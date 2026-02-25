@@ -55,9 +55,9 @@
 
 | 注解 | 说明 | 文档 |
 |------|------|------|
-| `@class` | Interface 映射为 class | [Override](../override/README.md) |
-| `@ctor` | 声明构造函数 | [Override](../override/README.md) |
-| `@static` | 声明静态函数 | [Override](../override/README.md) |
+| `@class` | Interface 映射为 class | [Override](../class/README.md) |
+| `@ctor` | 声明构造函数 | [Override](../class/README.md) |
+| `@static` | 声明静态函数 | [Override](../class/README.md) |
 | `@get` / `@set` | 声明 getter/setter | [继承](../inherit/README.md) |
 | `@extends` | 纯数据类继承 | [Struct 继承](../struct_extends/README.md) |
 | `@readonly` | 只读字段 | [Struct 继承](../struct_extends/README.md) |

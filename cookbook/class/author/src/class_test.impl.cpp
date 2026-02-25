@@ -15,11 +15,10 @@
 
 // This file is a test file.
 // NOLINTBEGIN
-#include "override.impl.hpp"
+#include "class_test.impl.hpp"
 
 #include <iostream>
 
-#include "override.UIAbility.proj.2.hpp"
 using namespace taihe;
 
 namespace {
@@ -36,12 +35,12 @@ public:
     }
 };
 
-::override::UIAbility getUIAbility()
+::class_test::UIAbility getUIAbility()
 {
-    return make_holder<UIAbility, ::override::UIAbility>();
+    return make_holder<UIAbility, ::class_test::UIAbility>();
 }
 
-void useUIAbility(::override::weak::UIAbility a)
+void useUIAbility(::class_test::weak::UIAbility a)
 {
     a->onForeground();
     a->onBackground();
@@ -51,9 +50,30 @@ void logLifecycle(string_view str)
 {
     std::cout << "[UIAbility]: " << str << std::endl;
 }
+
+string MyStructStaticFunc()
+{
+    return "Hello from MyStructStaticFunc";
+}
+
+class OldMyInterfaceImpl {
+public:
+    std::string doSomething(string_view s)
+    {
+        return "Hello, " + std::string(s);
+    }
+};
+
+::class_test::OldMyInterface MyInterfaceCtor()
+{
+    return taihe::make_holder<OldMyInterfaceImpl, ::class_test::OldMyInterface>();
+}
+
 }  // namespace
 
 TH_EXPORT_CPP_API_getUIAbility(getUIAbility);
 TH_EXPORT_CPP_API_useUIAbility(useUIAbility);
 TH_EXPORT_CPP_API_logLifecycle(logLifecycle);
+TH_EXPORT_CPP_API_MyStructStaticFunc(MyStructStaticFunc);
+TH_EXPORT_CPP_API_MyInterfaceCtor(MyInterfaceCtor);
 // NOLINTEND

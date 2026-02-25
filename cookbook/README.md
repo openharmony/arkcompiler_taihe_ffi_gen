@@ -54,7 +54,7 @@
 | [异步 async/promise](async/README.md) | 异步函数与 Promise 支持 |
 | [Callback 回调](callback/README.md) | 函数作为参数传递 |
 | [Opaque 外部对象](external_obj/README.md) | 处理外部语言对象 |
-| [Override 覆写](override/README.md) | `@class`、`@ctor`、`@static` |
+| [类、静态方法与构造函数](class/README.md) | 在 ArkTS 侧继承 Taihe 接口并重写方法 |
 | [ArrayBuffer](arraybuffer/README.md) | 二进制数据处理 |
 | [TypedArray](typedarray/README.md) | 类型化数组 |
 | [BigInt](bigint/README.md) | 大整数支持 |
@@ -66,7 +66,7 @@
 | [GetInner](unwrap_obj/README.md) | 获取 Taihe 绑定的实现类 |
 | [Null 与 Undefined](null_undefined/README.md) | 空值类型处理 |
 | [Callback 比较](callback_compare/README.md) | 回调对象的比较判断 |
-| [函数重命名](rename_example/README.md) | `@rename` 注解的使用 |
+| [关键字避让](rename_example/README.md) | `@rename` 注解的使用 |
 
 ## 附录
 

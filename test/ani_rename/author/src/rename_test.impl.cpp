@@ -18,6 +18,7 @@
 #include "rename_test.impl.hpp"
 #include "rename_test.proj.hpp"
 #include "taihe/runtime.hpp"
+#include <iostream>
 
 using namespace taihe;
 using namespace rename_test;
@@ -69,6 +70,33 @@ OldData CreateStrData(string_view v)
     return OldData::make_strVal(v);
 }
 
+OldMyStruct MyStructCtor(unit dummy, int32_t a, string_view b)
+{
+    return OldMyStruct {a, b};
+}
+
+string MyStructStaticFunc()
+{
+    return "Hello from MyStructStaticFunc";
+}
+
+class OldMyInterfaceImpl {
+public:
+    std::string doSomething(string_view s)
+    {
+        return "Hello, " + std::string(s);
+    }
+};
+
+OldMyInterface MyInterfaceCtor(unit dummy)
+{
+    return taihe::make_holder<OldMyInterfaceImpl, OldMyInterface>();
+}
+
+string MyInterfaceStaticMethod()
+{
+    return "Hello from MyInterfaceStaticMethod";
+}
 }  // namespace
 
 TH_EXPORT_CPP_API_OldAdd(OldAdd);
@@ -78,4 +106,8 @@ TH_EXPORT_CPP_API_GetPointSum(GetPointSum);
 TH_EXPORT_CPP_API_CreateCalculator(CreateCalculator);
 TH_EXPORT_CPP_API_CreateIntData(CreateIntData);
 TH_EXPORT_CPP_API_CreateStrData(CreateStrData);
+TH_EXPORT_CPP_API_MyStructCtor(MyStructCtor);
+TH_EXPORT_CPP_API_MyStructStaticFunc(MyStructStaticFunc);
+TH_EXPORT_CPP_API_MyInterfaceCtor(MyInterfaceCtor);
+TH_EXPORT_CPP_API_MyInterfaceStaticMethod(MyInterfaceStaticMethod);
 // NOLINTEND

@@ -62,3 +62,30 @@ union OldData {
 
 function CreateIntData(v: i32): OldData;
 function CreateStrData(v: String): OldData;
+
+@class
+@rename("MyStruct")
+struct OldMyStruct {
+    a: i32;
+    b: String;
+}
+
+@ctor("MyStruct")
+function MyStructCtor(dummy: unit, a: i32, b: String): OldMyStruct;
+
+@static("MyStruct")
+@rename("staticFunc")
+function MyStructStaticFunc(): String;
+
+@class
+@rename("MyInterface")
+interface OldMyInterface {
+    doSomething(s: String): String;
+}
+
+@ctor("MyInterface")
+function MyInterfaceCtor(dummy: unit): OldMyInterface;
+
+@static("MyInterface")
+@rename("staticMethod")
+function MyInterfaceStaticMethod(): String;

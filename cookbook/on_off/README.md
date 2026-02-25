@@ -225,5 +225,5 @@ function onFuncB(a: (b: bool) => void): void;
 
 - [Callback 回调](../callback/README.md) - 回调函数的基础用法
 - [重命名](../rename_example/README.md) - `@rename` 注解
-- [静态方法](../override/README.md) - `@static` 注解
+- [静态方法](../class/README.md) - `@static` 注解
 
