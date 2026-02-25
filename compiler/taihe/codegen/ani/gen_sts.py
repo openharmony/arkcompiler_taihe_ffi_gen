@@ -28,7 +28,7 @@ from taihe.codegen.ani.analyses import (
     EnumFieldAniInfo,
     GlobFuncAniInfo,
     IfaceAniInfo,
-    NamedFunctionLikeAniInfo,
+    NamedCallableAniInfo,
     PackageAniInfo,
     PackageGroupAniInfo,
     ParamAniInfo,
@@ -120,7 +120,7 @@ class StaticKind(FuncKind):
 
     class_name: str
 
-    def call_from_local(self, name) -> str:
+    def call_from_local(self, name: str) -> str:
         return f"{self.class_name}.{name}"
 
     def reverse_base_params(self) -> list[str]:
@@ -1094,7 +1094,7 @@ class StsNativeFuncGenerator:
         self.func = func
 
     def gen_native_func(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         params_sts = []
         for param in self.func.params:
             param_ani_info = ParamAniInfo.get(self.am, param)
@@ -1134,7 +1134,7 @@ class StsAnyFuncDeclGenerator:
         self.on_off_register = on_off_register
 
     def gen_any_func_decl(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
@@ -1356,7 +1356,7 @@ class StsAnyFuncGenerator:
         self.on_off_register = on_off_register
 
     def gen_any_func(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
@@ -1374,7 +1374,7 @@ class StsAnyFuncGenerator:
         args_sts = func_ani_info.as_native_args(args_sts)
         args_sts_str = ", ".join(args_sts)
         result_sts = (
-            f"{func_ani_info.call_native(func_ani_info.native_name)}({args_sts_str})"
+            f"{func_ani_info.native_call}{func_ani_info.native_name}({args_sts_str})"
         )
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -1667,7 +1667,7 @@ class StsAnyCtorGenerator:
         self.on_off_register = on_off_register
 
     def gen_any_ctor(self):
-        ctor_ani_info = GlobFuncAniInfo.get(self.am, self.ctor)
+        ctor_ani_info = NamedCallableAniInfo.get(self.am, self.ctor)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
@@ -1685,7 +1685,7 @@ class StsAnyCtorGenerator:
         args_sts = ctor_ani_info.as_native_args(args_sts)
         args_sts_str = ", ".join(args_sts)
         result_sts = (
-            f"{ctor_ani_info.call_native(ctor_ani_info.native_name)}({args_sts_str})"
+            f"{ctor_ani_info.native_call}{ctor_ani_info.native_name}({args_sts_str})"
         )
         if isinstance(return_ty := self.ctor.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -2020,7 +2020,7 @@ class StsReverseFuncGenerator:
         self.func_kind = func_kind
 
     def gen_reverse_func(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         args_sts = []
         params_sts = self.func_kind.reverse_base_params()
         for param in self.func.params:

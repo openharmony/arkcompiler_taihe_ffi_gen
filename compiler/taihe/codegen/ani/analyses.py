@@ -79,6 +79,7 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceExtendDecl,
     IfaceMethodDecl,
+    NamedCallableDecl,
     PackageDecl,
     PackageGroup,
     ParamDecl,
@@ -558,13 +559,13 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
             for attr in StsInjectAttr.get_all(pkg):
                 ns.injected_codes.append(attr.sts_code)
 
+    def get_namespace(self, pkg: PackageDecl) -> ArkTsModuleOrNamespace:
+        return self.pkg_map[pkg]
+
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupAniInfo":
         return PackageGroupAniInfo(am, pg)
-
-    def get_namespace(self, pkg: PackageDecl) -> ArkTsModuleOrNamespace:
-        return self.pkg_map[pkg]
 
 
 class PackageAniInfo(AbstractAnalysis[PackageDecl]):
@@ -592,15 +593,24 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
         return PackageAniInfo(am, p)
 
 
-class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+class NamedCallableAniInfo(AbstractAnalysis[NamedCallableDecl]):
+    def __init__(self, am: AnalysisManager, f: NamedCallableDecl) -> None:
         self.am = am
         self.f = f
 
-        self.native_prefix = "native function "
-        self.native_name = f"_taihe_{f.name}_native"
+        if isinstance(f, IfaceMethodDecl):
+            self.native_prefix = "native "
+            self.native_call = "this."
+            self.native_name = f"_taihe_{f.name}_native"
+        if isinstance(f, GlobFuncDecl):
+            self.native_prefix = "native function "
+            self.native_call = ""
+            self.native_name = f"_taihe_{f.name}_native"
 
-        self.reverse_name = f"_taihe_{f.name}_reverse"
+        if isinstance(f, IfaceMethodDecl):
+            self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
+        if isinstance(f, GlobFuncDecl):
+            self.reverse_name = f"_taihe_{f.name}_reverse"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
@@ -608,19 +618,10 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
             func_name = rename_attr.name
         elif rename_attr := OverloadAttr.get(f):
             func_name = rename_attr.func_name
+        elif isinstance(f, GlobFuncDecl) and CtorAttr.get(f):
+            func_name = ""
         else:
             func_name = naming.as_func(f.name)
-
-        self.static_scope = None
-        self.ctor_scope = None
-
-        if old_ctor_attr := CtorAttr.get(f):
-            self.ctor_scope = old_ctor_attr.cls_name
-            func_name = ""
-        elif ctor_attr := ConstructorAttribute.get(f):
-            self.ctor_scope = ctor_attr.cls_name
-        elif static_attr := StaticAttr.get(f):
-            self.static_scope = static_attr.cls_name
 
         self.get_name = None
         self.set_name = None
@@ -682,6 +683,56 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
             ):
                 continue
             self.sts_params.append(param)
+
+    def as_native_args(self, upper_args_sts: list[str]) -> list[str]:
+        this_atg_sts = "this"
+        last_arg_sts = this_atg_sts
+        upper_arg_sts = iter(upper_args_sts)
+        lower_args_sts: list[str] = []
+        for param in self.f.params:
+            if StsThisAttr.get(param):
+                lower_args_sts.append(this_atg_sts)
+            elif StsLastAttr.get(param):
+                lower_args_sts.append(last_arg_sts)
+            elif fill_attr := StsFillAttr.get(param):
+                fill_arg_sts = fill_attr.content
+                lower_args_sts.append(fill_arg_sts)
+            else:
+                lower_args_sts.append(last_arg_sts := next(upper_arg_sts))
+        return lower_args_sts
+
+    def as_normal_args(self, lower_args_sts: list[str]) -> list[str]:
+        upper_args_sts: list[str] = []
+        for param, lower_arg_sts in zip(self.f.params, lower_args_sts, strict=True):
+            if (
+                StsThisAttr.get(param)
+                or StsLastAttr.get(param)
+                or StsFillAttr.get(param)
+            ):
+                continue
+            upper_args_sts.append(lower_arg_sts)
+        return upper_args_sts
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: NamedCallableDecl) -> "NamedCallableAniInfo":  # fmt: skip
+        return NamedCallableAniInfo(am, f)
+
+
+class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        self.am = am
+        self.f = f
+
+        self.static_scope = None
+        self.ctor_scope = None
+
+        if old_ctor_attr := CtorAttr.get(f):
+            self.ctor_scope = old_ctor_attr.cls_name
+        elif ctor_attr := ConstructorAttribute.get(f):
+            self.ctor_scope = ctor_attr.cls_name
+        elif static_attr := StaticAttr.get(f):
+            self.static_scope = static_attr.cls_name
 
         self.is_default = ExportDefaultAttr.get(f) is not None
 
@@ -689,207 +740,6 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     @override
     def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAniInfo":
         return GlobFuncAniInfo(am, f)
-
-    def call_native(self, name: str) -> str:
-        return name
-
-    def as_native_args(self, upper_args_sts: list[str]) -> list[str]:
-        this_atg_sts = "this"
-        last_arg_sts = this_atg_sts
-        upper_arg_sts = iter(upper_args_sts)
-        lower_args_sts: list[str] = []
-        for param in self.f.params:
-            if StsThisAttr.get(param):
-                lower_args_sts.append(this_atg_sts)
-            elif StsLastAttr.get(param):
-                lower_args_sts.append(last_arg_sts)
-            elif fill_attr := StsFillAttr.get(param):
-                fill_arg_sts = fill_attr.content
-                lower_args_sts.append(fill_arg_sts)
-            else:
-                lower_args_sts.append(last_arg_sts := next(upper_arg_sts))
-        return lower_args_sts
-
-    def as_normal_args(self, lower_args_sts: list[str]) -> list[str]:
-        upper_args_sts: list[str] = []
-        for param, lower_arg_sts in zip(self.f.params, lower_args_sts, strict=True):
-            if (
-                StsThisAttr.get(param)
-                or StsLastAttr.get(param)
-                or StsFillAttr.get(param)
-            ):
-                continue
-            upper_args_sts.append(lower_arg_sts)
-        return upper_args_sts
-
-
-class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
-    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
-        self.am = am
-        self.f = f
-
-        self.native_prefix = "native "
-        self.native_name = f"_taihe_{f.name}_native"
-
-        self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
-
-        naming = PackageAniInfo.get(am, f.parent_pkg).naming
-
-        if rename_attr := RenameAttr.get(f):
-            func_name = rename_attr.name
-        elif rename_attr := OverloadAttr.get(f):
-            func_name = rename_attr.func_name
-        else:
-            func_name = naming.as_func(f.name)
-
-        self.get_name = None
-        self.set_name = None
-        self.promise_name = None
-        self.async_name = None
-        self.norm_name = None
-
-        self.gen_async_name = None
-        self.gen_promise_name = None
-
-        self.overload_name = None
-        self.on_off_pair = None
-
-        if get_attr := GetAttr.get(f):
-            if get_attr.member_name is not None:
-                get_name = get_attr.member_name
-            else:
-                get_name = naming.as_property(get_attr.func_suffix)
-            self.get_name = get_name
-        elif set_attr := SetAttr.get(f):
-            if set_attr.member_name is not None:
-                set_name = set_attr.member_name
-            else:
-                set_name = naming.as_property(set_attr.func_suffix)
-            self.set_name = set_name
-        elif PromiseAttribute.get(f):
-            self.promise_name = func_name
-        elif AsyncAttribute.get(f):
-            self.async_name = func_name
-        else:
-            self.norm_name = func_name
-            if gen_async_attr := GenAsyncAttr.get(f):
-                if gen_async_attr.func_name is not None:
-                    self.gen_async_name = gen_async_attr.func_name
-                else:
-                    self.gen_async_name = naming.as_func(gen_async_attr.func_prefix)
-            if gen_promise_attr := GenPromiseAttr.get(f):
-                if gen_promise_attr.func_name is not None:
-                    self.gen_promise_name = gen_promise_attr.func_name
-                else:
-                    self.gen_promise_name = naming.as_func(gen_promise_attr.func_prefix)
-
-        if overload_attr := StaticOverloadAttribute.get(f):
-            self.overload_name = overload_attr.name
-
-        if on_off_attr := OnOffAttr.get(f):
-            if on_off_attr.type is not None:
-                on_off_type = on_off_attr.type
-            else:
-                on_off_type = naming.as_on_off(on_off_attr.func_suffix)
-            self.on_off_pair = (on_off_attr.name, on_off_type)
-
-        self.sts_params: list[ParamDecl] = []
-        for param in f.params:
-            if (
-                StsThisAttr.get(param)
-                or StsLastAttr.get(param)
-                or StsFillAttr.get(param)
-            ):
-                continue
-            self.sts_params.append(param)
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":
-        return IfaceMethodAniInfo(am, f)
-
-    def call_native(self, name: str) -> str:
-        return f"this.{name}" if name else "this"
-
-    def as_native_args(self, upper_args_sts: list[str]) -> list[str]:
-        this_atg_sts = "this"
-        last_arg_sts = this_atg_sts
-        upper_arg_sts = iter(upper_args_sts)
-        lower_args_sts: list[str] = []
-        for param in self.f.params:
-            if StsThisAttr.get(param):
-                lower_args_sts.append(this_atg_sts)
-            elif StsLastAttr.get(param):
-                lower_args_sts.append(last_arg_sts)
-            elif fill_attr := StsFillAttr.get(param):
-                fill_arg_sts = fill_attr.content
-                lower_args_sts.append(fill_arg_sts)
-            else:
-                lower_args_sts.append(last_arg_sts := next(upper_arg_sts))
-        return lower_args_sts
-
-    def as_normal_args(self, lower_args_sts: list[str]) -> list[str]:
-        upper_args_sts: list[str] = []
-        for param, lower_arg_sts in zip(self.f.params, lower_args_sts, strict=True):
-            if (
-                StsThisAttr.get(param)
-                or StsLastAttr.get(param)
-                or StsFillAttr.get(param)
-            ):
-                continue
-            upper_args_sts.append(lower_arg_sts)
-        return upper_args_sts
-
-
-class NamedFunctionLikeAniInfo:
-    @staticmethod
-    def get(
-        am: AnalysisManager,
-        f: GlobFuncDecl | IfaceMethodDecl,
-    ) -> GlobFuncAniInfo | IfaceMethodAniInfo:
-        if isinstance(f, GlobFuncDecl):
-            return GlobFuncAniInfo.get(am, f)
-        if isinstance(f, IfaceMethodDecl):
-            return IfaceMethodAniInfo.get(am, f)
-
-
-class EnumFieldAniInfo(AbstractAnalysis[EnumItemDecl]):
-    def __init__(self, am: AnalysisManager, d: EnumItemDecl) -> None:
-        if rename_attr := RenameAttr.get(d):
-            self.sts_name = rename_attr.name
-        else:
-            self.sts_name = d.name
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: EnumItemDecl) -> "EnumFieldAniInfo":
-        return EnumFieldAniInfo(am, d)
-
-
-class StructFieldAniInfo(AbstractAnalysis[StructFieldDecl]):
-    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
-        if rename_attr := RenameAttr.get(d):
-            self.sts_name = rename_attr.name
-        else:
-            self.sts_name = d.name
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: StructFieldDecl) -> "StructFieldAniInfo":
-        return StructFieldAniInfo(am, d)
-
-
-class ParamAniInfo(AbstractAnalysis[ParamDecl]):
-    def __init__(self, am: AnalysisManager, d: ParamDecl) -> None:
-        if rename_attr := RenameAttr.get(d):
-            self.sts_name = rename_attr.name
-        else:
-            self.sts_name = d.name
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: ParamDecl) -> "ParamAniInfo":
-        return ParamAniInfo(am, d)
 
 
 class EnumAniInfo(AbstractAnalysis[EnumDecl]):
@@ -904,17 +754,17 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAniInfo":
-        return EnumAniInfo(am, d)
-
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
             self.sts_type_name,
             target=target,
         )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAniInfo":
+        return EnumAniInfo(am, d)
 
 
 class UnionAniInfo(AbstractAnalysis[UnionDecl]):
@@ -940,17 +790,17 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAniInfo":
-        return UnionAniInfo(am, d)
-
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
             self.sts_type_name,
             target=target,
         )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAniInfo":
+        return UnionAniInfo(am, d)
 
 
 class StructAniInfo(AbstractAnalysis[StructDecl]):
@@ -1016,11 +866,6 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructAniInfo":
-        return StructAniInfo(am, d)
-
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
@@ -1030,6 +875,11 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             self.sts_type_name,
             target=target,
         )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructAniInfo":
+        return StructAniInfo(am, d)
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
@@ -1074,11 +924,6 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceAniInfo":
-        return IfaceAniInfo(am, d)
-
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
@@ -1088,6 +933,63 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
             self.sts_type_name,
             target=target,
         )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceAniInfo":
+        return IfaceAniInfo(am, d)
+
+
+class EnumFieldAniInfo(AbstractAnalysis[EnumItemDecl]):
+    def __init__(self, am: AnalysisManager, d: EnumItemDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: EnumItemDecl) -> "EnumFieldAniInfo":
+        return EnumFieldAniInfo(am, d)
+
+
+class UnionFieldAniInfo(AbstractAnalysis[UnionFieldDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: UnionFieldDecl) -> "UnionFieldAniInfo":
+        return UnionFieldAniInfo(am, d)
+
+
+class StructFieldAniInfo(AbstractAnalysis[StructFieldDecl]):
+    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: StructFieldDecl) -> "StructFieldAniInfo":
+        return StructFieldAniInfo(am, d)
+
+
+class ParamAniInfo(AbstractAnalysis[ParamDecl]):
+    def __init__(self, am: AnalysisManager, d: ParamDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: ParamDecl) -> "ParamAniInfo":
+        return ParamAniInfo(am, d)
 
 
 class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
@@ -1108,11 +1010,6 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     @property
     def type_desc(self) -> str:
         return self.sig_type.boxed.desc
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeAniInfo":
-        return t.accept(TypeAniInfoDispatcher(am))
 
     @abstractmethod
     def sts_type_in(self, target: ArkTsImportManager) -> str: ...
@@ -1248,6 +1145,11 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
                 f"{env}->FixedArray_New_{self.ani_type.suffix}({cpp_size}, &{ani_fixedarray_after});",
                 f"{env}->FixedArray_SetRegion_{self.ani_type.suffix}({ani_fixedarray_after}, 0, {cpp_size}, reinterpret_cast<{self.ani_type} const*>({cpp_fixedarray_value}));",
             )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeAniInfo":
+        return t.accept(TypeAniInfoDispatcher(am))
 
 
 class EnumTypeAniInfo(TypeAniInfo):
