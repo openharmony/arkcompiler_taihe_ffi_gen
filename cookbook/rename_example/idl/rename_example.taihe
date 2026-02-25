@@ -43,3 +43,23 @@ interface OldGreeter {
 function CreateGreeter(name: String): OldGreeter;
 
 function TestParamRename(@rename("message") msg: String): String;
+
+@class
+@rename("MyStruct")
+struct OldMyStruct {
+    a: i32;
+    b: String;
+}
+
+@static("MyStruct")
+@rename("staticFunc")
+function MyStructStaticFunc(): String;
+
+@class
+@rename("MyInterface")
+interface OldMyInterface {
+    doSomething(s: String): String;
+}
+
+@ctor("MyInterface")
+function MyInterfaceCtor(): OldMyInterface;

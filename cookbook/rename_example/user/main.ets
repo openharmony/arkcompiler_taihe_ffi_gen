@@ -38,4 +38,13 @@ function main() {
     // Parameter rename: parameter "msg" renamed to "message"
     let msg = rename_example.testParamRename("Hello, Taihe!");
     console.log(msg);
+
+    // Static method
+    let staticMsg = rename_example.MyStruct.staticFunc();
+    console.log(staticMsg);
+
+    // Constructor
+    let myInstance = new rename_example.MyInterface();
+    let interfaceMsg = myInstance.doSomething("Taihe");
+    console.log(interfaceMsg);
 }

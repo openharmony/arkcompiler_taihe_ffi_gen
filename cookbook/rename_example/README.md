@@ -1,4 +1,4 @@
-# Rename 重命名
+# 关键字避让
 
 > **学习目标**：掌握如何使用 `@rename` 注解修改 ArkTS 侧的投影名称。
 
@@ -9,6 +9,30 @@
 | 用法 | 适用目标 |
 |------|----------|
 | `@rename("newName")` | 函数、方法、enum 成员、struct 字段、enum、union、struct、interface |
+
+> **注意：**
+> - 如果 struct/interface 被 `@rename` 重命名，所有 `@ctor` 和 `@static` 的 class name 参数必须使用重命名后的名称。
+
+#### 示例：
+
+```rust
+@class
+@rename("AniRenamed")
+interface AniOrigin {
+    bar(): void;
+}
+
+// 正确：@ctor/@static 使用重命名后的类名
+@ctor("AniRenamed")
+function createAniRenamed(): AniOrigin;
+
+@static("AniRenamed")
+function staticAni(): void;
+
+// 错误：@ctor/@static 使用原始类名会导致编译错误
+// @ctor("AniOrigin")
+// function createAniOrigin(): AniOrigin;
+```
 
 ---
 
@@ -148,4 +172,4 @@ function main() {
 
 ## 相关文档
 
-- [重写](../override/README.md) - 构造函数相关注解
+- [构造函数](../class/README.md) - 构造函数相关注解

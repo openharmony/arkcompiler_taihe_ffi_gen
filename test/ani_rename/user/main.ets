@@ -79,6 +79,35 @@ function test_rename_union() {
     let strData: RenameTest.Data = RenameTest.createStrData("hello");
 }
 
+function test_renamed_struct_class_ctor() {
+    // Struct "OldMyStruct" renamed to "MyStruct", constructor renamed to
+    // "MyStructCtor"
+    let s: RenameTest.MyStruct = new RenameTest.MyStruct(null, 123, "abc");
+    arktest.assertEQ(s.a, 123);
+    arktest.assertEQ(s.b, "abc");
+}
+
+function test_renamed_struct_class_static_func() {
+    // Static method "MyStructStaticFunc" renamed from "OldMyStructStaticFunc"
+    let result = RenameTest.MyStruct.staticFunc();
+    arktest.assertEQ(result, "Hello from MyStructStaticFunc");
+}
+
+function test_renamed_interface_class_ctor() {
+    // Interface "OldMyInterface" renamed to "MyInterface", constructor renamed
+    // to "MyInterfaceCtor"
+    let obj: RenameTest.MyInterface = new RenameTest.MyInterface(null);
+    let result = obj.doSomething("test");
+    arktest.assertEQ(result, "Hello, test");
+}
+
+function test_renamed_interface_class_static_method() {
+    // Static method "MyInterfaceStaticMethod" renamed from
+    // "OldMyInterfaceStaticMethod"
+    let result = RenameTest.MyInterface.staticMethod();
+    arktest.assertEQ(result, "Hello from MyInterfaceStaticMethod");
+}
+
 function main() {
     console.log("############## ani_rename start #############");
     const suite = new arktest.ArkTestsuite("Rename Tests");
@@ -92,6 +121,16 @@ function main() {
     suite.addTest("test_rename_struct_construct", test_rename_struct_construct);
     suite.addTest("test_rename_interface", test_rename_interface);
     suite.addTest("test_rename_union", test_rename_union);
+    suite.addTest(
+        "test_renamed_struct_class_ctor", test_renamed_struct_class_ctor);
+    suite.addTest(
+        "test_renamed_struct_class_static_func",
+        test_renamed_struct_class_static_func);
+    suite.addTest(
+        "test_renamed_interface_class_ctor", test_renamed_interface_class_ctor);
+    suite.addTest(
+        "test_renamed_interface_class_static_method",
+        test_renamed_interface_class_static_method);
 
     exit(suite.run());
 }

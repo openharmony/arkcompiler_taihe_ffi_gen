@@ -138,4 +138,4 @@ After reset: 0
 
 - [继承](../inherit/README.md) - 接口继承与属性
 - [多继承](../multiple_inherit/README.md) - 实现多个接口
-- [Override 覆写](../override/README.md) - `@class` 与构造函数
+- [类](../class/README.md) - 类、静态方法和构造函数

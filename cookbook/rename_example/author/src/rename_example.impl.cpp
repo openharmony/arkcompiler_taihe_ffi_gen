@@ -59,6 +59,24 @@ OldGreeter CreateGreeter(string_view name)
     return "Received message: " + msg;
 }
 
+string MyStructStaticFunc()
+{
+    return "Hello from MyStructStaticFunc";
+}
+
+class OldMyInterfaceImpl {
+public:
+    std::string doSomething(string_view s)
+    {
+        return "Hello, " + std::string(s);
+    }
+};
+
+OldMyInterface MyInterfaceCtor()
+{
+    return taihe::make_holder<OldMyInterfaceImpl, OldMyInterface>();
+}
+
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
@@ -66,4 +84,6 @@ TH_EXPORT_CPP_API_OldFoo(OldFoo);
 TH_EXPORT_CPP_API_CreatePoint(CreatePoint);
 TH_EXPORT_CPP_API_CreateGreeter(CreateGreeter);
 TH_EXPORT_CPP_API_TestParamRename(TestParamRename);
+TH_EXPORT_CPP_API_MyStructStaticFunc(MyStructStaticFunc);
+TH_EXPORT_CPP_API_MyInterfaceCtor(MyInterfaceCtor);
 // NOLINTEND

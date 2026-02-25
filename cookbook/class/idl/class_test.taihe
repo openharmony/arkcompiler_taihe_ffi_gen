@@ -26,3 +26,23 @@ function useUIAbility(a: UIAbility): void;
 
 @static("UIAbility")
 function logLifecycle(str: String): void;
+
+@class
+@rename("MyStruct")
+struct OldMyStruct {
+    a: i32;
+    b: String;
+}
+
+@static("MyStruct")
+@rename("staticFunc")
+function MyStructStaticFunc(): String;
+
+@class
+@rename("MyInterface")
+interface OldMyInterface {
+    doSomething(s: String): String;
+}
+
+@ctor("MyInterface")
+function MyInterfaceCtor(): OldMyInterface;
