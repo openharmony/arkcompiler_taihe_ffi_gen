@@ -360,23 +360,25 @@ class StsPackageGenerator:
             union_generator = StsUnionGenerator(self.am, self.target, union)
             union_generator.gen_union()
         for struct in self.pkg.structs:
+            struct_ani_info = StructAniInfo.get(self.am, struct)
             struct_generator = StsStructGenerator(
                 self.am,
                 self.target,
                 struct,
-                self.statics_map.get(struct.name, []),
-                self.ctors_map.get(struct.name, []),
+                self.statics_map.get(struct_ani_info.sts_impl_name, []),
+                self.ctors_map.get(struct_ani_info.sts_impl_name, []),
             )
             struct_generator.gen_struct_interface()
             struct_generator.gen_struct_class()
             struct_generator.gen_struct_factory()
         for iface in self.pkg.interfaces:
+            iface_ani_info = IfaceAniInfo.get(self.am, iface)
             iface_generator = StsIfaceGenerator(
                 self.am,
                 self.target,
                 iface,
-                self.statics_map.get(iface.name, []),
-                self.ctors_map.get(iface.name, []),
+                self.statics_map.get(iface_ani_info.sts_impl_name, []),
+                self.ctors_map.get(iface_ani_info.sts_impl_name, []),
             )
             iface_generator.gen_iface_interface()
             iface_generator.gen_iface_class()
@@ -438,19 +440,9 @@ class StsPackageGenerator:
                 func_kind,
             )
             reverse_func_generator.gen_reverse_func()
-        for struct in self.pkg.structs:
-            struct_ani_info = StructAniInfo.get(self.am, struct)
-            ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
-            for ctor in self.ctors_map.get(struct.name, []):
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    ctor,
-                    ctor_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
-            func_kind = StaticKind(struct_ani_info.sts_impl_name)
-            for func in self.statics_map.get(struct.name, []):
+        for class_name, funcs in self.statics_map.items():
+            func_kind = StaticKind(class_name)
+            for func in funcs:
                 reverse_func_generator = StsReverseFuncGenerator(
                     self.am,
                     self.target,
@@ -458,24 +450,14 @@ class StsPackageGenerator:
                     func_kind,
                 )
                 reverse_func_generator.gen_reverse_func()
-        for iface in self.pkg.interfaces:
-            iface_ani_info = IfaceAniInfo.get(self.am, iface)
-            ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
-            for ctor in self.ctors_map.get(iface.name, []):
+        for class_name, ctors in self.ctors_map.items():
+            ctor_kind = CtorKind(class_name)
+            for ctor in ctors:
                 reverse_func_generator = StsReverseFuncGenerator(
                     self.am,
                     self.target,
                     ctor,
                     ctor_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
-            func_kind = StaticKind(iface_ani_info.sts_impl_name)
-            for func in self.statics_map.get(iface.name, []):
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    func,
-                    func_kind,
                 )
                 reverse_func_generator.gen_reverse_func()
 
