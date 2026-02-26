@@ -67,6 +67,14 @@ class ExportDefaultAttr(TypedAttribute[PackageLevelDecl | PackageDecl]):
 
 
 @dataclass
+class StsKeepNameAttr(TypedAttribute[PackageDecl]):
+    NAME = "sts_keep_name"
+    TARGETS = (PackageDecl,)
+
+    option: bool = True
+
+
+@dataclass
 class StsInjectAttr(RepeatableAttribute[PackageDecl]):
     # TODO: Hack
 
@@ -738,6 +746,7 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 all_attr_types: list[CheckedAttrT] = [
     NamespaceAttr,
     ExportDefaultAttr,
+    StsKeepNameAttr,
     StsInjectAttr,
     StsInjectIntoModuleAttr,
     StsInjectIntoClazzAttr,
