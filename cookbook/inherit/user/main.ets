@@ -21,17 +21,13 @@ loadLibrary("inherit");
 function main() {
     // 初始化银行卡
     let card = inherit.makeCreditCard(1000.0);
-    // 查看当前是否可以进行国际交易
-    console.log(card.intlEnabled);
-    // 设置为可进行国际交易
-    card.intlEnabled = true;
-    // 查看当前是否可以进行国际交易
-    console.log(card.intlEnabled);
     // 查看余额
-    console.log(card.balance);
-    // 购买一件国际商品
-    console.log("Buy an international product")
+    console.log(card.getBalance());
+    // 充值
+    card.topUp(500.0);
+    console.log(card.getBalance());
+    // 付款（调用继承的方法）
     card.pay(50.0);
     // 查看余额
-    console.log(card.balance);
+    console.log(card.getBalance());
 }

@@ -1,6 +1,6 @@
 # 继承
 
-> **学习目标**：掌握 Taihe 中接口继承机制以及 `@class`、`@get`、`@set` 注解的使用。
+> **学习目标**：掌握 Taihe 中接口继承机制以及 `@class` 注解的使用。
 
 本教程以"银行卡付款系统"为例，介绍接口继承的用法。
 
@@ -11,15 +11,6 @@
 | 注解 | 作用 | 说明 |
 |------|------|------|
 | `@class` | 生成类而非接口 | ArkTS 侧投影为 `class` 而非 `interface` |
-| `@get` | 定义 getter | 声明只读属性的访问器 |
-| `@set` | 定义 setter | 声明可写属性的访问器 |
-
-### `@get` / `@set` 命名规则
-
-- **带参数**：`@get("balance")` 直接指定属性名
-- **无参数**：方法名必须以 `get`/`set` 开头，属性名取剩余部分并首字母小写
-  - `getBalance()` → 属性名 `balance`
-  - `setIntlEnabled()` → 属性名 `intlEnabled`
 
 ---
 
@@ -35,9 +26,7 @@ interface Payable {
 @class
 interface CreditCard : Payable {
     topUp(topUpAmount: f64): void;
-    @get("balance") getBalance(): f64;
-    @get getIntlEnabled(): bool;
-    @set setIntlEnabled(tag: bool): void;
+    getBalance(): f64;
 }
 
 function makeCreditCard(initAmount: f64): CreditCard;
@@ -46,8 +35,6 @@ function makeCreditCard(initAmount: f64): CreditCard;
 **说明：**
 - `CreditCard : Payable` 表示继承自 `Payable` 接口
 - `@class` 使 ArkTS 侧生成 `class CreditCard` 而非 `interface CreditCard`
-- `balance` 为只读属性（只有 getter）
-- `intlEnabled` 为可读写属性（有 getter 和 setter）
 
 ## 第二步：实现 C++ 代码
 
@@ -60,7 +47,7 @@ using namespace taihe;
 
 class CreditCardImpl {
 public:
-    CreditCardImpl(double initAmount) : amount(initAmount), intlEnabled(false) {}
+    CreditCardImpl(double initAmount) : amount(initAmount) {}
 
     void topUp(double topUpAmount) {
         amount += topUpAmount;
@@ -68,14 +55,6 @@ public:
 
     double getBalance() {
         return amount;
-    }
-
-    bool getIntlEnabled() {
-        return intlEnabled;
-    }
-
-    void setIntlEnabled(bool tag) {
-        intlEnabled = tag;
     }
 
     // 实现继承自 Payable 的方法
@@ -90,7 +69,6 @@ public:
 
 private:
     double amount;
-    bool intlEnabled;
 };
 
 CreditCard makeCreditCard(double initAmount) {
@@ -118,33 +96,29 @@ loadLibrary("inherit");
 function main() {
     // 创建银行卡，初始余额 1000
     let card = inherit.makeCreditCard(1000.0);
-    
-    // 查看国际交易状态
-    console.log(card.intlEnabled);  // false
-    
-    // 开启国际交易
-    card.intlEnabled = true;
-    console.log(card.intlEnabled);  // true
-    
+
     // 查看余额
-    console.log(card.balance);      // 1000
-    
+    console.log(card.getBalance());     // 1000
+
+    // 充值
+    card.topUp(500.0);
+    console.log(card.getBalance());     // 1500
+
     // 付款（调用继承的方法）
-    card.pay(50.0);                 // Payment successful
-    
+    card.pay(50.0);                     // Payment successful
+
     // 查看余额
-    console.log(card.balance);      // 950
+    console.log(card.getBalance());     // 1450
 }
 ```
 
 **输出：**
 
 ```
-false
-true
 1000
+1500
 Payment successful
-950
+1450
 ```
 
 ---
@@ -246,6 +220,7 @@ struct DerivedDataInterface {
 
 ## 相关文档
 
+- [属性](../property/README.md) - `@get`/`@set` 访问器与 `@readonly` 只读字段
 - [Interface 接口](../interface/README.md) - 接口基础定义
 - [Struct 继承](../struct_extends/README.md) - 纯数据类型继承
 - [多继承](../multiple_inherit/README.md) - 多接口继承

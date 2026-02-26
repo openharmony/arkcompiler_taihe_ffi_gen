@@ -21,14 +21,16 @@ Taihe 使用 `union` 配合注解来表示 null 和 undefined 类型。
 
 ```rust
 union NullableValue {
-    sValue: String;              // 字符串值
-    iValue: i32;                 // 整数值
     @undefined uValue: unit;     // undefined
     nValue: unit;                // null
+    sValue: String;              // 字符串值
+    iValue: i32;                 // 整数值
 }
 
 function makeNullableValue(tag: i32): NullableValue;
 ```
+
+> **注意**：在 union 中，undefined 和 null 需要放在其它有值的字段之前，才能正确映射。
 
 ## 第二步：实现 C++ 代码
 

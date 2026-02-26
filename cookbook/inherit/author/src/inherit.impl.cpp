@@ -41,7 +41,7 @@ private:
 
 class CreditCardImpl {
 public:
-    CreditCardImpl(double num) : amount(num), IntlEnabled(false)
+    CreditCardImpl(double num) : amount(num)
     {
     }
 
@@ -53,16 +53,6 @@ public:
     double getBalance()
     {
         return this->amount;
-    }
-
-    bool getIntlEnabled()
-    {
-        return this->IntlEnabled;
-    }
-
-    void setIntlEnabled(bool tag)
-    {
-        this->IntlEnabled = tag;
     }
 
     void pay(double amountDue)
@@ -78,7 +68,6 @@ public:
 
 private:
     double amount;
-    bool IntlEnabled;
 };
 
 CreditCard makeCreditCard(double initAmount)

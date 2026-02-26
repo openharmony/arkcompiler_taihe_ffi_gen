@@ -10,7 +10,7 @@
 |------|------|------|
 | 基础类型 | `i32`, `f64`, `String`, `bool` 等 | [基础能力](../basic_abilities/README.md) |
 | 容器类型 | `Array`, `Optional`, `Vector`, `Map`, `Set` | [基础能力](../basic_abilities/README.md) |
-| `struct` | 纯数据结构体 | [绑定机制](../binding/README.md) |
+| `struct` | 纯数据结构体 | [Struct 与 Tuple](../struct_tuple/README.md) |
 | `enum` | 枚举类型 | [Enum 与 Union](../enum_union/README.md) |
 | `union` | 联合类型 | [Enum 与 Union](../enum_union/README.md) |
 | `interface` | 接口定义 | [Interface](../interface/README.md) |
@@ -58,9 +58,10 @@
 | `@class` | Interface 映射为 class | [Override](../class/README.md) |
 | `@ctor` | 声明构造函数 | [Override](../class/README.md) |
 | `@static` | 声明静态函数 | [Override](../class/README.md) |
-| `@get` / `@set` | 声明 getter/setter | [继承](../inherit/README.md) |
+| `@get` / `@set` | 声明 getter/setter | [属性](../property/README.md) |
+| `@readonly` | 只读字段 | [属性](../property/README.md) |
+| `@tuple` | Struct 投影为元组 | [Struct 与 Tuple](../struct_tuple/README.md) |
 | `@extends` | 纯数据类继承 | [Struct 继承](../struct_extends/README.md) |
-| `@readonly` | 只读字段 | [Struct 继承](../struct_extends/README.md) |
 | `@const` | 枚举常量化 | [Enum 与 Union](../enum_union/README.md) |
 
 ### 字段与参数相关注解
