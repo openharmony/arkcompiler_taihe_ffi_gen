@@ -325,32 +325,32 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_long_type(self, node: ast.LongType) -> LongTypeRefDecl:
-        d = LongTypeRefDecl(node.loc, pkg2str(node.pkg_name), id2str(node.decl_name))
+        d = LongTypeRefDecl(pkg2str(node.pkg_name), id2str(node.decl_name), loc=node.loc)  # fmt: skip
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_short_type(self, node: ast.ShortType) -> ShortTypeRefDecl:
-        d = ShortTypeRefDecl(node.loc, id2str(node.decl_name))
+        d = ShortTypeRefDecl(id2str(node.decl_name), loc=node.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_generic_arg(self, node: ast.GenericArg) -> GenericArgDecl:
-        d = GenericArgDecl(node.loc, node.ty.accept(self))
+        d = GenericArgDecl(node.ty.accept(self), loc=node.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_generic_type(self, node: ast.GenericType) -> GenericTypeRefDecl:
-        d = GenericTypeRefDecl(node.loc, id2str(node.decl_name))
+        d = GenericTypeRefDecl(id2str(node.decl_name), loc=node.loc)
         self.dm.for_each(node.args, lambda a: d.add_arg(a.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_callback_type(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
-        d = CallbackTypeRefDecl(node.loc, node.return_ty.accept(self))
+        d = CallbackTypeRefDecl(node.return_ty.accept(self), loc=node.loc)
         self.dm.for_each(node.parameters, lambda p: d.add_param(p.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
@@ -359,7 +359,7 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_use_package(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
-        p_ref = PackageRefDecl(node.pkg_name.loc, pkg2str(node.pkg_name))
+        p_ref = PackageRefDecl(pkg2str(node.pkg_name), loc=node.pkg_name.loc)
         if node.pkg_alias:
             d = PackageImportDecl(
                 p_ref,
@@ -374,9 +374,9 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_use_symbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
-        p_ref = PackageRefDecl(node.pkg_name.loc, pkg2str(node.pkg_name))
+        p_ref = PackageRefDecl(pkg2str(node.pkg_name), loc=node.pkg_name.loc)
         for p in node.decl_alias_pairs:
-            d_ref = DeclarationRefDecl(p.decl_name.loc, id2str(p.decl_name), p_ref)
+            d_ref = DeclarationRefDecl(id2str(p.decl_name), p_ref, loc=p.decl_name.loc)
             if p.decl_alias:
                 d = DeclarationImportDecl(
                     d_ref,
@@ -393,13 +393,13 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_struct_property(self, node: ast.StructProperty) -> StructFieldDecl:
-        d = StructFieldDecl(node.name.loc, id2str(node.name), node.ty.accept(self))
+        d = StructFieldDecl(id2str(node.name), node.ty.accept(self), loc=node.name.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_struct(self, node: ast.Struct) -> StructDecl:
-        d = StructDecl(node.name.loc, id2str(node.name))
+        d = StructDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.fields, lambda f: d.add_field(f.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(d, a))
@@ -408,15 +408,15 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_enum_property(self, node: ast.EnumProperty) -> EnumItemDecl:
         if node.val:
-            d = EnumItemDecl(node.name.loc, id2str(node.name), node.val.accept(self))
+            d = EnumItemDecl(id2str(node.name), node.val.accept(self), loc=node.name.loc)  # fmt: skip
         else:
-            d = EnumItemDecl(node.name.loc, id2str(node.name))
+            d = EnumItemDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_enum(self, node: ast.Enum) -> EnumDecl:
-        d = EnumDecl(node.name.loc, id2str(node.name), node.enum_ty.accept(self))
+        d = EnumDecl(id2str(node.name), node.enum_ty.accept(self), loc=node.name.loc)
         self.dm.for_each(node.fields, lambda a: d.add_item(a.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
@@ -424,15 +424,15 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_union_property(self, node: ast.UnionProperty) -> UnionFieldDecl:
         if ty := node.ty:
-            d = UnionFieldDecl(node.name.loc, id2str(node.name), ty.accept(self))
+            d = UnionFieldDecl(id2str(node.name), ty.accept(self), loc=node.name.loc)
         else:
-            d = UnionFieldDecl(node.name.loc, id2str(node.name))
+            d = UnionFieldDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_union(self, node: ast.Union) -> UnionDecl:
-        d = UnionDecl(node.name.loc, id2str(node.name))
+        d = UnionDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.fields, lambda f: d.add_field(f.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(d, a))
@@ -440,29 +440,29 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_parameter(self, node: ast.Parameter) -> ParamDecl:
-        d = ParamDecl(node.name.loc, id2str(node.name), node.ty.accept(self))
+        d = ParamDecl(id2str(node.name), node.ty.accept(self), loc=node.name.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_interface_function(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
         if ty := node.return_ty:
-            d = IfaceMethodDecl(node.name.loc, id2str(node.name), ty.accept(self))
+            d = IfaceMethodDecl(id2str(node.name), ty.accept(self), loc=node.name.loc)
         else:
-            d = IfaceMethodDecl(node.name.loc, id2str(node.name))
+            d = IfaceMethodDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.parameters, lambda p: d.add_param(p.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_interface_extend(self, node: ast.InterfaceExtend) -> IfaceExtendDecl:
-        d = IfaceExtendDecl(node.ty.loc, node.ty.accept(self))
+        d = IfaceExtendDecl(node.ty.accept(self), loc=node.ty.loc)
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_interface(self, node: ast.Interface) -> IfaceDecl:
-        d = IfaceDecl(node.name.loc, id2str(node.name))
+        d = IfaceDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.fields, lambda f: d.add_method(f.accept(self)))
         self.dm.for_each(node.extends, lambda i: d.add_extend(i.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
@@ -472,9 +472,9 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_global_function(self, node: ast.GlobalFunction) -> GlobFuncDecl:
         if ty := node.return_ty:
-            d = GlobFuncDecl(node.name.loc, id2str(node.name), ty.accept(self))
+            d = GlobFuncDecl(id2str(node.name), ty.accept(self), loc=node.name.loc)
         else:
-            d = GlobFuncDecl(node.name.loc, id2str(node.name))
+            d = GlobFuncDecl(id2str(node.name), loc=node.name.loc)
         self.dm.for_each(node.parameters, lambda p: d.add_param(p.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
@@ -484,9 +484,9 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_spec(self, node: ast.Spec) -> PackageDecl:
         pkg = PackageDecl(
-            SourceLocation(self.source),
             self.source.pkg_name,
             self.source.is_stdlib,
+            loc=SourceLocation(self.source),
         )
         for u in node.uses:
             self.dm.for_each(u.accept(self), pkg.add_import)

@@ -91,6 +91,7 @@ class Decl(ABC):
 
     def __init__(
         self,
+        *,
         loc: SourceLocation | None,
     ):
         self.loc = loc
@@ -127,10 +128,11 @@ class NamedDecl(Decl, ABC):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.name = name
 
 
@@ -200,9 +202,10 @@ class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
 
     def __init__(
         self,
+        *,
         loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
 
     @property
     @override
@@ -243,9 +246,10 @@ class ImplicitTypeRefDecl(TypeRefDecl):
 
     def __init__(
         self,
+        *,
         loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
 
     def format(self, fmt: TaiheFormatter) -> None:
         return None
@@ -263,9 +267,10 @@ class ExplicitTypeRefDecl(TypeRefDecl):
 
     def __init__(
         self,
+        *,
         loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
 
     def format(self, fmt: TaiheFormatter) -> str:
         return fmt.get_type_ref(self)
@@ -279,10 +284,11 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         ty_ref: ExplicitTypeRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
 
@@ -317,11 +323,12 @@ class ParamDecl(NamedDeclWithParent["CallableDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         ty_ref: ExplicitTypeRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
+        super().__init__(name, loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
 
@@ -356,10 +363,11 @@ class ShortTypeRefDecl(ExplicitTypeRefDecl):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         symbol: str,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.symbol = symbol
 
     @override
@@ -373,11 +381,12 @@ class LongTypeRefDecl(ExplicitTypeRefDecl):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         pkname: str,
         symbol: str,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.pkname = pkname
         self.symbol = symbol
 
@@ -392,10 +401,11 @@ class GenericTypeRefDecl(ExplicitTypeRefDecl):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         symbol: str,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.symbol = symbol
         self.args = []
 
@@ -414,10 +424,11 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         return_ty_ref: ExplicitTypeRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self._param_dict = {}
         self.return_ty_ref = return_ty_ref
         self.return_ty_ref.set_parent(self)
@@ -466,10 +477,11 @@ class PackageRefDecl(DeclWithParent["PackageImportDecl | DeclarationRefDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         symbol: str,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.symbol = symbol
 
     @property
@@ -498,11 +510,12 @@ class DeclarationRefDecl(DeclWithParent["DeclarationImportDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         symbol: str,
         pkg_ref: PackageRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.symbol = symbol
         self.pkg_ref = pkg_ref
         self.pkg_ref.set_parent(self)
@@ -561,8 +574,8 @@ class PackageImportDecl(ImportDecl):
         self,
         pkg_ref: PackageRefDecl,
         *,
-        loc: SourceLocation | None = None,
         name: str = "",
+        loc: SourceLocation | None = None,
     ):
         super().__init__(
             name=name or pkg_ref.symbol,
@@ -591,8 +604,8 @@ class DeclarationImportDecl(ImportDecl):
         self,
         decl_ref: DeclarationRefDecl,
         *,
-        loc: SourceLocation | None = None,
         name: str = "",
+        loc: SourceLocation | None = None,
     ):
         super().__init__(
             name=name or decl_ref.symbol,
@@ -624,11 +637,12 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         value: int | float | str | bool | None = None,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
+        super().__init__(name, loc=loc)
         self.value = value
 
     @property
@@ -651,12 +665,13 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         ty_ref: ExplicitTypeRefDecl | None = None,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
-        self.ty_ref = ty_ref or ImplicitTypeRefDecl(loc)
+        super().__init__(name, loc=loc)
+        self.ty_ref = ty_ref or ImplicitTypeRefDecl(loc=loc)
         self.ty_ref.set_parent(self)
 
     @property
@@ -690,11 +705,12 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         ty_ref: ExplicitTypeRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
+        super().__init__(name, loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
 
@@ -729,10 +745,11 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         ty_ref: ExplicitTypeRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc)
+        super().__init__(loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
 
@@ -768,13 +785,14 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         return_ty_ref: ExplicitTypeRefDecl | None = None,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
+        super().__init__(name, loc=loc)
         self._param_dict = {}
-        self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc)
+        self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc=loc)
         self.return_ty_ref.set_parent(self)
 
     @property
@@ -832,13 +850,14 @@ class GlobFuncDecl(PackageLevelDecl):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         return_ty_ref: ExplicitTypeRefDecl | None = None,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
+        super().__init__(name, loc=loc)
         self._param_dict = {}
-        self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc)
+        self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc=loc)
         self.return_ty_ref.set_parent(self)
 
     @property
@@ -891,11 +910,12 @@ class EnumDecl(TypeDecl):
 
     def __init__(
         self,
-        loc: SourceLocation | None,
         name: str,
         ty_ref: ExplicitTypeRefDecl,
+        *,
+        loc: SourceLocation | None,
     ):
-        super().__init__(loc, name)
+        super().__init__(name, loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
         self._item_dict = {}
@@ -937,8 +957,13 @@ class EnumDecl(TypeDecl):
 class UnionDecl(TypeDecl):
     _field_dict: dict[str, UnionFieldDecl]
 
-    def __init__(self, loc: SourceLocation | None, name: str):
-        super().__init__(loc, name)
+    def __init__(
+        self,
+        name: str,
+        *,
+        loc: SourceLocation | None,
+    ):
+        super().__init__(name, loc=loc)
         self._field_dict = {}
 
     @property
@@ -967,8 +992,13 @@ class UnionDecl(TypeDecl):
 class StructDecl(TypeDecl):
     _field_dict: dict[str, StructFieldDecl]
 
-    def __init__(self, loc: SourceLocation | None, name: str):
-        super().__init__(loc, name)
+    def __init__(
+        self,
+        name: str,
+        *,
+        loc: SourceLocation | None,
+    ):
+        super().__init__(name, loc=loc)
         self._field_dict = {}
 
     @property
@@ -998,8 +1028,13 @@ class IfaceDecl(TypeDecl):
     _extend_list: list[IfaceExtendDecl]
     _method_dict: dict[str, IfaceMethodDecl]
 
-    def __init__(self, loc: SourceLocation | None, name: str):
-        super().__init__(loc, name)
+    def __init__(
+        self,
+        name: str,
+        *,
+        loc: SourceLocation | None,
+    ):
+        super().__init__(name, loc=loc)
         self._extend_list = []
         self._method_dict = {}
 
@@ -1073,8 +1108,14 @@ class PackageDecl(NamedDecl):
 
     is_stdlib: bool
 
-    def __init__(self, loc: SourceLocation | None, name: str, is_stdlib: bool):
-        super().__init__(loc, name)
+    def __init__(
+        self,
+        name: str,
+        is_stdlib: bool,
+        *,
+        loc: SourceLocation | None,
+    ):
+        super().__init__(name, loc=loc)
 
         self._pkg_import_dict = {}
         self._decl_import_dict = {}
