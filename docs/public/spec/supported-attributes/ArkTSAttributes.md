@@ -16,11 +16,15 @@
 
 - `@readonly`：设置 struct 中某个 field 为只读。
 
+- `@rename("newName")`：修改用户侧对应投影的名字。该注解可用于 enum/union/struct/interface（修改类型名称）、function/method（修改函数/方法名称）、field（修改属性名称）、parameter（修改参数名称）。
+
 ## 类型注解
 
 - `@undefined`：添加在 Taihe `unit` 类型上，表示该 `unit` 类型在用户侧被投影为 `undefined`，而非默认的 `null`。
 
 - `@null`：添加在 Taihe `unit` 类型上，表示该 `unit` 类型在用户侧被投影为 `null`，该注解实际上与不添加任何注解的效果相同，仅用于明确标识该 `unit` 类型的语义。
+
+- `@literal("literalString")`：将一个 Taihe `unit` 类型在用户侧中投影为一个字面量字符串类型，且该字面量字符串的值为 `literalString`。例如，`a: @literal("foo") unit` 将在用户侧被投影为 `a: "foo"`。
 
 - `@bigint`：将一个 Taihe `Array<u64>` 在用户侧中投影为 `BigInt`。（使用可变长小端序补码编码）
 
@@ -39,3 +43,15 @@
 - `@get("propertyName")`：将一个方法设置为某个属性/变量的 get 方法。
 
 - `@set("propertyName")`：将一个方法设置为某个属性/变量的 set 方法。
+
+- `@overload("newName")`：**该注解计划废弃，禁止在新的 Taihe 文件中继续使用该注解，请使用更通用的 `@rename` 注解替代。**修改用户侧对应投影函数/方法的名字，并且允许多个 Taihe 函数/方法投影到同一个名字上形成重载。
+
+- `@async`：将一个返回 `T` 类型同步函数封装为接受 `AsyncCallback<T>` 的异步函数。（`type AsyncCallback<T> = (error: BusinessError | null, data: T | undefined) => void;`）
+
+- `@promise`：将一个返回 `T` 的函数封装为返回 `Promise<T>` 的异步函数。
+
+- `@gen_async("asyncName")`：在保留同步函数的同时，额外生成一个名称为 `asyncName` 的，接受 `AsyncCallback<T>` 的异步函数。参数 `asyncName` 可省略，当省略时，默认生成的异步函数名称为 `原函数名.rstrip("Sync")`。例如，若原函数名为 `fooSync`，则默认生成的异步函数名为 `foo`。**该注解计划废弃，禁止在新的 Taihe 文件中继续使用该注解，建议直接使用 `@async` 分别声明同步和异步函数。**
+
+- `@gen_promise("promiseName")`：在保留原函数的同时，额外生成一个名称为 `promiseName` 的，返回 `Promise<T>` 的异步函数。参数 `promiseName` 可省略，当省略时，默认生成的 Promise 函数名称为 `原函数名.rstrip("Sync")`。例如，若原函数名为 `fooSync`，则默认生成的 Promise 函数名为 `foo`。**该注解计划废弃，禁止在新的 Taihe 文件中继续使用该注解，建议直接使用 `@promise` 分别声明同步和异步函数。**
+
+- `@on_off("typeName", name="funcName")`：如果原始函数形式为 `foo(a: int, b: int): void`，则使用该注解后会变形成 `funcName(type: "typeName", a: int, b: int): void`。`typeName` 和 `funcName` 均可省略，当省略 `funcName` 时，要求函数以 `on` 或 `off` 开头，并以 `on` 或 `off` 作为生成函数的名称。当省略 `typeName` 时，会使用 `原函数名.lstrip(funcName)` 作为 `typeName`。例如，若原函数名为 `onEvent(a: int): void`，则使用 `@on_off` 注解并省略 `funcName` 和 `typeName` 后生成的函数形式为 `on(type: "Event", a: int): void`。

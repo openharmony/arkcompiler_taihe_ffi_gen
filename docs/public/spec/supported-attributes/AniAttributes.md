@@ -1,4 +1,4 @@
-# Taihe IDL ani 注解全集
+# Taihe IDL ANI 注解全集
 
 本文档中仅包含 ANI 后端特有的注解，此外，[ArkTS 后端通用的注解](ArkTSAttributes.md) 也都适用于 ANI 后端。
 
@@ -26,26 +26,10 @@
 
 ## 类型注解
 
-- `@literal("literalString")`：将一个 Taihe `unit` 类型在用户侧中投影为一个字面量字符串类型，且该字面量字符串的值为 `literalString`。例如，`a: @literal("foo") unit` 将在用户侧被投影为 `a: "foo"`。
-
 - `@fixedarray`：将 Taihe `Array<T>` 在用户侧中投影为 `fixedarray<T>`。
 
 - `@sts_type("MyType")`：将一个 `Opaque` 类型在 ArkTS 侧投影为 `MyType` 类型。如果 `MyType` 不在当前编译单元中定义，用户需要通过通过 `@!sts_inject_into_module` 注入相应的导入语句来引入 `MyType` 的定义。
 
 ## 函数/方法注解
 
-- `@rename("newName")`：修改用户侧对应投影函数/方法的名字。
-
-- `@overload("newName")`：**该注解计划废弃，禁止在新的 Taihe 文件中继续使用该注解，请使用更通用的 `@rename` 注解替代。**修改用户侧对应投影函数/方法的名字，并且允许多个 Taihe 函数/方法投影到同一个名字上形成重载。
-
 - `@constructor("ClassName")`：将一个全局函数在用户侧绑定设置为某个类的**命名**构造器。该注解**可以**与 `@rename` 一起使用。
-
-- `@async`：将一个返回 `T` 类型同步函数封装为接受 `AsyncCallback<T>` 的异步函数。（`type AsyncCallback<T> = (error: BusinessError | null, data: T | undefined) => void;`）
-
-- `@promise`：将一个返回 `T` 的函数封装为返回 `Promise<T>` 的异步函数。
-
-- `@gen_async("asyncName")`：在保留同步函数的同时，额外生成一个名称为 `asyncName` 的，接受 `AsyncCallback<T>` 的异步函数。参数 `asyncName` 可省略，当省略时，默认生成的异步函数名称为 `原函数名.rstrip("Sync")`。例如，若原函数名为 `fooSync`，则默认生成的异步函数名为 `foo`。**该注解计划废弃，禁止在新的 Taihe 文件中继续使用该注解，建议直接使用 `@async` 分别声明同步和异步函数。**
-
-- `@gen_promise("promiseName")`：在保留原函数的同时，额外生成一个名称为 `promiseName` 的，返回 `Promise<T>` 的异步函数。参数 `promiseName` 可省略，当省略时，默认生成的 Promise 函数名称为 `原函数名.rstrip("Sync")`。例如，若原函数名为 `fooSync`，则默认生成的 Promise 函数名为 `foo`。**该注解计划废弃，禁止在新的 Taihe 文件中继续使用该注解，建议直接使用 `@promise` 分别声明同步和异步函数。**
-
-- `@on_off("typeName", name="funcName")`：如果原始函数形式为 `foo(a: int, b: int): void`，则使用该注解后会变形成 `funcName(type: "typeName", a: int, b: int): void`。`typeName` 和 `funcName` 均可省略，当省略 `funcName` 时，要求函数以 `on` 或 `off` 开头，并以 `on` 或 `off` 作为生成函数的名称。当省略 `typeName` 时，会使用 `原函数名.lstrip(funcName)` 作为 `typeName`。例如，若原函数名为 `onEvent(a: int): void`，则使用 `@on_off` 注解并省略 `funcName` 和 `typeName` 后生成的函数形式为 `on(type: "Event", a: int): void`。

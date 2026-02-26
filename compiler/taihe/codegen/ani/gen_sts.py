@@ -25,12 +25,15 @@ from taihe.codegen.ani.analyses import (
     ArkTsModule,
     ArkTsModuleOrNamespace,
     EnumAniInfo,
+    EnumFieldAniInfo,
     GlobFuncAniInfo,
     IfaceAniInfo,
-    NamedFunctionLikeAniInfo,
+    NamedCallableAniInfo,
     PackageAniInfo,
     PackageGroupAniInfo,
+    ParamAniInfo,
     StructAniInfo,
+    StructFieldAniInfo,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -117,7 +120,7 @@ class StaticKind(FuncKind):
 
     class_name: str
 
-    def call_from_local(self, name) -> str:
+    def call_from_local(self, name: str) -> str:
         return f"{self.class_name}.{name}"
 
     def reverse_base_params(self) -> list[str]:
@@ -334,27 +337,66 @@ class StsPackageGenerator:
         self.target = target
         self.pkg = pkg
 
+        self.ctors_map: dict[str, list[GlobFuncDecl]] = {}
+        self.statics_map: dict[str, list[GlobFuncDecl]] = {}
+        self.glob_funcs: list[GlobFuncDecl] = []
+        for func in self.pkg.functions:
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
+            if class_name := func_ani_info.static_scope:
+                self.statics_map.setdefault(class_name, []).append(func)
+            elif class_name := func_ani_info.ctor_scope:
+                self.ctors_map.setdefault(class_name, []).append(func)
+            else:
+                self.glob_funcs.append(func)
+
     def gen_package(self):
+        self.gen_func_natives()
+
+        self.gen_func_impls()
+        for enum in self.pkg.enums:
+            enum_generator = StsEnumGenerator(self.am, self.target, enum)
+            enum_generator.gen_enum()
+        for union in self.pkg.unions:
+            union_generator = StsUnionGenerator(self.am, self.target, union)
+            union_generator.gen_union()
+        for struct in self.pkg.structs:
+            struct_ani_info = StructAniInfo.get(self.am, struct)
+            struct_generator = StsStructGenerator(
+                self.am,
+                self.target,
+                struct,
+                self.statics_map.get(struct_ani_info.sts_impl_name, []),
+                self.ctors_map.get(struct_ani_info.sts_impl_name, []),
+            )
+            struct_generator.gen_struct_interface()
+            struct_generator.gen_struct_class()
+            struct_generator.gen_struct_factory()
+        for iface in self.pkg.interfaces:
+            iface_ani_info = IfaceAniInfo.get(self.am, iface)
+            iface_generator = StsIfaceGenerator(
+                self.am,
+                self.target,
+                iface,
+                self.statics_map.get(iface_ani_info.sts_impl_name, []),
+                self.ctors_map.get(iface_ani_info.sts_impl_name, []),
+            )
+            iface_generator.gen_iface_interface()
+            iface_generator.gen_iface_class()
+            iface_generator.gen_iface_factory()
+
+        self.gen_func_reverses()
+        self.gen_method_reverses()
+
+    def gen_func_natives(self):
         for func in self.pkg.functions:
             native_func_generator = StsNativeFuncGenerator(self.am, self.target, func)
             native_func_generator.gen_native_func()
 
-        ctors_map: dict[str, list[GlobFuncDecl]] = {}
-        statics_map: dict[str, list[GlobFuncDecl]] = {}
-        glob_funcs: list[GlobFuncDecl] = []
-        for func in self.pkg.functions:
-            func_ani_info = GlobFuncAniInfo.get(self.am, func)
-            if class_name := func_ani_info.static_scope:
-                statics_map.setdefault(class_name, []).append(func)
-            elif class_name := func_ani_info.ctor_scope:
-                ctors_map.setdefault(class_name, []).append(func)
-            else:
-                glob_funcs.append(func)
-
+    def gen_func_impls(self):
         func_overload_register = OverloadRegister()
         func_on_off_register = OnOffRegister()
         func_kind = GlobalKind()
-        for func in glob_funcs:
+        for func in self.glob_funcs:
             any_func_generator = StsAnyFuncGenerator(
                 self.am,
                 self.target,
@@ -388,36 +430,9 @@ class StsPackageGenerator:
             )
             on_off_func_generator.gen_full_on_off_func()
 
-        for enum in self.pkg.enums:
-            enum_generator = StsEnumGenerator(self.am, self.target, enum)
-            enum_generator.gen_enum()
-        for union in self.pkg.unions:
-            union_generator = StsUnionGenerator(self.am, self.target, union)
-            union_generator.gen_union()
-        for struct in self.pkg.structs:
-            struct_generator = StsStructGenerator(
-                self.am,
-                self.target,
-                struct,
-                statics_map.get(struct.name, []),
-                ctors_map.get(struct.name, []),
-            )
-            struct_generator.gen_struct_interface()
-            struct_generator.gen_struct_class()
-            struct_generator.gen_struct_ctor()
-        for iface in self.pkg.interfaces:
-            iface_generator = StsIfaceGenerator(
-                self.am,
-                self.target,
-                iface,
-                statics_map.get(iface.name, []),
-                ctors_map.get(iface.name, []),
-            )
-            iface_generator.gen_iface_interface()
-            iface_generator.gen_iface_class()
-            iface_generator.gen_iface_ctor()
-
-        for func in glob_funcs:
+    def gen_func_reverses(self):
+        func_kind = GlobalKind()
+        for func in self.glob_funcs:
             reverse_func_generator = StsReverseFuncGenerator(
                 self.am,
                 self.target,
@@ -425,19 +440,9 @@ class StsPackageGenerator:
                 func_kind,
             )
             reverse_func_generator.gen_reverse_func()
-        for struct in self.pkg.structs:
-            struct_ani_info = StructAniInfo.get(self.am, struct)
-            ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
-            for ctor in ctors_map.get(struct.name, []):
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    ctor,
-                    ctor_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
-            func_kind = StaticKind(struct_ani_info.sts_impl_name)
-            for func in statics_map.get(struct.name, []):
+        for class_name, funcs in self.statics_map.items():
+            func_kind = StaticKind(class_name)
+            for func in funcs:
                 reverse_func_generator = StsReverseFuncGenerator(
                     self.am,
                     self.target,
@@ -445,26 +450,20 @@ class StsPackageGenerator:
                     func_kind,
                 )
                 reverse_func_generator.gen_reverse_func()
+        for class_name, ctors in self.ctors_map.items():
+            ctor_kind = CtorKind(class_name)
+            for ctor in ctors:
+                reverse_func_generator = StsReverseFuncGenerator(
+                    self.am,
+                    self.target,
+                    ctor,
+                    ctor_kind,
+                )
+                reverse_func_generator.gen_reverse_func()
+
+    def gen_method_reverses(self):
         for iface in self.pkg.interfaces:
             iface_ani_info = IfaceAniInfo.get(self.am, iface)
-            ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
-            for ctor in ctors_map.get(iface.name, []):
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    ctor,
-                    ctor_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
-            func_kind = StaticKind(iface_ani_info.sts_impl_name)
-            for func in statics_map.get(iface.name, []):
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    func,
-                    func_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
             meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
             for method in iface.methods:
                 reverse_func_generator = StsReverseFuncGenerator(
@@ -486,8 +485,9 @@ class StsEnumGenerator:
         if ConstAttr.get(self.enum) is not None:
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
             for item in self.enum.items:
+                item_ani_info = EnumFieldAniInfo.get(self.am, item)
                 self.target.writelns(
-                    f"export const {item.name}: {enum_ty_ani_info.sts_type_in(self.target)} = {dumps(item.value)};",
+                    f"export const {item_ani_info.sts_name}: {enum_ty_ani_info.sts_type_in(self.target)} = {dumps(item.value)};",
                 )
             return
 
@@ -504,8 +504,9 @@ class StsEnumGenerator:
             f"}}",
         ):
             for item in self.enum.items:
+                item_ani_info = EnumFieldAniInfo.get(self.am, item)
                 self.target.writelns(
-                    f"{item.name} = {dumps(item.value)},",
+                    f"{item_ani_info.sts_name} = {dumps(item.value)},",
                 )
 
 
@@ -577,13 +578,19 @@ class StsStructGenerator:
             for injected in struct_ani_info.interface_injected_codes:
                 self.target.write_block(injected)
 
-            for field in struct_ani_info.sts_local_fields:
-                readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
-                opt = "?" if OptionalAttr.get(field) else ""
-                field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
-                self.target.writelns(
-                    f"{readonly}{field.name}{opt}: {field_ty_ani_info.sts_type_in(self.target)};",
-                )
+            self.gen_struct_field_decls()
+
+    def gen_struct_field_decls(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        for field in struct_ani_info.sts_local_fields:
+            readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
+            opt = "?" if OptionalAttr.get(field) else ""
+            field_ani_info = StructFieldAniInfo.get(self.am, field)
+            field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+            self.target.writelns(
+                f"{readonly}{field_ani_info.sts_name}{opt}: {field_ty_ani_info.sts_type_in(self.target)};",
+            )
 
     def gen_struct_class(self):
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
@@ -621,153 +628,179 @@ class StsStructGenerator:
             for injected in struct_ani_info.class_injected_codes:
                 self.target.write_block(injected)
 
+            self.gen_struct_field_impls()
+            self.gen_struct_init_ctor()
+            self.gen_struct_copy_ctor()
+            self.gen_struct_ctor_impls()
+            self.gen_struct_func_impls()
+
+    def gen_struct_field_impls(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        for final in [
+            *struct_ani_info.sts_local_fields,
+            *struct_ani_info.sts_iface_extend_fields,
+        ]:
+            readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
+            opt = "?" if OptionalAttr.get(final) else ""
+            final_ani_info = StructFieldAniInfo.get(self.am, final)
+            final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+            self.target.writelns(
+                f"{readonly}{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)};",
+            )
+
+    def gen_struct_init_ctor(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        with self.target.indented(
+            f"constructor(",
+            f")",
+        ):
+            for parts in struct_ani_info.sorted_sts_all_fields:
+                final = parts[-1]
+                opt = "?" if OptionalAttr.get(final) else ""
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
+                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                self.target.writelns(
+                    f"{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
+                )
+        with self.target.indented(
+            f"{{",
+            f"}}",
+        ):
+            if struct_ani_info.sts_class_extends:
+                finals = []
+                for final in struct_ani_info.sts_class_extend_fields:
+                    final_ani_info = StructFieldAniInfo.get(self.am, final)
+                    finals.append(final_ani_info.sts_name)
+                finals_str = ", ".join(finals)
+                self.target.writelns(
+                    f"super({finals_str});",
+                )
             for final in [
                 *struct_ani_info.sts_local_fields,
                 *struct_ani_info.sts_iface_extend_fields,
             ]:
-                readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
-                opt = "?" if OptionalAttr.get(final) else ""
-                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
                 self.target.writelns(
-                    f"{readonly}{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)};",
+                    f"this.{final_ani_info.sts_name} = {final_ani_info.sts_name};",
                 )
 
-            with self.target.indented(
-                f"constructor(",
-                f")",
-            ):
-                for parts in struct_ani_info.sorted_sts_all_fields:
-                    final = parts[-1]
-                    opt = "?" if OptionalAttr.get(final) else ""
-                    final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
-                    self.target.writelns(
-                        f"{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
-                    )
-            with self.target.indented(
-                f"{{",
-                f"}}",
-            ):
-                if struct_ani_info.sts_class_extends:
-                    finals = []
-                    for final in struct_ani_info.sts_class_extend_fields:
-                        finals.append(final.name)
-                    finals_str = ", ".join(finals)
-                    self.target.writelns(
-                        f"super({finals_str});",
-                    )
-                for final in [
-                    *struct_ani_info.sts_local_fields,
-                    *struct_ani_info.sts_iface_extend_fields,
-                ]:
-                    self.target.writelns(
-                        f"this.{final.name} = {final.name};",
-                    )
-
-            with self.target.indented(
-                f"constructor(other: {struct_ani_info.sts_impl_name}) {{",
-                f"}}",
-            ):
-                if struct_ani_info.sts_class_extends:
-                    finals = []
-                    for final in struct_ani_info.sts_class_extend_fields:
-                        finals.append(f"other.{final.name}")
-                    finals_str = ", ".join(finals)
-                    self.target.writelns(
-                        f"super({finals_str});",
-                    )
-                for final in [
-                    *struct_ani_info.sts_local_fields,
-                    *struct_ani_info.sts_iface_extend_fields,
-                ]:
-                    self.target.writelns(
-                        f"this.{final.name} = other.{final.name};",
-                    )
-
-            # ctors
-            ctor_overload_register = OverloadRegister()
-            ctor_on_off_register = OnOffRegister()
-            ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
-            for ctor in self.ctors:
-                any_ctor_generator = StsAnyCtorGenerator(
-                    self.am,
-                    self.target,
-                    ctor,
-                    ctor_kind,
-                    "",
-                    ctor_overload_register,
-                    ctor_on_off_register,
-                )
-                any_ctor_generator.gen_any_ctor()
-            for name, info in ctor_overload_register.infos.items():
-                overload_ctor_generator = StsOverloadCtorGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    ctor_kind,
-                    "",
-                )
-                overload_ctor_generator.gen_overload_ctor()
-            for name, info in ctor_on_off_register.infos.items():
-                on_off_ctor_generator = StsOnOffCtorGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    ctor_kind,
-                    "",
-                )
-                on_off_ctor_generator.gen_full_on_off_ctor()
-
-            # funcs
-            func_overload_register = OverloadRegister()
-            func_on_off_register = OnOffRegister()
-            func_kind = StaticKind(struct_ani_info.sts_impl_name)
-            for func in self.funcs:
-                any_func_generator = StsAnyFuncGenerator(
-                    self.am,
-                    self.target,
-                    func,
-                    func_kind,
-                    "",
-                    func_overload_register,
-                    func_on_off_register,
-                )
-                any_func_generator.gen_any_func()
-            for name, info in func_overload_register.infos.items():
-                overload_func_generator = StsOverloadFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    func_kind,
-                    "",
-                )
-                overload_func_generator.gen_overload_func()
-            for name, info in func_on_off_register.infos.items():
-                on_off_func_generator = StsOnOffFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    func_kind,
-                    "",
-                )
-                on_off_func_generator.gen_full_on_off_func()
-
-    def gen_struct_ctor(self):
+    def gen_struct_copy_ctor(self):
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
 
         with self.target.indented(
-            f"function {struct_ani_info.sts_ctor_name}(",
+            f"constructor(other: {struct_ani_info.sts_impl_name}) {{",
+            f"}}",
+        ):
+            if struct_ani_info.sts_class_extends:
+                finals = []
+                for final in struct_ani_info.sts_class_extend_fields:
+                    final_ani_info = StructFieldAniInfo.get(self.am, final)
+                    finals.append(f"other.{final_ani_info.sts_name}")
+                finals_str = ", ".join(finals)
+                self.target.writelns(
+                    f"super({finals_str});",
+                )
+            for final in [
+                *struct_ani_info.sts_local_fields,
+                *struct_ani_info.sts_iface_extend_fields,
+            ]:
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
+                self.target.writelns(
+                    f"this.{final_ani_info.sts_name} = other.{final_ani_info.sts_name};",
+                )
+
+    def gen_struct_ctor_impls(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        ctor_overload_register = OverloadRegister()
+        ctor_on_off_register = OnOffRegister()
+        ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
+        for ctor in self.ctors:
+            any_ctor_generator = StsAnyCtorGenerator(
+                self.am,
+                self.target,
+                ctor,
+                ctor_kind,
+                "",
+                ctor_overload_register,
+                ctor_on_off_register,
+            )
+            any_ctor_generator.gen_any_ctor()
+        for name, info in ctor_overload_register.infos.items():
+            overload_ctor_generator = StsOverloadCtorGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                ctor_kind,
+                "",
+            )
+            overload_ctor_generator.gen_overload_ctor()
+        for name, info in ctor_on_off_register.infos.items():
+            on_off_ctor_generator = StsOnOffCtorGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                ctor_kind,
+                "",
+            )
+            on_off_ctor_generator.gen_full_on_off_ctor()
+
+    def gen_struct_func_impls(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        func_overload_register = OverloadRegister()
+        func_on_off_register = OnOffRegister()
+        func_kind = StaticKind(struct_ani_info.sts_impl_name)
+        for func in self.funcs:
+            any_func_generator = StsAnyFuncGenerator(
+                self.am,
+                self.target,
+                func,
+                func_kind,
+                "",
+                func_overload_register,
+                func_on_off_register,
+            )
+            any_func_generator.gen_any_func()
+        for name, info in func_overload_register.infos.items():
+            overload_func_generator = StsOverloadFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                func_kind,
+                "",
+            )
+            overload_func_generator.gen_overload_func()
+        for name, info in func_on_off_register.infos.items():
+            on_off_func_generator = StsOnOffFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                func_kind,
+                "",
+            )
+            on_off_func_generator.gen_full_on_off_func()
+
+    def gen_struct_factory(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        with self.target.indented(
+            f"function {struct_ani_info.sts_factory_name}(",
             f"): {struct_ani_info.sts_impl_name}",
         ):
             for parts in struct_ani_info.sorted_sts_all_fields:
                 final = parts[-1]
                 opt = "?" if OptionalAttr.get(final) else ""
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 self.target.writelns(
-                    f"{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
+                    f"{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
                 )
         with self.target.indented(
             f"{{",
@@ -776,7 +809,8 @@ class StsStructGenerator:
             finals = []
             for parts in struct_ani_info.sorted_sts_all_fields:
                 final = parts[-1]
-                finals.append(final.name)
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
+                finals.append(final_ani_info.sts_name)
             finals_str = ", ".join(finals)
             self.target.writelns(
                 f"return new {struct_ani_info.sts_impl_name}({finals_str});",
@@ -826,45 +860,48 @@ class StsIfaceGenerator:
             for injected in iface_ani_info.interface_injected_codes:
                 self.target.write_block(injected)
 
-            # methods
-            meth_overload_register = OverloadRegister()
-            meth_on_off_register = OnOffRegister()
-            meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
-            for method in self.iface.methods:
-                any_func_decl_generator = StsAnyFuncDeclGenerator(
-                    self.am,
-                    self.target,
-                    method,
-                    meth_kind,
-                    "",
-                    meth_overload_register,
-                    meth_on_off_register,
-                )
-                any_func_decl_generator.gen_any_func_decl()
-            for name, info in meth_overload_register.infos.items():
-                overload_func_generator = StsOverloadFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    meth_kind,
-                    "",
-                )
-                overload_func_generator.gen_overload_func()
-            for name, info in meth_on_off_register.infos.items():
-                on_off_func_generator = StsOnOffFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    meth_kind,
-                    "",
-                )
-                on_off_func_generator.gen_half_on_off_func()
+            self.gen_iface_method_decls()
+
+    def gen_iface_method_decls(self):
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+
+        meth_overload_register = OverloadRegister()
+        meth_on_off_register = OnOffRegister()
+        meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
+        for method in self.iface.methods:
+            any_func_decl_generator = StsAnyFuncDeclGenerator(
+                self.am,
+                self.target,
+                method,
+                meth_kind,
+                "",
+                meth_overload_register,
+                meth_on_off_register,
+            )
+            any_func_decl_generator.gen_any_func_decl()
+        for name, info in meth_overload_register.infos.items():
+            overload_func_generator = StsOverloadFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                meth_kind,
+                "",
+            )
+            overload_func_generator.gen_overload_func()
+        for name, info in meth_on_off_register.infos.items():
+            on_off_func_generator = StsOnOffFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                meth_kind,
+                "",
+            )
+            on_off_func_generator.gen_half_on_off_func()
 
     def gen_iface_class(self):
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
-        package_ani_info = PackageAniInfo.get(self.am, self.iface.parent_pkg)
 
         sts_decl = f"class {iface_ani_info.sts_impl_name}"
         if iface_ani_info.is_class():
@@ -899,168 +936,192 @@ class StsIfaceGenerator:
             for injected in iface_ani_info.class_injected_codes:
                 self.target.write_block(injected)
 
-            if not iface_ani_info.sts_class_extends:
-                self.target.writelns(
-                    f"{iface_ani_info.vtbl_ptr}: long;",
-                    f"{iface_ani_info.data_ptr}: long;",
-                )
-                with self.target.indented(
-                    f"{iface_ani_info.register}(): void {{",
-                    f"}}",
-                ):
-                    self.target.writelns(
-                        f"{package_ani_info.ns.mod.registry}.register(this, this.{iface_ani_info.data_ptr});",
-                    )
-                with self.target.indented(
-                    f"constructor(vtblPtr: long, dataPtr: long) {{",
-                    f"}}",
-                ):
-                    self.target.writelns(
-                        f"this.{iface_ani_info.vtbl_ptr} = vtblPtr;",
-                        f"this.{iface_ani_info.data_ptr} = dataPtr;",
-                        f"this.{iface_ani_info.register}();",
-                    )
-            else:
-                with self.target.indented(
-                    f"constructor(vtblPtr: long, dataPtr: long) {{",
-                    f"}}",
-                ):
-                    self.target.writelns(
-                        f"super(vtblPtr, dataPtr);",
-                    )
+            self.gen_iface_init_ctor()
+            self.gen_iface_copy_ctor()
+            self.gen_iface_method_natives()
+            self.gen_iface_method_impls()
+            self.gen_iface_ctor_impls()
+            self.gen_iface_func_impls()
 
+    def gen_iface_init_ctor(self):
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+        package_ani_info = PackageAniInfo.get(self.am, self.iface.parent_pkg)
+
+        if not iface_ani_info.sts_class_extends:
+            self.target.writelns(
+                f"{iface_ani_info.vtbl_ptr}: long;",
+                f"{iface_ani_info.data_ptr}: long;",
+            )
             with self.target.indented(
-                f"constructor(other: {iface_ani_info.sts_impl_name}) {{",
+                f"{iface_ani_info.register}(): void {{",
                 f"}}",
             ):
                 self.target.writelns(
-                    f"this(other.{iface_ani_info.vtbl_ptr}, {package_ani_info.ns.mod.obj_dup}(other.{iface_ani_info.data_ptr}));",
+                    f"{package_ani_info.ns.mod.registry}.register(this, this.{iface_ani_info.data_ptr});",
+                )
+            with self.target.indented(
+                f"constructor(vtblPtr: long, dataPtr: long) {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"this.{iface_ani_info.vtbl_ptr} = vtblPtr;",
+                    f"this.{iface_ani_info.data_ptr} = dataPtr;",
+                    f"this.{iface_ani_info.register}();",
+                )
+        else:
+            with self.target.indented(
+                f"constructor(vtblPtr: long, dataPtr: long) {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"super(vtblPtr, dataPtr);",
                 )
 
-            iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-            for ancestor in iface_abi_info.ancestor_dict:
-                for method in ancestor.methods:
-                    native_func_generator = StsNativeFuncGenerator(
-                        self.am,
-                        self.target,
-                        method,
-                    )
-                    native_func_generator.gen_native_func()
+    def gen_iface_copy_ctor(self):
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+        package_ani_info = PackageAniInfo.get(self.am, self.iface.parent_pkg)
 
-            # methods
-            meth_overload_register = OverloadRegister()
-            meth_on_off_register = OnOffRegister()
-            meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
-            for ancestor in iface_abi_info.ancestor_dict:
-                for method in ancestor.methods:
-                    any_func_generator = StsAnyFuncGenerator(
-                        self.am,
-                        self.target,
-                        method,
-                        meth_kind,
-                        "",
-                        meth_overload_register,
-                        meth_on_off_register,
-                    )
-                    any_func_generator.gen_any_func()
-            for name, info in meth_overload_register.infos.items():
-                overload_func_generator = StsOverloadFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    meth_kind,
-                    "",
-                )
-                overload_func_generator.gen_overload_func()
-            for name, info in meth_on_off_register.infos.items():
-                on_off_func_generator = StsOnOffFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    meth_kind,
-                    "",
-                )
-                on_off_func_generator.gen_half_on_off_func()
+        with self.target.indented(
+            f"constructor(other: {iface_ani_info.sts_impl_name}) {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"this(other.{iface_ani_info.vtbl_ptr}, {package_ani_info.ns.mod.obj_dup}(other.{iface_ani_info.data_ptr}));",
+            )
 
-            # ctors
-            ctor_overload_register = OverloadRegister()
-            ctor_on_off_register = OnOffRegister()
-            ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
-            for ctor in self.ctors:
-                any_ctor_generator = StsAnyCtorGenerator(
-                    self.am,
-                    self.target,
-                    ctor,
-                    ctor_kind,
-                    "",
-                    ctor_overload_register,
-                    ctor_on_off_register,
-                )
-                any_ctor_generator.gen_any_ctor()
-            for name, info in ctor_overload_register.infos.items():
-                overload_ctor_generator = StsOverloadCtorGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    ctor_kind,
-                    "",
-                )
-                overload_ctor_generator.gen_overload_ctor()
-            for name, info in ctor_on_off_register.infos.items():
-                on_off_ctor_generator = StsOnOffCtorGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    ctor_kind,
-                    "",
-                )
-                on_off_ctor_generator.gen_full_on_off_ctor()
+    def gen_iface_method_natives(self):
+        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
 
-            # funcs
-            func_overload_register = OverloadRegister()
-            func_on_off_register = OnOffRegister()
-            func_kind = StaticKind(iface_ani_info.sts_impl_name)
-            for func in self.funcs:
+        for ancestor in iface_abi_info.ancestor_dict:
+            for method in ancestor.methods:
+                native_func_generator = StsNativeFuncGenerator(
+                    self.am,
+                    self.target,
+                    method,
+                )
+                native_func_generator.gen_native_func()
+
+    def gen_iface_method_impls(self):
+        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+
+        meth_overload_register = OverloadRegister()
+        meth_on_off_register = OnOffRegister()
+        meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
+        for ancestor in iface_abi_info.ancestor_dict:
+            for method in ancestor.methods:
                 any_func_generator = StsAnyFuncGenerator(
                     self.am,
                     self.target,
-                    func,
-                    func_kind,
+                    method,
+                    meth_kind,
                     "",
-                    func_overload_register,
-                    func_on_off_register,
+                    meth_overload_register,
+                    meth_on_off_register,
                 )
                 any_func_generator.gen_any_func()
-            for name, info in func_overload_register.infos.items():
-                overload_func_generator = StsOverloadFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    func_kind,
-                    "",
-                )
-                overload_func_generator.gen_overload_func()
-            for name, info in func_on_off_register.infos.items():
-                on_off_func_generator = StsOnOffFuncGenerator(
-                    self.am,
-                    self.target,
-                    name,
-                    info,
-                    func_kind,
-                    "",
-                )
-                on_off_func_generator.gen_full_on_off_func()
+        for name, info in meth_overload_register.infos.items():
+            overload_func_generator = StsOverloadFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                meth_kind,
+                "",
+            )
+            overload_func_generator.gen_overload_func()
+        for name, info in meth_on_off_register.infos.items():
+            on_off_func_generator = StsOnOffFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                meth_kind,
+                "",
+            )
+            on_off_func_generator.gen_half_on_off_func()
 
-    def gen_iface_ctor(self):
+    def gen_iface_ctor_impls(self):
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+
+        ctor_overload_register = OverloadRegister()
+        ctor_on_off_register = OnOffRegister()
+        ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
+        for ctor in self.ctors:
+            any_ctor_generator = StsAnyCtorGenerator(
+                self.am,
+                self.target,
+                ctor,
+                ctor_kind,
+                "",
+                ctor_overload_register,
+                ctor_on_off_register,
+            )
+            any_ctor_generator.gen_any_ctor()
+        for name, info in ctor_overload_register.infos.items():
+            overload_ctor_generator = StsOverloadCtorGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                ctor_kind,
+                "",
+            )
+            overload_ctor_generator.gen_overload_ctor()
+        for name, info in ctor_on_off_register.infos.items():
+            on_off_ctor_generator = StsOnOffCtorGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                ctor_kind,
+                "",
+            )
+            on_off_ctor_generator.gen_full_on_off_ctor()
+
+    def gen_iface_func_impls(self):
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+
+        func_overload_register = OverloadRegister()
+        func_on_off_register = OnOffRegister()
+        func_kind = StaticKind(iface_ani_info.sts_impl_name)
+        for func in self.funcs:
+            any_func_generator = StsAnyFuncGenerator(
+                self.am,
+                self.target,
+                func,
+                func_kind,
+                "",
+                func_overload_register,
+                func_on_off_register,
+            )
+            any_func_generator.gen_any_func()
+        for name, info in func_overload_register.infos.items():
+            overload_func_generator = StsOverloadFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                func_kind,
+                "",
+            )
+            overload_func_generator.gen_overload_func()
+        for name, info in func_on_off_register.infos.items():
+            on_off_func_generator = StsOnOffFuncGenerator(
+                self.am,
+                self.target,
+                name,
+                info,
+                func_kind,
+                "",
+            )
+            on_off_func_generator.gen_full_on_off_func()
+
+    def gen_iface_factory(self):
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
 
         with self.target.indented(
-            f"function {iface_ani_info.sts_ctor_name}(vtblPtr: long, dataPtr: long): {iface_ani_info.sts_impl_name} {{",
+            f"function {iface_ani_info.sts_factory_name}(vtblPtr: long, dataPtr: long): {iface_ani_info.sts_impl_name} {{",
             f"}}",
         ):
             self.target.writelns(
@@ -1080,12 +1141,13 @@ class StsNativeFuncGenerator:
         self.func = func
 
     def gen_native_func(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         params_sts = []
         for param in self.func.params:
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_sts.append(
-                f"{param.name}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
         params_sts_str = ", ".join(params_sts)
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
@@ -1119,20 +1181,21 @@ class StsAnyFuncDeclGenerator:
         self.on_off_register = on_off_register
 
     def gen_any_func_decl(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
         args_sts = []
         for param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_ty_sts_sig.append(param_ty_ani_info.type_sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
-                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
             return_ty_sts_name = return_ty_ani_info.sts_type_in(self.target)
@@ -1340,24 +1403,25 @@ class StsAnyFuncGenerator:
         self.on_off_register = on_off_register
 
     def gen_any_func(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
         args_sts = []
         for param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_ty_sts_sig.append(param_ty_ani_info.type_sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
-                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
         args_sts = func_ani_info.as_native_args(args_sts)
         args_sts_str = ", ".join(args_sts)
         result_sts = (
-            f"{func_ani_info.call_native(func_ani_info.native_name)}({args_sts_str})"
+            f"{func_ani_info.native_call}{func_ani_info.native_name}({args_sts_str})"
         )
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -1650,24 +1714,25 @@ class StsAnyCtorGenerator:
         self.on_off_register = on_off_register
 
     def gen_any_ctor(self):
-        ctor_ani_info = GlobFuncAniInfo.get(self.am, self.ctor)
+        ctor_ani_info = NamedCallableAniInfo.get(self.am, self.ctor)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
         args_sts = []
         for param in ctor_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_ty_sts_sig.append(param_ty_ani_info.type_sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
-                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
         args_sts = ctor_ani_info.as_native_args(args_sts)
         args_sts_str = ", ".join(args_sts)
         result_sts = (
-            f"{ctor_ani_info.call_native(ctor_ani_info.native_name)}({args_sts_str})"
+            f"{ctor_ani_info.native_call}{ctor_ani_info.native_name}({args_sts_str})"
         )
         if isinstance(return_ty := self.ctor.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -2002,14 +2067,15 @@ class StsReverseFuncGenerator:
         self.func_kind = func_kind
 
     def gen_reverse_func(self):
-        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
+        func_ani_info = NamedCallableAniInfo.get(self.am, self.func)
         args_sts = []
         params_sts = self.func_kind.reverse_base_params()
         for param in self.func.params:
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
             params_sts.append(
-                f"{param.name}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
         args_sts = func_ani_info.as_normal_args(args_sts)
         params_sts_str = ", ".join(params_sts)

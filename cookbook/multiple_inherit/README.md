@@ -118,7 +118,6 @@ public:
 
     string getMessage() { return "It's Rect"; }
 
-    // 覆盖原有方法需要 override
     void baseFunc() override {
         std::cout << "IRect" << std::endl;
     }

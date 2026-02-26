@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "override.ani.hpp"
+#include "class_test.ani.hpp"
 
 #if __has_include(<ani.h>)
 #include <ani.h>
@@ -29,8 +29,8 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
     if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {
         return ANI_ERROR;
     }
-    if (ANI_OK != override::ANIRegister(env)) {
-        std::cerr << "Error from override::ANIRegister" << std::endl;
+    if (ANI_OK != class_test::ANIRegister(env)) {
+        std::cerr << "Error from class_test::ANIRegister" << std::endl;
         return ANI_ERROR;
     }
     *result = ANI_VERSION_1;

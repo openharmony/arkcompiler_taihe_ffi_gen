@@ -15,19 +15,26 @@
 
 // This file is a test file.
 // NOLINTBEGIN
-#include "rename_example.impl.hpp"
-#include "rename_example.proj.hpp"
+#include "rename_test.impl.hpp"
+#include "rename_test.proj.hpp"
 #include "taihe/runtime.hpp"
+#include <iostream>
 
 using namespace taihe;
-using namespace rename_example;
+using namespace rename_test;
 
 namespace {
 
-// C++ side always uses original names
-int32_t OldFoo(int32_t a, int32_t b)
+// C++ side uses original names
+
+int32_t OldAdd(int32_t a, int32_t b)
 {
     return a + b;
+}
+
+int32_t GetColorValue(OldColor c)
+{
+    return c.get_value();
 }
 
 OldPoint CreatePoint(int32_t x, int32_t y)
@@ -35,28 +42,37 @@ OldPoint CreatePoint(int32_t x, int32_t y)
     return {x, y};
 }
 
-class OldGreeterImpl {
-    string name_;
+int32_t GetPointSum(OldPoint const &p)
+{
+    return p.x + p.y;
+}
 
+class OldCalculatorImpl {
 public:
-    OldGreeterImpl(string_view name) : name_(name)
+    int32_t OldCompute(int32_t a, int32_t b)
     {
-    }
-
-    string Greet()
-    {
-        return "Hello from " + name_;
+        return a * b;
     }
 };
 
-OldGreeter CreateGreeter(string_view name)
+OldCalculator CreateCalculator()
 {
-    return make_holder<OldGreeterImpl, OldGreeter>(name);
+    return make_holder<OldCalculatorImpl, OldCalculator>();
 }
 
-::taihe::string TestParamRename(::taihe::string_view msg)
+OldData CreateIntData(int32_t v)
 {
-    return "Received message: " + msg;
+    return OldData::make_intVal(v);
+}
+
+OldData CreateStrData(string_view v)
+{
+    return OldData::make_strVal(v);
+}
+
+OldMyStruct MyStructCtor(unit dummy, int32_t a, string_view b)
+{
+    return OldMyStruct {a, b};
 }
 
 string MyStructStaticFunc()
@@ -72,18 +88,26 @@ public:
     }
 };
 
-OldMyInterface MyInterfaceCtor()
+OldMyInterface MyInterfaceCtor(unit dummy)
 {
     return taihe::make_holder<OldMyInterfaceImpl, OldMyInterface>();
 }
 
+string MyInterfaceStaticMethod()
+{
+    return "Hello from MyInterfaceStaticMethod";
+}
 }  // namespace
 
-// Since these macros are auto-generate, lint will cause false positive.
-TH_EXPORT_CPP_API_OldFoo(OldFoo);
+TH_EXPORT_CPP_API_OldAdd(OldAdd);
+TH_EXPORT_CPP_API_GetColorValue(GetColorValue);
 TH_EXPORT_CPP_API_CreatePoint(CreatePoint);
-TH_EXPORT_CPP_API_CreateGreeter(CreateGreeter);
-TH_EXPORT_CPP_API_TestParamRename(TestParamRename);
+TH_EXPORT_CPP_API_GetPointSum(GetPointSum);
+TH_EXPORT_CPP_API_CreateCalculator(CreateCalculator);
+TH_EXPORT_CPP_API_CreateIntData(CreateIntData);
+TH_EXPORT_CPP_API_CreateStrData(CreateStrData);
+TH_EXPORT_CPP_API_MyStructCtor(MyStructCtor);
 TH_EXPORT_CPP_API_MyStructStaticFunc(MyStructStaticFunc);
 TH_EXPORT_CPP_API_MyInterfaceCtor(MyInterfaceCtor);
+TH_EXPORT_CPP_API_MyInterfaceStaticMethod(MyInterfaceStaticMethod);
 // NOLINTEND

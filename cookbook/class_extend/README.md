@@ -1,5 +1,7 @@
 # 类继承（Class Extend）
 
+> **注意**：本文档中所介绍的方法已经过时，现在你可以直接使用 [继承](../inherit/README.md#class-注解与继承实现的关系) 教程中介绍的方式来实现类继承，无需使用 `@!sts_inject` 注解。
+
 > **学习目标**：掌握通过 `@!sts_inject` 实现 ArkTS 侧类继承的高级模式。
 
 本教程介绍如何在 ArkTS 侧实现类继承，同时保持与 C++ 数据结构的正确绑定。
@@ -193,5 +195,5 @@ function main() {
 ## 相关文档
 
 - [继承](../inherit/README.md) - 基本继承
-- [重写](../override/README.md) - 方法重写
+- [类](../class/README.md) - 类、静态方法和构造函数
 - [External Object](../external_obj/README.md) - 外部对象处理

@@ -13,16 +13,26 @@
  * limitations under the License.
  */
 
-@class
-interface UIAbility {
-    onForeground(): void;
-    onBackground(): void;
+#include "rename_test.ani.hpp"
+
+#if __has_include(<ani.h>)
+#include <ani.h>
+#elif __has_include(<ani/ani.h>)
+#include <ani/ani.h>
+#else
+#error "ani.h not found. Please ensure the Ani SDK is correctly installed."
+#endif
+
+ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
+{
+    ani_env *env;
+    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {
+        return ANI_ERROR;
+    }
+    if (ANI_OK != rename_test::ANIRegister(env)) {
+        std::cerr << "Error from rename_test::ANIRegister" << std::endl;
+        return ANI_ERROR;
+    }
+    *result = ANI_VERSION_1;
+    return ANI_OK;
 }
-
-@ctor("UIAbility")
-function getUIAbility(): UIAbility;
-
-function useUIAbility(a: UIAbility): void;
-
-@static("UIAbility")
-function logLifecycle(str: String): void;

@@ -13,36 +13,19 @@
  * limitations under the License.
  */
 
-// Function rename
-@rename("newFoo")
-function OldFoo(a: i32, b: i32): i32;
-
-// Enum rename (type and items)
-@rename("Color")
-enum OldColor: i32 {
-    @rename("red") RED = 0,
-    @rename("green") GREEN = 1,
-    @rename("blue") BLUE = 2,
+@class
+interface UIAbility {
+    onForeground(): void;
+    onBackground(): void;
 }
 
-// Struct rename (type and fields)
-@rename("Point")
-struct OldPoint {
-    @rename("xPos") x: i32;
-    @rename("yPos") y: i32;
-}
+@ctor("UIAbility")
+function getUIAbility(): UIAbility;
 
-function CreatePoint(x: i32, y: i32): OldPoint;
+function useUIAbility(a: UIAbility): void;
 
-// Interface rename
-@rename("Greeter")
-interface OldGreeter {
-    Greet(): String;
-}
-
-function CreateGreeter(name: String): OldGreeter;
-
-function TestParamRename(@rename("message") msg: String): String;
+@static("UIAbility")
+function logLifecycle(str: String): void;
 
 @class
 @rename("MyStruct")
