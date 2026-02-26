@@ -46,6 +46,7 @@ AnyAttribute
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import MISSING, dataclass, fields
+from dataclasses import field as datafield
 from difflib import get_close_matches
 from itertools import chain
 from types import UnionType
@@ -77,7 +78,7 @@ class Argument:
     evaluated value of each argument.
     """
 
-    loc: SourceLocation | None
+    loc: SourceLocation | None = datafield(kw_only=True)
     """Source location of this argument for error reporting.
 
     For positional arguments, this covers the entire argument expression.
@@ -111,7 +112,7 @@ class AnyAttribute(ABC):
     way to retrieve the name and arguments of an attribute for diagnostics.
     """
 
-    loc: SourceLocation | None
+    loc: SourceLocation | None = datafield(kw_only=True)
     """Source location of the attribute name for error reporting."""
 
     @property
@@ -307,15 +308,16 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[_D]):
                     return None
                 kwargs[arg.key] = arg
 
-        return cls.try_construct_from_parsed_args(raw.loc, args, kwargs, dm)
+        return cls.try_construct_from_parsed_args(args, kwargs, dm, loc=raw.loc)
 
     @classmethod
     def try_construct_from_parsed_args(
         cls,
-        loc: SourceLocation | None,
         args: list[Argument],
         kwargs: dict[str, Argument],
         dm: DiagnosticsManager,
+        *,
+        loc: SourceLocation | None,
     ) -> Self | None:
         """Constructs the attribute instance from parsed arguments.
 
@@ -411,6 +413,8 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[_D]):
 
     @override
     def get_args(self) -> Iterable[Argument]:
+        positional_args: list[Argument] = []
+        keyword_args: list[Argument] = []
         for field in fields(self):
             if field.name == "loc":
                 # Skip the 'loc' field in the argument list
@@ -419,8 +423,14 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[_D]):
                 # Skip fields that are not intended for initialization
                 continue
             value = getattr(self, field.name, None)
-            if value is not None:
-                yield Argument(key=field.name, value=value, loc=None)
+            if value is None:
+                continue
+            if field.kw_only:
+                keyword_args.append(Argument(field.name, value, loc=None))
+            else:
+                positional_args.append(Argument(None, value, loc=None))
+        yield from positional_args
+        yield from keyword_args
 
 
 class TypedAttribute(AutoCheckedAttribute[_D]):
