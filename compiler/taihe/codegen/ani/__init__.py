@@ -58,8 +58,8 @@ class AniBridgeBackendConfig(BackendConfig):
         )
 
     def construct(self, instance: "CompilerInstance"):
-        from taihe.codegen.ani.analyses import ArkTsNamingConfig, ArkTsOutDir
-        from taihe.codegen.ani.attributes import all_attr_types
+        from taihe.codegen.ani.analyses import ArkTsOutDir
+        from taihe.codegen.ani.attributes import StsKeepNameAttr, all_attr_types
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
         from taihe.codegen.ani.gen_sts import StsCodeGenerator
 
@@ -75,11 +75,6 @@ class AniBridgeBackendConfig(BackendConfig):
                     ArkTsOutDir,
                     self._ci.package_group,
                 )
-                self._ci.analysis_manager.provide(
-                    ArkTsNamingConfig(self._config.keep_name),
-                    ArkTsNamingConfig,
-                    self._ci.package_group,
-                )
                 self._ci.attribute_registry.register(*all_attr_types)
 
             def inject(self):
@@ -89,6 +84,12 @@ class AniBridgeBackendConfig(BackendConfig):
                         is_stdlib=True,
                     )
                 )
+
+            def post_process(self):
+                if self._config.keep_name:
+                    for p in self._ci.package_group.packages:
+                        if StsKeepNameAttr.get(p) is None:
+                            p.add_attribute(StsKeepNameAttr(loc=p.loc))
 
             def generate(self):
                 om = self._ci.output_manager
