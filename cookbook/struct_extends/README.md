@@ -177,41 +177,8 @@ Player2's position: 1,1,1
 
 ---
 
-## `@readonly` 只读字段
-
-使用 `@readonly` 注解可以将 struct 字段标记为只读，在 ArkTS 侧生成 `readonly` 修饰符。
-
-**File: `idl/config.taihe`**
-
-```rust
-struct Config {
-    @readonly name: String;      // readonly name: string
-    @readonly version: i32;      // readonly version: int
-    description: String;         // description: string (可修改)
-}
-```
-
-**生成的 ArkTS 代码：**
-
-```typescript
-export interface Config {
-    readonly name: string;
-    readonly version: int;
-    description: string;
-}
-```
-
-**使用示例：**
-
-```typescript
-let config: Config = { name: "App", version: 1, description: "My app" };
-config.description = "Updated";  // OK
-// config.name = "New";          // Error: 只读属性
-```
-
----
-
 ## 相关文档
 
+- [属性](../property/README.md) - `@get`/`@set` 访问器与 `@readonly` 只读字段
 - [继承](../inherit/README.md) - 接口继承
 - [Enum 与 Union](../enum_union/README.md) - 枚举和联合类型

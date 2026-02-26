@@ -14,10 +14,10 @@
  */
 
 union NullableValue {
+    uValue: @undefined unit;
+    nValue: unit;
     sValue: String;
     iValue: i32;
-    uValue: @undefined unit;
-    nValue;
 }
 
 function makeNullableValue(tag: i32): NullableValue;
