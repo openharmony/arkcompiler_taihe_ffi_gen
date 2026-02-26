@@ -312,7 +312,7 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
         return v.visit_generic_arg(self)
 
 
-class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
+class ParamDecl(NamedDeclWithParent["CallableDecl"]):
     ty_ref: ExplicitTypeRefDecl
 
     def __init__(
@@ -331,7 +331,7 @@ class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
         return f"parameter {self.name}"
 
     @property
-    def parent_func(self) -> "FunctionLikeDecl":
+    def parent_func(self) -> "CallableDecl":
         assert self._node_parent
         return self._node_parent
 
@@ -1034,10 +1034,10 @@ class IfaceDecl(TypeDecl):
         return v.visit_iface_decl(self)
 
 
-NamedFunctionLikeDecl = GlobFuncDecl | IfaceMethodDecl
-FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
+NamedCallableDecl = GlobFuncDecl | IfaceMethodDecl
+CallableDecl = NamedCallableDecl | CallbackTypeRefDecl
 TypeHolderDecl = (
-    FunctionLikeDecl
+    CallableDecl
     | ParamDecl
     | StructFieldDecl
     | UnionFieldDecl

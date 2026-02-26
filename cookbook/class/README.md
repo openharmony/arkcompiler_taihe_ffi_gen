@@ -1,4 +1,4 @@
-# 重写（Override）
+# 类、静态方法与构造函数
 
 > **学习目标**：掌握如何在 ArkTS 侧继承 Taihe 接口并重写方法。
 
@@ -15,11 +15,36 @@ Taihe 支持在 ArkTS 侧创建子类，继承 Taihe 定义的父类，并重写
 | `@static("Class")` | 添加静态方法 | `@static("UIAbility") function log()` |
 | `@rename` | 重命名 | `@rename("logLifecycle") @static("OtherAbility") function logLifecycleInOtherAbility()` |
 
+> **注意：**
+> - 只有被 `@class` 修饰的 struct/interface 才能拥有 `@ctor` 或 `@static` 成员，否则会导致编译错误。
+> - 当 struct/interface 使用 `@rename` 重命名后，所有 `@ctor` 和 `@static` 的 class name 参数必须使用重命名后的名称，而非原始名称。
+
+#### 示例：
+
+```rust
+@class
+@rename("RenamedClass")
+interface OldClass {
+    foo(): void;
+}
+
+// 正确：@ctor/@static 使用重命名后的类名
+@ctor("RenamedClass")
+function createRenamedClass(): OldClass;
+
+@static("RenamedClass")
+function staticMethod(): void;
+
+// 错误：@ctor/@static 使用原始类名会导致编译错误
+// @ctor("OldClass")
+// function createOldClass(): OldClass;
+```
+
 ---
 
 ## 第一步：定义接口
 
-**File: `idl/override.taihe`**
+**File: `idl/class.taihe`**
 
 ```rust
 @class
@@ -74,13 +99,13 @@ function createIfaceBWithString(arg: String): IfaceB;
 
 ## 第二步：实现 C++ 代码
 
-**File: `author/src/override.impl.cpp`**
+**File: `author/src/class.impl.cpp`**
 
 ```cpp
-#include "override.impl.hpp"
+#include "class.impl.hpp"
 
 using namespace taihe;
-using namespace override;
+using namespace class;
 
 class UIAbilityImpl {
 public:
@@ -113,7 +138,7 @@ TH_EXPORT_CPP_API_logLifecycle(logLifecycle);
 ## 第三步：编译运行
 
 ```sh
-taihe-tryit test -u sts cookbook/override -Carkts:keep-name
+taihe-tryit test -u sts cookbook/class -Carkts:keep-name
 ```
 
 ## 使用示例
@@ -121,9 +146,9 @@ taihe-tryit test -u sts cookbook/override -Carkts:keep-name
 **File: `user/main.ets`**
 
 ```typescript
-import { UIAbility, useUIAbility } from "override";
+import { UIAbility, useUIAbility } from "class";
 
-loadLibrary("override");
+loadLibrary("class");
 
 // 继承并重写方法
 class MyAbility extends UIAbility {

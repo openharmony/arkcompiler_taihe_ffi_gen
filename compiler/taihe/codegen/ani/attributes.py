@@ -28,6 +28,7 @@ from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    NamedDecl,
     PackageDecl,
     PackageLevelDecl,
     ParamDecl,
@@ -154,6 +155,8 @@ UNIT_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 @dataclass
 class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
+    # TODO: remove UnionFieldDecl and StructFieldDecl in the future
+
     NAME = "null"
     TARGETS = (UnionFieldDecl, StructFieldDecl, TypeRefDecl)
     ATTRIBUTE_GROUP_TAGS = frozenset({UNIT_ATTRIBUTE_GROUP})
@@ -182,6 +185,8 @@ class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
 
 @dataclass
 class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
+    # TODO: remove UnionFieldDecl and StructFieldDecl in the future
+
     NAME = "undefined"
     TARGETS = (UnionFieldDecl, StructFieldDecl, TypeRefDecl)
     ATTRIBUTE_GROUP_TAGS = frozenset({UNIT_ATTRIBUTE_GROUP})
@@ -431,9 +436,9 @@ class StsTypeAttr(TypedAttribute[TypeRefDecl]):
 
 
 @dataclass
-class RenameAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+class RenameAttr(TypedAttribute[NamedDecl]):
     NAME = "rename"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    TARGETS = (NamedDecl,)
 
     name: str = ""
 

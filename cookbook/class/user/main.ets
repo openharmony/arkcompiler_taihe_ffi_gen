@@ -14,9 +14,9 @@
  */
 
 import {BusinessError} from "@ohos.base";
-import {UIAbility, useUIAbility} from "override";
+import {MyInterface, MyStruct, UIAbility, useUIAbility} from "class_test";
 
-loadLibrary("override");
+loadLibrary("class");
 
 class MyAbility extends UIAbility {
     constructor() {
@@ -31,4 +31,13 @@ function main() {
     let my_uiability: UIAbility = new MyAbility();
     useUIAbility(my_uiability);
     MyAbility.logLifecycle("using uiability")
+
+    // Static method
+    let staticMsg = MyStruct.staticFunc();
+    console.log(staticMsg);
+
+    // Constructor
+    let myInstance = new MyInterface();
+    let interfaceMsg = myInstance.doSomething("Taihe");
+    console.log(interfaceMsg);
 }

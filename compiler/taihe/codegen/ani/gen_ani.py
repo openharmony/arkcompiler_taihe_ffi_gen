@@ -19,11 +19,11 @@ from taihe.codegen.abi.analyses import (
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
     AniScope,
-    GlobFuncAniInfo,
     IfaceAniInfo,
-    IfaceMethodAniInfo,
+    NamedCallableAniInfo,
     PackageAniInfo,
     StructAniInfo,
+    StructFieldAniInfo,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -270,7 +270,7 @@ class AniPackageSourceGenerator:
             pkg_member_infos: dict[str, str] = {}
             for func in self.pkg.functions:
                 self.gen_native_func(func.name, func)
-                func_ani_info = GlobFuncAniInfo.get(self.am, func)
+                func_ani_info = NamedCallableAniInfo.get(self.am, func)
                 pkg_member_infos.setdefault(
                     func_ani_info.native_name,
                     f"{funcs_namespace}::{func.name}",
@@ -297,7 +297,7 @@ class AniPackageSourceGenerator:
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
                         self.gen_native_method(method.name, method, iface, ancestor)
-                        method_ani_info = IfaceMethodAniInfo.get(self.am, method)
+                        method_ani_info = NamedCallableAniInfo.get(self.am, method)
                         iface_member_infos.setdefault(
                             method_ani_info.native_name,
                             f"{methods_namespace}::{method.name}",
@@ -621,7 +621,7 @@ class AniIfaceImplGenerator:
     def gen_iface_method(self, method: IfaceMethodDecl):
         iface_ani_info = IfaceAniInfo.get(self.am, method.parent_iface)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        method_ani_info = IfaceMethodAniInfo.get(self.am, method)
+        method_ani_info = NamedCallableAniInfo.get(self.am, method)
         params_cpp = []
         args_cpp = []
         args_ani = []
@@ -694,7 +694,7 @@ class AniIfaceImplGenerator:
                 f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                 f"cpp_obj.m_handle.data_ptr = nullptr;",
                 f"ani_object ani_obj;",
-                f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_ctor_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
+                f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
                 f"return ani_obj;",
             )
 
@@ -764,6 +764,7 @@ class AniStructImplGenerator:
             fields_cpp = []
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 field_ani = f"ani_field_{final.name}"
                 field_cpp = f"cpp_field_{final.name}"
@@ -772,11 +773,11 @@ class AniStructImplGenerator:
                 )
                 if struct_ani_info.is_class():
                     self.target.writelns(
-                        f'env->Object_GetField_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final.name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
+                        f'env->Object_GetField_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final_ani_info.sts_name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
                     )
                 else:
                     self.target.writelns(
-                        f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final.name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
+                        f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
                     )
                 final_ty_ani_info.from_ani(
                     self.target,
@@ -814,7 +815,7 @@ class AniStructImplGenerator:
             fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
-                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_ctor_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
+                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
                 f"return ani_obj;",
             )
 

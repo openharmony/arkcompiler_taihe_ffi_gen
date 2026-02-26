@@ -70,12 +70,8 @@ class AniBridgeBackendConfig(BackendConfig):
                 self._config = config
 
             def register(self):
-                self._ci.attribute_registry.register(*all_attr_types)
                 self._ci.analysis_manager.provide(
-                    ArkTsOutDir(
-                        module_prefix=self._config.module_prefix,
-                        path_prefix=self._config.path_prefix,
-                    ),
+                    ArkTsOutDir(self._config.module_prefix, self._config.path_prefix),
                     ArkTsOutDir,
                     self._ci.package_group,
                 )
@@ -84,6 +80,7 @@ class AniBridgeBackendConfig(BackendConfig):
                     ArkTsNamingConfig,
                     self._ci.package_group,
                 )
+                self._ci.attribute_registry.register(*all_attr_types)
 
             def inject(self):
                 self._ci.source_manager.add_source(

@@ -19,6 +19,32 @@ import * as rename_example from "rename_example";
 loadLibrary("rename_example");
 
 function main() {
+    // Function: ArkTS uses renamed name "newFoo", C++ uses original "oldFoo"
     let res = rename_example.newFoo(1, 2);
-    console.log("res = " + res);
+    console.log("newFoo(1, 2) = " + res);
+
+    // Enum: type renamed to "Color", items renamed to "red", "green", "blue"
+    let c: rename_example.Color = rename_example.Color.red;
+    console.log("Color.red = " + c);
+
+    // Struct: type renamed to "Point", fields renamed to "xPos", "yPos"
+    let p = rename_example.createPoint(10, 20);
+    console.log("Point.xPos = " + p.xPos + ", Point.yPos = " + p.yPos);
+
+    // Interface: type renamed to "Greeter"
+    let g: rename_example.Greeter = rename_example.createGreeter("Taihe");
+    console.log(g.greet());
+
+    // Parameter rename: parameter "msg" renamed to "message"
+    let msg = rename_example.testParamRename("Hello, Taihe!");
+    console.log(msg);
+
+    // Static method
+    let staticMsg = rename_example.MyStruct.staticFunc();
+    console.log(staticMsg);
+
+    // Constructor
+    let myInstance = new rename_example.MyInterface();
+    let interfaceMsg = myInstance.doSomething("Taihe");
+    console.log(interfaceMsg);
 }
