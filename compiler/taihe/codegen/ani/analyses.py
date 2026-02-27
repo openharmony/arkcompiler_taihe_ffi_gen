@@ -54,6 +54,7 @@ from taihe.codegen.ani.attributes import (
     StsInjectIntoClazzAttr,
     StsInjectIntoIfaceAttr,
     StsInjectIntoModuleAttr,
+    StsKeepNameAttr,
     StsLastAttr,
     StsThisAttr,
     StsTypeAttr,
@@ -119,16 +120,6 @@ class ArkTsOutDir(AbstractAnalysis["PackageGroup"]):
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "ArkTsOutDir":
-        raise NotImplementedError(f"{cls.__name__} should be provided by backend")
-
-
-@dataclass
-class ArkTsNamingConfig(AbstractAnalysis["PackageGroup"]):
-    keep_name: bool = False
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "ArkTsNamingConfig":
         raise NotImplementedError(f"{cls.__name__} should be provided by backend")
 
 
@@ -582,8 +573,7 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
         pg_ani_info = PackageGroupAniInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
 
-        naming_config = ArkTsNamingConfig.get(am, p.parent_group)
-        if naming_config.keep_name:
+        if (attr := StsKeepNameAttr.get(p)) and attr.option:
             self.naming = UnchangeNamingStrategy()
         else:
             self.naming = DefaultNamingStrategy()

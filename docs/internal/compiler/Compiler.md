@@ -21,17 +21,16 @@ Taihe 遵从经典的“三阶段”编译器设计，具体地：
 
 `taihe.driver` 是统筹整个流水线的编译驱动。这是因为编译流程往往包含多个小的环节，实际使用中需要保证先后顺序。例如，生成代码的前提是进行语义分析，否则编译器不知道 `function foo(x: Bar)` 中 `Bar` 的名字背后指什么类型。
 
-让我们串起来整个编译流程。在执行 Python 脚本时，`taihe.cli.compiler` 的 `main` 函数获得执行：
+在执行 `taihec` 命令时，`taihe.cli.compiler` 的 `main` 函数会被调用，完成以下流程：
 
-1. 解析命令行参数
-2. 初始化 `taihe.driver.backend.BackendRegistry`，创造对应的语言后端。`BackendRegistry` 是语言后端的工厂，帮助从命令行逐步构建语言后端实例。
-3. 构造 `taihe.driver.contexts.CompilerInvocation` 实例，描述编译意图。例如，使用 `ani-bridge` 语言后端去编译 `foo.taihe` 文件到 `out/` 目录下。
-4. 创建 `taihe.driver.contexts.CompilerInstance` 实例，存储编译所依赖的主要对象，例如语言后端实例、报错信息收集器。
-5. 调用 `CompilerInstance.run()` 完成编译。该函数串接了前端、语义分析、代码生成等编译流水线。
-    - `CompilerInstance.collect()`: 扫描目录，收集待处理的 `.taihe` 源文件
+1. 在 `taihe.cli.compiler` 中解析命令行参数。
+2. 根据命令行参数配置构造 `taihe.driver.contexts.CompilerInvocation` 实例，描述编译意图。例如，使用 `cpp-user` 语言后端去编译 `foo.taihe` 文件到 `out/` 目录下。
+3. 根据 `CompilerInvocation` 构造出 `taihe.driver.contexts.CompilerInstance` 实例，其中存储编译所依赖的主要对象，例如语言后端实例、报错信息收集器。
+4. 调用 `CompilerInstance.run()` 完成编译。该函数串接了前端、语义分析、代码生成等编译流水线。
+    - `CompilerInstance.collect()`: 扫描目录，收集待处理的 `.taihe` 源文件。
     - `CompilerInstance.parse()`: 执行语言前端，解析 `.taihe` 源文件，并转换到 IR。
     - `CompilerInstance.validate()`: 分析语义，验证 `.taihe` 源文件的正确性。
-    - `CompilerInstance.generate()`: 执行语言后端，生成目标代码。
+    - `CompilerInstance.generate()`: 根据 IR 生成目标语言的代码。
 
 ## 文法解析
 
@@ -101,9 +100,10 @@ Taihe IR 由三部分组成：
 Taihe IR 的生命周期是：
 
 1. 产生：在 `CompilerInstance.parse()` 阶段，由 `taihe.parse.convert` 从源文件生成 IR。
-2. 内置的语义分析：在 `CompilerInstance.validate()` 阶段，由 `taihe.semantics.analysis` 进行语义分析和检查。**自此，IR 不再可变。**
-3. 语言后端的语义分析：在 `CompilerInstance.validate()` 阶段，由 `Backend.validate()` 完成自定义的语义检查。
-4. 代码生成：在 `CompilerInstance.generate()` 阶段，由 `Backend.generate()` 完成自定义的代码生成。
+2. 后处理：在 `CompilerInstance.parse()` 阶段，由 `Backend.post_process()` 完成 IR 的后处理，例如添加某些隐式声明。
+3. 内置的语义分析：在 `CompilerInstance.validate()` 阶段，由 `taihe.semantics.analysis` 进行语义分析和检查。**自此，IR 不再可变。**
+4. 语言后端的语义分析：在 `CompilerInstance.validate()` 阶段，由 `Backend.validate()` 完成自定义的语义检查。
+5. 代码生成：在 `CompilerInstance.generate()` 阶段，由 `Backend.generate()` 完成自定义的代码生成。
 
 ### 中间表示的常见数据结构
 
@@ -170,36 +170,60 @@ bar_decl = StructDecl(name="Bar", fields=[k_field])
 
 ## 语言后端
 
-### 语言后端的概念和生命周期
+### 关键概念和组件
 
-Taihe 的目标语言生成部分位于 `taihe.driver.backend`，由一个个语言后端组成。基本概念有：
+Taihe 的后端的接口定义位于 `taihe.driver.backend` 中，一个语言后端（Backend）是一个类，包含了编译器在不同阶段的回调函数。编译器在完成某个阶段时会调用语言后端的回调函数，来让语言后端完成特定的处理。
 
-- `BackendRegistry`：存储了已知的语言后端。
-- `BackendConfig`：描述了语言后端的配置信息。
-  - 静态成员：包括名称、依赖的其他语言后端。这些信息被 `BackendRegistry` 使用，用来编排代码生成。
-  - 非静态成员：描述了语言相关的代码生成配置，这些信息存储于 `CompilerInvocation` 中，在构造 `Backend` 实例时被使用。
-  - `BackendConfig` 可理解为 `Backend` 的工厂模式。通过将 `Backend` 解耦，可使用插件化的机制动态加载语言后端，并避免导入不使用的语言后端带来的启动速度问题。
+Taihe 的语言后端由以下几个组件组成：
+
+- `BackendRegistry`：语言后端的注册表，记录了所有可用的语言后端，并负责根据从命令行参数中得到的根后端节点，递归地收集本次编译需要启用的所有语言后端。
+- `BackendConfig`：描述了一个特定语言后端的配置信息。
+  - `NAME`（类变量）：语言后端的名字，例如 `cpp-user`。
+  - `DEPS`（类变量）：语言后端所依赖的其它语言后端。例如，`cpp-user` 依赖于 `cpp-common`。该变量中只需要列出直接依赖，由 `BackendRegistry` 负责递归地启用所有依赖。
+  - `register(registry: OptionRegistry)`（类方法）：注册语言后端自有的命令行参数（`ConfigOption`）。
+  - `create(options: OptionStore)`（类方法）：根据具体的命令行参数构造出结构化的语言配置实例。
+  - `construct()`（实例方法）：根据语言配置构造出语言后端实例。
 - `Backend`：语言后端实例，在编译流水线的不同阶段被回调。
+  - `register()`：在编译器启动时被调用，此时可注册后端相关注解、分析等组件。
+  - `inject()`：在完成源码收集（`collect`）后被调用，此时可注入新的文件到编译器中。
+  - `post_process()`：在完成 IR 解析（`parse`）后被调用，此时可修改 IR。
+  - `validate()`：在完成语义分析（`validate`）后被调用，此时不可修改 IR，但可返回错误。
+  - `generate()`：在通过全部语义检查、进入代码生成（`generate`）时调用，用于生成目标代码，此时不可修改 IR。
 
-类似于前述的 IR 生命周期，Taihe 语言后端的生命周期有：
+### 生命周期
 
-1. `taihe.cli.compiler` 初始化 `BackendRegistry`，获得已知的语言后端。
-2. `taihe.cli.compiler` 根据命令行参数，配置所需的 `BackendConfig`，存入 `CompilerInvocation`。
-3. `CompilerInstance` 根据 `BackendConfig` 初始化对应的 `Backend` 实例。
-4. `CompilerInstance.run()` 执行编译器流程，并按需回调 `Backend` 的方法：
-    - `post_process()`：完成 IR 解析（`parse`）被调用，此时可修改 IR。（Deprecated）
-    - `validate()`：在完成语义分析（`validate`）后被调用，此时不可修改 IR，但可返回错误。
-    - `generate()`：在通过全部语义检查、进入代码生成（`generate`）时调用，用于生成目标代码，此时不可修改 IR。
+语言后端的生命周期与编译流程紧密相关：
+
+1. 编译器启动时，`BackendRegistry` 根据命令行参数收集所有需要启用的语言后端，并调用它们的 `register()` 方法来将这些语言后端自有的命令行参数注册到 `OptionRegistry` 中。
+2. `OptionRegistry` 根据扩展的命令行参数解析出结构化配置信息，输出到 `OptionStore` 中。
+3. 启用的语言后端消费 `OptionStore` 中的配置信息，构造出语言后端配置对象，并储存在 `CompilerInvocation` 中。
+4. 通过 `CompilerInvocation` 构造出 `CompilerInstance`，并在构造过程中调用语言后端配置对象上的 `construct()` 方法来构造出语言后端实例。
+5. 编译器在不同阶段调用语言后端实例的回调函数，来完成注解注册、源文件注入、IR 修改、语义检查、代码生成等功能。
+
+### 语言后端的典型目录结构
+
+`pretty-print` 在屏幕上打印格式化后的 Taihe 源文件。它是非常简单的语言后端。参考 `taihe.semantics.PrettyPrinterBackendConfig` 了解更多。
+
+`taihe.codegen.abi` 定义了 Taihe ABI 并生成 C 文件，它是较为复杂的语言后端，结构如下：
+
+- `mangle`：是 ABI 层的特有组件，定义了符号名称的生成算法
+- `analyses`：将 Taihe IR 中的类型映射到 ABI 的类型，依赖 `mangle`
+- `attributes`：定义了 ABI 层的特有属性。
+- `options`：定义了 ABI 层的特有命令行参数。
+- `writer`：基于后文将介绍的 `FileWriter`，提供 C 源码的写入能力
+- `gen_abi` 和 `gen_impl`：代码生成逻辑
+  - 自顶向下，枚举 Taihe IR 中的每个声明
+  - 基于 `analyses` 获得类型信息
+  - 基于 `writer` 写入源码
 
 ### 中间分析结果
 
-Taihe 声明具有“必要”的性质，不能引入冗余的信息。
-然而，语言后端往往需要引入中间分析结果，存储并在多个语言后端中共享。
+Taihe 声明具有“必要”的性质，不能引入冗余的信息。然而，语言后端往往需要引入中间分析结果，存储并在多个语言后端中共享。
 
-举个例子，假如我们要给 `function foo(bar: i32)` 生成 C 和 C++ 侧的投影，会发现需要使用符号名称（即 "mangled name"）等 Taihe ABI 信息。
+举个例子，假如要给 `function foo(bar: i32)` 生成 C 和 C++ 侧的投影，会发现需要使用符号名称（即 "mangled name"）等 Taihe ABI 信息。
 这些信息不光要在 C 中使用，也需要在 C++ 中使用；不光要在 API 作者侧使用，也需要在 API 消费者侧使用。
 
-如果我们将函数的 Taihe ABI 信息都存储在 `GlobFuncAbiInfo` 的类里面，就可以写：
+如果要将函数的 Taihe ABI 信息都存储在 `GlobFuncAbiInfo` 的类里面，就可以写：
 
 ```python
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -211,14 +235,14 @@ am = AnalysisManager()
 @dataclass
 class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
     mangled_name: str
-    # 其他 ABI 信息...
+    # 其它 ABI 信息...
 
     # 覆写工厂方法 AbstractAnalysis.create(am, decl)，创建分析结果
     @classmethod
     def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAbiInfo":
         return GlobFuncAbiInfo(
             mangled_name=encode(...),
-            # 其他 ABI 信息...
+            # 其它 ABI 信息...
         )
 
 # 分析消费方：从分析管理器中拉取数据
@@ -227,27 +251,17 @@ func_abi_info = GlobFuncAbiInfo.get(am, func)
 
 从上述例子可以看出，Taihe 引入了分析（Analyses）的概念，将中间分析结果和 IR 解耦。其具体实现位于 `taihe.utils.analyses`，包含下列概念：
 
-- `AbstractAnalysis`：是一切分析中间结果的基类。
+- `AbstractAnalysis[T]`：是一切分析中间结果的基类。
+  - `T` 是分析结果所对应的 IR 声明的类型，例如 `GlobFuncDecl`。
+  - `_create(am, decl)`：是工厂方法，用于创建分析结果。编译器驱动在第一次查询分析结果时会调用该方法来创建分析结果。
+  - `get(am, decl)`：是查询方法，用于获取分析结果。编译器驱动在查询分析结果时会调用该方法来获取分析结果，如果分析结果不存在，则调用 `_create()` 来创建。
 - `AnalysisManager`：分析结果的缓存。由于 Taihe IR 在代码生成阶段不可变，`AnalysisManager` 缓存了相同对象的相同分析结果查询。首次查询时需要计算，后续查询时直接拿到结果。
+  - `provide(analysis, cls, decl)`：有时一些分析结果需要由语言后端提供，此时可以调用该方法来主动提供分析结果。该方法通常在语言后端的 `register()` 方法中被调用，用于将一些后端配置通过分析结果的方式注入到 `AnalysisManager` 中。
 
 相比于备选方案，中间分析有如下优点：
 
 - 更好的性能：相比于使用函数计算，Analysis 可缓存计算结果，无需二次计算；相比于添加成员变量，在不生成某一语言时，无需计算和存储该语言相关的信息
 - 清晰的架构。分析结果要被多方复用，相比变量或函数，以类的形式添加额外要设计类名，促进更好的架构设计。相比于直接在 IR 中添加语言相关的成员变量，Analysis 避免了多语言情况下变量爆炸和架构腐化问题。
-
-## 语言后端的典型目录结构
-
-`pretty-print` 在屏幕上打印格式化后的 Taihe 源文件。它是非常简单的语言后端。参考 `taihe.semantics.PrettyPrinterBackendConfig` 了解更多。
-
-`taihe.codegen.abi` 定义了 Taihe ABI 并生成 C 文件，它是较为复杂的语言后端，结构如下：
-
-- `mangle`：是 ABI 层的特有组件，定义了符号名称的生成算法
-- `analyses`：将 Taihe IR 中的类型映射到 ABI 的类型，依赖 `mangle`
-- `writer`：基于后文将介绍的 `FileWriter`，提供 C 源码的写入能力
-- `gen_abi` 和 `gen_impl`：代码生成逻辑
-  - 自顶向下，枚举 Taihe IR 中的每个声明
-  - 基于 `analyses` 获得类型信息
-  - 基于 `writer` 写入源码
 
 ## 实用工具
 

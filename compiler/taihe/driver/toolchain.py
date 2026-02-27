@@ -29,6 +29,7 @@ from taihe.driver.contexts import (
     CompilerInvocation,
 )
 from taihe.driver.options import OptionRegistry
+from taihe.semantics import PrettyPrintBackendConfig
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     PandaVm,
@@ -128,6 +129,7 @@ def taihec(
     backend_names: list[str],
     buildsys_name: str | None = None,
     extra: list[str] | None = None,
+    debug: bool = False,
 ) -> None:
     registry = BackendRegistry()
     registry.register_all()
@@ -150,6 +152,13 @@ def taihec(
 
     options = option_registry.parse_args(extra or [])
     backend_configs = [b.create(options) for b in backend_factories]
+    if debug:
+        pretty_print_backend_config = PrettyPrintBackendConfig(
+            show_resolved=True,
+            show_internal=True,
+            target_desc="stderr",
+        )
+        backend_configs.append(pretty_print_backend_config)
 
     invocation = CompilerInvocation(
         src_files=src_files,
