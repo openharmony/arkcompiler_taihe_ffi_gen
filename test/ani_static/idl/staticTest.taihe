@@ -36,6 +36,18 @@ function addSync(a: i32, b: i32): i32;
 @ctor("IBase")
 function getIBase(name: String): IBase;
 
+interface ITest {
+    get(): String;
+    set(a: String): void;
+}
+
+@static("ITest")
+@rename("static_test")
+function static_func(a: i32, b: i32): i32;
+
+@static("ITest")
+function ctor_func(): ITest;
+
 @static("IBase")
 @get
 function getName(): String;

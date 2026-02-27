@@ -51,17 +51,17 @@ Taihe 会在 `temp/` 中生成实现模板，你只需填写业务逻辑：
 }
 ```
 
-## Struct 的绑定
+## 类型的绑定
 
-`struct` 在 Taihe 中是纯数据类型，无需用户编写实现代码，可以直接在两端使用。
+以上例中的 `Color` 结构体为例，Taihe 同样会生成多层代码来实现类型的绑定：
 
 ### 生成文件对照表
 
 | 层级 | 文件 | 符号 |
 |------|------|------|
-| ANI 转换 | `binding.Color.ani.1.hpp` | `from_ani<Color>` / `into_ani<Color>` |
-| C++ 投影 | `binding.Color.proj.1.hpp` | `binding::Color` |
 | C ABI | `binding.Color.abi.1.h` | `struct binding_Color_t` |
+| C++ 投影 | `binding.Color.proj.1.hpp` | `binding::Color` |
+| ANI 转换 | `binding.Color.ani.1.hpp` | `from_ani<Color>` / `into_ani<Color>` |
 
 ### 调用链路
 

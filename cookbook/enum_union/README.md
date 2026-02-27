@@ -31,6 +31,31 @@ enum Status: String {
 }
 ```
 
+## Union 语法
+
+```rust
+interface Base {}
+
+interface Derived: Base {}
+
+union MessageData {
+    @undefined uValue: unit;                // undefined
+    nValue: unit;                           // null
+    derivedValue: Derived;                  // 子类型
+    baseValue: Base;                        // 基类型
+    stringValue: String;                    // 基础类型
+    recordValue: @record Map<String, i32>;  // 容器类型
+    opaqueValue: Opaque;                    // Object
+}
+```
+
+> **注意**：由于 Taihe union 在从 ArkTS 传入 C++ 侧时，会按照声明顺序依次匹配成员类型，因此在声明 union 时应遵循以下规则：
+> 1. 不能同时包含多个相同类型的成员。
+> 2. 不能同时有多个同一种类的类型擦除容器类型的成员（例如 `@record Map<String, i32>` 和 `@record Map<String, String>` 在 ArkTS 中都会被擦除为 `Record<any, any>`）。
+> 3. 如果有 `undefined` 或者 `null` 成员，必须放在其它成员之前，且 `undefined` 成员须在 `null` 成员之前。
+> 4. 如果同时包含基类型和子类型，基类型成员必须放在子类型成员之后。
+> 5. 如果存在 `Object` 成员，必须放在其它所有成员之后。
+
 ---
 
 ## 第一步：定义接口
@@ -171,3 +196,4 @@ const val = pkg.FLAG_A;  // 直接访问常量
 
 - [Struct 结构体](../struct_extends/README.md) - 结构体定义
 - [Optional 可选类型](../optional/README.md) - 可选值处理
+- [多态](../polymorphism/README.md) - 利用 union 实现跨语言多态
