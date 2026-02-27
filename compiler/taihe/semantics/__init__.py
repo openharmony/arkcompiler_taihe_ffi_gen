@@ -14,10 +14,13 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
+
+from typing_extensions import Self
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.utils.outputs import DebugOutputConfig, OutputConfig
+from taihe.driver.options import AbstractConfigOption, OptionRegistry
+from taihe.utils.outputs import DebugOutputConfig
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
@@ -25,17 +28,68 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class DebugOutputTargetOption(AbstractConfigOption):
+    """Specify the output target for pretty-print backend."""
+
+    NAME = "debug:output-target"
+
+    target_desc: Literal["stderr", "stdout"]
+
+    @classmethod
+    def parse(cls, value: str | None) -> Self:
+        if value is None:
+            raise ValueError("debug:output-target requires a value")
+        if value not in ("stderr", "stdout"):
+            raise ValueError("debug:output-target must be either 'stderr' or 'stdout'")
+        return cls(value)
+
+
+@dataclass
+class DebugShowInternalOption(AbstractConfigOption):
+    """Specify whether to show standard library files in pretty-print backend."""
+
+    NAME = "debug:show-internal"
+
+    @classmethod
+    def parse(cls, value: str | None) -> Self:
+        return cls()
+
+
+@dataclass
+class DebugShowResolvedOption(AbstractConfigOption):
+    """Specify whether to show resolved types in pretty-print backend."""
+
+    NAME = "debug:show-resolved"
+
+    @classmethod
+    def parse(cls, value: str | None) -> Self:
+        return cls()
+
+
+@dataclass
 class PrettyPrintBackendConfig(BackendConfig):
     NAME = "pretty-print"
 
-    show_resolved = True
-    colorize = True
+    show_resolved: bool = field(kw_only=True, default=False)
+    show_internal: bool = field(kw_only=True, default=False)
+    target_desc: Literal["stderr", "stdout"] | None = field(kw_only=True, default=None)
 
-    output_config: OutputConfig = field(default_factory=DebugOutputConfig)
+    @classmethod
+    def register(cls, option_registry: OptionRegistry):
+        option_registry.register(DebugOutputTargetOption)
+        option_registry.register(DebugShowResolvedOption)
+        option_registry.register(DebugShowInternalOption)
 
     @classmethod
     def create(cls, options: "OptionStore"):
-        return PrettyPrintBackendConfig()
+        output_target_opt = options.get(DebugOutputTargetOption)
+        show_resolved_opt = options.get(DebugShowResolvedOption)
+        show_internal_opt = options.get(DebugShowInternalOption)
+        return PrettyPrintBackendConfig(
+            target_desc=output_target_opt.target_desc if output_target_opt else None,
+            show_resolved=show_resolved_opt is not None,
+            show_internal=show_internal_opt is not None,
+        )
 
     def construct(self, instance: "CompilerInstance"):
         from taihe.semantics.format import TaiheGenerator
@@ -45,13 +99,16 @@ class PrettyPrintBackendConfig(BackendConfig):
                 assert isinstance(config, PrettyPrintBackendConfig)
                 self._ci = ci
                 self._config = config
-                self._om = self._config.output_config.construct()
+                if config.target_desc is None:
+                    self._om = ci.output_manager
+                else:
+                    self._om = DebugOutputConfig(config.target_desc).construct()
 
             def generate(self):
                 generator = TaiheGenerator(
                     self._om,
                     show_resolved=self._config.show_resolved,
-                    colorize=self._config.colorize,
+                    show_internal=self._config.show_internal,
                 )
                 generator.generate(self._ci.package_group)
 
