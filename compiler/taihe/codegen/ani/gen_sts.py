@@ -352,7 +352,6 @@ class StsPackageGenerator:
     def gen_package(self):
         self.gen_func_natives()
 
-        self.gen_func_impls()
         for enum in self.pkg.enums:
             enum_generator = StsEnumGenerator(self.am, self.target, enum)
             enum_generator.gen_enum()
@@ -371,6 +370,8 @@ class StsPackageGenerator:
             struct_generator.gen_struct_interface()
             struct_generator.gen_struct_class()
             struct_generator.gen_struct_factory()
+            struct_generator.gen_struct_ctor_reverses(struct_ani_info)
+            struct_generator.gen_struct_func_reverses(struct_ani_info)
         for iface in self.pkg.interfaces:
             iface_ani_info = IfaceAniInfo.get(self.am, iface)
             iface_generator = StsIfaceGenerator(
@@ -383,9 +384,12 @@ class StsPackageGenerator:
             iface_generator.gen_iface_interface()
             iface_generator.gen_iface_class()
             iface_generator.gen_iface_factory()
+            iface_generator.gen_iface_method_reverses(iface_ani_info)
+            iface_generator.gen_iface_ctor_reverses(iface_ani_info)
+            iface_generator.gen_iface_func_reverses(iface_ani_info)
+        self.gen_func_impls()
 
         self.gen_func_reverses()
-        self.gen_method_reverses()
 
     def gen_func_natives(self):
         for func in self.pkg.functions:
@@ -440,39 +444,6 @@ class StsPackageGenerator:
                 func_kind,
             )
             reverse_func_generator.gen_reverse_func()
-        for class_name, funcs in self.statics_map.items():
-            func_kind = StaticKind(class_name)
-            for func in funcs:
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    func,
-                    func_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
-        for class_name, ctors in self.ctors_map.items():
-            ctor_kind = CtorKind(class_name)
-            for ctor in ctors:
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    ctor,
-                    ctor_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
-
-    def gen_method_reverses(self):
-        for iface in self.pkg.interfaces:
-            iface_ani_info = IfaceAniInfo.get(self.am, iface)
-            meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
-            for method in iface.methods:
-                reverse_func_generator = StsReverseFuncGenerator(
-                    self.am,
-                    self.target,
-                    method,
-                    meth_kind,
-                )
-                reverse_func_generator.gen_reverse_func()
 
 
 class StsEnumGenerator:
@@ -816,6 +787,28 @@ class StsStructGenerator:
                 f"return new {struct_ani_info.sts_impl_name}({finals_str});",
             )
 
+    def gen_struct_ctor_reverses(self, struct_ani_info: StructAniInfo):
+        ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
+        for ctor in self.ctors:
+            reverse_func_generator = StsReverseFuncGenerator(
+                self.am,
+                self.target,
+                ctor,
+                ctor_kind,
+            )
+            reverse_func_generator.gen_reverse_func()
+
+    def gen_struct_func_reverses(self, struct_ani_info: StructAniInfo):
+        func_kind = StaticKind(struct_ani_info.sts_impl_name)
+        for func in self.funcs:
+            reverse_func_generator = StsReverseFuncGenerator(
+                self.am,
+                self.target,
+                func,
+                func_kind,
+            )
+            reverse_func_generator.gen_reverse_func()
+
 
 class StsIfaceGenerator:
     def __init__(
@@ -1127,6 +1120,39 @@ class StsIfaceGenerator:
             self.target.writelns(
                 f"return new {iface_ani_info.sts_impl_name}(vtblPtr, dataPtr);",
             )
+
+    def gen_iface_method_reverses(self, iface_ani_info: IfaceAniInfo):
+        meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
+        for method in self.iface.methods:
+            reverse_func_generator = StsReverseFuncGenerator(
+                self.am,
+                self.target,
+                method,
+                meth_kind,
+            )
+            reverse_func_generator.gen_reverse_func()
+
+    def gen_iface_ctor_reverses(self, iface_ani_info: IfaceAniInfo):
+        ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
+        for ctor in self.ctors:
+            reverse_func_generator = StsReverseFuncGenerator(
+                self.am,
+                self.target,
+                ctor,
+                ctor_kind,
+            )
+            reverse_func_generator.gen_reverse_func()
+
+    def gen_iface_func_reverses(self, iface_ani_info: IfaceAniInfo):
+        func_kind = StaticKind(iface_ani_info.sts_impl_name)
+        for func in self.funcs:
+            reverse_func_generator = StsReverseFuncGenerator(
+                self.am,
+                self.target,
+                func,
+                func_kind,
+            )
+            reverse_func_generator.gen_reverse_func()
 
 
 class StsNativeFuncGenerator:
