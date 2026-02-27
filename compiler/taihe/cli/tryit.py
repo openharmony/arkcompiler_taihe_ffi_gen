@@ -110,14 +110,13 @@ class BuildSystem(ABC):
         backend_names: list[str] = []
         backend_names.extend(self.author_backend_names)
         backend_names.extend(self.user_backend_names)
-        if self.should_run_pretty_print:
-            backend_names.append("pretty-print")
         taihec(
             dst_dir=self.generated_dir,
             src_files=list(self.idl_dir.glob("*")),
             backend_names=backend_names,
             buildsys_name=buildsys_name,
             extra=extra,
+            debug=self.should_run_pretty_print,
         )
 
     def build(self, opt_level: str) -> None:

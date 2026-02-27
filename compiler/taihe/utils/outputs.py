@@ -23,9 +23,9 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from io import StringIO
 from pathlib import Path
-from sys import _getframe, stdout  # type: ignore
+from sys import _getframe, stderr, stdout  # type: ignore
 from types import FrameType, TracebackType
-from typing import TextIO
+from typing import Literal, TextIO
 
 from typing_extensions import Self, override
 
@@ -374,19 +374,31 @@ class NullOutputConfig(OutputConfig):
 
 @dataclass
 class DebugOutputConfig(OutputConfig):
+    target_desc: Literal["stderr", "stdout"]
+
     def construct(self) -> OutputManager:
         class DebugOutputManager(OutputManager):
-            def __init__(self, *, debug_level: DebugLevel):
+            def __init__(
+                self,
+                target_desc: Literal["stderr", "stdout"],
+                *,
+                debug_level: DebugLevel,
+            ):
                 super().__init__(debug_level=debug_level)
+                match target_desc:
+                    case "stderr":
+                        self.target = stderr
+                    case "stdout":
+                        self.target = stdout
 
             @contextmanager
             def _open_impl(self, desc: FileDescriptor):
-                stdout.write(f"// File: {desc.relative_path}\n")
-                stdout.write(f"// Kind: {desc.kind.value}\n")
-                yield stdout
-                stdout.write(f"// End of file: {desc.relative_path}\n\n")
+                self.target.write(f"// File: {desc.relative_path}\n")
+                self.target.write(f"// Kind: {desc.kind.value}\n")
+                yield self.target
+                self.target.write(f"// End of file: {desc.relative_path}\n\n")
 
-        return DebugOutputManager(debug_level=self.debug_level)
+        return DebugOutputManager(self.target_desc, debug_level=self.debug_level)
 
 
 @dataclass
