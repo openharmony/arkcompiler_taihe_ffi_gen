@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, TextIO
 from typing_extensions import override
 
 from taihe.semantics.visitor import ExplicitTypeRefVisitor, RecursiveDeclVisitor
-from taihe.utils.diagnostics import AnsiStyle
+from taihe.utils.logging import AnsiStyle, should_use_color
 from taihe.utils.outputs import BaseWriter, FileDescriptor, FileKind, OutputManager
 from taihe.utils.sources import IDL_FILE_DEFAULT_EXT
 
@@ -170,13 +170,7 @@ class TaiheFormatter(ExplicitTypeRefVisitor[str]):
 
 
 class TaihePrinter(RecursiveDeclVisitor):
-    def __init__(
-        self,
-        buffer: TextIO,
-        *,
-        show_resolved: bool = False,
-        colorize: bool = False,
-    ):
+    def __init__(self, buffer: TextIO, *, show_resolved: bool):
         self.out = BaseWriter(
             buffer,
             default_indent="    ",
@@ -184,7 +178,7 @@ class TaihePrinter(RecursiveDeclVisitor):
         )
         self.fmt = TaiheFormatter(
             show_resolved=show_resolved,
-            colorize=colorize,
+            colorize=should_use_color(buffer),
         )
 
     def write_pkg_attr(self, d: "PackageDecl"):
@@ -358,27 +352,17 @@ class TaihePrinter(RecursiveDeclVisitor):
 
 
 class TaiheGenerator:
-    def __init__(
-        self,
-        om: OutputManager,
-        *,
-        show_resolved: bool = False,
-        colorize: bool = False,
-    ):
+    def __init__(self, om: OutputManager, *, show_resolved: bool, show_internal: bool):
         self.om = om
         self.show_resolved = show_resolved
-        self.colorize = colorize
+        self.show_internal = show_internal
 
     def generate(self, g: "PackageGroup"):
-        for p in g.all_packages:
+        for p in g.all_packages if self.show_internal else g.packages:
             fd = FileDescriptor(
                 relative_path=f"idl/{p.name}{IDL_FILE_DEFAULT_EXT}",
                 kind=FileKind.TAIHE,
             )
             with self.om.open(fd) as buffer:
-                printer = TaihePrinter(
-                    buffer,
-                    show_resolved=self.show_resolved,
-                    colorize=self.colorize,
-                )
+                printer = TaihePrinter(buffer, show_resolved=self.show_resolved)
                 p.accept(printer)

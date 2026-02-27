@@ -450,7 +450,7 @@ function(add_ani_demo demo_name idl_files taihe_configs gen_ets_names user_ets_f
   # 编译 taihe 运行时
   add_taihe_runtime()
   # ani 代码生成相关配置
-  set(taihe_configs "-Gpretty-print ${taihe_configs}")
+  set(taihe_configs "-Gpretty-print ${taihe_configs} -Cdebug:output-target=stderr -Cdebug:show-resolved -Cdebug:show-internal")
   # 生成代码
   generate_code_from_idl(${demo_name} "${idl_files}" "${gen_ets_names}" "cpp-author" "ani-bridge" "${taihe_configs}" GEN_INCLUDE_DIR GEN_ABI_C_FILES GEN_ANI_CPP_FILES GEN_ETS_FILES)
   # 生成代码静态库编译

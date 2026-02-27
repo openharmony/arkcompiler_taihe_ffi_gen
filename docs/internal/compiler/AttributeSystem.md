@@ -70,7 +70,7 @@ AnyAttribute
 
 `AutoCheckedAttribute` 为 `try_construct` 和 `check_context` 方法提供了默认实现，并提供以下可覆写的方法：
 
-- `try_construct_from_parsed_args(cls, loc: SourceLocation | None, args: list[Argument], kwargs: dict[str, Argument], dm: DiagnosticsManager) -> Self | None`：`try_construct` 方法的默认实现会先解析原始 `UncheckedAttribute` 对象，得到其匿名参数列表 `args` 和关键字参数字典 `kwargs` 后再调用该方法来创建 `CheckedAttribute` 对象。该方法的默认实现中则会根据当前 `dataclass` 的字段定义进行参数匹配和类型检查，并尝试构造实例。如果需要自定义参数解析逻辑，可以覆写该方法。
+- `try_construct_from_parsed_args(cls, args: list[Argument], kwargs: dict[str, Argument], dm: DiagnosticsManager, *, loc: SourceLocation | None) -> Self | None`：`try_construct` 方法的默认实现会先解析原始 `UncheckedAttribute` 对象，得到其匿名参数列表 `args` 和关键字参数字典 `kwargs` 后再调用该方法来创建 `CheckedAttribute` 对象。该方法的默认实现中则会根据当前 `dataclass` 的字段定义进行参数匹配和类型检查，并尝试构造实例。如果需要自定义参数解析逻辑，可以覆写该方法。
 - `check_typed_context(self, parent: ParentDecl, dm: DiagnosticsManager) -> None`：该方法会被 `check_context` 调用，`check_context` 方法的默认实现会先通过 `isinstance` 检查 `parent` 的类型是否在 `TARGETS` 中，然后将被保证为 `ParentDecl` 的 `parent` 传入该方法。该方法的默认实现中会根据 `ATTRIBUTE_GROUP_TAGS` 检查互斥组冲突。后端开发者可以覆写该方法以实现更复杂的上下文检查逻辑。
 
 注意，由于 `try_construct_from_parsed_args` 方法中会使用 `dataclass` 的字段定义进行参数匹配和类型检查，因此 `AutoCheckedAttribute` 的子类必须是 `dataclass`。
