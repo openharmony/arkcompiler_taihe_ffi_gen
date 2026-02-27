@@ -106,16 +106,28 @@ class StsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
     sts_code: str
 
 
-@dataclass
-class ClassAttr(TypedAttribute[IfaceDecl | StructDecl]):
-    NAME = "class"
-    TARGETS = (IfaceDecl, StructDecl)
+TYPE_DECL_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
 @dataclass
 class ConstAttr(TypedAttribute[EnumDecl]):
     NAME = "const"
     TARGETS = (EnumDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset({TYPE_DECL_ATTRIBUTE_GROUP})
+
+
+@dataclass
+class TupleAttr(TypedAttribute[StructDecl]):
+    NAME = "tuple"
+    TARGETS = (StructDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset({TYPE_DECL_ATTRIBUTE_GROUP})
+
+
+@dataclass
+class ClassAttr(TypedAttribute[IfaceDecl | StructDecl]):
+    NAME = "class"
+    TARGETS = (IfaceDecl, StructDecl)
+    ATTRIBUTE_GROUP_TAGS = frozenset({TYPE_DECL_ATTRIBUTE_GROUP})
 
 
 @dataclass
@@ -131,7 +143,10 @@ class ExtendsAttr(TypedAttribute[StructFieldDecl]):
         parent: StructFieldDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if not isinstance(parent.ty, StructType):
+        if (
+            not isinstance(parent.ty, StructType)
+            or TupleAttr.get(parent.ty.decl) is not None
+        ):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to struct fields with struct types.",
@@ -736,33 +751,39 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 
 all_attr_types: list[CheckedAttrT] = [
+    # Package/Declaration attributes
     NamespaceAttr,
     ExportDefaultAttr,
     StsInjectAttr,
     StsInjectIntoModuleAttr,
     StsInjectIntoClazzAttr,
     StsInjectIntoIfaceAttr,
-    ClassAttr,
+    # Type declaration attributes
     ConstAttr,
+    TupleAttr,
+    ClassAttr,
+    # Field/Parameter attributes
     ExtendsAttr,
     ReadOnlyAttr,
-    NullAttr,
-    UndefinedAttr,
-    LiteralAttr,
     OptionalAttr,
     StsThisAttr,
     StsLastAttr,
     StsFillAttr,
+    # Type attributes
+    NullAttr,
+    UndefinedAttr,
+    LiteralAttr,
     BigIntAttr,
     ArrayBufferAttr,
     TypedArrayAttr,
     FixedArrayAttr,
     RecordAttr,
     StsTypeAttr,
+    # Function attributes
     RenameAttr,
     OverloadAttr,
-    GenAsyncAttr,
-    GenPromiseAttr,
+    StaticOverloadAttribute,
+    OnOffAttr,
     StaticAttr,
     ConstructorAttribute,
     CtorAttr,
@@ -770,6 +791,6 @@ all_attr_types: list[CheckedAttrT] = [
     SetAttr,
     AsyncAttribute,
     PromiseAttribute,
-    StaticOverloadAttribute,
-    OnOffAttr,
+    GenAsyncAttr,
+    GenPromiseAttr,
 ]
