@@ -27,6 +27,8 @@ from taihe.codegen.ani.analyses import (
     PackageAniInfo,
     StructAniInfo,
     StructFieldAniInfo,
+    StructObjectAniInfo,
+    StructTupleAniInfo,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -860,38 +862,10 @@ class AniStructImplGenerator:
             f"inline {struct_cpp_info.as_owner} taihe::from_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_ani_info.ani_type} ani_obj) const {{",
             f"}}",
         ):
-            struct_cpp_info = StructCppInfo.get(self.am, self.struct)
-            fields_cpp = []
-            for parts in struct_ani_info.sts_all_fields:
-                final = parts[-1]
-                final_ani_info = StructFieldAniInfo.get(self.am, final)
-                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
-                field_ani = f"ani_field_{final.name}"
-                field_cpp = f"cpp_field_{final.name}"
-                self.target.writelns(
-                    f"{final_ty_ani_info.ani_type} {field_ani} = {{}};",
-                )
-                if struct_ani_info.is_class():
-                    self.target.writelns(
-                        f'env->Object_GetField_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final_ani_info.sts_name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
-                    )
-                else:
-                    self.target.writelns(
-                        f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
-                    )
-                final_ty_ani_info.from_ani(
-                    self.target,
-                    "env",
-                    field_ani,
-                    field_cpp,
-                )
-                fields_cpp.append(field_cpp)
-            fields_cpp_str = ", ".join(
-                f"std::move({field_cpp})" for field_cpp in fields_cpp
-            )
-            self.target.writelns(
-                f"return {struct_cpp_info.as_owner}{{{fields_cpp_str}}};",
-            )
+            if isinstance(struct_ani_info, StructObjectAniInfo):
+                self.gen_struct_object_from_ani_func(struct_ani_info)
+            elif isinstance(struct_ani_info, StructTupleAniInfo):
+                self.gen_struct_tuple_from_ani_func(struct_ani_info)
 
     def gen_struct_into_ani_func(self):
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
@@ -900,24 +874,110 @@ class AniStructImplGenerator:
             f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const {{",
             f"}}",
         ):
-            fields_ani = []
-            for parts in struct_ani_info.sorted_sts_all_fields:
-                final = parts[-1]
-                field_ani = f"ani_field_{final.name}"
-                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
-                final_ty_ani_info.into_ani(
-                    self.target,
-                    "env",
-                    ".".join(("cpp_obj", *(part.name for part in parts))),
-                    field_ani,
-                )
-                fields_ani.append(field_ani)
-            fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
+            if isinstance(struct_ani_info, StructObjectAniInfo):
+                self.gen_struct_object_into_ani_func(struct_ani_info)
+            elif isinstance(struct_ani_info, StructTupleAniInfo):
+                self.gen_struct_tuple_into_ani_func(struct_ani_info)
+
+    def gen_struct_object_from_ani_func(self, struct_ani_info: StructObjectAniInfo):
+        struct_cpp_info = StructCppInfo.get(self.am, self.struct)
+        fields_cpp = []
+        for parts in struct_ani_info.sts_all_fields:
+            final = parts[-1]
+            final_ani_info = StructFieldAniInfo.get(self.am, final)
+            final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+            field_ani = f"ani_field_{final.name}"
+            field_cpp = f"cpp_field_{final.name}"
             self.target.writelns(
-                f"ani_object ani_obj = {{}};",
-                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
-                f"return ani_obj;",
+                f"{final_ty_ani_info.ani_type} {field_ani} = {{}};",
             )
+            if struct_ani_info.is_class():
+                self.target.writelns(
+                    f'env->Object_GetField_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final_ani_info.sts_name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
+                )
+            else:
+                self.target.writelns(
+                    f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
+                )
+            final_ty_ani_info.from_ani(
+                self.target,
+                "env",
+                field_ani,
+                field_cpp,
+            )
+            fields_cpp.append(field_cpp)
+        fields_cpp_str = ", ".join(
+            f"std::move({field_cpp})" for field_cpp in fields_cpp
+        )
+        self.target.writelns(
+            f"return {struct_cpp_info.as_owner}{{{fields_cpp_str}}};",
+        )
+
+    def gen_struct_object_into_ani_func(self, struct_ani_info: StructObjectAniInfo):
+        struct_cpp_info = StructCppInfo.get(self.am, self.struct)
+        fields_ani = []
+        for parts in struct_ani_info.sorted_sts_all_fields:
+            final = parts[-1]
+            field_ani = f"ani_field_{final.name}"
+            final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+            final_ty_ani_info.into_ani(
+                self.target,
+                "env",
+                ".".join(("cpp_obj", *(part.name for part in parts))),
+                field_ani,
+            )
+            fields_ani.append(field_ani)
+        fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
+        self.target.writelns(
+            f"ani_object ani_obj = {{}};",
+            f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
+            f"return ani_obj;",
+        )
+
+    def gen_struct_tuple_from_ani_func(self, struct_ani_info: StructTupleAniInfo):
+        struct_cpp_info = StructCppInfo.get(self.am, self.struct)
+        fields_cpp = []
+        for i, field in enumerate(self.struct.fields):
+            field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+            field_ani = f"ani_field_{field.name}"
+            field_cpp = f"cpp_field_{field.name}"
+            self.target.writelns(
+                f"ani_ref {field_ani} = {{}};",
+                f'env->Object_GetField_Ref(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "${i}"), &{field_ani});',
+            )
+            field_ty_ani_info.from_ani_boxed(
+                self.target,
+                "env",
+                field_ani,
+                field_cpp,
+            )
+            fields_cpp.append(field_cpp)
+        fields_cpp_str = ", ".join(
+            f"std::move({field_cpp})" for field_cpp in fields_cpp
+        )
+        self.target.writelns(
+            f"return {struct_cpp_info.as_owner}{{{fields_cpp_str}}};",
+        )
+
+    def gen_struct_tuple_into_ani_func(self, struct_ani_info: StructTupleAniInfo):
+        struct_cpp_info = StructCppInfo.get(self.am, self.struct)
+        fields_ani = []
+        for field in self.struct.fields:
+            field_ani = f"ani_field_{field.name}"
+            final_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+            final_ty_ani_info.into_ani_boxed(
+                self.target,
+                "env",
+                f"cpp_obj.{field.name}",
+                field_ani,
+            )
+            fields_ani.append(field_ani)
+        fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
+        self.target.writelns(
+            f"ani_object ani_obj = {{}};",
+            f'env->Object_New(TH_ANI_FIND_CLASS(env, "{struct_ani_info.type_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "<ctor>", nullptr), &ani_obj{fields_ani_sum});',
+            f"return ani_obj;",
+        )
 
 
 class AniUnionDeclGenerator:

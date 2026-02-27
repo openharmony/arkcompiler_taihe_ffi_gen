@@ -36,6 +36,8 @@ from taihe.codegen.ani.analyses import (
     ParamAniInfo,
     StructAniInfo,
     StructFieldAniInfo,
+    StructObjectAniInfo,
+    StructTupleAniInfo,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -531,13 +533,33 @@ class StsStructGenerator:
     def gen_struct(self):
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
 
-        self.gen_struct_interface(struct_ani_info)
-        self.gen_struct_class(struct_ani_info)
-        self.gen_struct_factory(struct_ani_info)
-        self.gen_struct_ctor_reverses(struct_ani_info)
-        self.gen_struct_func_reverses(struct_ani_info)
+        if isinstance(struct_ani_info, StructTupleAniInfo):
+            self.gen_struct_tuple(struct_ani_info)
+        if isinstance(struct_ani_info, StructObjectAniInfo):
+            self.gen_struct_interface(struct_ani_info)
+            self.gen_struct_class(struct_ani_info)
+            self.gen_struct_factory(struct_ani_info)
+            self.gen_struct_ctor_reverses(struct_ani_info)
+            self.gen_struct_func_reverses(struct_ani_info)
 
-    def gen_struct_interface(self, struct_ani_info: StructAniInfo):
+    def gen_struct_tuple(self, struct_ani_info: StructTupleAniInfo):
+        sts_decl = f"type {struct_ani_info.sts_type_name}"
+        if struct_ani_info.is_default:
+            sts_decl = f"export default {sts_decl}"
+        else:
+            sts_decl = f"export {sts_decl}"
+
+        sts_types = []
+        for field in self.struct.fields:
+            field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+            sts_types.append(field_ty_ani_info.sts_type_in(self.target))
+        sts_types_str = ", ".join(sts_types)
+
+        self.target.writelns(
+            f"{sts_decl} = [{sts_types_str}];",
+        )
+
+    def gen_struct_interface(self, struct_ani_info: StructObjectAniInfo):
         if struct_ani_info.is_class():
             # no interface
             return
@@ -566,7 +588,7 @@ class StsStructGenerator:
 
             self.gen_struct_field_decls(struct_ani_info)
 
-    def gen_struct_field_decls(self, struct_ani_info: StructAniInfo):
+    def gen_struct_field_decls(self, struct_ani_info: StructObjectAniInfo):
         for field in struct_ani_info.sts_local_fields:
             readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
             opt = "?" if OptionalAttr.get(field) else ""
@@ -576,7 +598,7 @@ class StsStructGenerator:
                 f"{readonly}{field_ani_info.sts_name}{opt}: {field_ty_ani_info.sts_type_in(self.target)};",
             )
 
-    def gen_struct_class(self, struct_ani_info: StructAniInfo):
+    def gen_struct_class(self, struct_ani_info: StructObjectAniInfo):
         sts_decl = f"class {struct_ani_info.sts_impl_name}"
         if struct_ani_info.is_class():
             if struct_ani_info.sts_class_extends:
@@ -616,7 +638,7 @@ class StsStructGenerator:
             self.gen_struct_ctor_impls(struct_ani_info)
             self.gen_struct_func_impls(struct_ani_info)
 
-    def gen_struct_field_impls(self, struct_ani_info: StructAniInfo):
+    def gen_struct_field_impls(self, struct_ani_info: StructObjectAniInfo):
         for final in [
             *struct_ani_info.sts_local_fields,
             *struct_ani_info.sts_iface_extend_fields,
@@ -629,7 +651,7 @@ class StsStructGenerator:
                 f"{readonly}{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)};",
             )
 
-    def gen_struct_init_ctor(self, struct_ani_info: StructAniInfo):
+    def gen_struct_init_ctor(self, struct_ani_info: StructObjectAniInfo):
         with self.target.indented(
             f"constructor(",
             f")",
@@ -664,7 +686,7 @@ class StsStructGenerator:
                     f"this.{final_ani_info.sts_name} = {final_ani_info.sts_name};",
                 )
 
-    def gen_struct_copy_ctor(self, struct_ani_info: StructAniInfo):
+    def gen_struct_copy_ctor(self, struct_ani_info: StructObjectAniInfo):
         with self.target.indented(
             f"constructor(other: {struct_ani_info.sts_impl_name}) {{",
             f"}}",
@@ -687,7 +709,7 @@ class StsStructGenerator:
                     f"this.{final_ani_info.sts_name} = other.{final_ani_info.sts_name};",
                 )
 
-    def gen_struct_ctor_impls(self, struct_ani_info: StructAniInfo):
+    def gen_struct_ctor_impls(self, struct_ani_info: StructObjectAniInfo):
         ctor_overload_register = OverloadRegister()
         ctor_on_off_register = OnOffRegister()
         ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
@@ -723,7 +745,7 @@ class StsStructGenerator:
             )
             on_off_ctor_generator.gen_full_on_off_ctor()
 
-    def gen_struct_func_impls(self, struct_ani_info: StructAniInfo):
+    def gen_struct_func_impls(self, struct_ani_info: StructObjectAniInfo):
         func_overload_register = OverloadRegister()
         func_on_off_register = OnOffRegister()
         func_kind = StaticKind(struct_ani_info.sts_impl_name)
@@ -759,7 +781,7 @@ class StsStructGenerator:
             )
             on_off_func_generator.gen_full_on_off_func()
 
-    def gen_struct_factory(self, struct_ani_info: StructAniInfo):
+    def gen_struct_factory(self, struct_ani_info: StructObjectAniInfo):
         with self.target.indented(
             f"function {struct_ani_info.sts_factory_name}(",
             f"): {struct_ani_info.sts_impl_name}",
@@ -786,7 +808,7 @@ class StsStructGenerator:
                 f"return new {struct_ani_info.sts_impl_name}({finals_str});",
             )
 
-    def gen_struct_ctor_reverses(self, struct_ani_info: StructAniInfo):
+    def gen_struct_ctor_reverses(self, struct_ani_info: StructObjectAniInfo):
         ctor_kind = CtorKind(struct_ani_info.sts_impl_name)
         for ctor in self.ctors.get(struct_ani_info.sts_impl_name, []):
             reverse_func_generator = StsReverseFuncGenerator(
@@ -797,7 +819,7 @@ class StsStructGenerator:
             )
             reverse_func_generator.gen_reverse_func()
 
-    def gen_struct_func_reverses(self, struct_ani_info: StructAniInfo):
+    def gen_struct_func_reverses(self, struct_ani_info: StructObjectAniInfo):
         func_kind = StaticKind(struct_ani_info.sts_impl_name)
         for func in self.funcs.get(struct_ani_info.sts_impl_name, []):
             reverse_func_generator = StsReverseFuncGenerator(

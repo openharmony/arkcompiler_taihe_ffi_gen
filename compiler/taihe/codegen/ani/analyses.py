@@ -57,6 +57,7 @@ from taihe.codegen.ani.attributes import (
     StsLastAttr,
     StsThisAttr,
     StsTypeAttr,
+    TupleAttr,
     TypedArrayAttr,
     UndefinedAttr,
 )
@@ -849,6 +850,37 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             self.sts_type_name = rename_attr.name
         else:
             self.sts_type_name = d.name
+
+        self.is_default = ExportDefaultAttr.get(d) is not None
+
+    def sts_type_in(self, target: ArkTsImportManager):
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructAniInfo":
+        if TupleAttr.get(d):
+            return StructTupleAniInfo(am, d)
+        return StructObjectAniInfo(am, d)
+
+
+class StructTupleAniInfo(StructAniInfo):
+    def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
+
+        self.type_desc = f"std.core.Tuple{len(d.fields)}"
+        self.ani_type = ANI_OBJECT
+        self.sig_type = AniRuntimeClassType(self.type_desc)
+
+
+class StructObjectAniInfo(StructAniInfo):
+    def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
+
         if ClassAttr.get(d):
             self.sts_impl_name = self.sts_type_name
         else:
@@ -873,6 +905,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         for field in d.fields:
             if extend := ExtendsAttr.get(field):
                 extend_ani_info = StructAniInfo.get(am, extend.ty.decl)
+                assert isinstance(extend_ani_info, StructObjectAniInfo)
                 if extend_ani_info.is_class():
                     self.sts_class_extends.append(field)
                 else:
@@ -896,6 +929,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             final = parts[-1]
             if extend := ExtendsAttr.get(origin):
                 extend_ani_info = StructAniInfo.get(am, extend.ty.decl)
+                assert isinstance(extend_ani_info, StructObjectAniInfo)
                 if extend_ani_info.is_class():
                     self.sts_class_extend_fields.append(final)
                 else:
@@ -903,17 +937,8 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             else:
                 self.sts_local_fields.append(final)
 
-        self.is_default = ExportDefaultAttr.get(d) is not None
-
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
-
-    def sts_type_in(self, target: ArkTsImportManager):
-        return self.parent_ns.get_type(
-            self.is_default,
-            self.sts_type_name,
-            target=target,
-        )
 
     @classmethod
     @override
