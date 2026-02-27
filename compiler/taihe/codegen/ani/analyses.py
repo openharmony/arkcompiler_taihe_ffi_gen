@@ -57,6 +57,7 @@ from taihe.codegen.ani.attributes import (
     StsLastAttr,
     StsThisAttr,
     StsTypeAttr,
+    TupleAttr,
     TypedArrayAttr,
     UndefinedAttr,
 )
@@ -743,14 +744,17 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
 
 
 class EnumAniInfo(AbstractAnalysis[EnumDecl]):
+    ani_type: AniType
+    sig_type: AniRuntimeType
+
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
+
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
             self.sts_type_name = rename_attr.name
         else:
             self.sts_type_name = d.name
-
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -764,10 +768,33 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAniInfo":
-        return EnumAniInfo(am, d)
+        if ConstAttr.get(d):
+            return EnumConstAniInfo(am, d)
+        return EnumObjectAniInfo(am, d)
+
+
+class EnumObjectAniInfo(EnumAniInfo):
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        super().__init__(am, d)
+
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
+        self.ani_type = ANI_ENUM_ITEM
+        self.sig_type = AniRuntimeEnumType(self.type_desc)
+
+
+class EnumConstAniInfo(EnumAniInfo):
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        super().__init__(am, d)
+
+        enum_ty_ani_info = TypeAniInfo.get(am, d.ty)
+        self.ani_type = enum_ty_ani_info.ani_type
+        self.sig_type = enum_ty_ani_info.sig_type
 
 
 class UnionAniInfo(AbstractAnalysis[UnionDecl]):
+    ani_type: AniType
+    sig_type: AniRuntimeType
+
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
@@ -777,6 +804,13 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
             self.sts_type_name = rename_attr.name
         else:
             self.sts_type_name = d.name
+
+        self.ani_type = ANI_REF
+        sig_types: list[AniRuntimeType] = []
+        for field in d.fields:
+            field_ani_info = TypeAniInfo.get(am, field.ty)
+            sig_types.append(field_ani_info.sig_type)
+        self.sig_type = AniRuntimeUnionType.union(*sig_types)
 
         self.sts_all_fields: list[list[UnionFieldDecl]] = []
         for field in d.fields:
@@ -804,6 +838,9 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
 
 class StructAniInfo(AbstractAnalysis[StructDecl]):
+    ani_type: AniType
+    sig_type: AniRuntimeType
+
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
@@ -813,13 +850,47 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             self.sts_type_name = rename_attr.name
         else:
             self.sts_type_name = d.name
+
+        self.is_default = ExportDefaultAttr.get(d) is not None
+
+    def sts_type_in(self, target: ArkTsImportManager):
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructAniInfo":
+        if TupleAttr.get(d):
+            return StructTupleAniInfo(am, d)
+        return StructObjectAniInfo(am, d)
+
+
+class StructTupleAniInfo(StructAniInfo):
+    def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
+
+        self.type_desc = f"std.core.Tuple{len(d.fields)}"
+        self.ani_type = ANI_OBJECT
+        self.sig_type = AniRuntimeClassType(self.type_desc)
+
+
+class StructObjectAniInfo(StructAniInfo):
+    def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
+
         if ClassAttr.get(d):
             self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.sts_factory_name = f"_taihe_{d.name}_ctor"
+
         self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
         self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
+        self.ani_type = ANI_OBJECT
+        self.sig_type = AniRuntimeClassType(self.type_desc)
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
@@ -834,6 +905,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         for field in d.fields:
             if extend := ExtendsAttr.get(field):
                 extend_ani_info = StructAniInfo.get(am, extend.ty.decl)
+                assert isinstance(extend_ani_info, StructObjectAniInfo)
                 if extend_ani_info.is_class():
                     self.sts_class_extends.append(field)
                 else:
@@ -857,6 +929,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             final = parts[-1]
             if extend := ExtendsAttr.get(origin):
                 extend_ani_info = StructAniInfo.get(am, extend.ty.decl)
+                assert isinstance(extend_ani_info, StructObjectAniInfo)
                 if extend_ani_info.is_class():
                     self.sts_class_extend_fields.append(final)
                 else:
@@ -864,17 +937,8 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             else:
                 self.sts_local_fields.append(final)
 
-        self.is_default = ExportDefaultAttr.get(d) is not None
-
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
-
-    def sts_type_in(self, target: ArkTsImportManager):
-        return self.parent_ns.get_type(
-            self.is_default,
-            self.sts_type_name,
-            target=target,
-        )
 
     @classmethod
     @override
@@ -883,6 +947,9 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
+    ani_type: AniType
+    sig_type: AniRuntimeType
+
     scope: ClassVar[AniScope] = ANI_CLASS
 
     data_ptr = "_taihe_dataPtr"
@@ -903,8 +970,11 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.sts_factory_name = f"_taihe_{d.name}_ctor"
+
         self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
         self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
+        self.ani_type = ANI_OBJECT
+        self.sig_type = AniRuntimeClassType(self.type_desc)
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
@@ -1158,8 +1228,8 @@ class EnumTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
-        self.ani_type = ANI_ENUM_ITEM
-        self.sig_type = AniRuntimeEnumType(enum_ani_info.type_desc)
+        self.ani_type = enum_ani_info.ani_type
+        self.sig_type = enum_ani_info.sig_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1174,12 +1244,11 @@ class EnumTypeAniInfo(TypeAniInfo):
         ani_value: str,
         cpp_after: str,
     ):
-        ani_index = f"{cpp_after}_ani_index"
+        enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.decl)
+        target.add_include(enum_ani_info.impl_header)
         target.writelns(
-            f"ani_size {ani_index} = {{}};",
-            f"{env}->EnumItem_GetIndex({ani_value}, &{ani_index});",
-            f"{enum_cpp_info.full_name} {cpp_after}(static_cast<{enum_cpp_info.full_name}::key_t>({ani_index}));",
+            f"{self.cpp_info.as_owner} {cpp_after} = ::taihe::from_ani<{enum_cpp_info.as_owner}>({env}, {ani_value});",
         )
 
     @override
@@ -1190,58 +1259,12 @@ class EnumTypeAniInfo(TypeAniInfo):
         cpp_value: str,
         ani_after: str,
     ):
-        target.writelns(
-            f"ani_enum_item {ani_after} = {{}};",
-            f'{env}->Enum_GetEnumItemByIndex(TH_ANI_FIND_ENUM({env}, "{self.type_desc}"), static_cast<ani_size>({cpp_value}.get_key()), &{ani_after});',
-        )
-
-
-class ConstEnumTypeAniInfo(TypeAniInfo):
-    def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
-        super().__init__(am, t)
-        self.am = am
-        self.t = t
-        self.const_attr = const_attr
-        enum_ty_ani_info = TypeAniInfo.get(self.am, self.t.decl.ty)
-        self.ani_type = enum_ty_ani_info.ani_type
-        self.sig_type = enum_ty_ani_info.sig_type
-
-    @override
-    def sts_type_in(self, target: ArkTsImportManager) -> str:
-        enum_ty_ani_info = TypeAniInfo.get(self.am, self.t.decl.ty)
-        return enum_ty_ani_info.sts_type_in(target)
-
-    @override
-    def from_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_value: str,
-        cpp_after: str,
-    ):
-        cpp_temp = f"{cpp_after}_cpp_temp"
-        enum_ty_ani_info = TypeAniInfo.get(self.am, self.t.decl.ty)
-        enum_ty_ani_info.from_ani(target, env, ani_value, cpp_temp)
+        enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.decl)
+        target.add_include(enum_ani_info.impl_header)
         target.writelns(
-            f"{enum_cpp_info.full_name} {cpp_after} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{enum_cpp_info.as_owner}>({env}, {cpp_value});",
         )
-
-    @override
-    def into_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_value: str,
-        ani_after: str,
-    ):
-        cpp_temp = f"{ani_after}_cpp_temp"
-        enum_ty_cpp_info = TypeCppInfo.get(self.am, self.t.decl.ty)
-        enum_ty_ani_info = TypeAniInfo.get(self.am, self.t.decl.ty)
-        target.writelns(
-            f"{enum_ty_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
-        )
-        enum_ty_ani_info.into_ani(target, env, cpp_temp, ani_after)
 
 
 class StructTypeAniInfo(TypeAniInfo):
@@ -1250,8 +1273,8 @@ class StructTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
-        self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(struct_ani_info.type_desc)
+        self.ani_type = struct_ani_info.ani_type
+        self.sig_type = struct_ani_info.sig_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1285,7 +1308,7 @@ class StructTypeAniInfo(TypeAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.t.decl)
         target.add_include(struct_ani_info.impl_header)
         target.writelns(
-            f"ani_object {ani_after} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, {cpp_value});",
         )
 
 
@@ -1294,12 +1317,9 @@ class UnionTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_REF
-        sig_types: list[AniRuntimeType] = []
-        for field in t.decl.fields:
-            field_ani_info = TypeAniInfo.get(self.am, field.ty)
-            sig_types.append(field_ani_info.sig_type)
-        self.sig_type = AniRuntimeUnionType.union(*sig_types)
+        union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
+        self.ani_type = union_ani_info.ani_type
+        self.sig_type = union_ani_info.sig_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1333,7 +1353,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         union_cpp_info = UnionCppInfo.get(self.am, self.t.decl)
         target.add_include(union_ani_info.impl_header)
         target.writelns(
-            f"ani_ref {ani_after} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, {cpp_value});",
         )
 
 
@@ -1343,8 +1363,8 @@ class IfaceTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
-        self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(iface_ani_info.type_desc)
+        self.ani_type = iface_ani_info.ani_type
+        self.sig_type = iface_ani_info.sig_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1378,7 +1398,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         iface_cpp_info = IfaceCppInfo.get(self.am, self.t.decl)
         target.add_include(iface_ani_info.impl_header)
         target.writelns(
-            f"ani_object {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, {cpp_value});",
         )
 
 
@@ -2692,8 +2712,6 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
 
     @override
     def visit_enum_type(self, t: EnumType) -> TypeAniInfo:
-        if const_attr := ConstAttr.get(t.decl):
-            return ConstEnumTypeAniInfo(self.am, t, const_attr)
         return EnumTypeAniInfo(self.am, t)
 
     @override

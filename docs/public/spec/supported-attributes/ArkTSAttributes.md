@@ -8,9 +8,11 @@
 
 ## 声明注解
 
+- `@const`：加在 Taihe enum 上，表示该 enum 在用户侧被投影为若干个常量，而不是一个 enum 类型。
+
 - `@class`：使用此注解将在 Taihe 中声明的 interface 或 struct 在用户侧中投影为 class，如果不使用此注解则默认会被投影为用户侧中的 interface。
 
-- `@const`：加在 Taihe enum 上，表示该 enum 在用户侧被投影为若干个常量，而不是一个 enum 类型。
+- `@tuple`：使用此注解将在 Taihe 中声明的 struct 在用户侧中投影为 tuple，而非默认的 interface。
 
 - `@extends`：加在 struct field 上，用于以组合的方式实现纯数据类的继承。
 

@@ -13,14 +13,19 @@
  * limitations under the License.
  */
 
-interface Payable {
-    pay(amountDue: f64): void;
+struct Config {
+    @readonly name: String;
+    @readonly version: i32;
+    description: String;
 }
 
 @class
-interface CreditCard : Payable {
-    topUp(topUpAmount: f64): void;
-    getBalance(): f64;
+interface Counter {
+    @get getCount(): i32;
+    @get("label") getLabel(): String;
+    @set setLabel(val: String): void;
+    increment(): void;
 }
 
-function makeCreditCard(initAmount: f64): CreditCard;
+function createConfig(name: String, version: i32, description: String): Config;
+function createCounter(label: String): Counter;

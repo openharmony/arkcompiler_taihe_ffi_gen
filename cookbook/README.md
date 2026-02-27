@@ -42,7 +42,9 @@
 | [Interface 接口](interface/README.md) | 定义和实现纯方法类 |
 | [Import 导入](import/README.md) | 模块化：导入其他 Taihe IDL 文件 |
 | [Enum 与 Union](enum_union/README.md) | 枚举类型和联合类型的使用 |
-| [继承](inherit/README.md) | 接口继承与 `@get`/`@set` 属性 |
+| [Struct 与 Tuple](struct_tuple/README.md) | Struct 基础用法与 `@tuple` 元组投影 |
+| [继承](inherit/README.md) | 接口继承与 `@class` 注解 |
+| [属性（Property）](property/README.md) | `@get`/`@set` 访问器与 `@readonly` 只读字段 |
 | [Optional 可选类型](optional/README.md) | 可选参数和可空类型 |
 
 ## 第三章：进阶与扩展
