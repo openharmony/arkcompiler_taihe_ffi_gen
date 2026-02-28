@@ -30,6 +30,7 @@ from taihe.driver.contexts import (
 )
 from taihe.driver.options import OptionRegistry
 from taihe.semantics import PrettyPrintBackendConfig
+from taihe.utils.diagnostics import ConsoleDiagnosticsManager
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     PandaVm,
@@ -134,10 +135,21 @@ def taihec(
     registry = BackendRegistry()
     registry.register_all()
 
+    dm = ConsoleDiagnosticsManager()
+
     backend_factories = registry.collect_required_backends(backend_names)
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
+    options = option_registry.parse_args(extra or [])
+    backend_configs = [b.create(options) for b in backend_factories]
+    if debug:
+        pretty_print_backend_config = PrettyPrintBackendConfig(
+            show_resolved=True,
+            show_internal=True,
+            target_desc="stderr",
+        )
+        backend_configs.append(pretty_print_backend_config)
 
     if buildsys_name == "cmake":
         output_config = CMakeOutputConfig(
@@ -150,23 +162,15 @@ def taihec(
             dst_dir=dst_dir,
         )
 
-    options = option_registry.parse_args(extra or [])
-    backend_configs = [b.create(options) for b in backend_factories]
-    if debug:
-        pretty_print_backend_config = PrettyPrintBackendConfig(
-            show_resolved=True,
-            show_internal=True,
-            target_desc="stderr",
-        )
-        backend_configs.append(pretty_print_backend_config)
-
     invocation = CompilerInvocation(
         src_files=src_files,
         output_config=output_config,
         backend_configs=backend_configs,
     )
-    instance = CompilerInstance(invocation)
-    if not instance.run():
+    instance = CompilerInstance(invocation, dm)
+    instance.run()
+
+    if dm.has_error:
         raise RuntimeError("Taihe compiler (taihec) failed to run")
 
 
