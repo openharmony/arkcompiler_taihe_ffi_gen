@@ -15,11 +15,17 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from difflib import get_close_matches
 from typing import TYPE_CHECKING, ClassVar
+
+from typing_extensions import Self
+
+from taihe.utils.exceptions import AdhocError
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
     from taihe.driver.options import OptionRegistry, OptionStore
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 class BackendConfig(ABC):
@@ -40,16 +46,20 @@ class BackendConfig(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls, options: "OptionStore") -> "BackendConfig":
-        """Creates a configuration for the backend.
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager") -> Self | None:
+        """Creates a backend configuration from the given options.
 
-        Subclasses that registered options in `register()` should consume
-        them from *options* here and store the resolved values as fields.
+        This method is called after all options are parsed, and the returned
+        configuration will be used to construct the backend instance.
         """
 
     @abstractmethod
     def construct(self, instance: "CompilerInstance") -> "Backend":
-        """Construct an instance of the backend based on this configuration."""
+        """Constructs the backend instance from the configuration.
+
+        This method is called by the CompilerInstance to construct the backend
+        after all backends are collected and their configurations are created.
+        """
 
 
 class Backend(ABC):  # noqa: B024
@@ -136,22 +146,31 @@ class BackendRegistry:
     def clear(self):
         self._factories.clear()
 
-    def collect_required_backends(self, names: Iterable[str]) -> list[BackendConfigT]:
+    def collect_required_backends(
+        self,
+        names: Iterable[str],
+        dm: "DiagnosticsManager",
+    ) -> list[BackendConfigT]:
         factories: list[BackendConfigT] = []
         visited: set[str] = set()
 
         def add(name: str):
             if name in visited:
-                return False
+                return
             factory = self._factories.get(name)
             if not factory:
-                raise KeyError(f"unknown backend {name!r}")
+                suggestions = get_close_matches(name, self._factories.keys())
+                msg = f"unknown backend {name!r}"
+                if suggestions:
+                    suggestions_str = ", ".join(suggestions)
+                    msg += f", did you mean: {suggestions_str}?"
+                dm.emit(AdhocError(msg))
+                return
 
             visited.add(name)
             for dep in factory.DEPS:
                 add(dep)
             factories.append(factory)
-            return True
 
         for name in names:
             add(name)

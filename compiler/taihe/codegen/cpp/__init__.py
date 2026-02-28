@@ -21,6 +21,7 @@ from taihe.driver.backend import Backend, BackendConfig
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
     from taihe.driver.options import OptionStore
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass
@@ -29,7 +30,7 @@ class CppCommonHeadersBackendConfig(BackendConfig):
     DEPS: ClassVar = ["abi-header"]
 
     @classmethod
-    def create(cls, options: "OptionStore"):
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CppCommonHeadersBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
@@ -54,7 +55,7 @@ class CppAuthorBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-common", "abi-source"]
 
     @classmethod
-    def create(cls, options: "OptionStore"):
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CppAuthorBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
@@ -84,7 +85,7 @@ class CppUserHeadersBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-common"]
 
     @classmethod
-    def create(cls, options: "OptionStore"):
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CppUserHeadersBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
