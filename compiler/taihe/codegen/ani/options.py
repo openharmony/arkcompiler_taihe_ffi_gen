@@ -14,10 +14,12 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING
 
 from taihe.driver.options import AbstractConfigOption
+
+if TYPE_CHECKING:
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass
@@ -34,7 +36,7 @@ class ArktsKeepNameOption(AbstractConfigOption):
     NAME = "arkts:keep-name"
 
     @classmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
@@ -53,7 +55,7 @@ class ArktsModulePrefixOption(AbstractConfigOption):
     prefix: str | None = None
 
     @classmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls(prefix=value)
 
 
@@ -72,7 +74,7 @@ class ArktsPathPrefixOption(AbstractConfigOption):
     prefix: str | None = None
 
     @classmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls(prefix=value)
 
 

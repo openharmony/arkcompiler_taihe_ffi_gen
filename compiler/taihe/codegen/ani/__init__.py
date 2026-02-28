@@ -23,6 +23,7 @@ from taihe.utils.sources import SourceFile
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
     from taihe.driver.options import OptionRegistry, OptionStore
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass
@@ -41,7 +42,7 @@ class AniBridgeBackendConfig(BackendConfig):
         option_registry.register(*all_ani_config_options)
 
     @classmethod
-    def create(cls, options: "OptionStore"):
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         from taihe.codegen.ani.options import (
             ArktsKeepNameOption,
             ArktsModulePrefixOption,

@@ -114,8 +114,12 @@ def main():
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
-    options = option_registry.parse_args(args.config)
-    backend_configs = [b.create(options) for b in backend_factories]
+    options = option_registry.parse_args(args.config, dm)
+    backend_configs = [
+        backend_config
+        for backend_factory in backend_factories
+        if (backend_config := backend_factory.create(options, dm)) is not None
+    ]
 
     if args.buildsys == "cmake":
         output_config = CMakeOutputConfig(
@@ -127,6 +131,9 @@ def main():
         output_config = BasicOutputConfig(
             dst_dir=dst_dir,
         )
+
+    if dm.has_error:
+        return -1
 
     invocation = CompilerInvocation(
         src_files=src_files,

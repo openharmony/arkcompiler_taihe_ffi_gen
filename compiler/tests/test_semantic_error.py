@@ -92,10 +92,15 @@ backend_registry.register_all()
 #############################
 
 
+pre_temp_dm = SemanticTestDiagnosticsManager()
 pre_backend_names = ["pretty-print"]
 pre_backend_factories = backend_registry.collect_required_backends(pre_backend_names)
 pre_options = OptionStore()
-pre_backend_configs = [b.create(pre_options) for b in pre_backend_factories]
+pre_backend_configs = [
+    backend_config
+    for backend_factory in pre_backend_factories
+    if (backend_config := backend_factory.create(pre_options, pre_temp_dm)) is not None
+]
 pre_invocation = CompilerInvocation(
     backend_configs=pre_backend_configs,
 )
@@ -454,10 +459,15 @@ def test_enum_value():
 #################################
 
 
+ani_temp_dm = SemanticTestDiagnosticsManager()
 ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
 ani_backend_factories = backend_registry.collect_required_backends(ani_backend_names)
 ani_options = OptionStore()
-ani_backend_configs = [b.create(ani_options) for b in ani_backend_factories]
+ani_backend_configs = [
+    backend_config
+    for backend_factory in ani_backend_factories
+    if (backend_config := backend_factory.create(ani_options, ani_temp_dm)) is not None
+]
 ani_invocation = CompilerInvocation(
     backend_configs=ani_backend_configs,
 )

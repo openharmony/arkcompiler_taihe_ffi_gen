@@ -141,8 +141,12 @@ def taihec(
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
-    options = option_registry.parse_args(extra or [])
-    backend_configs = [b.create(options) for b in backend_factories]
+    options = option_registry.parse_args(extra or [], dm)
+    backend_configs = [
+        backend_config
+        for backend_factory in backend_factories
+        if (backend_config := backend_factory.create(options, dm)) is not None
+    ]
     if debug:
         pretty_print_backend_config = PrettyPrintBackendConfig(
             show_resolved=True,
@@ -162,16 +166,19 @@ def taihec(
             dst_dir=dst_dir,
         )
 
+    if dm.has_error:
+        raise RuntimeError("Failed to parse options for backends")
+
     invocation = CompilerInvocation(
         src_files=src_files,
-        output_config=output_config,
         backend_configs=backend_configs,
+        output_config=output_config,
     )
     instance = CompilerInstance(invocation, dm)
     instance.run()
 
     if dm.has_error:
-        raise RuntimeError("Taihe compiler (taihec) failed to run")
+        raise RuntimeError("Compilation failed with errors")
 
 
 class CppToolchain:

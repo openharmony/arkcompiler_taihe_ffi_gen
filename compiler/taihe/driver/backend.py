@@ -17,9 +17,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, ClassVar
 
+from typing_extensions import Self
+
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
     from taihe.driver.options import OptionRegistry, OptionStore
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 class BackendConfig(ABC):
@@ -40,16 +43,20 @@ class BackendConfig(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls, options: "OptionStore") -> "BackendConfig":
-        """Creates a configuration for the backend.
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager") -> Self | None:
+        """Creates a backend configuration from the given options.
 
-        Subclasses that registered options in `register()` should consume
-        them from *options* here and store the resolved values as fields.
+        This method is called after all options are parsed, and the returned
+        configuration will be used to construct the backend instance.
         """
 
     @abstractmethod
     def construct(self, instance: "CompilerInstance") -> "Backend":
-        """Construct an instance of the backend based on this configuration."""
+        """Constructs the backend instance from the configuration.
+
+        This method is called by the CompilerInstance to construct the backend
+        after all backends are collected and their configurations are created.
+        """
 
 
 class Backend(ABC):  # noqa: B024
