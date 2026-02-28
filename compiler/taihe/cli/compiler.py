@@ -23,6 +23,7 @@ from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.driver.options import OptionRegistry
 from taihe.utils.build_metadata import BuildMetadata
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager
+from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     ResourceContext,
@@ -110,7 +111,7 @@ def main():
     ]
     dst_dir = Path(args.dst_dir)
 
-    backend_factories = backend_registry.collect_required_backends(args.backends)
+    backend_factories = backend_registry.collect_required_backends(args.backends, dm)
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
@@ -121,16 +122,19 @@ def main():
         if (backend_config := backend_factory.create(options, dm)) is not None
     ]
 
-    if args.buildsys == "cmake":
-        output_config = CMakeOutputConfig(
-            dst_dir=dst_dir,
-            runtime_include_dir=RuntimeHeader.resolve_path(),
-            runtime_src_dir=RuntimeSource.resolve_path(),
-        )
-    else:
-        output_config = BasicOutputConfig(
-            dst_dir=dst_dir,
-        )
+    match args.buildsys:
+        case "cmake":
+            output_config = CMakeOutputConfig(
+                dst_dir=dst_dir,
+                runtime_include_dir=RuntimeHeader.resolve_path(),
+                runtime_src_dir=RuntimeSource.resolve_path(),
+            )
+        case _:
+            if args.buildsys is not None:
+                dm.emit(AdhocError(f"unknown build system {args.buildsys!r}"))
+            output_config = BasicOutputConfig(
+                dst_dir=dst_dir,
+            )
 
     if dm.has_error:
         return -1
