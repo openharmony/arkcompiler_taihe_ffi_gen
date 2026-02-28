@@ -52,9 +52,14 @@ OptionStore
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from difflib import get_close_matches
-from typing import ClassVar, TypeVar, cast
+from typing import TYPE_CHECKING, ClassVar, TypeVar, cast
 
 from typing_extensions import Self
+
+from taihe.utils.exceptions import AdhocError
+
+if TYPE_CHECKING:
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass
@@ -71,11 +76,12 @@ class AbstractConfigOption(ABC):
 
     @classmethod
     @abstractmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager") -> Self | None:
         """Parse the option value from command line.
 
         Args:
             value: The value string, or None for flag-style options
+            dm: DiagnosticsManager for reporting errors during parsing
 
         Returns:
             A new instance of this config option
@@ -150,12 +156,18 @@ class OptionRegistry:
                 )
             self._name_to_option[name] = option_type
 
-    def parse(self, name: str, value: str | None) -> AbstractConfigOption:
+    def parse(
+        self,
+        name: str,
+        value: str | None,
+        dm: "DiagnosticsManager",
+    ) -> AbstractConfigOption | None:
         """Parse raw config list into a OptionStore.
 
         Args:
             name: The option name from command line -C flags
             value: The option value string, or None for flag-style options
+            dm: DiagnosticsManager for reporting errors during parsing
 
         Returns:
             A parsed ConfigOption instance
@@ -168,16 +180,19 @@ class OptionRegistry:
             suggestions = get_close_matches(name, self._name_to_option.keys())
             msg = f"unknown config option {name!r}"
             if suggestions:
-                msg += f", did you mean: {', '.join(suggestions)}?"
-            raise ValueError(msg)
+                suggestions_str = ", ".join(suggestions)
+                msg += f", did you mean: {suggestions_str}?"
+            dm.emit(AdhocError(msg))
+            return None
 
-        return option_type.parse(value)
+        return option_type.parse(value, dm)
 
-    def parse_args(self, args: list[str]) -> OptionStore:
+    def parse_args(self, args: list[str], dm: "DiagnosticsManager") -> OptionStore:
         """Parse a list of raw config strings into an OptionStore.
 
         Args:
             args: List of config strings from command line
+            dm: DiagnosticsManager for reporting errors during parsing
 
         Returns:
             An OptionStore containing all parsed options
@@ -189,8 +204,9 @@ class OptionRegistry:
         for arg in args:
             name, *values = arg.split("=", 1)
             value = values[0] if values else None
-            option = self.parse(name, value)
-            store.add(option)
+            option = self.parse(name, value, dm)
+            if option is not None:
+                store.add(option)
         return store
 
     def get_option_names(self) -> list[str]:
