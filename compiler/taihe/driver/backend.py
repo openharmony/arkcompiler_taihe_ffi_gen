@@ -15,9 +15,12 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from difflib import get_close_matches
 from typing import TYPE_CHECKING, ClassVar
 
 from typing_extensions import Self
+
+from taihe.utils.exceptions import AdhocError
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
@@ -143,22 +146,31 @@ class BackendRegistry:
     def clear(self):
         self._factories.clear()
 
-    def collect_required_backends(self, names: Iterable[str]) -> list[BackendConfigT]:
+    def collect_required_backends(
+        self,
+        names: Iterable[str],
+        dm: "DiagnosticsManager",
+    ) -> list[BackendConfigT]:
         factories: list[BackendConfigT] = []
         visited: set[str] = set()
 
         def add(name: str):
             if name in visited:
-                return False
+                return
             factory = self._factories.get(name)
             if not factory:
-                raise KeyError(f"unknown backend {name!r}")
+                suggestions = get_close_matches(name, self._factories.keys())
+                msg = f"unknown backend {name!r}"
+                if suggestions:
+                    suggestions_str = ", ".join(suggestions)
+                    msg += f", did you mean: {suggestions_str}?"
+                dm.emit(AdhocError(msg))
+                return
 
             visited.add(name)
             for dep in factory.DEPS:
                 add(dep)
             factories.append(factory)
-            return True
 
         for name in names:
             add(name)

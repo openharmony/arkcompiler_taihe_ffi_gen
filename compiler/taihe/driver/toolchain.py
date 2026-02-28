@@ -31,6 +31,7 @@ from taihe.driver.contexts import (
 from taihe.driver.options import OptionRegistry
 from taihe.semantics import PrettyPrintBackendConfig
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager
+from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     PandaVm,
@@ -137,7 +138,7 @@ def taihec(
 
     dm = ConsoleDiagnosticsManager()
 
-    backend_factories = registry.collect_required_backends(backend_names)
+    backend_factories = registry.collect_required_backends(backend_names, dm)
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
@@ -155,16 +156,19 @@ def taihec(
         )
         backend_configs.append(pretty_print_backend_config)
 
-    if buildsys_name == "cmake":
-        output_config = CMakeOutputConfig(
-            dst_dir=dst_dir,
-            runtime_include_dir=RuntimeHeader.resolve_path(),
-            runtime_src_dir=RuntimeSource.resolve_path(),
-        )
-    else:
-        output_config = BasicOutputConfig(
-            dst_dir=dst_dir,
-        )
+    match buildsys_name:
+        case "cmake":
+            output_config = CMakeOutputConfig(
+                dst_dir=dst_dir,
+                runtime_include_dir=RuntimeHeader.resolve_path(),
+                runtime_src_dir=RuntimeSource.resolve_path(),
+            )
+        case _:
+            if buildsys_name is not None:
+                dm.emit(AdhocError(f"unknown build system {buildsys_name!r}"))
+            output_config = BasicOutputConfig(
+                dst_dir=dst_dir,
+            )
 
     if dm.has_error:
         raise RuntimeError("Failed to parse options for backends")
