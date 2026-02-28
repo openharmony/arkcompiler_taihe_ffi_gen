@@ -37,8 +37,8 @@ from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.attributes import AttributeRegistry
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
-from taihe.utils.exceptions import IgnoredFileReason, IgnoredFileWarn
+from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.exceptions import AdhocWarn, IgnoredFileReason, IgnoredFileWarn
 from taihe.utils.outputs import NullOutputConfig, OutputConfig, OutputManager
 from taihe.utils.sources import IDL_FILE_EXTS, SourceFile, SourceLocation, SourceManager
 
@@ -99,10 +99,9 @@ class CompilerInstance:
     def __init__(
         self,
         invocation: CompilerInvocation,
-        *,
-        dm: DiagnosticsManager | None = None,
+        dm: DiagnosticsManager,
     ):
-        self.diagnostics_manager = dm or ConsoleDiagnosticsManager()
+        self.diagnostics_manager = dm
         self.attribute_registry = AttributeRegistry()
         self.analysis_manager = AnalysisManager()
 
@@ -136,6 +135,9 @@ class CompilerInstance:
                 self.diagnostics_manager.emit(warn)
             else:
                 self.source_manager.add_source(source)
+
+        if not self.source_manager.sources:
+            self.diagnostics_manager.emit(AdhocWarn("no input files found"))
 
         for b in self.backends:
             b.inject()
@@ -174,4 +176,3 @@ class CompilerInstance:
         self.parse()
         self.validate()
         self.generate()
-        return not self.diagnostics_manager.has_error

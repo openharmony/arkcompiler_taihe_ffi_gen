@@ -22,6 +22,7 @@ from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.driver.options import OptionRegistry
 from taihe.utils.build_metadata import BuildMetadata
+from taihe.utils.diagnostics import ConsoleDiagnosticsManager
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     ResourceContext,
@@ -95,6 +96,8 @@ def main():
     ResourceContext.initialize(args)
     # }} Special options
 
+    dm = ConsoleDiagnosticsManager()
+
     src_files = [
         Path(src_file)
         for src_file_pattern in args.src_files
@@ -107,14 +110,12 @@ def main():
     ]
     dst_dir = Path(args.dst_dir)
 
-    if not src_files and not src_dirs:
-        print("taihec: error: no input files", file=sys.stderr)
-        return -1
-
     backend_factories = backend_registry.collect_required_backends(args.backends)
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
+    options = option_registry.parse_args(args.config)
+    backend_configs = [b.create(options) for b in backend_factories]
 
     if args.buildsys == "cmake":
         output_config = CMakeOutputConfig(
@@ -127,20 +128,18 @@ def main():
             dst_dir=dst_dir,
         )
 
-    options = option_registry.parse_args(args.config)
-    backend_configs = [b.create(options) for b in backend_factories]
-
     invocation = CompilerInvocation(
         src_files=src_files,
         src_dirs=src_dirs,
         backend_configs=backend_configs,
         output_config=output_config,
     )
+    instance = CompilerInstance(invocation, dm)
+    instance.run()
 
-    instance = CompilerInstance(invocation)
-
-    if not instance.run():
+    if dm.has_error:
         return -1
+
     return 0
 
 
