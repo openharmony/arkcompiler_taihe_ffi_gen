@@ -16,15 +16,15 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from typing_extensions import Self
-
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.driver.options import AbstractConfigOption, OptionRegistry
+from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import DebugOutputConfig
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
     from taihe.driver.options import OptionStore
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass
@@ -36,11 +36,13 @@ class DebugOutputTargetOption(AbstractConfigOption):
     target_desc: Literal["stderr", "stdout"]
 
     @classmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         if value is None:
-            raise ValueError("debug:output-target requires a value")
+            dm.emit(AdhocError("debug:output-target requires a value"))
+            return None
         if value not in ("stderr", "stdout"):
-            raise ValueError("debug:output-target must be either 'stderr' or 'stdout'")
+            dm.emit(AdhocError(f"invalid value for debug:output-target"))
+            return None
         return cls(value)
 
 
@@ -51,7 +53,7 @@ class DebugShowInternalOption(AbstractConfigOption):
     NAME = "debug:show-internal"
 
     @classmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
@@ -62,7 +64,7 @@ class DebugShowResolvedOption(AbstractConfigOption):
     NAME = "debug:show-resolved"
 
     @classmethod
-    def parse(cls, value: str | None) -> Self:
+    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
@@ -81,7 +83,7 @@ class PrettyPrintBackendConfig(BackendConfig):
         option_registry.register(DebugShowInternalOption)
 
     @classmethod
-    def create(cls, options: "OptionStore"):
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         output_target_opt = options.get(DebugOutputTargetOption)
         show_resolved_opt = options.get(DebugShowResolvedOption)
         show_internal_opt = options.get(DebugShowInternalOption)

@@ -63,7 +63,7 @@ class DiagBase(ABC):
     SEVERITY_DESC: ClassVar[str]
     STYLE: ClassVar[str]
 
-    loc: SourceLocation | None = field(kw_only=True)
+    loc: SourceLocation | None = field(kw_only=True, default=None)
     """The source location where the diagnostic refers to."""
 
     def __str__(self) -> str:
@@ -99,10 +99,17 @@ class DiagBase(ABC):
         Example:
             "example.taihe:7:20: error: redefinition of ..."
         """
+        location = f"{self.loc}: " if self.loc else ""  # "example.taihe:7:20: "
+        severity = self.SEVERITY_DESC  # "error: "
+        description = self.describe()  # "redefinition of ..."
         return (
-            f"{f(AnsiStyle.BRIGHT)}{self.loc or '???'}: "  # "example.taihe:7:20: "
-            f"{f(self.STYLE)}{self.SEVERITY_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
-            f"{self.describe()}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
+            f"{f(AnsiStyle.BRIGHT)}"
+            f"{location}"
+            f"{f(self.STYLE)}"
+            f"{severity}"
+            f"{f(AnsiStyle.RESET)}: "
+            f"{description}"
+            f"{f(AnsiStyle.RESET_ALL)}"
         )
 
 

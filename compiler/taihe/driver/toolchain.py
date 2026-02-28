@@ -30,6 +30,8 @@ from taihe.driver.contexts import (
 )
 from taihe.driver.options import OptionRegistry
 from taihe.semantics import PrettyPrintBackendConfig
+from taihe.utils.diagnostics import ConsoleDiagnosticsManager
+from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     PandaVm,
@@ -134,24 +136,18 @@ def taihec(
     registry = BackendRegistry()
     registry.register_all()
 
-    backend_factories = registry.collect_required_backends(backend_names)
+    dm = ConsoleDiagnosticsManager()
+
+    backend_factories = registry.collect_required_backends(backend_names, dm)
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
-
-    if buildsys_name == "cmake":
-        output_config = CMakeOutputConfig(
-            dst_dir=dst_dir,
-            runtime_include_dir=RuntimeHeader.resolve_path(),
-            runtime_src_dir=RuntimeSource.resolve_path(),
-        )
-    else:
-        output_config = BasicOutputConfig(
-            dst_dir=dst_dir,
-        )
-
-    options = option_registry.parse_args(extra or [])
-    backend_configs = [b.create(options) for b in backend_factories]
+    options = option_registry.parse_args(extra or [], dm)
+    backend_configs = [
+        backend_config
+        for backend_factory in backend_factories
+        if (backend_config := backend_factory.create(options, dm)) is not None
+    ]
     if debug:
         pretty_print_backend_config = PrettyPrintBackendConfig(
             show_resolved=True,
@@ -160,14 +156,33 @@ def taihec(
         )
         backend_configs.append(pretty_print_backend_config)
 
+    match buildsys_name:
+        case "cmake":
+            output_config = CMakeOutputConfig(
+                dst_dir=dst_dir,
+                runtime_include_dir=RuntimeHeader.resolve_path(),
+                runtime_src_dir=RuntimeSource.resolve_path(),
+            )
+        case _:
+            if buildsys_name is not None:
+                dm.emit(AdhocError(f"unknown build system {buildsys_name!r}"))
+            output_config = BasicOutputConfig(
+                dst_dir=dst_dir,
+            )
+
+    if dm.has_error:
+        raise RuntimeError("Failed to parse options for backends")
+
     invocation = CompilerInvocation(
         src_files=src_files,
-        output_config=output_config,
         backend_configs=backend_configs,
+        output_config=output_config,
     )
-    instance = CompilerInstance(invocation)
-    if not instance.run():
-        raise RuntimeError("Taihe compiler (taihec) failed to run")
+    instance = CompilerInstance(invocation, dm)
+    instance.run()
+
+    if dm.has_error:
+        raise RuntimeError("Compilation failed with errors")
 
 
 class CppToolchain:

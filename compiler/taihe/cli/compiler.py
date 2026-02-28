@@ -22,6 +22,8 @@ from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.driver.options import OptionRegistry
 from taihe.utils.build_metadata import BuildMetadata
+from taihe.utils.diagnostics import ConsoleDiagnosticsManager
+from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     ResourceContext,
@@ -95,6 +97,8 @@ def main():
     ResourceContext.initialize(args)
     # }} Special options
 
+    dm = ConsoleDiagnosticsManager()
+
     src_files = [
         Path(src_file)
         for src_file_pattern in args.src_files
@@ -107,28 +111,33 @@ def main():
     ]
     dst_dir = Path(args.dst_dir)
 
-    if not src_files and not src_dirs:
-        print("taihec: error: no input files", file=sys.stderr)
-        return -1
-
-    backend_factories = backend_registry.collect_required_backends(args.backends)
+    backend_factories = backend_registry.collect_required_backends(args.backends, dm)
     option_registry = OptionRegistry()
     for factory in backend_factories:
         factory.register(option_registry)
+    options = option_registry.parse_args(args.config, dm)
+    backend_configs = [
+        backend_config
+        for backend_factory in backend_factories
+        if (backend_config := backend_factory.create(options, dm)) is not None
+    ]
 
-    if args.buildsys == "cmake":
-        output_config = CMakeOutputConfig(
-            dst_dir=dst_dir,
-            runtime_include_dir=RuntimeHeader.resolve_path(),
-            runtime_src_dir=RuntimeSource.resolve_path(),
-        )
-    else:
-        output_config = BasicOutputConfig(
-            dst_dir=dst_dir,
-        )
+    match args.buildsys:
+        case "cmake":
+            output_config = CMakeOutputConfig(
+                dst_dir=dst_dir,
+                runtime_include_dir=RuntimeHeader.resolve_path(),
+                runtime_src_dir=RuntimeSource.resolve_path(),
+            )
+        case _:
+            if args.buildsys is not None:
+                dm.emit(AdhocError(f"unknown build system {args.buildsys!r}"))
+            output_config = BasicOutputConfig(
+                dst_dir=dst_dir,
+            )
 
-    options = option_registry.parse_args(args.config)
-    backend_configs = [b.create(options) for b in backend_factories]
+    if dm.has_error:
+        return -1
 
     invocation = CompilerInvocation(
         src_files=src_files,
@@ -136,11 +145,12 @@ def main():
         backend_configs=backend_configs,
         output_config=output_config,
     )
+    instance = CompilerInstance(invocation, dm)
+    instance.run()
 
-    instance = CompilerInstance(invocation)
-
-    if not instance.run():
+    if dm.has_error:
         return -1
+
     return 0
 
 

@@ -78,7 +78,7 @@ class ArkTsOutDir:
 
 | 组件 | 职责 |
 |---|---|
-| `AbstractConfigOption` | 选项的类型定义。每个子类通过 `NAME` 声明命令行名称，通过 `parse(value)` 实现类型安全的解析逻辑。 |
+| `AbstractConfigOption` | 选项的类型定义。每个子类通过 `NAME` 声明命令行名称，通过 `parse(value, diag_mgr)` 实现类型安全的解析逻辑。 |
 | `OptionRegistry` | 解析期的编译选项注册表。由后端自己注册支持的编译选项类型。将 option name 映射到 option type，支持 fuzzy matching 错误提示。 |
 | `OptionStore` | 解析结果的存储。multimap 结构 `dict[type, list[option]]`，支持 `get`（单值）和 `get_all`（多值）。 |
 
@@ -87,26 +87,33 @@ class ArkTsOutDir:
 ### 完整传递路径
 
 ```
-option_registry = OptionRegistry()                                      # 创建 OptionRegistry 实例
+opt_reg = OptionRegistry()                                  # 创建 OptionRegistry 实例
   ↓
-BackendConfig.register(option_registry)                                 # 后端声明「自己需要哪些选项」
+BackendConfig.register(opt_reg)                             # 后端声明「自己需要哪些选项」
   ↓
-options: OptionStore = option_registry.parse_args(args, ...)            # 统一解析，未知选项报错 + fuzzy suggest
+opts: OptionStore = opt_reg.parse_args(args, diag_mgr)      # 统一解析，未知选项报错 + fuzzy suggest
   ↓
-backend_config: BackendConfig = BackendConfig.create(options)           # 后端消费选项，存为类型安全的字段
+conf: BackendConfig = BackendConfig.create(opts, diag_mgr)  # OptionStore 被 BackendConfig 工厂方法消费用于构造实例
   ↓
-invocation = CompilerInvocation(backend_configs=[backend_config, ...])  # config 作为 backend_configs 的一部分进入编译流程
-  ↓                                                                     # OptionStore 本身不进入 CompilerInvocation
-instance = CompilerInstance(invocation)                                 # 根据 CompilerInvocation 构造 CompilerInstance
+comp_inv = CompilerInvocation(backend_configs=[conf, ...])  # BackendConfig 作为 CompilerInvocation 的一部分
   ↓
-backend: Backend = backend_config.construct(instance)                   # 构造 Backend 实例，持有 config 引用
+comp_ins = CompilerInstance(comp_inv, diag_mgr)             # 根据 CompilerInvocation 构造 CompilerInstance
   ↓
-Backend.register()                                                      # 在此阶段将选项值注入回系统
-  └─ provide(ArkTsOutDir(...), ...)                                     # module-prefix/path-prefix -> Analysis 缓存
+backend: Backend = conf.construct(comp_ins)                 # 在 CompilerInstance 中，根据 BackendConfig 构造 Backend 实例
   ↓
-Backend.post_process()                                                  # 在此阶段将选项物化为 IR 注解
-  └─ declaration.add_attribute(...)                                     # keep-name -> per-package 属性
+Backend.register()                                          # 在此阶段将选项值注入回系统
+  └─ provide(ArkTsOutDir(...), ...)                         # module-prefix/path-prefix -> Analysis 缓存
+  ↓
+Backend.post_process()                                      # 在此阶段将选项物化为 IR 注解
+  └─ decl.add_attribute(...)                                # keep-name -> per-package 属性
 ```
+
+命令行参数可能存在输入错误的情况，在以上流程中，有两个阶段允许通过诊断器报告错误：
+
+1. `AbstractConfigOption.parse()`：针对单个选项值的解析错误（如类型错误、格式错误），可以在这里直接报告。错误应该通过 `DiagnosticsManager` 发出，并且 `parse()` 返回 `None`。不应该抛出异常。
+2. `BackendConfig.create()`：针对选项间的组合逻辑错误可以在这里报告（如互斥选项同时出现、必需选项缺失等）。报告方式同上。
+
+除此之外，不应该在后续阶段，尤其是通过 `BackendConfig` 构造 `Backend` 实例时再报告选项相关的错误。换句话说，`BackendConfig` 的合法性应该在 `create()` 阶段被完全验证，`construct()` 阶段不应再担心选项错误的情况。
 
 ### `AnalysisManager.provide` 的设计
 
