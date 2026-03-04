@@ -182,7 +182,8 @@ bool IsString(uintptr_t s)
 {
     ani_boolean res;
     ani_class cls;
-    ani_env *env = get_env();
+    env_guard guard;
+    ani_env *env = guard.get_env();
     env->FindClass("std.core.String", &cls);
     env->Object_InstanceOf((ani_object)s, cls, &res);
     return res;
@@ -190,7 +191,8 @@ bool IsString(uintptr_t s)
 
 array<uintptr_t> GetStringArray()
 {
-    ani_env *env = get_env();
+    env_guard guard;
+    ani_env *env = guard.get_env();
     // 首个元素为字符串 "AAA"
     ani_string ani_arr_0;
     env->String_NewUTF8("AAA", 3, &ani_arr_0);

@@ -804,7 +804,7 @@ class Foo_inner implements Foo {
 - 类似于 ArkTS 代码注入，Taihe 支持引入 ANI 代码，从而在 C++ 侧访问 ArkTS 对象：
   - `Opaque` 类型：对应 ArkTS 的 `Any` 类型、ANI 的 `ani_object`，可以存放任意可空引用类型。允许 `Opaque` 类型和其他类型相组合。
   - `@sts_this` 注解：在类中适用，获得与 Taihe 对象相绑定的 ArkTS 类的 `ani_object`
-  - `ani_env taihe::get_env()`：返回 `ani_env` 指针
+  - `taihe::env_guard`：构造 guard 对象，通过 `guard.get_env()` 获取 `ani_env` 指针
 
 **File: `idl/ohos.book.store.taihe`**
 
@@ -830,14 +830,16 @@ export function get_objects(): (Any[]) { ... }
 bool IsString(uintptr_t s) {
   ani_boolean res;
   ani_class cls;
-  ani_env* env = get_env();
+  env_guard guard;
+  ani_env* env = guard.get_env();
   env->FindClass("std.core.String", &cls);
   env->Object_InstanceOf((ani_object)s, cls, &res);
   return res;
 }
 
 array<uintptr_t> GetStringArray() {
-  ani_env* env = get_env();
+  env_guard guard;
+  ani_env* env = guard.get_env();
   // 首个元素为字符串 "AAA"
   ani_string ani_arr_0;
   env->String_NewUTF8("AAA", 3, &ani_arr_0);
