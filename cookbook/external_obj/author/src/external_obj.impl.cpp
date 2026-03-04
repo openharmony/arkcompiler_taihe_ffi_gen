@@ -27,7 +27,8 @@ using namespace taihe;
 namespace {
 bool is_string(uintptr_t s)
 {
-    ani_env *env = get_env();
+    env_guard guard;
+    ani_env *env = guard.get_env();
     ani_boolean res;
     ani_class cls;
     env->FindClass("std.core.String", &cls);
@@ -37,7 +38,8 @@ bool is_string(uintptr_t s)
 
 array<uintptr_t> get_objects()
 {
-    ani_env *env = get_env();
+    env_guard guard;
+    ani_env *env = guard.get_env();
     ani_string ani_arr_0;
     env->String_NewUTF8("AAA", 3, &ani_arr_0);
     ani_ref ani_arr_1;
@@ -47,7 +49,8 @@ array<uintptr_t> get_objects()
 
 void processPerson(uintptr_t person)
 {
-    ani_env *env = get_env();
+    env_guard guard;
+    ani_env *env = guard.get_env();
     ani_object ani_obj = reinterpret_cast<ani_object>(person);
     ani_string name;
     ani_int age;
