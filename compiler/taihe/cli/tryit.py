@@ -482,8 +482,7 @@ class TaiheTryitParser(argparse.ArgumentParser):
             "--codegen",
             "-C",
             dest="config",
-            nargs="*",
-            action="extend",
+            action="append",
             default=[],
             help="additional code generation configuration",
         )
