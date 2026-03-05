@@ -115,7 +115,7 @@ class OptionStore:
         """
         options = self._options.get(option_type)
         if options:
-            return cast(_C, options[0])
+            return cast(_C, options[-1])
         return None
 
     def get_all(self, option_type: type[_C]) -> list[_C]:
