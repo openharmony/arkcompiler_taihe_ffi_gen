@@ -283,7 +283,7 @@ let arrBool: ArrayTest.ArrayPromiseBool = ArrayTest.getArrayPromiseBool();
 let arrU8: ArrayTest.ArrayPromiseU8 = ArrayTest.getArrayPromiseU8();
 let arrU16: ArrayTest.ArrayPromiseU16 = ArrayTest.getArrayPromiseU16();
 function test_ani_array_with_PromiseI8() {
-    let info: byte[] = new Array<byte>(0);
+    let info: byte[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrI8.fetchDataI8();
@@ -296,7 +296,7 @@ function test_ani_array_with_PromiseI8() {
 }
 
 function test_ani_array_with_PromiseI8_sync() {
-    let info: byte[] = new Array<byte>(0);
+    let info: byte[] = [];
     let err: BusinessError|undefined;
     try {
         info = waitForCompletion(
@@ -317,7 +317,7 @@ function test_ani_array_with_PromiseI8_sync() {
 }
 
 function test_ani_array_with_PromiseI8_promise() {
-    let info: byte[] = new Array<byte>(0);
+    let info: byte[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrI8.fetchData());
@@ -328,7 +328,7 @@ function test_ani_array_with_PromiseI8_promise() {
 }
 
 function test_ani_array_with_PromiseI16() {
-    let info: short[] = new Array<short>(0);
+    let info: short[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrI16.fetchDataI16();
@@ -341,7 +341,7 @@ function test_ani_array_with_PromiseI16() {
 }
 
 function test_ani_array_with_PromiseI16_sync() {
-    let info: short[] = new Array<short>(0);
+    let info: short[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -362,7 +362,7 @@ function test_ani_array_with_PromiseI16_sync() {
 }
 
 function test_ani_array_with_PromiseI16_promise() {
-    let info: short[] = new Array<short>(0);
+    let info: short[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrI16.fetchData());
@@ -373,7 +373,7 @@ function test_ani_array_with_PromiseI16_promise() {
 }
 
 function test_ani_array_with_PromiseI32() {
-    let info: int[] = new Array<int>(0);
+    let info: int[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrI32.fetchDataI32();
@@ -386,7 +386,7 @@ function test_ani_array_with_PromiseI32() {
 }
 
 function test_ani_array_with_PromiseI32_sync() {
-    let info: int[] = new Array<int>(0);
+    let info: int[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -407,7 +407,7 @@ function test_ani_array_with_PromiseI32_sync() {
 }
 
 function test_ani_array_with_PromiseI32_promise() {
-    let info: int[] = new Array<int>(0);
+    let info: int[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrI32.fetchData());
@@ -418,7 +418,7 @@ function test_ani_array_with_PromiseI32_promise() {
 }
 
 function test_ani_array_with_PromiseI64() {
-    let info: long[] = new Array<long>(0);
+    let info: long[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrI64.fetchDataI64();
@@ -431,7 +431,7 @@ function test_ani_array_with_PromiseI64() {
 }
 
 function test_ani_array_with_PromiseI64_sync() {
-    let info: long[] = new Array<long>(0);
+    let info: long[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -452,7 +452,7 @@ function test_ani_array_with_PromiseI64_sync() {
 }
 
 function test_ani_array_with_PromiseI64_promise() {
-    let info: long[] = new Array<long>(0);
+    let info: long[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrI64.fetchData());
@@ -463,7 +463,7 @@ function test_ani_array_with_PromiseI64_promise() {
 }
 
 function test_ani_array_with_PromiseF32() {
-    let info: float[] = new Array<float>(0);
+    let info: float[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrF32.fetchDataF32();
@@ -476,7 +476,7 @@ function test_ani_array_with_PromiseF32() {
 }
 
 function test_ani_array_with_PromiseF32_sync() {
-    let info: float[] = new Array<float>(0);
+    let info: float[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -497,7 +497,7 @@ function test_ani_array_with_PromiseF32_sync() {
 }
 
 function test_ani_array_with_PromiseF32_promise() {
-    let info: float[] = new Array<float>(0);
+    let info: float[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrF32.fetchData());
@@ -508,7 +508,7 @@ function test_ani_array_with_PromiseF32_promise() {
 }
 
 function test_ani_array_with_PromiseF64() {
-    let info: double[] = new Array<double>(0);
+    let info: double[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrF64.fetchDataF64();
@@ -521,7 +521,7 @@ function test_ani_array_with_PromiseF64() {
 }
 
 function test_ani_array_with_PromiseF64_sync() {
-    let info: double[] = new Array<double>(0);
+    let info: double[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -542,7 +542,7 @@ function test_ani_array_with_PromiseF64_sync() {
 }
 
 function test_ani_array_with_PromiseF64_promise() {
-    let info: double[] = new Array<double>(0);
+    let info: double[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrF64.fetchData());
@@ -553,7 +553,7 @@ function test_ani_array_with_PromiseF64_promise() {
 }
 
 function test_ani_array_with_PromiseString() {
-    let info: string[] = new Array<string>(0);
+    let info: string[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrStr.fetchDataString();
@@ -566,7 +566,7 @@ function test_ani_array_with_PromiseString() {
 }
 
 function test_ani_array_with_PromiseString_sync() {
-    let info: string[] = new Array<string>(0);
+    let info: string[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -587,7 +587,7 @@ function test_ani_array_with_PromiseString_sync() {
 }
 
 function test_ani_array_with_PromiseString_promise() {
-    let info: string[] = new Array<string>(0);
+    let info: string[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrStr.fetchData());
@@ -598,7 +598,7 @@ function test_ani_array_with_PromiseString_promise() {
 }
 
 function test_ani_array_with_PromiseBool() {
-    let info: boolean[] = new Array<boolean>(0);
+    let info: boolean[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = arrBool.fetchDataBool();
@@ -611,7 +611,7 @@ function test_ani_array_with_PromiseBool() {
 }
 
 function test_ani_array_with_PromiseBool_sync() {
-    let info: boolean[] = new Array<boolean>(0);
+    let info: boolean[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(
@@ -633,7 +633,7 @@ function test_ani_array_with_PromiseBool_sync() {
 }
 
 function test_ani_array_with_PromiseBool_promise() {
-    let info: boolean[] = new Array<boolean>(0);
+    let info: boolean[] = [];
     let err: BusinessError = new BusinessError();
     try {
         info = waitForCompletion(() => arrBool.fetchData());
