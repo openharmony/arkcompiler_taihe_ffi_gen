@@ -1253,7 +1253,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.decl)
         target.add_include(enum_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{enum_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{enum_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -1298,7 +1298,7 @@ class StructTypeAniInfo(TypeAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.t.decl)
         target.add_include(struct_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -1343,7 +1343,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         union_cpp_info = UnionCppInfo.get(self.am, self.t.decl)
         target.add_include(union_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -1388,7 +1388,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         iface_cpp_info = IfaceCppInfo.get(self.am, self.t.decl)
         target.add_include(iface_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -2204,7 +2204,7 @@ class RecordTypeAniInfo(TypeAniInfo):
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Record"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Record", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
-            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"for (auto&& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
             f"}}",
         ):
             key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
@@ -2303,7 +2303,7 @@ class MapTypeAniInfo(TypeAniInfo):
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Map"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Map", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
-            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"for (auto&& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
             f"}}",
         ):
             key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
@@ -2389,7 +2389,7 @@ class SetTypeAniInfo(TypeAniInfo):
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Set"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Set", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
-            f"for (const auto& {cpp_val} : {cpp_value}) {{",
+            f"for (auto&& {cpp_val} : {cpp_value}) {{",
             f"}}",
         ):
             item_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
@@ -2616,7 +2616,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         ):
             self.gen_native_invoke(target, invoke_name)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_copy} = {cpp_value};",
+            f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
             f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
             f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
             f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
