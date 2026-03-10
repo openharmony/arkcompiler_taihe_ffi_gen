@@ -2603,6 +2603,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
         cpp_value: str,
         ani_after: str,
     ):
+        wrapper = f"{ani_after}_wrapper"
+        global_ref = f"{ani_after}_global_ref"
+        wref = f"{ani_after}_wref"
+        released = f"{ani_after}_released"
         cpp_copy = f"{ani_after}_cpp_copy"
         cpp_scope = f"{ani_after}_cpp_scope"
         invoke_name = "invoke"
@@ -2610,20 +2614,38 @@ class CallbackTypeAniInfo(TypeAniInfo):
         ani_func_ptr = f"{ani_after}_ani_func_ptr"
         ani_data_ptr = f"{ani_after}_ani_data_ptr"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
-        with target.indented(
-            f"struct {cpp_scope} {{",
-            f"}};",
-        ):
-            self.gen_native_invoke(target, invoke_name)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
-            f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
-            f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
-            f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
-            f"{cpp_copy}.m_handle.data_ptr = nullptr;",
             f"ani_fn_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            f"auto {wrapper} = ::taihe::platform::ani::weak::AniObject({cpp_value});",
         )
+        with target.indented(
+            f"if (!{wrapper}.is_error()) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_ref {global_ref} = reinterpret_cast<ani_ref>({wrapper}->getGlobalReference());",
+                f"ani_wref {wref} = {{}};",
+                f"{env}->WeakReference_Create({global_ref}, &{wref});",
+                f"ani_boolean {released} = {{}};",
+                f"{env}->WeakReference_GetReference({wref}, &{released}, reinterpret_cast<ani_ref*>(&{ani_after}));",
+            )
+        with target.indented(
+            f"else {{",
+            f"}}",
+        ):
+            with target.indented(
+                f"struct {cpp_scope} {{",
+                f"}};",
+            ):
+                self.gen_native_invoke(target, invoke_name)
+            target.writelns(
+                f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
+                f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
+                f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
+                f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
+                f"{cpp_copy}.m_handle.data_ptr = nullptr;",
+                f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            )
 
     def gen_native_invoke(
         self,

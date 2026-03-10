@@ -791,11 +791,31 @@ class AniIfaceImplGenerator:
             f"}}",
         ):
             self.target.writelns(
-                f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
-                f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
-                f"cpp_obj.m_handle.data_ptr = nullptr;",
                 f"ani_object ani_obj;",
-                f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
+                f"auto wrapper = ::taihe::platform::ani::weak::AniObject(cpp_obj);",
+            )
+            with self.target.indented(
+                f"if (!wrapper.is_error()) {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"ani_ref global_ref = reinterpret_cast<ani_ref>(wrapper->getGlobalReference());",
+                    f"ani_wref wref = {{}};",
+                    f"env->WeakReference_Create(global_ref, &wref);",
+                    f"ani_boolean released = {{}};",
+                    f"env->WeakReference_GetReference(wref, &released, reinterpret_cast<ani_ref*>(&ani_obj));",
+                )
+            with self.target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
+                    f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
+                    f"cpp_obj.m_handle.data_ptr = nullptr;",
+                    f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
+                )
+            self.target.writelns(
                 f"return ani_obj;",
             )
 
