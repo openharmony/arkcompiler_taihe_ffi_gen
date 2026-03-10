@@ -226,26 +226,12 @@ public:
         return vtbl_ptr;
     }
 
-    static constexpr struct typeinfo_t {
-        free_func_t *free_fptr = &free_data_ptr<Impl>;
-        hash_func_t *hash_fptr = &hash_data_ptr<Impl>;
-        same_func_t *same_fptr = &same_data_ptr<Impl>;
-        qiid_func_t *qiid_fptr = &query_interface_id;
-        uint64_t len = 0;
-        struct IdMapItem idmap[((sizeof(InterfaceTypes::template idmap_impl<Impl>) / sizeof(IdMapItem)) + ...)] = {};
-    } rtti = [] {
-        struct typeinfo_t info;
-        (
-            [&] {
-                using InterfaceType = InterfaceTypes;
-                for (std::size_t j = 0; j < sizeof(InterfaceType::template idmap_impl<Impl>) / sizeof(IdMapItem);
-                     j++, info.len++) {
-                    info.idmap[info.len] = InterfaceType::template idmap_impl<Impl>[j];
-                }
-            }(),
-            ...);
-        return info;
-    }();
+    static constexpr TypeInfo rtti = {
+        .free_fptr = &free_data_ptr<Impl>,
+        .hash_fptr = &hash_data_ptr<Impl>,
+        .same_fptr = &same_data_ptr<Impl>,
+        .qiid_fptr = &query_interface_id,
+    };
 
     template<typename InterfaceDest,
              std::enable_if_t<
@@ -282,9 +268,7 @@ struct impl_holder : public impl_view<Impl, InterfaceTypes...> {
     template<typename... Args>
     static impl_holder make(Args &&...args)
     {
-        DataBlockHead *data_ptr =
-            make_data_ptr<Impl>(reinterpret_cast<TypeInfo const *>(&rtti), std::forward<Args>(args)...);
-        return impl_holder(data_ptr);
+        return impl_holder(make_data_ptr<Impl>(&rtti, std::forward<Args>(args)...));
     }
 
     impl_holder &operator=(impl_holder other)

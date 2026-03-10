@@ -315,19 +315,8 @@ class AbiIfaceDefnGenerator:
             f"TH_INLINE struct {iface_abi_info.vtable} const* {iface_abi_info.dynamic_cast}(struct TypeInfo const* rtti_ptr) {{",
             f"}}",
         ):
-            with self.target.indented(
-                f"for (size_t i = 0; i < rtti_ptr->len; i++) {{",
-                f"}}",
-            ):
-                with self.target.indented(
-                    f"if (rtti_ptr->idmap[i].id == {iface_abi_info.iid}) {{",
-                    f"}}",
-                ):
-                    self.target.writelns(
-                        f"return (struct {iface_abi_info.vtable} const*)rtti_ptr->idmap[i].vtbl_ptr;",
-                    )
             self.target.writelns(
-                f"return NULL;",
+                f"return (struct {iface_abi_info.vtable} const*)rtti_ptr->qiid_fptr({iface_abi_info.iid});",
             )
 
 
