@@ -142,11 +142,9 @@ if (!bar.is_error()) {
 2.  此构造函数内部调用了 ABI 层的 `my_package_IBar_dynamic` 辅助函数。
 3.  `_dynamic` 函数执行以下运行时操作：
     1. 通过 `foo` 对象的 `data_ptr` 找到 `DataBlockHead`。
-    2. 通过 `DataBlockHead` 上的 `rtti_ptr` 找到 `typeinfo` 结构。
-    3. 遍历 `typeinfo` 中的 `idmap` 数组。
-    4. 将 `idmap` 中每个条目的 `id` 与目标接口的 IID（`my_package_IBar_i`）进行比较。
-    5. 如果找到匹配项，则返回该条目对应的 `vtbl_ptr`。
-    6. 如果遍历完仍未找到，返回 `NULL`。
+    2. 通过 `DataBlockHead` 上的 `rtti_ptr` 找到 `TypeInfo` 结构。
+    3. 调用 `TypeInfo` 中的 `qiid_fptr` 函数指针，传入目标接口的 IID（`my_package_IBar_i`）。
+    4. `qiid_fptr` 函数在内部查找匹配的接口 ID，如果找到则返回对应的 `vtbl_ptr`，否则返回 `NULL`。
 4.  C++ 层的构造函数接收到返回的 `vtbl_ptr`。如果为 `NULL`，则 `bar.is_error()` 将返回 `true`，表示转换失败。
 
 ## 附录：生成文件的完整内容
@@ -214,12 +212,7 @@ struct my_package_IFoo_t {
     struct DataBlockHead* data_ptr;
 };
 TH_INLINE struct my_package_IFoo_vtable const* my_package_IFoo_dynamic(struct TypeInfo const* rtti_ptr) {
-    for (size_t i = 0; i < rtti_ptr->len; i++) {
-        if (rtti_ptr->idmap[i].id == my_package_IFoo_i) {
-            return (struct my_package_IFoo_vtable const*)rtti_ptr->idmap[i].vtbl_ptr;
-        }
-    }
-    return NULL;
+    return (struct my_package_IFoo_vtable const*)rtti_ptr->qiid_fptr(my_package_IFoo_i);
 }
 
 // File: example/generated/include/my.package.IFoo.abi.2.h
@@ -255,12 +248,7 @@ TH_INLINE struct my_package_IFoo_vtable const* my_package_IBar_1_static(struct m
     return vtbl_ptr ? (struct my_package_IFoo_vtable const*)((void* const*)vtbl_ptr + 1) : NULL;
 }
 TH_INLINE struct my_package_IBar_vtable const* my_package_IBar_dynamic(struct TypeInfo const* rtti_ptr) {
-    for (size_t i = 0; i < rtti_ptr->len; i++) {
-        if (rtti_ptr->idmap[i].id == my_package_IBar_i) {
-            return (struct my_package_IBar_vtable const*)rtti_ptr->idmap[i].vtbl_ptr;
-        }
-    }
-    return NULL;
+    return (struct my_package_IBar_vtable const*)rtti_ptr->qiid_fptr(my_package_IBar_i);
 }
 
 // File: example/generated/include/my.package.IBar.abi.2.h

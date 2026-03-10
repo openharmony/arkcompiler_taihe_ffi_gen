@@ -139,23 +139,23 @@ struct DataBlockHead {
 
 #### 2.2.5 运行时类型信息
 
-在**运行时类型信息**中，会包含对象的销毁函数、哈希函数及比较函数等通用函数的指针，还有**动态转换表**及其长度。
+在**运行时类型信息**中，会包含对象的销毁函数、哈希函数及比较函数等通用函数的指针，还有一个**接口 ID 查询函数**指针，用于在运行时根据接口 ID 查找对应的虚表指针。
 
 ```c
 typedef void free_func_t(struct DataBlockHead *);
 typedef size_t hash_func_t(struct DataBlockHead *);
 typedef bool same_func_t(struct DataBlockHead *, struct DataBlockHead *);
+typedef void const *qiid_func_t(void const *id);
 
 struct TypeInfo {
   free_func_t *free_fptr;
   hash_func_t *hash_fptr;
   same_func_t *same_fptr;
-  uint64_t len;
-  struct IdMapItem idmap[];
+  qiid_func_t *qiid_fptr;
 };
 ```
 
-其中**动态转换表**由若干**动态转换表项**构成，每个项包含一个**接口 ID** 和指向该接口虚表的指针。
+其中 `qiid_fptr`（Query Interface ID）接受一个**接口 ID** 作为参数，返回该接口对应的虚表指针；如果对象未实现该接口，则返回 `NULL`。该函数在 C++ 层中由每个具体实现类型特化生成（参见[第 3 节](#3-c-层设计和实现)），其内部维护了从接口 ID 到虚表指针的映射关系（`IdMapItem`）。
 
 ```c
 struct IdMapItem {
@@ -226,14 +226,11 @@ struct IBase base = {
 
 ```cpp
 struct IFancyObj_vtable const* dynamic_cast_to_IFancyObj(struct TypeInfo const* rtti_ptr) {
-  for (size_t i = 0; i < rtti_ptr->len; i++) {
-    if (rtti_ptr->idmap[i].id == IFancyObj_iid) {
-      return (struct IFancyObj_vtable const*)rtti_ptr->idmap[i].vtbl_ptr;
-    }
-  }
-  return NULL;
+  return (struct IFancyObj_vtable const*)rtti_ptr->qiid_fptr(IFancyObj_iid);
 }
 ```
+
+该函数通过调用 `TypeInfo` 中的 `qiid_fptr` 函数指针，传入目标接口的 ID，直接获取对应的虚表指针。如果对象未实现该接口，`qiid_fptr` 返回 `NULL`。
 
 如果要将一个对象转换为 `IFancyObj`，就可以这样做：
 
@@ -398,31 +395,12 @@ auto obj = taihe::make_holder<MyObject, IColor, IShape>(constructor_args...);
 5. 注意到步骤 2 中使用了 `impl_view<Impl, InterfaceTypes...>::rtti`，这是一个 `constexpr` 静态成员变量，定义在 `impl_view` 模板类内部。它在编译期根据 `Impl` 类和接口列表 `InterfaceTypes...` 生成了完整的运行时类型信息：
 
     ```c++
-    struct typeinfo_t {
-      free_func_t *free_fptr;
-      hash_func_t *hash_fptr;
-      same_func_t *same_fptr;
-      uint64_t len;
-      struct IdMapItem idmap[((sizeof(InterfaceTypes::template idmap_impl<Impl>) / sizeof(IdMapItem)) + ...)];
-    };
-    static constexpr typeinfo_t rtti = [] {
-      struct typeinfo_t info = {
+    static constexpr TypeInfo rtti = {
         .free_fptr = &free_data_ptr<Impl>,
         .hash_fptr = &hash_data_ptr<Impl>,
         .same_fptr = &same_data_ptr<Impl>,
-      };
-      // 使用折叠表达式展开所有接口的 idmap_impl
-      info.len = 0;
-      (
-        [&] {
-          using InterfaceType = InterfaceTypes;
-          for (std::size_t j = 0; j < sizeof(InterfaceType::template idmap_impl<Impl>) / sizeof(IdMapItem); info.len++, j++) {
-            info.idmap[info.len] = InterfaceType::template idmap_impl<Impl>[j];
-          }
-        }(),
-      ...);
-      return info;
-    }();
+        .qiid_fptr = &query_interface_id,
+    };
     ```
 
 6. `free_data_ptr<Impl>`, `hash_data_ptr<Impl>` 和 `same_data_ptr<Impl>` 是几个非成员模板函数，用于实现对象的销毁、哈希和比较，这里以 `free_data_ptr<Impl>` 为例，它基本可以看作 `make_data_ptr<Impl>` 的逆操作：
@@ -433,6 +411,27 @@ auto obj = taihe::make_holder<MyObject, IColor, IShape>(constructor_args...);
       delete static_cast<data_block<Impl> *>(data_ptr);
     }
     ```
+
+    动态转换表的查找逻辑被封装在 `query_interface_id` 静态函数中，该函数通过折叠表达式遍历所有接口的 `idmap_impl` 数组，匹配传入的接口 ID 并返回对应的虚表指针。
+
+    ```c++
+    static inline void const *query_interface_id(void const *id)
+    {
+        void const *vtbl_ptr = nullptr;
+        (
+            [&] {
+                using InterfaceType = InterfaceTypes;
+                for (std::size_t j = 0; j < sizeof(InterfaceType::template idmap_impl<Impl>) / sizeof(IdMapItem); j++) {
+                    if (id == InterfaceType::template idmap_impl<Impl>[j].id) {
+                        vtbl_ptr = InterfaceType::template idmap_impl<Impl>[j].vtbl_ptr;
+                    }
+                }
+            }(),
+            ...);
+        return vtbl_ptr;
+    }
+    ```
+
 
 7. 其中的 `idmap_impl<Impl>` 是每个接口类（如 `IColor`, `IShape`）中定义的一个编译器静态模板成员变量，定义在 `*.proj.1.hpp` 中。它包含了 `Impl` 类关于该接口及其所有父接口的动态转换表项，例如 `IColor` 的 `idmap_impl` 定义如下：
 
