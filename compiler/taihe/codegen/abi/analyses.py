@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from typing_extensions import override
 
@@ -130,15 +130,15 @@ class StructAbiInfo(AbstractAnalysis[StructDecl]):
 
 
 @dataclass
-class AncestorListItemInfo:
-    iface: IfaceDecl
-    ftbl_ptr: str
+class AncestorInfo:
+    static_cast: str
+    slots: list["AncestorSlot"] = field(default_factory=lambda: [])
 
 
 @dataclass
-class AncestorDictItemInfo:
+class AncestorSlot:
     offset: int
-    static_cast: str
+    iface: IfaceDecl
     ftbl_ptr: str
 
 
@@ -156,28 +156,30 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.vtable = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)
         self.dynamic_cast = encode(segments, DeclKind.DYNAMIC_CAST)
-        self.ancestor_list: list[AncestorListItemInfo] = []
-        self.ancestor_dict: dict[IfaceDecl, AncestorDictItemInfo] = {}
-        self.ancestors = [d]
-        for extend in d.extends:
-            extend_abi_info = IfaceAbiInfo.get(am, extend.ty.decl)
-            self.ancestors.extend(extend_abi_info.ancestors)
-        for i, ancestor in enumerate(self.ancestors):
-            ftbl_ptr = f"ftbl_ptr_{i}"
-            self.ancestor_list.append(
-                AncestorListItemInfo(
-                    iface=ancestor,
-                    ftbl_ptr=ftbl_ptr,
-                )
+
+        self.ancestor_slots: list[AncestorSlot] = []
+        self.ancestor_infos: dict[IfaceDecl, AncestorInfo] = {}
+
+        def dfs(ancestor: IfaceDecl):
+            offset = len(self.ancestor_slots)
+            ancestor_slot = AncestorSlot(
+                offset=offset,
+                iface=ancestor,
+                ftbl_ptr=f"ftbl_ptr_{offset}",
             )
-            self.ancestor_dict.setdefault(
-                ancestor,
-                AncestorDictItemInfo(
-                    offset=i,
-                    static_cast=encode([*segments, str(i)], DeclKind.STATIC_CAST),
-                    ftbl_ptr=ftbl_ptr,
-                ),
-            )
+            self.ancestor_slots.append(ancestor_slot)
+            if ancestor not in self.ancestor_infos:
+                number = len(self.ancestor_infos)
+                static_cast = encode([*segments, str(number)], DeclKind.STATIC_CAST)
+                ancestor_info = AncestorInfo(static_cast=static_cast)
+                self.ancestor_infos[ancestor] = ancestor_info
+            else:
+                ancestor_info = self.ancestor_infos[ancestor]
+            ancestor_info.slots.append(ancestor_slot)
+            for extend in ancestor.extends:
+                dfs(extend.ty.decl)
+
+        dfs(d)
 
     @classmethod
     @override
