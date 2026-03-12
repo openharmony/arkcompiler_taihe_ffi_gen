@@ -130,36 +130,37 @@ BackendConfigT = type[BackendConfig]
 
 class BackendRegistry:
     def __init__(self):
-        self._factories: dict[str, BackendConfigT] = {}
+        self._name_to_config_type: dict[str, BackendConfigT] = {}
 
-    def register(self, factory: BackendConfigT):
-        name = factory.NAME
-        if (setted := self._factories.setdefault(name, factory)) is not factory:
+    def register(self, config_type: BackendConfigT):
+        name = config_type.NAME
+        setted_config_type = self._name_to_config_type.setdefault(name, config_type)
+        if setted_config_type is not config_type:
             raise ValueError(
-                f"backend {name!r} cannot be registered as {factory.__name__} "
-                f"because it is already registered as {setted.__name__}"
+                f"backend {name!r} cannot be registered as {config_type.__qualname__} "
+                f"because it is already registered as {setted_config_type.__qualname__}"
             )
 
     def get_backend_names(self) -> list[str]:
-        return list(self._factories.keys())
+        return list(self._name_to_config_type.keys())
 
     def clear(self):
-        self._factories.clear()
+        self._name_to_config_type.clear()
 
     def collect_required_backends(
         self,
         names: Iterable[str],
         dm: "DiagnosticsManager",
     ) -> list[BackendConfigT]:
-        factories: list[BackendConfigT] = []
+        config_types: list[BackendConfigT] = []
         visited: set[str] = set()
 
         def add(name: str):
             if name in visited:
                 return
-            factory = self._factories.get(name)
-            if not factory:
-                suggestions = get_close_matches(name, self._factories.keys())
+            config_type = self._name_to_config_type.get(name)
+            if not config_type:
+                suggestions = get_close_matches(name, self._name_to_config_type.keys())
                 msg = f"unknown backend {name!r}"
                 if suggestions:
                     suggestions_str = ", ".join(suggestions)
@@ -168,14 +169,14 @@ class BackendRegistry:
                 return
 
             visited.add(name)
-            for dep in factory.DEPS:
+            for dep in config_type.DEPS:
                 add(dep)
-            factories.append(factory)
+            config_types.append(config_type)
 
         for name in names:
             add(name)
 
-        return factories
+        return config_types
 
     def register_all(self):
         from taihe.codegen.abi import (

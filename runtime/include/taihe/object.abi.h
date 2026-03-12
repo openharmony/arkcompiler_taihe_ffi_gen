@@ -48,16 +48,12 @@ typedef void const *qiid_func_t(void const *id);
 // - `hash_fptr`: Pointer to function that computes the hash of a data block.
 // - `same_fptr`: Pointer to function that compares equality of two data blocks.
 // - `qiid_fptr`: Pointer to function that queries the interface id;
-// - `len`: A 64-bit unsigned integer representing the length of idmap.
-// - `idmap`: An array of IdMapItem structures representing the ID to vtable
 //   mapping.
 struct TypeInfo {
     free_func_t *free_fptr;
     hash_func_t *hash_fptr;
     same_func_t *same_fptr;
     qiid_func_t *qiid_fptr;
-    uint64_t len;
-    struct IdMapItem idmap[];
 };
 
 // DataBlockHead

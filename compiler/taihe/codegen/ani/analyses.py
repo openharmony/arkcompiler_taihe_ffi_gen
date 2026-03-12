@@ -22,6 +22,9 @@ from typing import ClassVar
 
 from typing_extensions import override
 
+from taihe.codegen.abi.analyses import (
+    IfaceAbiInfo,
+)
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
@@ -69,7 +72,9 @@ from taihe.codegen.ani.writer import (
 )
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
+    GlobFuncCppUserInfo,
     IfaceCppInfo,
+    IfaceMethodCppInfo,
     StructCppInfo,
     TypeCppInfo,
     UnionCppInfo,
@@ -326,36 +331,12 @@ ANI_STRING = AniType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = AniType(hint="arraybuffer", base=ANI_REF)
 
 
-# Ani Function and Method
-
-
-@dataclass(repr=False)
-class AniFuncLike:
-    hint: str
-
-    def __repr__(self) -> str:
-        return f"ani_{self.hint}"
-
-    @property
-    def suffix(self) -> str:
-        return self.hint.capitalize()
-
-    @property
-    def upper(self) -> str:
-        return self.hint.upper()
-
-
-ANI_FUNCTION = AniFuncLike("function")
-ANI_METHOD = AniFuncLike("method")
-
-
 # Ani Scopes
 
 
 @dataclass(repr=False)
 class AniScope:
     hint: str
-    member: AniFuncLike
 
     def __repr__(self) -> str:
         return f"ani_{self.hint}"
@@ -367,11 +348,6 @@ class AniScope:
     @property
     def upper(self) -> str:
         return self.hint.upper()
-
-
-ANI_CLASS = AniScope("class", ANI_METHOD)
-ANI_MODULE = AniScope("module", ANI_FUNCTION)
-ANI_NAMESPACE = AniScope("namespace", ANI_FUNCTION)
 
 
 # ArkTs Module and Namespace
@@ -429,7 +405,7 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     parent: ArkTsOutDir
     module_name: str
 
-    scope: ClassVar[AniScope] = ANI_MODULE
+    scope: ClassVar[AniScope] = AniScope("module")
 
     obj_drop = "_taihe_objDrop"
     obj_dup = "_taihe_objDup"
@@ -494,7 +470,7 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
     parent: ArkTsModuleOrNamespace
     ns_name: str
 
-    scope: ClassVar[AniScope] = ANI_NAMESPACE
+    scope: ClassVar[AniScope] = AniScope("namespace")
 
     @property
     def mod(self) -> "ArkTsModule":
@@ -523,15 +499,12 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
 
 class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
     def __init__(self, am: AnalysisManager, pg: PackageGroup) -> None:
-        self.am = am
-        self.pg = pg
-
         self.mods: dict[str, ArkTsModule] = {}
         self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
         self.path = ArkTsOutDir.get(am, pg)
 
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             ns_parts = []
             if attr := NamespaceAttr.get(pkg):
                 module_str = attr.module
@@ -562,9 +535,6 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
 
 class PackageAniInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        self.am = am
-        self.p = p
-
         self.header = f"{p.name}.ani.hpp"
         self.source = f"{p.name}.ani.cpp"
 
@@ -586,22 +556,7 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
 
 class NamedCallableAniInfo(AbstractAnalysis[NamedCallableDecl]):
     def __init__(self, am: AnalysisManager, f: NamedCallableDecl) -> None:
-        self.am = am
         self.f = f
-
-        if isinstance(f, IfaceMethodDecl):
-            self.native_prefix = "native "
-            self.native_call = "this."
-            self.native_name = f"_taihe_{f.name}_native"
-        if isinstance(f, GlobFuncDecl):
-            self.native_prefix = "native function "
-            self.native_call = ""
-            self.native_name = f"_taihe_{f.name}_native"
-
-        if isinstance(f, IfaceMethodDecl):
-            self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
-        if isinstance(f, GlobFuncDecl):
-            self.reverse_name = f"_taihe_{f.name}_reverse"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
@@ -710,10 +665,59 @@ class NamedCallableAniInfo(AbstractAnalysis[NamedCallableDecl]):
         return NamedCallableAniInfo(am, f)
 
 
+@dataclass(frozen=True)
+class IfaceThunkKey:
+    iface: IfaceDecl
+    method: IfaceMethodDecl
+
+
+class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
+    def __init__(self, am: AnalysisManager, c: IfaceThunkKey) -> None:  # fmt: skip
+        self.native_name = f"_taihe_{c.iface.name}_{c.method.name}_native"
+        self.native_base_params: list[str] = [
+            f"{IfaceAniInfo.vtbl_ptr}: long",
+            f"{IfaceAniInfo.data_ptr}: long",
+        ]
+        self.native_base_args: list[str] = [
+            f"this.{IfaceAniInfo.vtbl_ptr}",
+            f"this.{IfaceAniInfo.data_ptr}",
+        ]
+        self.c_native_base_params: list[str] = [
+            f"ani_long ani_vtbl_ptr",
+            f"ani_long ani_data_ptr",
+        ]
+        iface_abi_info = IfaceAbiInfo.get(am, c.iface)
+        iface_cpp_info = IfaceCppInfo.get(am, c.iface)
+        iancr_cpp_info = IfaceCppInfo.get(am, c.method.parent_iface)
+        method_cpp_info = IfaceMethodCppInfo.get(am, c.method)
+        self.c_native_call = f"{iancr_cpp_info.as_param}({iface_cpp_info.as_param}({{reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr), reinterpret_cast<DataBlockHead*>(ani_data_ptr)}}))->{method_cpp_info.call_name}"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, c: IfaceThunkKey) -> "IfaceThunkAniInfo":  # fmt: skip
+        return IfaceThunkAniInfo(am, c)
+
+
+class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":  # fmt: skip
+        return IfaceMethodAniInfo(am, f)
+
+
 class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        self.am = am
-        self.f = f
+        self.native_name = f"_taihe_{f.name}_native"
+        self.native_base_params: list[str] = []
+        self.native_base_args: list[str] = []
+        self.c_native_base_params: list[str] = []
+        func_cpp_user_info = GlobFuncCppUserInfo.get(am, f)
+        self.c_native_call = func_cpp_user_info.full_name
+
+        self.reverse_name = f"_taihe_{f.name}_reverse"
 
         self.static_scope = None
         self.ctor_scope = None
@@ -939,8 +943,6 @@ class StructObjectAniInfo(StructAniInfo):
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
     ani_type: AniType
     sig_type: AniRuntimeType
-
-    scope: ClassVar[AniScope] = ANI_CLASS
 
     data_ptr = "_taihe_dataPtr"
     vtbl_ptr = "_taihe_vtblPtr"
@@ -1253,7 +1255,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.decl)
         target.add_include(enum_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{enum_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{enum_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -1298,7 +1300,7 @@ class StructTypeAniInfo(TypeAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.t.decl)
         target.add_include(struct_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -1343,7 +1345,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         union_cpp_info = UnionCppInfo.get(self.am, self.t.decl)
         target.add_include(union_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -1388,7 +1390,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         iface_cpp_info = IfaceCppInfo.get(self.am, self.t.decl)
         target.add_include(iface_ani_info.impl_header)
         target.writelns(
-            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, {cpp_value});",
+            f"{self.ani_type} {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, std::move({cpp_value}));",
         )
 
 
@@ -2204,7 +2206,7 @@ class RecordTypeAniInfo(TypeAniInfo):
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Record"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Record", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
-            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"for (auto&& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
             f"}}",
         ):
             key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
@@ -2303,7 +2305,7 @@ class MapTypeAniInfo(TypeAniInfo):
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Map"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Map", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
-            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"for (auto&& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
             f"}}",
         ):
             key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
@@ -2389,7 +2391,7 @@ class SetTypeAniInfo(TypeAniInfo):
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Set"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Set", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
-            f"for (const auto& {cpp_val} : {cpp_value}) {{",
+            f"for (auto&& {cpp_val} : {cpp_value}) {{",
             f"}}",
         ):
             item_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
@@ -2603,6 +2605,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
         cpp_value: str,
         ani_after: str,
     ):
+        wrapper = f"{ani_after}_wrapper"
+        global_ref = f"{ani_after}_global_ref"
+        wref = f"{ani_after}_wref"
+        released = f"{ani_after}_released"
         cpp_copy = f"{ani_after}_cpp_copy"
         cpp_scope = f"{ani_after}_cpp_scope"
         invoke_name = "invoke"
@@ -2610,20 +2616,38 @@ class CallbackTypeAniInfo(TypeAniInfo):
         ani_func_ptr = f"{ani_after}_ani_func_ptr"
         ani_data_ptr = f"{ani_after}_ani_data_ptr"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
-        with target.indented(
-            f"struct {cpp_scope} {{",
-            f"}};",
-        ):
-            self.gen_native_invoke(target, invoke_name)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_copy} = {cpp_value};",
-            f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
-            f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
-            f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
-            f"{cpp_copy}.m_handle.data_ptr = nullptr;",
             f"ani_fn_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            f"auto {wrapper} = ::taihe::platform::ani::weak::AniObject({cpp_value});",
         )
+        with target.indented(
+            f"if (!{wrapper}.is_error()) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_ref {global_ref} = reinterpret_cast<ani_ref>({wrapper}->getGlobalReference());",
+                f"ani_wref {wref} = {{}};",
+                f"{env}->WeakReference_Create({global_ref}, &{wref});",
+                f"ani_boolean {released} = {{}};",
+                f"{env}->WeakReference_GetReference({wref}, &{released}, reinterpret_cast<ani_ref*>(&{ani_after}));",
+            )
+        with target.indented(
+            f"else {{",
+            f"}}",
+        ):
+            with target.indented(
+                f"struct {cpp_scope} {{",
+                f"}};",
+            ):
+                self.gen_native_invoke(target, invoke_name)
+            target.writelns(
+                f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
+                f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
+                f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
+                f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
+                f"{cpp_copy}.m_handle.data_ptr = nullptr;",
+                f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            )
 
     def gen_native_invoke(
         self,

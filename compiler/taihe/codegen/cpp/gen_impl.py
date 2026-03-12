@@ -52,7 +52,7 @@ class CppImplHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             CppMacroPackageGenerator(self.om, self.am, pkg).gen_package_file()
             # for iface in pkg.interfaces:
             #     CppMacroIfaceGenerator(self.om, self.am, iface).gen_iface_file()
@@ -181,11 +181,11 @@ class CppImplSourcesGenerator:
         self.using_namespaces: list[str] = []
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             CppTemplatePackageGenerator(self.om, self.am, pkg).gen_package_file()
             # for iface in pkg.interfaces:
             #     CppTemplateIfaceGenerator(self.om, self.am, iface).gen_iface_file()
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             for iface in pkg.interfaces:
                 CppTemplateClassHeaderGenerator(self.om, self.am, iface).gen_file()
                 CppTemplateClassSourceGenerator(self.om, self.am, iface).gen_file()
@@ -401,7 +401,7 @@ class CppTemplateClassHeaderGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/common.hpp")
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 for method in ancestor.methods:
                     for param in method.params:
                         param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -424,7 +424,7 @@ class CppTemplateClassHeaderGenerator:
             self.target.writelns(
                 f"// You can add member variables and constructor here.",
             )
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 for method in ancestor.methods:
                     self.gen_iface_method_decl(method)
 
@@ -463,7 +463,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
             self.target.add_include(iface_cpp_impl_info.template_header)
             self.target.add_include("stdexcept")
             self.gen_using_namespaces()
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 for method in ancestor.methods:
                     self.target.newline()
                     self.gen_iface_method_impl(method)
