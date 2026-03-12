@@ -24,6 +24,7 @@
 #error "Please ensure the napi is correctly installed."
 #endif
 
+#include <sstream>
 #include <taihe/string.hpp>
 
 namespace taihe {
@@ -61,15 +62,12 @@ private:
             const napi_extended_error_info *error_info;                                     \
             napi_get_last_error_info(env, &error_info);                                     \
             const char *message = error_info ? error_info->error_message : "Unknown error"; \
-            char error_buf[256];                                                            \
-            snprintf(error_buf, sizeof(error_buf),                                          \
-                     "N-API call failed at %s:%d\n"                                         \
-                     "Call: " #call                                                         \
-                     "\n"                                                                   \
-                     "Status: %d\n"                                                         \
-                     "Message: %s",                                                         \
-                     __FILE__, __LINE__, status, message);                                  \
-            napi_throw_error(env, nullptr, error_buf);                                      \
+            std::ostringstream oss;                                                         \
+            oss << "N-API call failed at " << __FILE__ << ":" << __LINE__ << "\n"           \
+                << "Call: " << #call << "\n"                                                \
+                << "Status: " << status << "\n"                                             \
+                << "Message: " << message;                                                  \
+            napi_throw_error(env, nullptr, oss.str().c_str());                              \
         }                                                                                   \
     } while (0)
 

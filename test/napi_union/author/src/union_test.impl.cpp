@@ -52,10 +52,12 @@ namespace {
     ::taihe::string s_value = "string";
     constexpr double f64_value = 1.12345;
     constexpr bool bool_value = false;
+    constexpr int32_t i32_value1 = 1;
+    constexpr int32_t i32_value2 = 2;
     ::taihe::array<int32_t> array_value = ::taihe::array<int32_t> {1, 2, 3};
     ::taihe::map<int32_t, ::taihe::string> map_value;
-    map_value.emplace(1, "a");
-    map_value.emplace(2, "b");
+    map_value.emplace(i32_value1, "a");
+    map_value.emplace(i32_value2, "b");
 
     if (kind == "s") {
         return ::union_test::union_primitive::make_sValue(s_value);

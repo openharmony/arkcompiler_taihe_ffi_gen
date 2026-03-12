@@ -15,6 +15,9 @@
 // This file is a test file.
 // NOLINTBEGIN
 
+#ifndef MY_MODULE_B_FUNCTIONTEST_H
+#define MY_MODULE_B_FUNCTIONTEST_H
+
 #include "taihe/string.hpp"
 
 namespace {
@@ -25,8 +28,10 @@ namespace {
 
 int32_t concat_i32(int32_t a)
 {
-    return a + 10;
+    constexpr int32_t OFFSET = 10;
+    return a + OFFSET;
 }
 }  // namespace
 
+#endif
 // NOLINTEND

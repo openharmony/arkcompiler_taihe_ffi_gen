@@ -26,7 +26,8 @@ namespace {
 
 int32_t concat_i32(int32_t a)
 {
-    return a + 10;
+    constexpr int32_t OFFSET = 10;
+    return a + OFFSET;
 }
 
 }  // namespace

@@ -26,7 +26,7 @@
 
 // implement the inject declare in .d.ts file
 // implement for inject overload functions
-#include "my_module_b_functiontest.hpp"
+#include "my_module_b_functiontest.h"
 #include "taihe/napi_runtime.hpp"
 
 static napi_value my_module_a_concat(napi_env env, [[maybe_unused]] napi_callback_info info)
@@ -114,7 +114,8 @@ napi_value Init(napi_env env, napi_value exports)
     // implement the inject declare in .d.ts file
     // implement for inject module const variable
     napi_value value_rate = nullptr;
-    napi_create_double(env, 0.618, &value_rate);
+    constexpr double OFFSET = 0.618;
+    napi_create_double(env, OFFSET, &value_rate);
     napi_set_named_property(env, exports, "rate", value_rate);
 
     return exports;
