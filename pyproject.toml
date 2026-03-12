@@ -24,7 +24,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "coverage==7.2.7",
-    "hatchling==1.26.3",
     "pyright[nodejs]==1.1.400",
     "pytest==8.3.5",
     "removestar==1.5.2",
@@ -38,32 +37,28 @@ default = true
 ### Build System ###
 
 [build-system]
-requires = ["hatchling", "hatch-vcs", "antlr4-python3-runtime", "typing-extensions"]
-build-backend = "hatchling.build"
+requires = ["setuptools==80.0.0", "setuptools-scm==9.2.1", "antlr4-python3-runtime", "typing-extensions"]
+build-backend = "setuptools.build_meta"
 
 [project.scripts]
 taihec      = "taihe.cli.compiler:main"
 taihe-tryit = "taihe.cli.tryit:main"
 
-[tool.hatch.version]
-source = "vcs"
-fallback-version = "0.0.0+thunk"
-
-[tool.hatch.version.raw-options]
+[tool.setuptools_scm]
 search_parent_directories = true
 local_scheme = "dirty-tag"
 version_scheme = "python-simplified-semver"
+fallback_version = "0.0.0+thunk"
 
-[tool.hatch.build.hooks.custom]
-path = "compiler/hatch_build.py"
+[tool.setuptools.packages.find]
+where = ["compiler"]
+include = ["taihe*"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["compiler/taihe"]
+[tool.setuptools.package-dir]
+"taihe" = "compiler/taihe"
 
-[tool.hatch.build.targets.wheel.force-include]
-"./runtime" = "taihe/data/runtime"
-"./stdlib" = "taihe/data/stdlib"
-"./cmake" = "taihe/data/cmake"
+[tool.setuptools.package-data]
+"taihe.data" = ["runtime/**/*", "stdlib/**/*", "cmake/**/*"]
 
 ### Linting ###
 

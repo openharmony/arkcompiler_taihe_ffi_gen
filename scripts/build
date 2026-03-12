@@ -132,7 +132,7 @@ class PythonBundle:
                 'exec "$TAIHE_ROOT/_PYTHON_REL_" "$TAIHE_ROOT/_PYMOD_REL_" "$@"\n'
             )
 
-        python_path = self.pyrt_dir / f"bin"/ python_executable
+        python_path = self.pyrt_dir / "bin" / python_executable
         python_rel = python_path.relative_to(self.root_dir)
         pymod_path = (self.sitepkg_dir / pymod.replace(".", "/")).with_suffix(".py")
         pymod_rel = pymod_path.relative_to(self.root_dir)
@@ -180,7 +180,7 @@ class Builder:
         if self._has_built_compiler:
             return  # Only build once.
         self._has_built_compiler = True
-        subprocess.run(["uv", "build", "--out-dir", str(self.dist_dir)], cwd=self.pyproject_dir, check=True)
+        subprocess.run(["uv", "build", "--wheel", "-q", "--out-dir", str(self.dist_dir)], cwd=self.pyproject_dir, check=True)
 
     def build(self, platform: Platform):
         ### Preparation ###
