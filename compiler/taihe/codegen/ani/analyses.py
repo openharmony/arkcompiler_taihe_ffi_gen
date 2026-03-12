@@ -22,6 +22,9 @@ from typing import ClassVar
 
 from typing_extensions import override
 
+from taihe.codegen.abi.analyses import (
+    IfaceAbiInfo,
+)
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
@@ -69,7 +72,9 @@ from taihe.codegen.ani.writer import (
 )
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
+    GlobFuncCppUserInfo,
     IfaceCppInfo,
+    IfaceMethodCppInfo,
     StructCppInfo,
     TypeCppInfo,
     UnionCppInfo,
@@ -326,36 +331,12 @@ ANI_STRING = AniType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = AniType(hint="arraybuffer", base=ANI_REF)
 
 
-# Ani Function and Method
-
-
-@dataclass(repr=False)
-class AniFuncLike:
-    hint: str
-
-    def __repr__(self) -> str:
-        return f"ani_{self.hint}"
-
-    @property
-    def suffix(self) -> str:
-        return self.hint.capitalize()
-
-    @property
-    def upper(self) -> str:
-        return self.hint.upper()
-
-
-ANI_FUNCTION = AniFuncLike("function")
-ANI_METHOD = AniFuncLike("method")
-
-
 # Ani Scopes
 
 
 @dataclass(repr=False)
 class AniScope:
     hint: str
-    member: AniFuncLike
 
     def __repr__(self) -> str:
         return f"ani_{self.hint}"
@@ -367,11 +348,6 @@ class AniScope:
     @property
     def upper(self) -> str:
         return self.hint.upper()
-
-
-ANI_CLASS = AniScope("class", ANI_METHOD)
-ANI_MODULE = AniScope("module", ANI_FUNCTION)
-ANI_NAMESPACE = AniScope("namespace", ANI_FUNCTION)
 
 
 # ArkTs Module and Namespace
@@ -429,7 +405,7 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     parent: ArkTsOutDir
     module_name: str
 
-    scope: ClassVar[AniScope] = ANI_MODULE
+    scope: ClassVar[AniScope] = AniScope("module")
 
     obj_drop = "_taihe_objDrop"
     obj_dup = "_taihe_objDup"
@@ -494,7 +470,7 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
     parent: ArkTsModuleOrNamespace
     ns_name: str
 
-    scope: ClassVar[AniScope] = ANI_NAMESPACE
+    scope: ClassVar[AniScope] = AniScope("namespace")
 
     @property
     def mod(self) -> "ArkTsModule":
@@ -523,9 +499,6 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
 
 class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
     def __init__(self, am: AnalysisManager, pg: PackageGroup) -> None:
-        self.am = am
-        self.pg = pg
-
         self.mods: dict[str, ArkTsModule] = {}
         self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
@@ -562,9 +535,6 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
 
 class PackageAniInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        self.am = am
-        self.p = p
-
         self.header = f"{p.name}.ani.hpp"
         self.source = f"{p.name}.ani.cpp"
 
@@ -586,22 +556,7 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
 
 class NamedCallableAniInfo(AbstractAnalysis[NamedCallableDecl]):
     def __init__(self, am: AnalysisManager, f: NamedCallableDecl) -> None:
-        self.am = am
         self.f = f
-
-        if isinstance(f, IfaceMethodDecl):
-            self.native_prefix = "native "
-            self.native_call = "this."
-            self.native_name = f"_taihe_{f.name}_native"
-        if isinstance(f, GlobFuncDecl):
-            self.native_prefix = "native function "
-            self.native_call = ""
-            self.native_name = f"_taihe_{f.name}_native"
-
-        if isinstance(f, IfaceMethodDecl):
-            self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
-        if isinstance(f, GlobFuncDecl):
-            self.reverse_name = f"_taihe_{f.name}_reverse"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
@@ -710,10 +665,59 @@ class NamedCallableAniInfo(AbstractAnalysis[NamedCallableDecl]):
         return NamedCallableAniInfo(am, f)
 
 
+@dataclass(frozen=True)
+class IfaceThunkKey:
+    iface: IfaceDecl
+    method: IfaceMethodDecl
+
+
+class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
+    def __init__(self, am: AnalysisManager, c: IfaceThunkKey) -> None:  # fmt: skip
+        self.native_name = f"_taihe_{c.iface.name}_{c.method.name}_native"
+        self.native_base_params: list[str] = [
+            f"{IfaceAniInfo.vtbl_ptr}: long",
+            f"{IfaceAniInfo.data_ptr}: long",
+        ]
+        self.native_base_args: list[str] = [
+            f"this.{IfaceAniInfo.vtbl_ptr}",
+            f"this.{IfaceAniInfo.data_ptr}",
+        ]
+        self.c_native_base_params: list[str] = [
+            f"ani_long ani_vtbl_ptr",
+            f"ani_long ani_data_ptr",
+        ]
+        iface_abi_info = IfaceAbiInfo.get(am, c.iface)
+        iface_cpp_info = IfaceCppInfo.get(am, c.iface)
+        iancr_cpp_info = IfaceCppInfo.get(am, c.method.parent_iface)
+        method_cpp_info = IfaceMethodCppInfo.get(am, c.method)
+        self.c_native_call = f"{iancr_cpp_info.as_param}({iface_cpp_info.as_param}({{reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr), reinterpret_cast<DataBlockHead*>(ani_data_ptr)}}))->{method_cpp_info.call_name}"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, c: IfaceThunkKey) -> "IfaceThunkAniInfo":  # fmt: skip
+        return IfaceThunkAniInfo(am, c)
+
+
+class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":  # fmt: skip
+        return IfaceMethodAniInfo(am, f)
+
+
 class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        self.am = am
-        self.f = f
+        self.native_name = f"_taihe_{f.name}_native"
+        self.native_base_params: list[str] = []
+        self.native_base_args: list[str] = []
+        self.c_native_base_params: list[str] = []
+        func_cpp_user_info = GlobFuncCppUserInfo.get(am, f)
+        self.c_native_call = func_cpp_user_info.full_name
+
+        self.reverse_name = f"_taihe_{f.name}_reverse"
 
         self.static_scope = None
         self.ctor_scope = None
@@ -939,8 +943,6 @@ class StructObjectAniInfo(StructAniInfo):
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
     ani_type: AniType
     sig_type: AniRuntimeType
-
-    scope: ClassVar[AniScope] = ANI_CLASS
 
     data_ptr = "_taihe_dataPtr"
     vtbl_ptr = "_taihe_vtblPtr"
