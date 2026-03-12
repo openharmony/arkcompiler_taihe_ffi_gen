@@ -17,7 +17,6 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import IntEnum
 from sys import stderr
@@ -162,33 +161,7 @@ class DiagnosticsManager(ABC):
     def has_fatal(self):
         return self.has_reached_severity(Severity.FATAL)
 
-    @contextmanager
-    def capture_error(self):
-        """Captures "error" and "fatal" diagnostics using context manager.
-
-        Example:
-        ```
-        # Emit the error and prevent its propogation
-        with diag_mgr.capture_error():
-            foo();
-            raise DiagError(...)
-            bar();
-
-        # Equivalent to:
-        try:
-            foo();
-            raise DiagError(...)
-            bar();
-        except DiagError as e:
-            diag_mgr.emit(e)
-        ```
-        """
-        try:
-            yield None
-        except DiagError as e:
-            self.emit(e)
-
-    def for_each(self, xs: Iterable[_T], cb: Callable[[_T], bool | None]) -> bool:
+    def for_each(self, xs: Iterable[_T], cb: Callable[[_T], None]) -> bool:
         """Calls `cb` for each element. Records and recovers from `DiagError`s.
 
         Returns `True` if no errors are encountered.
@@ -196,8 +169,7 @@ class DiagnosticsManager(ABC):
         no_error = True
         for x in xs:
             try:
-                if cb(x):
-                    return True
+                cb(x)
             except DiagError as e:
                 self.emit(e)
                 no_error = False
