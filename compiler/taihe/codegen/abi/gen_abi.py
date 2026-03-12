@@ -256,7 +256,7 @@ class AbiIfaceDefnGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include(iface_abi_info.decl_header)
-            for ancestor, info in iface_abi_info.ancestor_dict.items():
+            for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 if ancestor is self.iface:
                     continue
                 ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
@@ -275,10 +275,10 @@ class AbiIfaceDefnGenerator:
             f"struct {iface_abi_info.vtable} {{",
             f"}};",
         ):
-            for ancestor_item_info in iface_abi_info.ancestor_list:
-                ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor_item_info.iface)
+            for ancestor_slot in iface_abi_info.ancestor_slots:
+                ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor_slot.iface)
                 self.target.writelns(
-                    f"struct {ancestor_abi_info.ftable} const* {ancestor_item_info.ftbl_ptr};",
+                    f"struct {ancestor_abi_info.ftable} const* {ancestor_slot.ftbl_ptr};",
                 )
 
     def gen_iface_defn(self):
@@ -297,16 +297,16 @@ class AbiIfaceDefnGenerator:
 
     def gen_iface_static_cast(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
+        for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
             if ancestor is self.iface:
                 continue
             ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
             with self.target.indented(
-                f"TH_INLINE struct {ancestor_abi_info.vtable} const* {info.static_cast}(struct {iface_abi_info.vtable} const* vtbl_ptr) {{",
+                f"TH_INLINE struct {ancestor_abi_info.vtable} const* {ancestor_info.static_cast}(struct {iface_abi_info.vtable} const* vtbl_ptr) {{",
                 f"}}",
             ):
                 self.target.writelns(
-                    f"return vtbl_ptr ? (struct {ancestor_abi_info.vtable} const*)((void* const*)vtbl_ptr + {info.offset}) : NULL;",
+                    f"return vtbl_ptr ? (struct {ancestor_abi_info.vtable} const*)((void* const*)vtbl_ptr + {ancestor_info.slots[0].offset}) : NULL;",
                 )
 
     def gen_iface_dynamic_cast(self):
@@ -347,7 +347,7 @@ class AbiIfaceImplGenerator:
             for method in self.iface.methods:
                 self.gen_method(method)
                 self.gen_method_call(method)
-            for ancestor, info in iface_abi_info.ancestor_dict.items():
+            for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 if ancestor is self.iface:
                     continue
                 ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
@@ -415,13 +415,13 @@ class AbiIfaceImplGenerator:
             f"TH_INLINE {return_ty_abi_name} {method_abi_info.wrap_name}({params_str}) {{",
             f"}}",
         ):
-            info = iface_abi_info.ancestor_dict[self.iface]
+            ancestor_slot = iface_abi_info.ancestor_infos[self.iface].slots[0]
             with self.target.indented(
-                f"if (0 >= {method_abi_info.min_version} || tobj.vtbl_ptr->{info.ftbl_ptr}->version >= {method_abi_info.min_version}) {{",
+                f"if (0 >= {method_abi_info.min_version} || tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->version >= {method_abi_info.min_version}) {{",
                 f"}}",
             ):
                 self.target.writelns(
-                    f"return tobj.vtbl_ptr->{info.ftbl_ptr}->methods.{method.name}({args_str});",
+                    f"return tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->methods.{method.name}({args_str});",
                 )
             with self.target.indented(
                 f"else {{",

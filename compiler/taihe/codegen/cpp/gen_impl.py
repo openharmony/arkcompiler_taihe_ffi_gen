@@ -401,7 +401,7 @@ class CppTemplateClassHeaderGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/common.hpp")
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 for method in ancestor.methods:
                     for param in method.params:
                         param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -424,7 +424,7 @@ class CppTemplateClassHeaderGenerator:
             self.target.writelns(
                 f"// You can add member variables and constructor here.",
             )
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 for method in ancestor.methods:
                     self.gen_iface_method_decl(method)
 
@@ -463,7 +463,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
             self.target.add_include(iface_cpp_impl_info.template_header)
             self.target.add_include("stdexcept")
             self.gen_using_namespaces()
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 for method in ancestor.methods:
                     self.target.newline()
                     self.gen_iface_method_impl(method)

@@ -303,7 +303,7 @@ class AniPackageSourceGenerator:
                 iface_abi_info = IfaceAbiInfo.get(self.am, iface)
                 iface_ani_info = IfaceAniInfo.get(self.am, iface)
                 iface_member_infos: dict[str, str] = {}
-                for ancestor in iface_abi_info.ancestor_dict:
+                for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
                         self.gen_native_method(method.name, method, iface, ancestor)
                         method_ani_info = NamedCallableAniInfo.get(self.am, method)
@@ -707,7 +707,7 @@ class AniIfaceImplGenerator:
                 self.target.writelns(
                     f"cpp_impl_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
                 )
-                for ancestor in iface_abi_info.ancestor_dict:
+                for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
                         self.gen_iface_method(method)
                 with self.target.indented(

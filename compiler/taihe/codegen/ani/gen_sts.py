@@ -1008,7 +1008,7 @@ class StsIfaceGenerator:
 
     def gen_iface_method_natives(self, iface_ani_info: IfaceAniInfo):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        for ancestor in iface_abi_info.ancestor_dict:
+        for ancestor in iface_abi_info.ancestor_infos:
             for method in ancestor.methods:
                 native_func_generator = StsNativeFuncGenerator(
                     self.am,
@@ -1022,7 +1022,7 @@ class StsIfaceGenerator:
         meth_on_off_register = OnOffRegister()
         meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        for ancestor in iface_abi_info.ancestor_dict:
+        for ancestor in iface_abi_info.ancestor_infos:
             for method in ancestor.methods:
                 any_func_generator = StsAnyFuncGenerator(
                     self.am,
