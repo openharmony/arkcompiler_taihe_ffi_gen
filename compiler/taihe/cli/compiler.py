@@ -111,15 +111,15 @@ def main():
     ]
     dst_dir = Path(args.dst_dir)
 
-    backend_factories = backend_registry.collect_required_backends(args.backends, dm)
+    backend_config_types = backend_registry.collect_required_backends(args.backends, dm)
     option_registry = OptionRegistry()
-    for factory in backend_factories:
-        factory.register(option_registry)
+    for backend_config_type in backend_config_types:
+        backend_config_type.register(option_registry)
     options = option_registry.parse_args(args.config, dm)
     backend_configs = [
         backend_config
-        for backend_factory in backend_factories
-        if (backend_config := backend_factory.create(options, dm)) is not None
+        for backend_config_type in backend_config_types
+        if (backend_config := backend_config_type.create(options, dm)) is not None
     ]
 
     match args.buildsys:

@@ -106,7 +106,9 @@ class AnalysisManager:
         hashable_args = tuple(args)
         hashable_kwargs = tuple(sorted(kwargs.items()))
         key = CacheKey(analysis_type, hashable_args, hashable_kwargs)
-        self._cache[key] = analysis
+
+        if self._cache.setdefault(key, analysis) != analysis:
+            raise ValueError(f"Analysis for {key} already exists in cache.")
 
     def clear(self) -> None:
         """Clear the analysis cache."""

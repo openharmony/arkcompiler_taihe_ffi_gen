@@ -487,7 +487,7 @@ class AttributeRegistry:
     """
 
     def __init__(self) -> None:
-        self._name_to_attr: dict[str, CheckedAttrT] = {}
+        self._name_to_attr_type: dict[str, CheckedAttrT] = {}
 
     def register_one(self, name: str, attr_type: CheckedAttrT) -> None:
         """Registers a single attribute type with the given name.
@@ -499,13 +499,12 @@ class AttributeRegistry:
         Raises:
             ValueError: If an attribute with this name is already registered
         """
-        if name in self._name_to_attr:
-            existing = self._name_to_attr[name]
+        setted_attr_type = self._name_to_attr_type.setdefault(name, attr_type)
+        if setted_attr_type is not attr_type:
             raise ValueError(
-                f"Attribute '{name}' already registered to {existing.__qualname__}, "
+                f"Attribute '{name}' already registered to {setted_attr_type.__qualname__}, "
                 f"cannot register {attr_type.__qualname__}"
             )
-        self._name_to_attr[name] = attr_type
 
     def register(self, *attr_types: CheckedAttrT) -> None:
         """Registers multiple attribute types using their inferred names.
@@ -533,9 +532,9 @@ class AttributeRegistry:
             raw: Unchecked attribute data from parsing
             dm: Diagnostics manager for error reporting
         """
-        attr_type = self._name_to_attr.get(raw.name)
+        attr_type = self._name_to_attr_type.get(raw.name)
         if attr_type is None:
-            suggestions = get_close_matches(raw.name, self._name_to_attr.keys())
+            suggestions = get_close_matches(raw.name, self._name_to_attr_type.keys())
             dm.emit(AttrNotExistError(raw.name, suggestions, loc=raw.loc))
             return None
 
