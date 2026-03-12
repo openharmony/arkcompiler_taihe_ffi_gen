@@ -78,7 +78,9 @@ bool has_error()
     napi_env env = guard.env();
     napi_value exception;
     napi_get_and_clear_last_exception(env, &exception);
-    if (exception == nullptr) return false;
+    if (exception == nullptr) {
+        return false;
+    }
 
     bool is_error = false;
     napi_is_error(env, exception, &is_error);

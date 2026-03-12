@@ -8,7 +8,7 @@
 
 - [Taihe Napi 用户文档](./NapiUsageGuide.md)
 
-*其他文档涉及不同后端，与本开发无关。*
+*此外文档涉及不同后端，与本开发无关。*
 
 ## Taihe 命令行使用方法
 
@@ -38,7 +38,7 @@ taihec [taihe_files ...] [options ...]
 
 #### 代码生成后端
 
-代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的其他后端，生成完整的代码。
+代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的后端，生成完整的代码。
 
 | Backend | 说明 | 依赖 |
 | ------- | ---- | ---- |
@@ -60,7 +60,7 @@ taihec test/napi_string/idl/*.taihe -Otest/napi_string/generated -Gnapi-bridge -
 
 ## 使用流程
 
-下面我们以一个 memberTest 项目为例，展示其标准流程。
+下面以一个 memberTest 项目为例，展示其标准流程。
 
 1. **准备工具**
 
@@ -149,13 +149,13 @@ taihec test/napi_string/idl/*.taihe -Otest/napi_string/generated -Gnapi-bridge -
      )
      ```
 
-可以使用命令获取 `object.cpp`，`string.cpp` 和 `napi_runtime.cpp` 文件的所在目录的绝对路径
+可以使用命令获取 `object.cpp`，`string.cpp` 和 `napi_runtime.cpp` 文件的所在目录的路径
 
 ```bash
 taihec --print-runtime-source-path
 ```
 
-可以使用命令获取 `taihe/include` 文件夹的绝对路径
+可以使用命令获取 `taihe/include` 文件夹的路径
 
 ```bash
 taihec --print-runtime-header-path

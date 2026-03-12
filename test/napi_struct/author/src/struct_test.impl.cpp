@@ -33,9 +33,11 @@ int32_t from_rgb(::struct_test::RGB const &rgb)
 double from_color(::struct_test::Color const &color)
 {
     if (color.flag) {
-        return color.rgb.r + 100;
+        constexpr int32_t i32_value100 = 100;
+        return color.rgb.r + i32_value100;
     } else {
-        return color.price + 1;
+        constexpr int32_t i32_value1 = 1;
+        return color.price + i32_value1;
     }
 }
 
