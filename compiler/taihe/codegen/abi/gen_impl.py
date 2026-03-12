@@ -43,7 +43,7 @@ class CImplHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             CMacroPackageGenerator(self.om, self.am, pkg).gen_package_file()
             for iface in pkg.interfaces:
                 CMacroIfaceGenerator(self.om, self.am, iface).gen_iface_file()
@@ -158,7 +158,7 @@ class CImplSourcesGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             CTemplatePackageGenerator(self.om, self.am, pkg).gen_package_file()
             for iface in pkg.interfaces:
                 CTemplateIfaceGenerator(self.om, self.am, iface).gen_iface_file()

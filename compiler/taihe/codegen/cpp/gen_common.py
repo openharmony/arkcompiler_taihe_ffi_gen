@@ -59,7 +59,7 @@ class CppHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.all_packages:
+        for pkg in pg.iterate(include_stdlib=True):
             for enum in pkg.enums:
                 CppEnumDeclGenerator(self.om, self.am, enum).gen_enum_decl_file()
                 CppEnumDefnGenerator(self.om, self.am, enum).gen_enum_defn_file()

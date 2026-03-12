@@ -71,6 +71,7 @@ packages = ["compiler/taihe"]
 include = ["compiler"]
 exclude = ["compiler/taihe/parse/antlr"]
 pythonVersion = '3.10'
+reportDeprecated = true
 
 # strict = ["compiler/taihe"]  # Maybe later: codegen
 strict = [

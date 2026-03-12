@@ -531,7 +531,7 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
 
         self.path = ArkTsOutDir.get(am, pg)
 
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             ns_parts = []
             if attr := NamespaceAttr.get(pkg):
                 module_str = attr.module

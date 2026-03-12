@@ -52,7 +52,7 @@ class CppImplHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             CppMacroPackageGenerator(self.om, self.am, pkg).gen_package_file()
             # for iface in pkg.interfaces:
             #     CppMacroIfaceGenerator(self.om, self.am, iface).gen_iface_file()
@@ -181,11 +181,11 @@ class CppImplSourcesGenerator:
         self.using_namespaces: list[str] = []
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             CppTemplatePackageGenerator(self.om, self.am, pkg).gen_package_file()
             # for iface in pkg.interfaces:
             #     CppTemplateIfaceGenerator(self.om, self.am, iface).gen_iface_file()
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             for iface in pkg.interfaces:
                 CppTemplateClassHeaderGenerator(self.om, self.am, iface).gen_file()
                 CppTemplateClassSourceGenerator(self.om, self.am, iface).gen_file()

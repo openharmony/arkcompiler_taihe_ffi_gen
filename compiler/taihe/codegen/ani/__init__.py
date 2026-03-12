@@ -88,7 +88,7 @@ class AniBridgeBackendConfig(BackendConfig):
 
             def post_process(self):
                 if self._config.keep_name:
-                    for p in self._ci.package_group.packages:
+                    for p in self._ci.package_group.iterate():
                         if StsKeepNameAttr.get(p) is None:
                             p.add_attribute(StsKeepNameAttr(loc=p.loc))
 
