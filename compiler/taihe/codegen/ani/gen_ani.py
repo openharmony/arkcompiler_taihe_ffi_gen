@@ -63,7 +63,7 @@ class AniCodeGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             for iface in pkg.interfaces:
                 AniIfaceDeclGenerator(self.om, self.am, iface).gen_iface_decl_file()
                 AniIfaceImplGenerator(self.om, self.am, iface).gen_iface_impl_file()
@@ -120,7 +120,7 @@ class AniConstructorGenerator:
                 self.target.writelns(
                     f"ani_status status = ANI_OK;",
                 )
-                for pkg in self.pg.packages:
+                for pkg in self.pg.iterate():
                     pkg_ani_info = PackageAniInfo.get(self.am, pkg)
                     self.target.add_include(pkg_ani_info.header)
                     with self.target.indented(

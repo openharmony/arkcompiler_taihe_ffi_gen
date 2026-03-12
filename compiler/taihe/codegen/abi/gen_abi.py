@@ -43,7 +43,7 @@ class AbiHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.all_packages:
+        for pkg in pg.iterate(include_stdlib=True):
             for struct in pkg.structs:
                 AbiStructDeclGenerator(self.om, self.am, struct).gen_struct_decl_file()
                 AbiStructDefnGenerator(self.om, self.am, struct).gen_struct_defn_file()
@@ -506,7 +506,7 @@ class AbiSourcesGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.all_packages:
+        for pkg in pg.iterate(include_stdlib=True):
             AbiPackageSourceGenerator(self.om, self.am, pkg).gen_package_file()
 
 

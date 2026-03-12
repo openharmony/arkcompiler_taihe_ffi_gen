@@ -109,7 +109,7 @@ def _check_decl_confilct_with_namespace(
 ):
     """Checks for declarations conflicts with namespaces."""
     namespaces: dict[str, list[PackageDecl]] = {}
-    for pkg in pg.packages:
+    for pkg in pg.iterate():
         pkg_name = pkg.name
         # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
         while True:
@@ -120,7 +120,7 @@ def _check_decl_confilct_with_namespace(
             else:
                 break
 
-    for p in pg.packages:
+    for p in pg.iterate():
         for d in p.declarations:
             name = p.name + "." + d.name
             if packages := namespaces.get(name, []):
