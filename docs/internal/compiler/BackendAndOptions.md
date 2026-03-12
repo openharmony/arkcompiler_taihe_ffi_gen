@@ -102,7 +102,7 @@ comp_ins = CompilerInstance(comp_inv, diag_mgr)             # 根据 CompilerInv
 backend: Backend = conf.construct(comp_ins)                 # 在 CompilerInstance 中，根据 BackendConfig 构造 Backend 实例
   ↓
 Backend.register()                                          # 在此阶段将选项值注入回系统
-  └─ provide(ArkTsOutDir(...), ...)                         # module-prefix/path-prefix -> Analysis 缓存
+  └─ ArkTsOutDir.provide(...)                               # module-prefix/path-prefix -> Analysis 缓存
   ↓
 Backend.post_process()                                      # 在此阶段将选项物化为 IR 注解
   └─ decl.add_attribute(...)                                # keep-name -> per-package 属性
@@ -115,14 +115,20 @@ Backend.post_process()                                      # 在此阶段将选
 
 除此之外，不应该在后续阶段，尤其是通过 `BackendConfig` 构造 `Backend` 实例时再报告选项相关的错误。换句话说，`BackendConfig` 的合法性应该在 `create()` 阶段被完全验证，`construct()` 阶段不应再担心选项错误的情况。
 
-### `AnalysisManager.provide` 的设计
+### `Analysis.provide` 和 `AnalysisManager.provide` 的设计
 
-`provide` 方法是这套方案的关键拼图。它的作用是：**在 Analysis 的缓存中预置一个由外部构造的实例，使得后续通过标准的 `Analysis.get()` API 访问时，直接命中这个预置值，而不走 `_create()` 工厂方法。**
+`provide` 方法是这套方案的关键拼图。它的作用是：**在 Analysis 的缓存中预置一个由外部构造的实例，使得后续通过标准的 `Analysis.get()` API 访问时，直接命中这个预置值，而不走 `_create()` 工厂方法。**s
 
 ```python
-def provide(self, analysis, analysis_type, *args, **kwargs):
-    key = CacheKey(analysis_type, tuple(args), tuple(sorted(kwargs.items())))
-    self._cache[key] = analysis
+class AbstractAnalysis(Generic[H], ABC):
+    @classmethod
+    def provide(cls: type[A], am: AnalysisManager, arg: H, instance: A) -> None:
+        am.provide(cls, arg, instance)
+
+class AnalysisManager:
+    def provide(self, analysis_type: type[A], arg: Hashable, analysis: A) -> None:
+        key = CacheKey(analysis_type, arg)
+        self._cache[key] = analysis
 ```
 
 这个模式可以类比为依赖注入框架中的 `bind(type).toInstance(instance)`——在正常的惰性求值流程之外，显式地为某个 key 绑定一个已构造好的值。与依赖注入框架不同的是，这里的 key 不仅包含类型，还包含参数（比如 `PackageGroup` 实例），因此同一类型的 Analysis 在不同参数下可以有不同的绑定。LLVM 的 `AnalysisManager` 也提供了类似功能。

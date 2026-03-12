@@ -256,7 +256,7 @@ func_abi_info = GlobFuncAbiInfo.get(am, func)
   - `_create(am, decl)`：是工厂方法，用于创建分析结果。编译器驱动在第一次查询分析结果时会调用该方法来创建分析结果。
   - `get(am, decl)`：是查询方法，用于获取分析结果。编译器驱动在查询分析结果时会调用该方法来获取分析结果，如果分析结果不存在，则调用 `_create()` 来创建。
 - `AnalysisManager`：分析结果的缓存。由于 Taihe IR 在代码生成阶段不可变，`AnalysisManager` 缓存了相同对象的相同分析结果查询。首次查询时需要计算，后续查询时直接拿到结果。
-  - `provide(analysis, cls, decl)`：有时一些分析结果需要由语言后端提供，此时可以调用该方法来主动提供分析结果。该方法通常在语言后端的 `register()` 方法中被调用，用于将一些后端配置通过分析结果的方式注入到 `AnalysisManager` 中。
+  - `provide(am, decl, analysis)`：有时一些分析结果需要由语言后端提供，此时可以调用该方法来主动提供分析结果。该方法通常在语言后端的 `register()` 方法中被调用，用于将一些后端配置通过分析结果的方式注入到 `AnalysisManager` 中。
 
 相比于备选方案，中间分析有如下优点：
 
