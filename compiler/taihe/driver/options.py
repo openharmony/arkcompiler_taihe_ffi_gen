@@ -135,7 +135,7 @@ class OptionRegistry:
     """
 
     def __init__(self) -> None:
-        self._name_to_option: dict[str, ConfigOptionT] = {}
+        self._name_to_option_type: dict[str, ConfigOptionT] = {}
 
     def register(self, *option_types: ConfigOptionT) -> None:
         """Register one or more config option types.
@@ -148,13 +148,12 @@ class OptionRegistry:
         """
         for option_type in option_types:
             name = option_type.NAME
-            if name in self._name_to_option:
-                existing = self._name_to_option[name]
+            setted_option_type = self._name_to_option_type.setdefault(name, option_type)
+            if setted_option_type is not option_type:
                 raise ValueError(
-                    f"config option {name!r} cannot be registered as {option_type.__name__} "
-                    f"because it is already registered as {existing.__name__}"
+                    f"config option {name!r} cannot be registered as {option_type.__qualname__} "
+                    f"because it is already registered as {setted_option_type.__qualname__}"
                 )
-            self._name_to_option[name] = option_type
 
     def parse(
         self,
@@ -175,9 +174,9 @@ class OptionRegistry:
         Raises:
             ValueError: If an unknown option name is encountered
         """
-        option_type = self._name_to_option.get(name)
+        option_type = self._name_to_option_type.get(name)
         if option_type is None:
-            suggestions = get_close_matches(name, self._name_to_option.keys())
+            suggestions = get_close_matches(name, self._name_to_option_type.keys())
             msg = f"unknown config option {name!r}"
             if suggestions:
                 suggestions_str = ", ".join(suggestions)
@@ -211,4 +210,4 @@ class OptionRegistry:
 
     def get_option_names(self) -> list[str]:
         """Get all registered option names."""
-        return list(self._name_to_option.keys())
+        return list(self._name_to_option_type.keys())

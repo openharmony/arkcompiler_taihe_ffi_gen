@@ -16,10 +16,10 @@
 """Defines the types for declarations."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Collection
+from collections.abc import Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
-from typing_extensions import override
+from typing_extensions import deprecated, override
 
 from taihe.semantics.format import TaiheFormatter
 from taihe.semantics.types import (
@@ -397,7 +397,7 @@ class LongTypeRefDecl(ExplicitTypeRefDecl):
 
 class GenericTypeRefDecl(ExplicitTypeRefDecl):
     symbol: str
-    args: list[GenericArgDecl]
+    _args: list[GenericArgDecl]
 
     def __init__(
         self,
@@ -407,10 +407,14 @@ class GenericTypeRefDecl(ExplicitTypeRefDecl):
     ):
         super().__init__(loc=loc)
         self.symbol = symbol
-        self.args = []
+        self._args = []
+
+    @property
+    def args(self) -> Sequence[GenericArgDecl]:
+        return self._args
 
     def add_arg(self, a: GenericArgDecl):
-        self.args.append(a)
+        self._args.append(a)
         a.set_parent(self)
 
     @override
@@ -419,8 +423,8 @@ class GenericTypeRefDecl(ExplicitTypeRefDecl):
 
 
 class CallbackTypeRefDecl(ExplicitTypeRefDecl):
-    _param_dict: dict[str, ParamDecl]
     return_ty_ref: ExplicitTypeRefDecl
+    _param_dict: dict[str, ParamDecl]
 
     def __init__(
         self,
@@ -434,8 +438,8 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
         self.return_ty_ref.set_parent(self)
 
     @property
-    def params(self) -> Collection[ParamDecl]:
-        return self._param_dict.values()
+    def params(self) -> Sequence[ParamDecl]:
+        return list(self._param_dict.values())
 
     @property
     def return_ty_or_none(self) -> Type | None:
@@ -780,8 +784,8 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
 
 
 class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
-    _param_dict: dict[str, ParamDecl]
     return_ty_ref: TypeRefDecl
+    _param_dict: dict[str, ParamDecl]
 
     def __init__(
         self,
@@ -806,8 +810,8 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         return self._node_parent
 
     @property
-    def params(self) -> Collection[ParamDecl]:
-        return self._param_dict.values()
+    def params(self) -> Sequence[ParamDecl]:
+        return list(self._param_dict.values())
 
     @property
     def return_ty_or_none(self) -> Type | None:
@@ -845,8 +849,8 @@ class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
 
 
 class GlobFuncDecl(PackageLevelDecl):
-    _param_dict: dict[str, ParamDecl]
     return_ty_ref: TypeRefDecl
+    _param_dict: dict[str, ParamDecl]
 
     def __init__(
         self,
@@ -866,8 +870,8 @@ class GlobFuncDecl(PackageLevelDecl):
         return f"function {self.name}"
 
     @property
-    def params(self) -> Collection[ParamDecl]:
-        return self._param_dict.values()
+    def params(self) -> Sequence[ParamDecl]:
+        return list(self._param_dict.values())
 
     @property
     def return_ty_or_none(self) -> Type | None:
@@ -926,8 +930,8 @@ class EnumDecl(TypeDecl):
         return f"enum {self.name}"
 
     @property
-    def items(self) -> Collection[EnumItemDecl]:
-        return self._item_dict.values()
+    def items(self) -> Sequence[EnumItemDecl]:
+        return list(self._item_dict.values())
 
     @property
     def ty_or_none(self) -> ScalarType | StringType | None:
@@ -972,8 +976,8 @@ class UnionDecl(TypeDecl):
         return f"union {self.name}"
 
     @property
-    def fields(self) -> Collection[UnionFieldDecl]:
-        return self._field_dict.values()
+    def fields(self) -> Sequence[UnionFieldDecl]:
+        return list(self._field_dict.values())
 
     def add_field(self, f: UnionFieldDecl):
         if (prev := self._field_dict.setdefault(f.name, f)) != f:
@@ -1007,8 +1011,8 @@ class StructDecl(TypeDecl):
         return f"struct {self.name}"
 
     @property
-    def fields(self) -> Collection[StructFieldDecl]:
-        return self._field_dict.values()
+    def fields(self) -> Sequence[StructFieldDecl]:
+        return list(self._field_dict.values())
 
     def add_field(self, f: StructFieldDecl):
         if (prev := self._field_dict.setdefault(f.name, f)) != f:
@@ -1044,12 +1048,12 @@ class IfaceDecl(TypeDecl):
         return f"interface {self.name}"
 
     @property
-    def extends(self) -> Collection[IfaceExtendDecl]:
-        return self._extend_list
+    def extends(self) -> Sequence[IfaceExtendDecl]:
+        return list(self._extend_list)
 
     @property
-    def methods(self) -> Collection[IfaceMethodDecl]:
-        return self._method_dict.values()
+    def methods(self) -> Sequence[IfaceMethodDecl]:
+        return list(self._method_dict.values())
 
     def add_extend(self, p: IfaceExtendDecl):
         self._extend_list.append(p)
@@ -1096,15 +1100,15 @@ class PackageDecl(NamedDecl):
     _pkg_import_dict: dict[str, PackageImportDecl]
     _decl_import_dict: dict[str, DeclarationImportDecl]
 
-    # Symbols
+    # Declarations by symbol
     _declaration_dict: dict[str, PackageLevelDecl]
 
-    # Things that the package contains.
-    functions: list[GlobFuncDecl]
-    structs: list[StructDecl]
-    unions: list[UnionDecl]
-    interfaces: list[IfaceDecl]
-    enums: list[EnumDecl]
+    # Declarations by category
+    _functions: list[GlobFuncDecl]
+    _enums: list[EnumDecl]
+    _unions: list[UnionDecl]
+    _structs: list[StructDecl]
+    _interfaces: list[IfaceDecl]
 
     is_stdlib: bool
 
@@ -1122,11 +1126,11 @@ class PackageDecl(NamedDecl):
 
         self._declaration_dict = {}
 
-        self.functions = []
-        self.structs = []
-        self.unions = []
-        self.interfaces = []
-        self.enums = []
+        self._functions = []
+        self._enums = []
+        self._unions = []
+        self._structs = []
+        self._interfaces = []
 
         self.is_stdlib = is_stdlib
 
@@ -1160,6 +1164,26 @@ class PackageDecl(NamedDecl):
     @property
     def declarations(self) -> Collection[PackageLevelDecl]:
         return self._declaration_dict.values()
+
+    @property
+    def functions(self) -> Collection[GlobFuncDecl]:
+        return self._functions
+
+    @property
+    def enums(self) -> Collection[EnumDecl]:
+        return self._enums
+
+    @property
+    def unions(self) -> Collection[UnionDecl]:
+        return self._unions
+
+    @property
+    def structs(self) -> Collection[StructDecl]:
+        return self._structs
+
+    @property
+    def interfaces(self) -> Collection[IfaceDecl]:
+        return self._interfaces
 
     def set_group(self, group: "PackageGroup"):
         self._node_parent = group
@@ -1208,31 +1232,31 @@ class PackageDecl(NamedDecl):
     def add_function(self, d: GlobFuncDecl):
         if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
-        self.functions.append(d)
+        self._functions.append(d)
         d.set_parent(self)
 
     def add_enum(self, d: EnumDecl):
         if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
-        self.enums.append(d)
-        d.set_parent(self)
-
-    def add_struct(self, d: StructDecl):
-        if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
-            raise DeclRedefError(prev, d)
-        self.structs.append(d)
+        self._enums.append(d)
         d.set_parent(self)
 
     def add_union(self, d: UnionDecl):
         if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
-        self.unions.append(d)
+        self._unions.append(d)
+        d.set_parent(self)
+
+    def add_struct(self, d: StructDecl):
+        if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
+            raise DeclRedefError(prev, d)
+        self._structs.append(d)
         d.set_parent(self)
 
     def add_interface(self, d: IfaceDecl):
         if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
-        self.interfaces.append(d)
+        self._interfaces.append(d)
         d.set_parent(self)
 
     @override
@@ -1243,34 +1267,43 @@ class PackageDecl(NamedDecl):
 class PackageGroup:
     """Stores all known packages for a compilation instance."""
 
-    _all_package_dict: dict[str, PackageDecl]
-    _package_dict: dict[str, PackageDecl]
+    _all_packages: dict[str, PackageDecl]
 
     def __init__(self):
-        self._all_package_dict = {}
-        self._package_dict = {}
+        self._all_packages = {}
 
     def __repr__(self) -> str:
-        packages_str = ", ".join(repr(x) for x in self._package_dict)
+        packages_str = ", ".join(repr(x) for x in self._all_packages)
         return f"{self.__class__.__qualname__}({packages_str})"
 
     @property
-    def all_packages(self) -> Collection[PackageDecl]:
-        return self._all_package_dict.values()
+    @deprecated("use `iterate()` instead")
+    def packages(self) -> Iterable[PackageDecl]:
+        return self.iterate()
 
     @property
-    def packages(self) -> Collection[PackageDecl]:
-        return self._package_dict.values()
+    @deprecated("use `iterate(include_stdlib=True)` instead")
+    def all_packages(self) -> Iterable[PackageDecl]:
+        return self.iterate(include_stdlib=True)
 
-    def lookup(self, name: str) -> PackageDecl | None:
-        return self._package_dict.get(name)
+    def iterate(self, include_stdlib: bool = False) -> Iterable[PackageDecl]:
+        packages = self._all_packages.values()
+        if not include_stdlib:
+            packages = filter(lambda p: not p.is_stdlib, packages)
+        return packages
+
+    def lookup(self, name: str, include_stdlib: bool = False) -> PackageDecl | None:
+        pkg = self._all_packages.get(name)
+        if pkg is None:
+            return None
+        if not include_stdlib and pkg.is_stdlib:
+            return None
+        return pkg
 
     def add(self, d: PackageDecl):
-        if (prev := self._all_package_dict.setdefault(d.name, d)) != d:
+        if (prev := self._all_packages.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
-        if not d.is_stdlib:
-            self._package_dict[d.name] = d
         d.set_group(self)
 
-    def accept(self, v: "PackageGroupVisitor[_R]"):
+    def accept(self, v: "PackageGroupVisitor[_R]") -> _R:
         return v.visit_package_group(self)

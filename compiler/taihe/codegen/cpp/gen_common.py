@@ -59,7 +59,7 @@ class CppHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.all_packages:
+        for pkg in pg.iterate(include_stdlib=True):
             for enum in pkg.enums:
                 CppEnumDeclGenerator(self.om, self.am, enum).gen_enum_decl_file()
                 CppEnumDefnGenerator(self.om, self.am, enum).gen_enum_defn_file()
@@ -1184,7 +1184,7 @@ class CppIfaceDefnGenerator:
         with self.target:
             self.target.add_include(iface_cpp_info.decl_header)
             self.target.add_include(iface_abi_info.defn_header)
-            for ancestor, info in iface_abi_info.ancestor_dict.items():
+            for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 if ancestor is self.iface:
                     continue
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
@@ -1229,7 +1229,7 @@ class CppIfaceDefnGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         # static cast to ancestors
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
+        for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
             if ancestor is self.iface:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
@@ -1242,7 +1242,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
                         f"this->m_handle.data_ptr,",
                     )
             with self.target.indented(
@@ -1254,7 +1254,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
                         f"tobj_dup(this->m_handle.data_ptr),",
                     )
         # static cast to root
@@ -1319,10 +1319,10 @@ class CppIfaceDefnGenerator:
             f"static constexpr {iface_abi_info.vtable} vtbl_impl = {{",
             f"}};",
         ):
-            for ancestor_info in iface_abi_info.ancestor_list:
-                ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor_info.iface)
+            for ancestor_slot in iface_abi_info.ancestor_slots:
+                ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor_slot.iface)
                 self.target.writelns(
-                    f".{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
+                    f".{ancestor_slot.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
                 )
 
     def gen_iface_idmap_impl(self):
@@ -1332,13 +1332,13 @@ class CppIfaceDefnGenerator:
             f"template<typename Impl>",
         )
         with self.target.indented(
-            f"static constexpr struct IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{",
+            f"static constexpr struct IdMapItem idmap_impl[{len(iface_abi_info.ancestor_infos)}] = {{",
             f"}};",
         ):
-            for ancestor, info in iface_abi_info.ancestor_dict.items():
+            for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
                 self.target.writelns(
-                    f"{{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},",
+                    f"{{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{ancestor_info.slots[0].ftbl_ptr}}},",
                 )
 
     def gen_iface_infos(self):
@@ -1441,7 +1441,7 @@ class CppIfaceDefnGenerator:
                 f"std::exchange(other.m_handle.data_ptr, nullptr),",
             )
         # copy/move to ancestors
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
+        for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
             if ancestor is self.iface:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
@@ -1454,7 +1454,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
                         f"this->m_handle.data_ptr,",
                     )
             with self.target.indented(
@@ -1466,7 +1466,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
                         f"tobj_dup(this->m_handle.data_ptr),",
                     )
             with self.target.indented(
@@ -1478,7 +1478,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
                         f"std::exchange(this->m_handle.data_ptr, nullptr),",
                     )
         # copy/move to root
@@ -1577,7 +1577,7 @@ class CppIfaceImplGenerator:
             self.gen_iface_virtual_type_impl()
             self.gen_iface_methods_impl_impl()
             self.gen_iface_ftbl_impl()
-            for ancestor, info in iface_abi_info.ancestor_dict.items():
+            for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 if ancestor is self.iface:
                     continue
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)

@@ -42,7 +42,7 @@ class CppUserHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.all_packages:
+        for pkg in pg.iterate(include_stdlib=True):
             CppUserPackageGenerator(self.om, self.am, pkg).gen_package_file()
 
 

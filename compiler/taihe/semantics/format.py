@@ -358,7 +358,7 @@ class TaiheGenerator:
         self.show_internal = show_internal
 
     def generate(self, g: "PackageGroup"):
-        for p in g.all_packages if self.show_internal else g.packages:
+        for p in g.iterate(include_stdlib=True) if self.show_internal else g.iterate():
             fd = FileDescriptor(
                 relative_path=f"idl/{p.name}{IDL_FILE_DEFAULT_EXT}",
                 kind=FileKind.TAIHE,
