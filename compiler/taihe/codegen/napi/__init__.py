@@ -14,10 +14,14 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.driver.contexts import CompilerInstance
+
+if TYPE_CHECKING:
+    from taihe.driver.contexts import CompilerInstance
+    from taihe.driver.options import OptionStore
+    from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass
@@ -26,10 +30,10 @@ class NapiBridgeBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-user"]
 
     @classmethod
-    def create(cls):
+    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return NapiBridgeBackendConfig()
 
-    def construct(self, instance: CompilerInstance):
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.napi.attributes import all_napi_attr_types
         from taihe.codegen.napi.gen_dts import DtsCodeGenerator
@@ -37,7 +41,7 @@ class NapiBridgeBackendConfig(BackendConfig):
         from taihe.codegen.napi.gen_ts import TsCodeGenerator
 
         class NapiBridgeBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 self._ci = ci
 
             def register(self):
