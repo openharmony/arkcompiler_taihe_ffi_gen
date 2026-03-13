@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include <taihe/runtime.hpp>
+#include <taihe/runtime_ani.hpp>
 
 #include <iostream>
 
