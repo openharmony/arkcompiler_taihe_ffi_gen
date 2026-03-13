@@ -475,6 +475,13 @@ class CMakeOutputManager(BasicOutputManager):
     runtime_include_dir: Path
     runtime_src_dir: Path
 
+    RUNTIME_SRC_DIR = "TAIHE_RUNTIME_SRC_DIR_INNER"
+    RUNTIME_INCLUDE = "TAIHE_RUNTIME_INCLUDE"
+    GEN_DIR = "TAIHE_GEN_DIR"
+    GEN_INCLUDE = "TAIHE_GEN_INCLUDE"
+    GEN_SRC = "TAIHE_GEN_SRC"
+    RUNTIME_SRC = "TAIHE_RUNTIME_SRC"
+
     def __init__(
         self,
         dst_dir: Path,
@@ -515,40 +522,45 @@ class CMakeOutputManager(BasicOutputManager):
 
     def emit_prev_settings(self):
         with self.target.indented(
-            f"if(NOT DEFINED TAIHE_RUNTIME_INCLUDE_INNER)",
+            f"if(NOT DEFINED {self.RUNTIME_INCLUDE})",
             f"endif()",
         ):
             with self.target.indented(
-                f"set(TAIHE_RUNTIME_INCLUDE_INNER",
+                f"set({self.RUNTIME_INCLUDE}",
                 f")",
             ):
                 self.target.writelns(
                     f'"{self.runtime_include_dir.as_posix()}"',
                 )
         with self.target.indented(
-            f"if(NOT DEFINED TAIHE_RUNTIME_SRC_INNER)",
+            f"if(NOT DEFINED {self.RUNTIME_SRC_DIR})",
             f"endif()",
         ):
             with self.target.indented(
-                f"set(TAIHE_RUNTIME_SRC_INNER",
+                f"set({self.RUNTIME_SRC_DIR}",
                 f")",
             ):
-                for runtime_src_file in self.runtime_src_dir.glob("**/*"):
-                    if runtime_src_file.is_file():
-                        self.target.writelns(
-                            f'"{runtime_src_file.as_posix()}"',
-                        )
+                self.target.writelns(
+                    f'"{self.runtime_src_dir.as_posix()}"',
+                )
         with self.target.indented(
-            f"if(NOT DEFINED TAIHE_GEN_DIR)",
+            f"if(NOT DEFINED {self.GEN_DIR})",
             f"endif()",
         ):
             with self.target.indented(
-                f"set(TAIHE_GEN_DIR",
+                f"set({self.GEN_DIR}",
                 f")",
             ):
                 self.target.writelns(
                     "${CMAKE_CURRENT_LIST_DIR}",
                 )
+        with self.target.indented(
+            f"set({self.GEN_INCLUDE}",
+            f")",
+        ):
+            self.target.writelns(
+                f"${{{self.GEN_DIR}}}/include",
+            )
 
     def emit_core_settings(self):
         for group, values in self.variables.items():
@@ -564,34 +576,18 @@ class CMakeOutputManager(BasicOutputManager):
                 f")",
             ):
                 for relative_path in relative_paths:
-                    path = (self.runtime_src_dir / relative_path).as_posix()
-                    self.target.writelns(path)
+                    self.target.writelns(f"${{{self.RUNTIME_SRC_DIR}}}/{relative_path}")
         for group, relative_paths in self.gen_src_files.items():
             with self.target.indented(
                 f"set({group}",
                 f")",
             ):
                 for relative_path in relative_paths:
-                    path = (self.dst_dir / relative_path).as_posix()
-                    self.target.writelns(path)
+                    self.target.writelns(f"${{{self.GEN_DIR}}}/{relative_path}")
 
     def emit_post_settings(self):
         with self.target.indented(
-            f"set(TAIHE_RUNTIME_INCLUDE",
-            f")",
-        ):
-            self.target.writelns(
-                f"${{TAIHE_RUNTIME_INCLUDE_INNER}}",
-            )
-        with self.target.indented(
-            f"set(TAIHE_GEN_INCLUDE",
-            f")",
-        ):
-            self.target.writelns(
-                f"${{TAIHE_GEN_DIR}}/include",
-            )
-        with self.target.indented(
-            f"set(TAIHE_RUNTIME_SRC",
+            f"set({self.RUNTIME_SRC}",
             f")",
         ):
             self.target.writelns(
@@ -599,7 +595,7 @@ class CMakeOutputManager(BasicOutputManager):
                 f"${{{RUNTIME_CXX_SRC_GROUP}}}",
             )
         with self.target.indented(
-            f"set(TAIHE_GEN_SRC",
+            f"set({self.GEN_SRC}",
             f")",
         ):
             self.target.writelns(
