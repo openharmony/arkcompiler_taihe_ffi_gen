@@ -14,13 +14,13 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import TextIO
 
 from typing_extensions import override
 
-from taihe.utils.outputs import FileKind, FileWriter, OutputManager
+from taihe.utils.outputs import FileWriter, GeneratedFileGroup, OutputManager
 
 C_DEFAULT_INDENT = "    "
 C_COMMENT_PREFIX = "// "
@@ -34,16 +34,16 @@ DEFAULT_CLANG_DIAGNOSTIC_SETTINGS = {
 
 class IncludeGuard(ABC):
     @abstractmethod
-    def gen_prologue(self) -> Generator[str, None, None]:
+    def gen_prologue(self) -> Iterable[str]:
         """Generate the prologue lines for the header guard."""
 
     @abstractmethod
-    def gen_epilogue(self) -> Generator[str, None, None]:
+    def gen_epilogue(self) -> Iterable[str]:
         """Generate the epilogue lines for the header guard."""
 
 
 @dataclass(frozen=True)
-class PragmaBasedIncludeGuard(IncludeGuard):
+class PragmaBasedGuard(IncludeGuard):
     def gen_prologue(self):
         yield "#pragma once"
         yield ""
@@ -53,11 +53,11 @@ class PragmaBasedIncludeGuard(IncludeGuard):
 
 
 @dataclass(frozen=True)
-class MacroBasedIncludeGuard(IncludeGuard):
+class MacroBasedGuard(IncludeGuard):
     identifier: str
 
     @staticmethod
-    def from_path(path: str) -> "MacroBasedIncludeGuard":
+    def from_path(path: str) -> "MacroBasedGuard":
         last_end = 0
         for pattern in ("include/", "inc/"):
             begin = path.rfind(pattern)
@@ -65,7 +65,7 @@ class MacroBasedIncludeGuard(IncludeGuard):
             last_end = max(last_end, end)
         path = path[last_end:]
         identifier = "".join([c if c.isalnum() else "_" for c in path]).upper()
-        return MacroBasedIncludeGuard(identifier)
+        return MacroBasedGuard(identifier)
 
     def gen_prologue(self):
         yield f"#ifndef {self.identifier}"
@@ -120,22 +120,21 @@ class CSourceWriter(FileWriter, CMacroManager):
         self,
         om: OutputManager,
         relative_path: str,
-        file_kind: FileKind,
         *,
+        group: GeneratedFileGroup | None,
+        is_template: bool = False,
         include_guard: IncludeGuard | None = None,
     ):
         super().__init__(
             om,
-            relative_path=relative_path,
-            file_kind=file_kind,
+            relative_path,
+            group=group,
             default_indent=C_DEFAULT_INDENT,
             comment_prefix=C_COMMENT_PREFIX,
         )
         CMacroManager.__init__(
             self,
-            diag_settings={}
-            if file_kind == FileKind.C_TEMPLATE
-            else DEFAULT_CLANG_DIAGNOSTIC_SETTINGS,
+            diag_settings={} if is_template else DEFAULT_CLANG_DIAGNOSTIC_SETTINGS,
             include_guard=include_guard,
         )
 
@@ -157,11 +156,17 @@ class CHeaderWriter(CSourceWriter):
         self,
         om: OutputManager,
         relative_path: str,
-        file_kind: FileKind,
+        *,
+        group: GeneratedFileGroup | None,
+        is_template: bool = False,
+        use_macro_based_guard: bool = False,
     ):
         super().__init__(
             om,
-            relative_path=relative_path,
-            file_kind=file_kind,
-            include_guard=PragmaBasedIncludeGuard(),
+            relative_path,
+            group=group,
+            is_template=is_template,
+            include_guard=MacroBasedGuard.from_path(relative_path)
+            if use_macro_based_guard
+            else PragmaBasedGuard(),
         )

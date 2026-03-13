@@ -33,7 +33,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 class CppUserHeadersGenerator:
@@ -55,7 +55,7 @@ class CppUserPackageGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_cpp_user_info.header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_package_file(self):

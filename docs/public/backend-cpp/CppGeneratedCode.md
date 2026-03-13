@@ -1022,7 +1022,6 @@ inline ::my::package::Result processWithBar(::my::package::weak::IBar bar, ::my:
 // File: example/generated/temp/my.package.impl.cpp
 #include "my.package.proj.hpp"
 #include "my.package.impl.hpp"
-#include "taihe/runtime.hpp"
 #include "stdexcept"
 
 namespace {
