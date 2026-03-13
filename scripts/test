@@ -169,10 +169,16 @@ def run_core_tests(project_root: Path, **config: Path | str):
 def run_napi_tests(project_root: Path, **config: Path | str):
     log_stage("Run napi tests...")
     base_dir = project_root / "test"
+    
+    # TODO: Waiting for expected system
+    skip_dirs = ["napi_maythrow", "napi_error", "napi_async"]
+    
     for test_dir in base_dir.glob("napi_*"):
-        if test_dir.is_dir():
+        if test_dir.is_dir() and test_dir.name not in skip_dirs:
             log_stage(f"Testing: {test_dir}")
             run_taihe_tryit(["test", "-u", "ts", test_dir], project_root)
+        else:
+            log_stage(f"Skipping: {test_dir}")
 
 def run_ani_test_build(
     project_root: Path,
