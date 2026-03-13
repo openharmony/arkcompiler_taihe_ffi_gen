@@ -61,7 +61,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 @dataclass(frozen=True)
@@ -206,7 +206,7 @@ class StsModuleGenerator:
         mod: ArkTsModule,
     ):
         self.am = am
-        self.target = StsWriter(om, mod, FileKind.ETS)
+        self.target = StsWriter(om, mod)
         self.mod = mod
 
     def gen_module_file(self):

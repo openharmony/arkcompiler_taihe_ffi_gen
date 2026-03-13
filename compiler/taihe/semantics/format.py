@@ -24,7 +24,7 @@ from typing_extensions import override
 
 from taihe.semantics.visitor import ExplicitTypeRefVisitor, RecursiveDeclVisitor
 from taihe.utils.logging import AnsiStyle, should_use_color
-from taihe.utils.outputs import BaseWriter, FileDescriptor, FileKind, OutputManager
+from taihe.utils.outputs import BaseWriter, OutputManager
 from taihe.utils.sources import IDL_FILE_DEFAULT_EXT
 
 if TYPE_CHECKING:
@@ -359,10 +359,6 @@ class TaiheGenerator:
 
     def generate(self, g: "PackageGroup"):
         for p in g.iterate(include_stdlib=True) if self.show_internal else g.iterate():
-            fd = FileDescriptor(
-                relative_path=f"idl/{p.name}{IDL_FILE_DEFAULT_EXT}",
-                kind=FileKind.TAIHE,
-            )
-            with self.om.open(fd) as buffer:
+            with self.om.open(f"idl/{p.name}{IDL_FILE_DEFAULT_EXT}") as buffer:
                 printer = TaihePrinter(buffer, show_resolved=self.show_resolved)
                 p.accept(printer)

@@ -56,7 +56,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import GEN_CXX_SRC_GROUP, OutputManager
 
 
 class AniCodeGenerator:
@@ -90,7 +90,7 @@ class AniConstructorGenerator:
         self.target = CSourceWriter(
             self.om,
             f"temp/ani_constructor.cpp",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
 
     def gen_constructor(self):
@@ -148,7 +148,7 @@ class AniPackageHeaderGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_ani_info.header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_package_header(self):
@@ -174,7 +174,7 @@ class AniPackageSourceGenerator:
         self.target = CSourceWriter(
             self.om,
             f"src/{pkg_ani_info.source}",
-            FileKind.CPP_SOURCE,
+            group=GEN_CXX_SRC_GROUP,
         )
 
     def gen_package_source(self):
@@ -475,7 +475,7 @@ class AniEnumImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{enum_ani_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_enum_impl_file(self):
@@ -571,7 +571,7 @@ class AniIfaceDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_ani_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_decl_file(self):
@@ -605,7 +605,7 @@ class AniIfaceImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_ani_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_impl_file(self):
@@ -754,7 +754,7 @@ class AniStructDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_ani_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_decl_file(self):
@@ -788,7 +788,7 @@ class AniStructImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_ani_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_impl_file(self):
@@ -934,7 +934,7 @@ class AniUnionDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_ani_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_decl_file(self):
@@ -968,7 +968,7 @@ class AniUnionImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_ani_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_impl_file(self):
