@@ -45,31 +45,6 @@ class DebugLevel(Enum):
     """Besides CONSICE, also prints code snippet. Could be slow."""
 
 
-class FileKind(str, Enum):
-    """Kinds of output files.
-
-    Indicates the intended use case of the output file, e.g., C header, C source, etc.
-    Note that this does not necessarily imply the programming language of the file.
-    """
-
-    TAIHE = "taihe"
-    C_HEADER = "c_header"
-    C_SOURCE = "c_source"
-    CPP_HEADER = "cpp_header"
-    CPP_SOURCE = "cpp_source"
-    C_TEMPLATE = "c_template"  # C/C++ template file
-    ETS = "ets"
-    DTS = "dts"
-    CMAKE = "cmake"
-    OTHER = "other"
-
-
-@dataclass
-class FileDescriptor:
-    relative_path: str  # e.g., "include/foo.h"
-    kind: FileKind
-
-
 IndentationLevel = tuple[str, ...]
 
 
@@ -257,13 +232,43 @@ class BaseWriter:
         )
 
 
+@dataclass(frozen=True)
+class GeneratedFileGroup:
+    var_name: str
+
+    def __str__(self):
+        return self.var_name
+
+
+@dataclass(frozen=True)
+class RuntimeSourceGroup:
+    var_name: str
+
+    def __str__(self):
+        return self.var_name
+
+
+@dataclass(frozen=True)
+class VariableRecordGroup:
+    var_name: str
+
+    def __str__(self):
+        return self.var_name
+
+
+GEN_C_SRC_GROUP = GeneratedFileGroup("TAIHE_GEN_C_SRC")
+GEN_CXX_SRC_GROUP = GeneratedFileGroup("TAIHE_GEN_CXX_SRC")
+RUNTIME_C_SRC_GROUP = RuntimeSourceGroup("TAIHE_RUNTIME_C_SRC_INNER")
+RUNTIME_CXX_SRC_GROUP = RuntimeSourceGroup("TAIHE_RUNTIME_CXX_SRC_INNER")
+
+
 class FileWriter(BaseWriter):
     def __init__(
         self,
         om: "OutputManager",
         relative_path: str,
-        file_kind: FileKind,
         *,
+        group: GeneratedFileGroup | None,
         default_indent: str,
         comment_prefix: str,
     ):
@@ -274,10 +279,8 @@ class FileWriter(BaseWriter):
             debug_level=om.debug_level,
         )
         self._om = om
-        self.desc = FileDescriptor(
-            relative_path=relative_path,
-            kind=file_kind,
-        )
+        self._relative_path = relative_path
+        self._group = group
 
     def __enter__(self):
         return self
@@ -289,7 +292,7 @@ class FileWriter(BaseWriter):
         exc_tb: TracebackType | None,
     ) -> bool:
         del exc_val, exc_tb, exc_type
-        with self._om.open(self.desc) as f:
+        with self._om.open(self._relative_path, self._group) as f:
             self.write_prologue(f)
             self.write_body(f)
             self.write_epilogue(f)
@@ -318,44 +321,44 @@ class OutputConfig(ABC):
 class OutputManager(ABC):
     """Abstract base class for output managers."""
 
-    files: dict[str, FileDescriptor]
-    files_by_kind: dict[FileKind, list[FileDescriptor]]
-
     debug_level: DebugLevel
 
     def __init__(self, *, debug_level: DebugLevel):
-        self.files = {}
-        self.files_by_kind = {}
         self.debug_level = debug_level
-
-    def get_all_files(self) -> list[FileDescriptor]:
-        return list(self.files.values())
-
-    def get_files_by_kind(self, kind: FileKind) -> list[FileDescriptor]:
-        return self.files_by_kind.get(kind, [])
-
-    def register(self, desc: FileDescriptor):
-        if (prev := self.files.setdefault(desc.relative_path, desc)) != desc:
-            raise ValueError(
-                f"File {desc.relative_path} is already registered as {prev.kind}, "
-                f"cannot re-register with {desc.kind}."
-            )
-        self.files_by_kind.setdefault(desc.kind, []).append(desc)
 
     def post_generate(self) -> None:
         """Hook called after all files have been generated."""
         return
 
-    @contextmanager
-    def open(self, desc: FileDescriptor) -> Iterator[TextIO]:
-        """Opens a file for writing."""
-        self.register(desc)
+    def register_variable_record(self, group: VariableRecordGroup, value: str):
+        """Registers a variable for later use in code generation."""
+        return
 
-        with self._open_impl(desc) as f:
+    def register_runtime_src(self, group: RuntimeSourceGroup, relative_path: str):
+        """Registers a runtime source file path."""
+        return
+
+    def register_generated_file(self, group: GeneratedFileGroup, relative_path: str):
+        """Registers a generated file path."""
+        return
+
+    def register_runtime_c_src(self, relative_path: str):
+        self.register_runtime_src(RUNTIME_C_SRC_GROUP, relative_path)
+
+    def register_runtime_cxx_src(self, relative_path: str):
+        self.register_runtime_src(RUNTIME_CXX_SRC_GROUP, relative_path)
+
+    @contextmanager
+    def open(self, relative_path: str, group: GeneratedFileGroup | None = None):
+        """Opens a file for writing."""
+        if group is not None:
+            self.register_generated_file(group, relative_path)
+
+        with self._open_impl(relative_path) as f:
             yield f
 
     @abstractmethod
-    def _open_impl(self, desc: FileDescriptor) -> AbstractContextManager[TextIO]:
+    def _open_impl(self, relative_path: str) -> AbstractContextManager[TextIO]:
         """Opens a file for writing."""
 
 
@@ -366,7 +369,7 @@ class NullOutputConfig(OutputConfig):
             def __init__(self, *, debug_level: DebugLevel):
                 super().__init__(debug_level=debug_level)
 
-            def _open_impl(self, desc: FileDescriptor):
+            def _open_impl(self, relative_path: str):
                 return Path(os.devnull).open("w", encoding="utf-8")
 
         return NullOutputManager(debug_level=self.debug_level)
@@ -392,11 +395,10 @@ class DebugOutputConfig(OutputConfig):
                         self.target = stdout
 
             @contextmanager
-            def _open_impl(self, desc: FileDescriptor):
-                self.target.write(f"// File: {desc.relative_path}\n")
-                self.target.write(f"// Kind: {desc.kind.value}\n")
+            def _open_impl(self, relative_path: str):
+                self.target.write(f"=== Open file: {relative_path} ===\n")
                 yield self.target
-                self.target.write(f"// End of file: {desc.relative_path}\n\n")
+                self.target.write(f"=== Close file: {relative_path} ===\n")
 
         return DebugOutputManager(self.target_desc, debug_level=self.debug_level)
 
@@ -424,8 +426,8 @@ class BasicOutputManager(OutputManager):
         super().__init__(debug_level=debug_level)
         self.dst_dir = dst_dir
 
-    def _open_impl(self, desc: FileDescriptor):
-        file_path = self.dst_dir / desc.relative_path
+    def _open_impl(self, relative_path: str):
+        file_path = self.dst_dir / relative_path
         file_path.parent.mkdir(exist_ok=True, parents=True)
         return file_path.open("w", encoding="utf-8")
 
@@ -442,14 +444,13 @@ class CMakeWriter(FileWriter):
         self,
         om: OutputManager,
         relative_path: str,
-        file_kind: FileKind,
     ):
         super().__init__(
             om,
-            relative_path=relative_path,
-            file_kind=file_kind,
+            relative_path,
             default_indent="    ",
             comment_prefix="# ",
+            group=None,
         )
         self.headers: dict[str, None] = {}
 
@@ -472,7 +473,7 @@ class CMakeOutputManager(BasicOutputManager):
     """Manages the generation of CMake files for Taihe runtime."""
 
     runtime_include_dir: Path
-    runtime_src_files: list[Path]
+    runtime_src_dir: Path
 
     def __init__(
         self,
@@ -483,26 +484,36 @@ class CMakeOutputManager(BasicOutputManager):
         runtime_src_dir: Path,
     ):
         super().__init__(dst_dir, debug_level=debug_level)
+
         self.runtime_include_dir = runtime_include_dir
-        self.runtime_c_src_files = [
-            p for p in runtime_src_dir.rglob("*.c") if p.is_file()
-        ]
-        self.runtime_cxx_src_files = [
-            p for p in runtime_src_dir.rglob("*.cpp") if p.is_file()
-        ]
-        self.target = CMakeWriter(self, "TaiheGenerated.cmake", FileKind.CMAKE)
-        self.generated_path = "${CMAKE_CURRENT_LIST_DIR}"
+        self.runtime_src_dir = runtime_src_dir
+
+        self.variables: dict[VariableRecordGroup, list[str]] = {}
+        self.runtime_src_files: dict[RuntimeSourceGroup, list[str]] = {}
+        self.gen_src_files: dict[GeneratedFileGroup, list[str]] = {}
+
+        self.target = CMakeWriter(self, "TaiheGenerated.cmake")
+
+    @override
+    def register_variable_record(self, group: VariableRecordGroup, value: str):
+        self.variables.setdefault(group, []).append(value)
+
+    @override
+    def register_runtime_src(self, group: RuntimeSourceGroup, relative_path: str):
+        self.runtime_src_files.setdefault(group, []).append(relative_path)
+
+    @override
+    def register_generated_file(self, group: GeneratedFileGroup, relative_path: str):
+        self.gen_src_files.setdefault(group, []).append(relative_path)
 
     @override
     def post_generate(self):
         with self.target:
-            self.emit_runtime_files_list()
-            self.emit_generated_dir()
-            self.emit_generated_includes()
-            self.emit_generated_sources()
-            self.emit_set_cpp_standard()
+            self.emit_prev_settings()
+            self.emit_core_settings()
+            self.emit_post_settings()
 
-    def emit_runtime_files_list(self):
+    def emit_prev_settings(self):
         with self.target.indented(
             f"if(NOT DEFINED TAIHE_RUNTIME_INCLUDE_INNER)",
             f"endif()",
@@ -515,46 +526,18 @@ class CMakeOutputManager(BasicOutputManager):
                     f'"{self.runtime_include_dir.as_posix()}"',
                 )
         with self.target.indented(
-            f"if(NOT DEFINED TAIHE_RUNTIME_C_SRC_INNER)",
+            f"if(NOT DEFINED TAIHE_RUNTIME_SRC_INNER)",
             f"endif()",
         ):
             with self.target.indented(
-                f"set(TAIHE_RUNTIME_C_SRC_INNER",
+                f"set(TAIHE_RUNTIME_SRC_INNER",
                 f")",
             ):
-                for runtime_src_file in self.runtime_c_src_files:
-                    self.target.writelns(
-                        f"{runtime_src_file.as_posix()}",
-                    )
-        with self.target.indented(
-            f"if(NOT DEFINED TAIHE_RUNTIME_CXX_SRC_INNER)",
-            f"endif()",
-        ):
-            with self.target.indented(
-                f"set(TAIHE_RUNTIME_CXX_SRC_INNER",
-                f")",
-            ):
-                for runtime_src_file in self.runtime_cxx_src_files:
-                    self.target.writelns(
-                        f'"{runtime_src_file.as_posix()}"',
-                    )
-        with self.target.indented(
-            f"set(TAIHE_RUNTIME_INCLUDE",
-            f")",
-        ):
-            self.target.writelns(
-                f"${{TAIHE_RUNTIME_INCLUDE_INNER}}",
-            )
-        with self.target.indented(
-            f"set(TAIHE_RUNTIME_SRC",
-            f")",
-        ):
-            self.target.writelns(
-                f"${{TAIHE_RUNTIME_C_SRC_INNER}}",
-                f"${{TAIHE_RUNTIME_CXX_SRC_INNER}}",
-            )
-
-    def emit_generated_dir(self):
+                for runtime_src_file in self.runtime_src_dir.glob("**/*"):
+                    if runtime_src_file.is_file():
+                        self.target.writelns(
+                            f'"{runtime_src_file.as_posix()}"',
+                        )
         with self.target.indented(
             f"if(NOT DEFINED TAIHE_GEN_DIR)",
             f"endif()",
@@ -564,10 +547,42 @@ class CMakeOutputManager(BasicOutputManager):
                 f")",
             ):
                 self.target.writelns(
-                    f"{self.generated_path}",
+                    "${CMAKE_CURRENT_LIST_DIR}",
                 )
 
-    def emit_generated_includes(self):
+    def emit_core_settings(self):
+        for group, values in self.variables.items():
+            with self.target.indented(
+                f"set({group}",
+                f")",
+            ):
+                for value in values:
+                    self.target.writelns(value)
+        for group, relative_paths in self.runtime_src_files.items():
+            with self.target.indented(
+                f"set({group}",
+                f")",
+            ):
+                for relative_path in relative_paths:
+                    path = (self.runtime_src_dir / relative_path).as_posix()
+                    self.target.writelns(path)
+        for group, relative_paths in self.gen_src_files.items():
+            with self.target.indented(
+                f"set({group}",
+                f")",
+            ):
+                for relative_path in relative_paths:
+                    path = (self.dst_dir / relative_path).as_posix()
+                    self.target.writelns(path)
+
+    def emit_post_settings(self):
+        with self.target.indented(
+            f"set(TAIHE_RUNTIME_INCLUDE",
+            f")",
+        ):
+            self.target.writelns(
+                f"${{TAIHE_RUNTIME_INCLUDE_INNER}}",
+            )
         with self.target.indented(
             f"set(TAIHE_GEN_INCLUDE",
             f")",
@@ -575,41 +590,29 @@ class CMakeOutputManager(BasicOutputManager):
             self.target.writelns(
                 f"${{TAIHE_GEN_DIR}}/include",
             )
-
-    def emit_generated_sources(self):
         with self.target.indented(
-            f"set(TAIHE_GEN_C_SRC",
+            f"set(TAIHE_RUNTIME_SRC",
             f")",
         ):
-            for file in self.get_files_by_kind(FileKind.C_SOURCE):
-                self.target.writelns(
-                    f"${{TAIHE_GEN_DIR}}/{file.relative_path}",
-                )
-        with self.target.indented(
-            f"set(TAIHE_GEN_CXX_SRC",
-            f")",
-        ):
-            for file in self.get_files_by_kind(FileKind.CPP_SOURCE):
-                self.target.writelns(
-                    f"${{TAIHE_GEN_DIR}}/{file.relative_path}",
-                )
+            self.target.writelns(
+                f"${{{RUNTIME_C_SRC_GROUP}}}",
+                f"${{{RUNTIME_CXX_SRC_GROUP}}}",
+            )
         with self.target.indented(
             f"set(TAIHE_GEN_SRC",
             f")",
         ):
             self.target.writelns(
-                f"${{TAIHE_GEN_C_SRC}}",
-                f"${{TAIHE_GEN_CXX_SRC}}",
+                f"${{{GEN_C_SRC_GROUP}}}",
+                f"${{{GEN_CXX_SRC_GROUP}}}",
             )
-
-    def emit_set_cpp_standard(self):
         with self.target.indented(
             f"set_source_files_properties(",
             f")",
         ):
             self.target.writelns(
-                f"${{TAIHE_GEN_CXX_SRC}}",
-                f"${{TAIHE_RUNTIME_CXX_SRC_INNER}}",
+                f"${{{GEN_CXX_SRC_GROUP}}}",
+                f"${{{RUNTIME_CXX_SRC_GROUP}}}",
                 # setting
                 f"PROPERTIES",
                 f"LANGUAGE CXX",
