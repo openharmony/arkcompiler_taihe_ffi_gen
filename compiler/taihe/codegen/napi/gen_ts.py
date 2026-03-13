@@ -43,7 +43,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 def check_lib(ns: Namespace) -> bool:
@@ -68,7 +68,6 @@ class TsCodeGenerator:
             with DtsWriter(
                 self.oc,
                 f"proxy/{module}.ts",
-                FileKind.TS,
             ) as target:
                 native_lib_name = "_taihe_native_lib"
                 self.gen_namespace(ns, target, native_lib_name)
@@ -368,7 +367,7 @@ class TsCodeGenerator:
                         target.writelns(
                             f"return {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func_napi_info.norm_name}({args_str});",
                         )
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 self.gen_iface_class_methods_impl(
                     ancestor.methods, target, nativa_class_name
                 )

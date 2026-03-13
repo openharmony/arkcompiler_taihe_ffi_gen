@@ -17,7 +17,7 @@ from typing import TextIO
 
 from typing_extensions import override
 
-from taihe.utils.outputs import FileKind, FileWriter, OutputManager
+from taihe.utils.outputs import FileWriter, OutputManager
 
 
 class DtsWriter(FileWriter):
@@ -28,12 +28,11 @@ class DtsWriter(FileWriter):
         self,
         om: OutputManager,
         relative_path: str,
-        file_kind: FileKind,
     ):
         super().__init__(
             om,
             relative_path=relative_path,
-            file_kind=file_kind,
+            group=None,
             default_indent="    ",
             comment_prefix="// ",
         )

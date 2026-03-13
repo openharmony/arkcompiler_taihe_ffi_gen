@@ -42,7 +42,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 class DtsCodeGenerator:
@@ -59,7 +59,6 @@ class DtsCodeGenerator:
         with DtsWriter(
             self.oc,
             f"{module}.d.ts",
-            FileKind.DTS,
         ) as target:
             self.gen_namespace(ns, target)
 
@@ -346,7 +345,7 @@ class DtsCodeGenerator:
                         target.writelns(
                             f"static {static_func_napi_info.norm_name}({params_str}): {return_ty};",
                         )
-            for ancestor in iface_abi_info.ancestor_dict:
+            for ancestor in iface_abi_info.ancestor_infos:
                 self.gen_iface_methods_decl(ancestor.methods, target)
 
     def gen_iface_methods_decl(

@@ -328,7 +328,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         iface_register_infos: list[
             tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]
         ] = []
-        for ancestor in iface_abi_info.ancestor_dict:
+        for ancestor in iface_abi_info.ancestor_infos:
             property_map: dict[
                 str, tuple[str | None, str | None, list[IfaceMethodDecl]]
             ] = defaultdict(lambda: (None, None, []))
