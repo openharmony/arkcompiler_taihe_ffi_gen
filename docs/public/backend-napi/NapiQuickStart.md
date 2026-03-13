@@ -215,7 +215,7 @@ taihe-tryit [mode] [test_dir] [options ...]
   - 需传递参数表示在编译 napi 代码
 
      ```CMakeLists.txt
-     target_compile_definitions(entry PRIVATE USE_NAPI_RUNTIME=1)
+     target_compile_definitions(entry PRIVATE TAIHE_USE_NAPI_RUNTIME=1)
      ```
 
 可以使用命令获取 `object.cpp`，`string.cpp` 和 `runtime_napi.cpp` 文件的所在目录的路径

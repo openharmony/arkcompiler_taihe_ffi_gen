@@ -16,13 +16,13 @@
 #ifndef TAIHE_RUNTIME_HPP
 #define TAIHE_RUNTIME_HPP
 
-#if !defined(USE_ANI_RUNTIME) && !defined(USE_NAPI_RUNTIME)
-#define USE_ANI_RUNTIME
+#if !defined(TAIHE_USE_ANI_RUNTIME) && !defined(TAIHE_USE_NAPI_RUNTIME)
+#define TAIHE_USE_ANI_RUNTIME
 #endif
 
-#if defined(USE_ANI_RUNTIME)
+#if defined(TAIHE_USE_ANI_RUNTIME)
 #include <taihe/runtime_ani.hpp>
-#elif defined(USE_NAPI_RUNTIME)
+#elif defined(TAIHE_USE_NAPI_RUNTIME)
 #include <taihe/runtime_napi.hpp>
 #endif
 

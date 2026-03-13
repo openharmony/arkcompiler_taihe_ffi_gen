@@ -469,7 +469,7 @@ class TsBuildSystem(BuildSystem):
             self.build_runtime_src_dir,
             self.runtime_sources,
             self.runtime_includes,
-            compile_flags=["-DUSE_NAPI_RUNTIME", f"-O{opt_level}"],
+            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
             system_include_dirs=self.runtime_sys_includes,
         )
 
@@ -477,7 +477,7 @@ class TsBuildSystem(BuildSystem):
             self.build_generated_src_dir,
             self.generated_src_dir.glob("*.[cC]*"),
             self.generated_includes,
-            compile_flags=["-DUSE_NAPI_RUNTIME", f"-O{opt_level}"],
+            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
             system_include_dirs=self.generated_sys_includes,
         )
 
@@ -485,7 +485,7 @@ class TsBuildSystem(BuildSystem):
             self.build_author_src_dir,
             self.author_src_dir.glob("*.[cC]*"),
             self.author_includes,
-            compile_flags=["-DUSE_NAPI_RUNTIME", f"-O{opt_level}"],
+            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
             system_include_dirs=self.author_sys_includes,
         )
 
