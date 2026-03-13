@@ -61,7 +61,7 @@ from taihe.semantics.types import (
     UnitType,
 )
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import GEN_CXX_SRC_GROUP, OutputManager
 
 
 class NapiCodeGenerator:
@@ -105,7 +105,7 @@ class NapiCodeGenerator:
         with CSourceWriter(
             self.oc,
             f"temp/napi_register.cpp",
-            FileKind.CPP_SOURCE,
+            group=None,
         ) as target:
             for pkg in pg.packages:
                 pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
@@ -149,7 +149,7 @@ class NapiCodeGenerator:
         with CSourceWriter(
             self.oc,
             f"src/{pkg_napi_info.source}",
-            FileKind.CPP_SOURCE,
+            group=GEN_CXX_SRC_GROUP,
         ) as pkg_napi_target:
             pkg_napi_target.add_include(pkg_napi_info.header)
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
@@ -208,7 +208,7 @@ class NapiCodeGenerator:
         with CSourceWriter(
             self.oc,
             f"include/napi_utils.hpp",
-            FileKind.C_HEADER,
+            group=None,
         ) as target:
             target.add_include("taihe/array.hpp")
             target.add_include("mutex")
@@ -308,7 +308,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{pkg_napi_info.header}",
-            FileKind.C_HEADER,
+            group=None,
         ) as target:
             target.add_include("taihe/runtime_napi.hpp")
             target.add_include("napi_utils.hpp")
@@ -446,7 +446,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{struct_napi_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         ) as struct_napi_decl_target:
             struct_napi_decl_target.add_include("napi_utils.hpp")
             struct_napi_decl_target.add_include("taihe/runtime_napi.hpp")
@@ -465,7 +465,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{struct_napi_info.impl_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         ) as struct_napi_impl_target:
             struct_napi_impl_target.add_include(struct_napi_info.decl_header)
             struct_napi_impl_target.add_include(struct_cpp_info.impl_header)
@@ -805,7 +805,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         ) as iface_napi_decl_target:
             iface_napi_decl_target.add_include("napi_utils.hpp")
             iface_napi_decl_target.add_include("taihe/runtime_napi.hpp")
@@ -825,7 +825,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.impl_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         ) as iface_napi_impl_target:
             iface_napi_impl_target.add_include(iface_napi_info.decl_header)
             iface_napi_impl_target.add_include(iface_cpp_info.impl_header)
@@ -871,7 +871,7 @@ class NapiCodeGenerator:
                         iface_napi_impl_target.writelns(
                             f"NAPI_CALL(env, napi_delete_reference(env, ref));",
                         )
-                for ancestor in iface_abi_info.ancestor_dict:
+                for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
                         self.gen_iface_napi_method(method, iface_napi_impl_target)
             iface_napi_impl_target.writelns(
@@ -1162,7 +1162,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.meth_decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         ) as iface_meth_napi_decl_target:
             iface_meth_napi_decl_target.add_include("napi_utils.hpp")
             iface_meth_napi_decl_target.add_include("taihe/runtime_napi.hpp")
@@ -1190,7 +1190,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.meth_impl_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         ) as iface_meth_napi_impl_target:
             iface_meth_napi_impl_target.add_include(iface_napi_info.meth_decl_header)
             iface_meth_napi_impl_target.add_include(iface_cpp_info.impl_header)
@@ -1311,7 +1311,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{union_napi_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         ) as union_napi_decl_target:
             union_napi_decl_target.add_include("napi_utils.hpp")
             union_napi_decl_target.add_include(union_cpp_info.defn_header)
@@ -1329,7 +1329,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{union_napi_info.impl_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         ) as union_napi_impl_target:
             union_napi_impl_target.add_include(union_napi_info.decl_header)
             union_napi_impl_target.add_include(union_cpp_info.impl_header)

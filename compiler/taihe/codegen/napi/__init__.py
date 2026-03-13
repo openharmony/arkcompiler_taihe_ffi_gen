@@ -49,6 +49,7 @@ class NapiBridgeBackendConfig(BackendConfig):
                 self._ci.attribute_registry.register(*all_napi_attr_types)
 
             def generate(self):
+                self._ci.output_manager.register_runtime_cxx_src("runtime_napi.cpp")
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
