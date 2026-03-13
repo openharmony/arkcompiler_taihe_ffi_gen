@@ -17,7 +17,7 @@
 #define TAIHE_PLATFORM_ANI_HPP
 
 #include <taihe/object.hpp>
-#include <taihe/runtime.hpp>
+#include <taihe/runtime_ani.hpp>
 
 #include <taihe.platform.ani.proj.hpp>
 
