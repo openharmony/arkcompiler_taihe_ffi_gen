@@ -18,7 +18,7 @@
 #include <iostream>
 #include <maythrow.impl.hpp>
 
-#include "taihe/napi_runtime.hpp"
+#include <taihe/runtime.hpp>
 
 namespace {
 int32_t maythrow_impl(int32_t a)

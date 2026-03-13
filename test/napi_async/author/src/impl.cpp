@@ -18,7 +18,7 @@
 #include <async_test.impl.hpp>
 #include <cstdint>
 #include <iostream>
-#include "taihe/napi_runtime.hpp"
+#include <taihe/runtime.hpp>
 
 namespace {
 class IBaseImpl {
