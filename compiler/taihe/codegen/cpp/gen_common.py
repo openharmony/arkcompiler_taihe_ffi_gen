@@ -50,7 +50,7 @@ from taihe.semantics.types import (
     StringType,
 )
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 class CppHeadersGenerator:
@@ -87,7 +87,7 @@ class CppPackageGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_cpp_info.header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_package_file(self):
@@ -115,7 +115,7 @@ class CppEnumDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{enum_cpp_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_enum_decl_file(self):
@@ -167,7 +167,7 @@ class CppEnumDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{enum_cpp_info.defn_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_enum_defn_file(self):
@@ -360,7 +360,7 @@ class CppUnionDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_cpp_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_decl_file(self):
@@ -423,7 +423,7 @@ class CppUnionDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_cpp_info.defn_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_union_defn_file(self):
@@ -910,7 +910,7 @@ class CppUnionImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_cpp_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_impl_file(self):
@@ -933,7 +933,7 @@ class CppStructDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_cpp_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_decl_file(self):
@@ -996,7 +996,7 @@ class CppStructDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_cpp_info.defn_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_struct_defn_file(self):
@@ -1081,7 +1081,7 @@ class CppStructImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_cpp_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_impl_file(self):
@@ -1104,7 +1104,7 @@ class CppIfaceDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_cpp_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_decl_file(self):
@@ -1175,7 +1175,7 @@ class CppIfaceDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_cpp_info.defn_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_iface_defn_file(self):
@@ -1558,7 +1558,7 @@ class CppIfaceImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_cpp_info.impl_header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_iface_impl_file(self):

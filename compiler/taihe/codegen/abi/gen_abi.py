@@ -34,7 +34,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import GEN_C_SRC_GROUP, OutputManager
 
 
 class AbiHeadersGenerator:
@@ -68,7 +68,7 @@ class AbiStructDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_abi_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_decl_file(self):
@@ -89,7 +89,7 @@ class AbiStructDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_abi_info.defn_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_defn_file(self):
@@ -123,7 +123,7 @@ class AbiStructImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{struct_abi_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_struct_impl_file(self):
@@ -144,7 +144,7 @@ class AbiUnionDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_abi_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_decl_file(self):
@@ -165,7 +165,7 @@ class AbiUnionDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_abi_info.defn_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_defn_file(self):
@@ -207,7 +207,7 @@ class AbiUnionImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{union_abi_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_union_impl_file(self):
@@ -228,7 +228,7 @@ class AbiIfaceDeclGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_abi_info.decl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_decl_file(self):
@@ -249,7 +249,7 @@ class AbiIfaceDefnGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_abi_info.defn_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_defn_file(self):
@@ -329,7 +329,7 @@ class AbiIfaceImplGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_abi_info.impl_header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_impl_file(self):
@@ -459,7 +459,7 @@ class AbiPackageHeaderGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_abi_info.header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_package_file(self):
@@ -519,7 +519,7 @@ class AbiPackageSourceGenerator:
         self.target = CSourceWriter(
             self.om,
             f"src/{pkg_abi_info.source}",
-            FileKind.C_SOURCE,
+            group=GEN_C_SRC_GROUP,
         )
 
     def gen_package_file(self):

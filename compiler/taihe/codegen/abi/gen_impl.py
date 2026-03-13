@@ -34,7 +34,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 class CImplHeadersGenerator:
@@ -58,7 +58,7 @@ class CMacroPackageGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_c_impl_info.header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_package_file(self):
@@ -108,7 +108,7 @@ class CMacroIfaceGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_c_impl_info.header}",
-            FileKind.C_HEADER,
+            group=None,
         )
 
     def gen_iface_file(self):
@@ -173,7 +173,7 @@ class CTemplatePackageGenerator:
         self.target = CSourceWriter(
             self.om,
             f"temp/{pkg_c_impl_info.source}",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
 
     def gen_package_file(self):
@@ -216,7 +216,7 @@ class CTemplateIfaceGenerator:
         self.target = CSourceWriter(
             self.om,
             f"temp/{iface_c_impl_info.source}",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
 
     def gen_iface_file(self):

@@ -43,7 +43,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import IfaceType, NonVoidType
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import FileKind, OutputManager
+from taihe.utils.outputs import OutputManager
 
 
 class CppImplHeadersGenerator:
@@ -67,7 +67,7 @@ class CppMacroPackageGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_cpp_impl_info.header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_package_file(self):
@@ -123,7 +123,7 @@ class CppMacroIfaceGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"include/{iface_cpp_impl_info.header}",
-            FileKind.CPP_HEADER,
+            group=None,
         )
 
     def gen_iface_file(self):
@@ -246,7 +246,7 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
         target = CSourceWriter(
             om,
             f"temp/{pkg_cpp_impl_info.source}",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
         super().__init__(om, am, target, [])
 
@@ -318,7 +318,7 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
         target = CSourceWriter(
             om,
             f"temp/{iface_cpp_impl_info.source}",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
         super().__init__(om, am, target, [])
 
@@ -394,7 +394,7 @@ class CppTemplateClassHeaderGenerator:
         self.target = CHeaderWriter(
             self.om,
             f"temp/{iface_cpp_impl_info.template_header}",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
 
     def gen_file(self):
@@ -452,7 +452,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
         target = CSourceWriter(
             om,
             f"temp/{iface_cpp_impl_info.template_source}",
-            FileKind.C_TEMPLATE,
+            group=None,
         )
         super().__init__(om, am, target, [])
 
