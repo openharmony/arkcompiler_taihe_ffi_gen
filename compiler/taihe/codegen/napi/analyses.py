@@ -40,7 +40,10 @@ from taihe.codegen.ani.attributes import (
 )
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
+    IfaceCppInfo,
+    StructCppInfo,
     TypeCppInfo,
+    UnionCppInfo,
 )
 from taihe.codegen.napi.attributes import (
     DtsInjectAttr,
@@ -801,9 +804,10 @@ class StructTypeNapiInfo(TypeNapiInfo):
         cpp_result: str,
     ):
         struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
+        struct_cpp_info = StructCppInfo.get(self.am, self.type.decl)
         target.add_include(struct_napi_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {struct_napi_info.from_napi_func_name}(env, {napi_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{struct_cpp_info.as_owner}>(env, {napi_value});",
         )
 
     def into_napi(
@@ -813,9 +817,10 @@ class StructTypeNapiInfo(TypeNapiInfo):
         napi_result: str,
     ):
         struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
+        struct_cpp_info = StructCppInfo.get(self.am, self.type.decl)
         target.add_include(struct_napi_info.impl_header)
         target.writelns(
-            f"napi_value {napi_result} = {struct_napi_info.into_napi_func_name}(env, {cpp_value});",
+            f"napi_value {napi_result} = ::taihe::into_napi<{struct_cpp_info.as_owner}>(env, {cpp_value});",
         )
 
 
@@ -844,9 +849,10 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         cpp_result: str,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.type.decl)
         target.add_include(iface_napi_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {iface_napi_info.from_napi_func_name}(env, {napi_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{iface_cpp_info.as_owner}>(env, {napi_value});",
         )
 
     def into_napi(
@@ -856,9 +862,10 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         napi_result: str,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.type.decl)
         target.add_include(iface_napi_info.impl_header)
         target.writelns(
-            f"napi_value {napi_result} = {iface_napi_info.into_napi_func_name}(env, {cpp_value});",
+            f"napi_value {napi_result} = ::taihe::into_napi<{iface_cpp_info.as_owner}>(env, {cpp_value});",
         )
 
 
@@ -1800,9 +1807,10 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         cpp_result: str,
     ):
         union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
+        union_cpp_info = UnionCppInfo.get(self.am, self.type.decl)
         target.add_include(union_napi_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {union_napi_info.from_napi_func_name}(env, {napi_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{union_cpp_info.as_owner}>(env, {napi_value});",
         )
 
     def into_napi(
@@ -1812,9 +1820,10 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         napi_result: str,
     ):
         union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
+        union_cpp_info = UnionCppInfo.get(self.am, self.type.decl)
         target.add_include(union_napi_info.impl_header)
         target.writelns(
-            f"napi_value {napi_result} = {union_napi_info.into_napi_func_name}(env, {cpp_value});",
+            f"napi_value {napi_result} = ::taihe::into_napi<{union_cpp_info.as_owner}>(env, {cpp_value});",
         )
 
 
