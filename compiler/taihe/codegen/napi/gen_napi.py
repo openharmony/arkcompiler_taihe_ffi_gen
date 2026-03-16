@@ -452,10 +452,20 @@ class NapiCodeGenerator:
             struct_napi_decl_target.add_include("napi_utils.hpp")
             struct_napi_decl_target.add_include("taihe/runtime_napi.hpp")
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
-            struct_napi_decl_target.writelns(
-                f"{struct_cpp_info.as_owner} {struct_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
-                f"napi_value {struct_napi_info.into_napi_func_name}(napi_env env, {struct_cpp_info.as_param} cpp_obj);",
-            )
+            with struct_napi_decl_target.indented(
+                f"template<> struct ::taihe::from_napi_t<{struct_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                struct_napi_decl_target.writelns(
+                    f"inline {struct_cpp_info.as_owner} operator()(napi_env env, napi_value napi_obj) const;",
+                )
+            with struct_napi_decl_target.indented(
+                f"template<> struct ::taihe::into_napi_t<{struct_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                struct_napi_decl_target.writelns(
+                    f"inline napi_value operator()(napi_env env, {struct_cpp_info.as_owner} cpp_obj) const;",
+                )
 
     def gen_struct_conv_impl_file(
         self,
@@ -488,7 +498,7 @@ class NapiCodeGenerator:
         struct_cpp_info = StructCppInfo.get(self.am, struct)
         struct_napi_info = StructNapiInfo.get(self.am, struct)
         with struct_napi_impl_target.indented(
-            f"inline {struct_cpp_info.as_owner} {struct_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj) {{",
+            f"inline {struct_cpp_info.as_owner} taihe::from_napi_t<{struct_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
             cpp_field_results = []
@@ -521,7 +531,7 @@ class NapiCodeGenerator:
         struct_cpp_info = StructCppInfo.get(self.am, struct)
         struct_napi_info = StructNapiInfo.get(self.am, struct)
         with struct_napi_impl_target.indented(
-            f"inline napi_value {struct_napi_info.into_napi_func_name}(napi_env env, {struct_cpp_info.as_param} cpp_obj) {{",
+            f"inline napi_value taihe::into_napi_t<{struct_cpp_info.as_owner}>::operator()(napi_env env, {struct_cpp_info.as_owner} cpp_obj) const {{",
             f"}}",
         ):
             args = []
@@ -819,10 +829,20 @@ class NapiCodeGenerator:
             iface_napi_decl_target.add_include("napi_utils.hpp")
             iface_napi_decl_target.add_include("taihe/runtime_napi.hpp")
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
-            iface_napi_decl_target.writelns(
-                f"{iface_cpp_info.as_owner} {iface_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
-                f"napi_value {iface_napi_info.into_napi_func_name}(napi_env env, {iface_cpp_info.as_owner} cpp_obj);",
-            )
+            with iface_napi_decl_target.indented(
+                f"template<> struct ::taihe::from_napi_t<{iface_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                iface_napi_decl_target.writelns(
+                    f"inline {iface_cpp_info.as_owner} operator()(napi_env env, napi_value napi_obj) const;",
+                )
+            with iface_napi_decl_target.indented(
+                f"template<> struct ::taihe::into_napi_t<{iface_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                iface_napi_decl_target.writelns(
+                    f"inline napi_value operator()(napi_env env, {iface_cpp_info.as_owner} cpp_obj) const;",
+                )
 
     def gen_iface_conv_impl_file(
         self,
@@ -849,10 +869,9 @@ class NapiCodeGenerator:
         iface_napi_impl_target: CHeaderWriter,
     ):
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         with iface_napi_impl_target.indented(
-            f"inline {iface_cpp_info.as_owner} {iface_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj) {{",
+            f"inline {iface_cpp_info.as_owner} taihe::from_napi_t<{iface_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
             with iface_napi_impl_target.indented(
@@ -960,7 +979,7 @@ class NapiCodeGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         with iface_napi_impl_target.indented(
-            f"inline napi_value {iface_napi_info.into_napi_func_name}(napi_env env, {iface_cpp_info.as_owner} cpp_obj) {{",
+            f"inline napi_value taihe::into_napi_t<{iface_cpp_info.as_owner}>::operator()(napi_env env, {iface_cpp_info.as_owner} cpp_obj) const {{",
             f"}}",
         ):
             iface_napi_impl_target.writelns(
@@ -1287,10 +1306,20 @@ class NapiCodeGenerator:
         ) as union_napi_decl_target:
             union_napi_decl_target.add_include("napi_utils.hpp")
             union_napi_decl_target.add_include(union_cpp_info.defn_header)
-            union_napi_decl_target.writelns(
-                f"{union_cpp_info.as_owner} {union_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
-                f"napi_value {union_napi_info.into_napi_func_name}(napi_env env, {union_cpp_info.as_param} cpp_obj);",
-            )
+            with union_napi_decl_target.indented(
+                f"template<> struct ::taihe::from_napi_t<{union_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                union_napi_decl_target.writelns(
+                    f"inline {union_cpp_info.as_owner} operator()(napi_env env, napi_value napi_obj) const;",
+                )
+            with union_napi_decl_target.indented(
+                f"template<> struct ::taihe::into_napi_t<{union_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                union_napi_decl_target.writelns(
+                    f"inline napi_value operator()(napi_env env, {union_cpp_info.as_owner} cpp_obj) const;",
+                )
 
     def gen_union_conv_impl_file(
         self,
@@ -1316,7 +1345,7 @@ class NapiCodeGenerator:
         union_cpp_info = UnionCppInfo.get(self.am, union)
         union_napi_info = UnionNapiInfo.get(self.am, union)
         with union_napi_impl_target.indented(
-            f"inline {union_cpp_info.as_owner} {union_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj) {{",
+            f"inline {union_cpp_info.as_owner} taihe::from_napi_t<{union_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
             union_napi_impl_target.writelns(
@@ -1395,9 +1424,8 @@ class NapiCodeGenerator:
         union_napi_impl_target: CHeaderWriter,
     ):
         union_cpp_info = UnionCppInfo.get(self.am, union)
-        union_napi_info = UnionNapiInfo.get(self.am, union)
         with union_napi_impl_target.indented(
-            f"inline napi_value {union_napi_info.into_napi_func_name}(napi_env env, {union_cpp_info.as_param} cpp_value) {{",
+            f"inline napi_value taihe::into_napi_t<{union_cpp_info.as_owner}>::operator()(napi_env env, {union_cpp_info.as_owner} cpp_value) const {{",
             f"}}",
         ):
             union_napi_impl_target.writelns(

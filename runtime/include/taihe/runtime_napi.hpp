@@ -71,4 +71,20 @@ private:
         }                                                                                   \
     } while (0)
 
+namespace taihe {
+// convert between napi types and taihe types
+
+template<typename cpp_owner_t>
+struct from_napi_t;
+
+template<typename cpp_owner_t>
+struct into_napi_t;
+
+template<typename cpp_owner_t>
+constexpr inline from_napi_t<cpp_owner_t> from_napi;
+
+template<typename cpp_owner_t>
+constexpr inline into_napi_t<cpp_owner_t> into_napi;
+}  // namespace taihe
+
 #endif  // TAIHE_RUNTIME_NAPI_HPP
