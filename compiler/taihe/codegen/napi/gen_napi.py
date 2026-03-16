@@ -481,10 +481,6 @@ class NapiCodeGenerator:
         ) as struct_napi_impl_target:
             struct_napi_impl_target.add_include(struct_napi_info.decl_header)
             struct_napi_impl_target.add_include(struct_cpp_info.impl_header)
-            # TODO: ignore compiler warning
-            struct_napi_impl_target.writelns(
-                '#pragma clang diagnostic ignored "-Wmissing-braces"',
-            )
             self.gen_struct_ctor_func(struct, pkg_napi_target)
             self.gen_struct_ctor_ref_func(struct, struct_napi_impl_target)
             self.gen_struct_from_napi_func(struct, struct_napi_impl_target)
