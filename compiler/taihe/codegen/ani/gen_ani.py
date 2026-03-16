@@ -178,17 +178,23 @@ class AniPackageSourceGenerator:
         )
 
     def gen_package_source(self):
-        pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
         with self.target:
+            pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
             pkg_cpp_user_info = PackageCppUserInfo.get(self.am, self.pkg)
-            self.target.add_include("taihe/object.hpp")
             self.target.add_include(pkg_ani_info.header)
             self.target.add_include(pkg_cpp_user_info.header)
-            subregisters = self.gen_bindings()
+
+            subregisters: list[str] = []
+
+            self.gen_utils_bindings(subregisters)
+            self.gen_funcs_bindings(subregisters)
+            self.gen_methods_bindings(subregisters)
+
             self.gen_package_register(subregisters)
 
     def gen_package_register(self, subregisters: list[str]):
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
+
         with self.target.indented(
             f"namespace {pkg_ani_info.cpp_ns} {{",
             f"}}",
@@ -232,15 +238,14 @@ class AniPackageSourceGenerator:
                     f"return status;",
                 )
 
-    def gen_bindings(self):
+    def gen_utils_bindings(self, subregisters: list[str]):
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
 
-        subregisters: list[str] = []
-
-        utils_namespace = "local"
+        utils_ns = "local::utils"
+        utils_register_ns = "local"
         utils_register_name = "ANIUtilsRegister"
         with self.target.indented(
-            f"namespace {utils_namespace} {{",
+            f"namespace {utils_ns} {{",
             f"}}",
             indent="",
         ):
@@ -249,31 +254,40 @@ class AniPackageSourceGenerator:
             self.gen_obj_drop(obj_drop_cpp_name)
             mod_member_infos.setdefault(
                 pkg_ani_info.ns.mod.obj_drop,
-                f"{utils_namespace}::{obj_drop_cpp_name}",
+                f"{utils_ns}::{obj_drop_cpp_name}",
             )
             obj_dup_cpp_name = "_obj_dup"
             self.gen_obj_dup(obj_dup_cpp_name)
             mod_member_infos.setdefault(
                 pkg_ani_info.ns.mod.obj_dup,
-                f"{utils_namespace}::{obj_dup_cpp_name}",
+                f"{utils_ns}::{obj_dup_cpp_name}",
             )
             native_invoke_cpp_name = "_native_invoke"
             self.gen_native_invoke(native_invoke_cpp_name)
             mod_member_infos.setdefault(
                 pkg_ani_info.ns.mod.native_invoke,
-                f"{utils_namespace}::{native_invoke_cpp_name}",
+                f"{utils_ns}::{native_invoke_cpp_name}",
             )
+        with self.target.indented(
+            f"namespace {utils_register_ns} {{",
+            f"}}",
+            indent="",
+        ):
             self.gen_subregister(
                 utils_register_name,
                 ns=pkg_ani_info.ns.mod,
                 member_infos=mod_member_infos,
             )
-            subregisters.append(f"{utils_namespace}::{utils_register_name}")
+            subregisters.append(f"{utils_register_ns}::{utils_register_name}")
 
-        funcs_namespace = "local"
+    def gen_funcs_bindings(self, subregisters: list[str]):
+        pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
+
+        funcs_ns = "local::funcs"
+        funcs_register_ns = "local"
         funcs_register_name = "ANIFuncsRegister"
         with self.target.indented(
-            f"namespace {funcs_namespace} {{",
+            f"namespace {funcs_ns} {{",
             f"}}",
             indent="",
         ):
@@ -287,20 +301,29 @@ class AniPackageSourceGenerator:
                 )
                 pkg_member_infos.setdefault(
                     func_nat_info.native_name,
-                    f"{funcs_namespace}::{func.name}",
+                    f"{funcs_ns}::{func.name}",
                 )
+        with self.target.indented(
+            f"namespace {funcs_register_ns} {{",
+            f"}}",
+            indent="",
+        ):
             self.gen_subregister(
                 funcs_register_name,
                 ns=pkg_ani_info.ns,
                 member_infos=pkg_member_infos,
             )
-            subregisters.append(f"{funcs_namespace}::{funcs_register_name}")
+            subregisters.append(f"{funcs_register_ns}::{funcs_register_name}")
+
+    def gen_methods_bindings(self, subregisters: list[str]):
+        pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
 
         for iface in self.pkg.interfaces:
-            methods_namespace = f"local::{iface.name}"
+            methods_ns = f"local::interfaces::{iface.name}::methods"
+            methods_register_ns = f"local::interfaces::{iface.name}"
             methods_register_name = "ANIMethodsRegister"
             with self.target.indented(
-                f"namespace {methods_namespace} {{",
+                f"namespace {methods_ns} {{",
                 f"}}",
                 indent="",
             ):
@@ -316,16 +339,19 @@ class AniPackageSourceGenerator:
                         )
                         iface_member_infos.setdefault(
                             method_nat_info.native_name,
-                            f"{methods_namespace}::{method.name}",
+                            f"{methods_ns}::{method.name}",
                         )
+            with self.target.indented(
+                f"namespace {methods_register_ns} {{",
+                f"}}",
+                indent="",
+            ):
                 self.gen_subregister(
                     methods_register_name,
                     ns=pkg_ani_info.ns,
                     member_infos=iface_member_infos,
                 )
-                subregisters.append(f"{methods_namespace}::{methods_register_name}")
-
-        return subregisters
+                subregisters.append(f"{methods_register_ns}::{methods_register_name}")
 
     def gen_subregister(
         self,
