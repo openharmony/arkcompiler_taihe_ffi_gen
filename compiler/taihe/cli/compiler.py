@@ -49,7 +49,7 @@ def main():
     parser.add_argument(
         "-I",
         dest="src_dirs",
-        nargs="*",
+        action="append",
         default=[],
         help="directories of .taihe source files",
     )  # deprecated
@@ -64,8 +64,7 @@ def main():
         "--generate",
         "-G",
         dest="backends",
-        nargs="*",
-        action="extend",
+        action="append",
         default=[],
         choices=backend_registry.get_backend_names(),
         help="backends to generate sources, default: abi-header, abi-source, c-author",
@@ -81,8 +80,7 @@ def main():
         "--codegen",
         "-C",
         dest="config",
-        nargs="*",
-        action="extend",
+        action="append",
         default=[],
         help="additional code generation configuration",
     )
