@@ -301,8 +301,6 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.create_func_name = encode(segments, DeclKind.CREATE)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
-        self.meth_decl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.decl.h"
-        self.meth_impl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.impl.h"
         self.dts_type_name = d.name
         iface_abi_info = IfaceAbiInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{iface_abi_info.mangled_name}"
