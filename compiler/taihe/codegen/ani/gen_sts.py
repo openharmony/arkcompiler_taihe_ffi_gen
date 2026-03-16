@@ -37,6 +37,7 @@ from taihe.codegen.ani.analyses import (
     PackageAniInfo,
     PackageGroupAniInfo,
     ParamAniInfo,
+    ScalarTypeAniInfo,
     StructAniInfo,
     StructFieldAniInfo,
     StructObjectAniInfo,
@@ -483,7 +484,12 @@ class StsEnumGenerator:
             )
 
     def gen_enum_decl(self, enum_ani_info: EnumObjectAniInfo):
+        enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
+
         sts_decl = f"enum {enum_ani_info.sts_type_name}"
+        # TODO: remove this condition when string type annotation is supported
+        if isinstance(enum_ty_ani_info, ScalarTypeAniInfo):
+            sts_decl = f"{sts_decl}: {enum_ty_ani_info.sts_type_in(self.target)}"
         if enum_ani_info.is_default:
             sts_decl = f"export default {sts_decl}"
         else:
