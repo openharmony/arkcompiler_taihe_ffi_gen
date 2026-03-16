@@ -672,15 +672,16 @@ class IfaceThunkKey:
 
 
 class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
-    def __init__(self, am: AnalysisManager, c: IfaceThunkKey) -> None:  # fmt: skip
+    def __init__(self, am: AnalysisManager, c: IfaceThunkKey) -> None:
         self.native_name = f"_taihe_{c.iface.name}_{c.method.name}_native"
+        iface_ani_info = IfaceAniInfo.get(am, c.iface)
         self.native_base_params: list[str] = [
-            f"{IfaceAniInfo.vtbl_ptr}: long",
-            f"{IfaceAniInfo.data_ptr}: long",
+            f"{iface_ani_info.vtbl_ptr}: long",
+            f"{iface_ani_info.data_ptr}: long",
         ]
         self.native_base_args: list[str] = [
-            f"this.{IfaceAniInfo.vtbl_ptr}",
-            f"this.{IfaceAniInfo.data_ptr}",
+            f"this.{iface_ani_info.vtbl_ptr}",
+            f"this.{iface_ani_info.data_ptr}",
         ]
         self.c_native_base_params: list[str] = [
             f"ani_long ani_vtbl_ptr",
@@ -694,7 +695,7 @@ class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, c: IfaceThunkKey) -> "IfaceThunkAniInfo":  # fmt: skip
+    def _create(cls, am: AnalysisManager, c: IfaceThunkKey) -> "IfaceThunkAniInfo":
         return IfaceThunkAniInfo(am, c)
 
 
@@ -704,7 +705,7 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":  # fmt: skip
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":
         return IfaceMethodAniInfo(am, f)
 
 
@@ -1181,7 +1182,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         if self.ani_type.base == ANI_REF:
             ani_item = f"{ani_fixedarray_after}_ani_item"
             ani_init = f"{ani_fixedarray_after}_ani_init"
-            iterator = f"{ani_fixedarray_after}_itorator"
+            iterator = f"{ani_fixedarray_after}_iterator"
             target.writelns(
                 f"ani_fixedarray_ref {ani_fixedarray_after} = {{}};",
                 f"ani_ref {ani_init} = {{}};",
