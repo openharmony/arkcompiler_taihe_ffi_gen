@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef TAIHE_RUNTIME_ANI_HPP
-#define TAIHE_RUNTIME_ANI_HPP
+#ifndef TAIHE_RUNTIME_NAPI_HPP
+#define TAIHE_RUNTIME_NAPI_HPP
 
 #if __has_include(<napi/native_api.h>)
 #include <napi/native_api.h>
@@ -71,4 +71,4 @@ private:
         }                                                                                   \
     } while (0)
 
-#endif  // TAIHE_RUNTIME_ANI_HPP
+#endif  // TAIHE_RUNTIME_NAPI_HPP
