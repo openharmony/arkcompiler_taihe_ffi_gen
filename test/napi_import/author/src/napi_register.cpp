@@ -21,8 +21,8 @@
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__building(env, exports);
-    Init__people(env, exports);
+    building::NapiInit(env, exports);
+    people::NapiInit(env, exports);
     return exports;
 }
 

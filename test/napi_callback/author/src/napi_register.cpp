@@ -20,7 +20,7 @@
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__cb_test(env, exports);
+    cb_test::NapiInit(env, exports);
     return exports;
 }
 

@@ -76,15 +76,6 @@ class DeclKind(Enum):
     DYNAMIC_CAST = "dynamic"
     STATIC_CAST = "static"
 
-    NAPI_FUNC = "NAPI"
-    FROM_NAPI = "fromNAPI"
-    INTO_NAPI = "intoNAPI"
-    CONSTRUCTOR = "constructor"
-    CREATE = "create"
-
-    GETTER = "getter"
-    SETTER = "setter"
-
 
 def _encode_uleb8(value: int) -> list[int]:
     """Encodes a single integer in ULEB8 format.
