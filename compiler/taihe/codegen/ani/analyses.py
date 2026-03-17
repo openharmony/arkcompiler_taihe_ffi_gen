@@ -2175,7 +2175,7 @@ class RecordTypeAniInfo(TypeAniInfo):
                     f"break;",
                 )
             target.writelns(
-                f"ani_tuple_value {ani_item} = {{}};",
+                f"ani_object {ani_item} = {{}};",
                 f'{env}->Object_GetField_Ref({ani_next},  TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&{ani_item}));',
                 f"ani_ref {ani_key} = {{}};",
                 f'{env}->Object_GetField_Ref({ani_item}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.Tuple2", "$0"), &{ani_key});',
@@ -2274,7 +2274,7 @@ class MapTypeAniInfo(TypeAniInfo):
                     f"break;",
                 )
             target.writelns(
-                f"ani_tuple_value {ani_item} = {{}};",
+                f"ani_object {ani_item} = {{}};",
                 f'{env}->Object_GetField_Ref({ani_next},  TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&{ani_item}));',
                 f"ani_ref {ani_key} = {{}};",
                 f'{env}->Object_GetField_Ref({ani_item}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.Tuple2", "$0"), &{ani_key});',
