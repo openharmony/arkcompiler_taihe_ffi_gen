@@ -611,9 +611,7 @@ array<int8_t> PrintTestInterfaceArray(::inner::weak::TestInterface testiface)
 
 ::inner::union_primitive PrintTestInterfaceUnion(::inner::weak::TestInterface testiface)
 {
-    ::inner::union_primitive up = testiface->getunion();
-    std::cout << "s: " << up.get_sValue_ref() << std::endl;
-    return up;
+    return testiface->getunion();
 }
 
 map<string, int8_t> PrintTestInterfaceRecord(::inner::weak::TestInterface testiface)
