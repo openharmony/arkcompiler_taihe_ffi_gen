@@ -142,7 +142,7 @@ class PackageGroupNapiInfo(AbstractAnalysis[PackageGroup]):
         self.module_dict: dict[str, Namespace] = {}
         self.package_map: dict[PackageDecl, Namespace] = {}
 
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             path = []
             if attr := NamespaceAttr.get(pkg):
                 module_name = attr.module
