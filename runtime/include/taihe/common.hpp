@@ -23,7 +23,6 @@
 #include <unordered_set>
 #include <utility>
 
-#ifdef __cplusplus
 #ifdef __EXCEPTIONS
 #define TH_THROW(error_type, message) throw error_type(message)
 #else
@@ -35,7 +34,6 @@
                 #error_type, message, __FUNCTION__, __FILE__, __LINE__); \
         abort();                                                         \
     } while (0)
-#endif
 #endif
 
 namespace taihe {
