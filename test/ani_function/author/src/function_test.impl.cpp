@@ -49,10 +49,13 @@ public:
         switch (b.get_tag()) {
             case ::function_test::MyUnion::tag_t::sValue:
                 std::cout << "s: " << b.get_sValue_ref() << std::endl;
+                break;
             case ::function_test::MyUnion::tag_t::iValue:
                 std::cout << "i: " << b.get_iValue_ref() << std::endl;
+                break;
             case ::function_test::MyUnion::tag_t::fValue:
-                std::cout << "i: " << b.get_iValue_ref() << std::endl;
+                std::cout << "f: " << b.get_fValue_ref() << std::endl;
+                break;
         }
     }
 
