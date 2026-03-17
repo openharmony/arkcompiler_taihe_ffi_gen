@@ -17,7 +17,7 @@ from collections.abc import Collection
 from json import dumps
 
 from taihe.codegen.abi.analyses import IfaceAbiInfo
-from taihe.codegen.ani.attributes import ReadOnlyAttr
+from taihe.codegen.napi.attributes import ReadOnlyAttr
 from taihe.codegen.napi.analyses import (
     EnumNapiInfo,
     GlobFuncNapiInfo,
