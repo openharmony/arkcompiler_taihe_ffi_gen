@@ -86,8 +86,6 @@ public:
 
     void FuncUnion(optional_view<::optional::Union> param1)
     {
-        std::cout << (*param1).get_sValue_ref() << std::endl;
-        std::cout << (*param1).get_iValue_ref() << std::endl;
     }
 
     void FuncMap(optional_view<map<string, int32_t>> param1)

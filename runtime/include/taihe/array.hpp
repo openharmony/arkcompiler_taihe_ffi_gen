@@ -93,7 +93,6 @@ struct array_view {
 
     reference operator[](size_type const pos) const noexcept
     {
-        TH_ASSERT(pos < size(), "Pos should be less than array's size");
         return m_data[pos];
     }
 
@@ -107,13 +106,11 @@ struct array_view {
 
     reference front() const noexcept
     {
-        TH_ASSERT(m_size > 0, "Array's size should be greater than 0");
-        return *m_data;
+        return m_data[0];
     }
 
     reference back() const noexcept
     {
-        TH_ASSERT(m_size > 0, "Array's size should be greater than 0");
         return m_data[m_size - 1];
     }
 
