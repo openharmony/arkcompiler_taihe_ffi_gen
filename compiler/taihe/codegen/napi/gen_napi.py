@@ -67,7 +67,7 @@ class NapiCodeGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.iterate():
             self.gen_package(pkg)
         self.gen_register(pg)
         self.gen_utils_file()
@@ -104,7 +104,7 @@ class NapiCodeGenerator:
             f"temp/napi_register.cpp",
             group=None,
         ) as target:
-            for pkg in pg.packages:
+            for pkg in pg.iterate():
                 pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
                 target.add_include(pkg_napi_info.header)
             target.writelns(
