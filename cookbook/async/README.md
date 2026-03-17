@@ -67,7 +67,7 @@ TH_EXPORT_CPP_API_addSync(addSync);
 
 ```typescript
 // 回调式异步函数
-export function addWithCallback(a: int, b: int, callback: AsyncCallback<int>): void {
+export function add(a: int, b: int, callback: AsyncCallback<int>): void {
     taskpool.execute((): int => {
         return _taihe_addWithCallback_native(a, b);
     })
@@ -80,7 +80,7 @@ export function addWithCallback(a: int, b: int, callback: AsyncCallback<int>): v
 }
 
 // Promise 式异步函数
-export function addReturnsPromise(a: int, b: int): Promise<int> {
+export function add(a: int, b: int): Promise<int> {
     return new Promise<int>((resolve, reject): void => {
         taskpool.execute((): int => {
             return _taihe_addReturnsPromise_native(a, b);
@@ -97,12 +97,6 @@ export function addReturnsPromise(a: int, b: int): Promise<int> {
 // 同步函数
 export function addSync(a: int, b: int): int {
     return _taihe_addSync_native(a, b);
-}
-
-// 重载导出
-export overload add {
-    addWithCallback,
-    addReturnsPromise,
 }
 ```
 

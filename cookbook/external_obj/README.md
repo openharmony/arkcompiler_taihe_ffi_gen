@@ -63,7 +63,8 @@ using namespace taihe;
 
 // 判断外部对象是否为 string 类型
 bool is_string(uintptr_t obj) {
-    ani_env* env = get_env();  // 获取当前 ANI 环境
+    env_guard guard;  // 构造 guard 对象
+    ani_env* env = guard.get_env();  // 获取当前 ANI 环境
     ani_boolean result;
     ani_class cls;
     
@@ -75,7 +76,8 @@ bool is_string(uintptr_t obj) {
 
 // 返回包含 ANI 对象的数组
 array<uintptr_t> get_objects() {
-    ani_env* env = get_env();
+    env_guard guard;
+    ani_env* env = guard.get_env();
     
     // 创建字符串对象
     ani_string str;
@@ -90,7 +92,8 @@ array<uintptr_t> get_objects() {
 
 // 处理 Person 对象
 void processPerson(uintptr_t person) {
-    ani_env* env = get_env();
+    env_guard guard;
+    ani_env* env = guard.get_env();
     ani_object obj = reinterpret_cast<ani_object>(person);
     
     // 获取 name 属性
@@ -122,13 +125,13 @@ TH_EXPORT_CPP_API_processPerson(processPerson);
 
 | 函数 | 作用 |
 |------|------|
-| `get_env()` | 获取当前 ANI 环境指针 |
+| `env_guard guard; guard.get_env()` | 构造 guard 对象并获取当前 ANI 环境指针 |
 | `env->FindClass(name, &cls)` | 查找类 |
 | `env->Object_InstanceOf(obj, cls, &result)` | 类型检查 |
 | `env->String_NewUTF8(str, len, &result)` | 创建字符串 |
 | `env->GetUndefined(&ref)` | 获取 undefined 值 |
 
-> **注意**：与 ANI 原生函数不同，Taihe 函数没有 `env` 参数，需要通过 `get_env()` 获取。
+> **注意**：与 ANI 原生函数不同，Taihe 函数没有 `env` 参数，需要先构造 `env_guard` 对象再通过 `guard.get_env()` 获取。
 
 ## 第三步：编译运行
 
