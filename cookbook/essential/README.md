@@ -688,15 +688,11 @@ function SaveBookToFile(p: Path);
 **File (Generated): `generated/example.ets`**
 
 ```typescript
-export function SaveBookToInternet(url: string): void {
+export function SaveBook(url: string): void {
     return _taihe_SaveBookToInternet_native(url);
 }
-export function SaveBookToFile(p: Path): void {
+export function SaveBook(p: Path): void {
     return _taihe_SaveBookToFile_native(p);
-}
-export overload SavaBook {
-  SaveBookToInternet,
-  SaveBookToFile,
 }
 ```
 
@@ -705,18 +701,18 @@ export overload SavaBook {
 **File: `example.taihe`**
 
 ```rust
-@async("uploadBook")
-function uploadBookWithCallback(b: Book): String;
+@rename("uploadBook")
+@async function uploadBookWithCallback(b: Book): String;
 
-@promise("uploadBook")
-function uploadBookReturnsPromise(b: Book): String;
+@rename("uploadBook")
+@promise function uploadBookReturnsPromise(b: Book): String;
 ```
 
 **File (Generated): `generated/example.ets`**
 
 ```typescript
-export function uploadBookWithCallback(b: Book, callback: AsyncCallback<string>): void {
-    taskpool.execute((): string => { return uploadBook_inner(b); })
+export function uploadBook(b: Book, callback: AsyncCallback<string>): void {
+    taskpool.execute((): string => { return _taihe_uploadBookWithCallback_native(b); })
     .then((ret: Any): void => {
         callback(null, ret as string);
     })
@@ -724,9 +720,9 @@ export function uploadBookWithCallback(b: Book, callback: AsyncCallback<string>)
         callback(ret as Error);
     });
 }
-export function uploadBookReturnsPromise(b: Book): Promise<string> {
+export function uploadBook(b: Book): Promise<string> {
     return new Promise<string>((resolve: (data: string) => void, reject: (err: Error) => void): void => {
-        taskpool.execute((): string => { return uploadBook_inner(b); })
+        taskpool.execute((): string => { return _taihe_uploadBookReturnsPromise_native(b); })
         .then((ret: Any): void => {
             resolve(ret as string);
         })
@@ -734,10 +730,6 @@ export function uploadBookReturnsPromise(b: Book): Promise<string> {
             reject(ret as Error);
         });
     });
-}
-export overload uploadBook {
-    uploadBookWithCallback,
-    uploadBookReturnsPromise,
 }
 ```
 
