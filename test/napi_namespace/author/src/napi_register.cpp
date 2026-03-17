@@ -29,7 +29,7 @@ napi_value Init(napi_env env, napi_value exports)
 {
     napi_value ns_ns1;
     napi_create_object(env, &ns_ns1);
-    Init__my_module_a_ns1(env, ns_ns1);
+    my_module_a::ns1::NapiInit(env, ns_ns1);
     napi_value ns_ns1_ns2;
     napi_create_object(env, &ns_ns1_ns2);
     napi_value ns_ns1_ns2_ns3;
@@ -38,19 +38,19 @@ napi_value Init(napi_env env, napi_value exports)
     napi_create_object(env, &ns_ns1_ns2_ns3_ns4);
     napi_value ns_ns1_ns2_ns3_ns4_ns5;
     napi_create_object(env, &ns_ns1_ns2_ns3_ns4_ns5);
-    Init__my_module_a_ns1_ns2_ns3_ns4_ns5(env, ns_ns1_ns2_ns3_ns4_ns5);
-    Init__my_module_a_ns1_ns2_ns3_ns4_ns5(env, exports);
+    my_module_a::ns1::ns2::ns3::ns4::ns5::NapiInit(env, ns_ns1_ns2_ns3_ns4_ns5);
+    my_module_a::ns1::ns2::ns3::ns4::ns5::NapiInit(env, exports);
     NAPI_CALL(env, napi_set_named_property(env, ns_ns1_ns2_ns3_ns4, "ns5", ns_ns1_ns2_ns3_ns4_ns5));
     NAPI_CALL(env, napi_set_named_property(env, ns_ns1_ns2_ns3, "ns4", ns_ns1_ns2_ns3_ns4));
     NAPI_CALL(env, napi_set_named_property(env, ns_ns1_ns2, "ns3", ns_ns1_ns2_ns3));
     NAPI_CALL(env, napi_set_named_property(env, ns_ns1, "ns2", ns_ns1_ns2));
-    Init__my_module_a_ns1(env, exports);
+    my_module_a::ns1::NapiInit(env, exports);
     NAPI_CALL(env, napi_set_named_property(env, exports, "ns1", ns_ns1));
-    Init__my_module_a(env, exports);
+    my_module_a::NapiInit(env, exports);
     napi_value ns_functiontest;
     napi_create_object(env, &ns_functiontest);
-    Init__my_module_b_functiontest(env, ns_functiontest);
-    Init__my_module_b_functiontest(env, exports);
+    my_module_b::functiontest::NapiInit(env, ns_functiontest);
+    my_module_b::functiontest::NapiInit(env, exports);
     NAPI_CALL(env, napi_set_named_property(env, exports, "functiontest", ns_functiontest));
     return exports;
 }

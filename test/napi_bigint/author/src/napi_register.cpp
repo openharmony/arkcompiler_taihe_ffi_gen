@@ -24,7 +24,7 @@
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__bigint_test(env, exports);
+    bigint_test::NapiInit(env, exports);
     return exports;
 }
 

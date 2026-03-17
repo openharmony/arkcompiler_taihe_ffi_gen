@@ -25,8 +25,8 @@
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__cookies(env, exports);
-    Init__cookies_user(env, exports);
+    cookies::NapiInit(env, exports);
+    cookies_user::NapiInit(env, exports);
     return exports;
 }
 

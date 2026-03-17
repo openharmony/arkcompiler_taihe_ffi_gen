@@ -20,7 +20,7 @@
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__maythrow(env, exports);
+    maythrow::NapiInit(env, exports);
     return exports;
 }
 

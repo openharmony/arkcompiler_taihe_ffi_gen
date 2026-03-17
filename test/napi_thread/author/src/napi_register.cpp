@@ -24,7 +24,7 @@
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__thread_test(env, exports);
+    thread_test::NapiInit(env, exports);
     return exports;
 }
 

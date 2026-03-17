@@ -1829,12 +1829,12 @@ napi_value Init(napi_env env, napi_value exports) {   // napi register 文件中
   napi_set_named_property(env, exports, "rate", value_rate);
 
   // 在初始化 namespace xxx 对象与向 exports 注册 namespace xxx 对象之间调用注册 ts_inject 函数 concat 的函数
-  // ... 初始化 namespace xxx 对象，例如：Init__my_module_b_functiontest(env, ns_functiontest);
+  // ... 初始化 namespace xxx 对象，例如：my_module_b::functiontest::NapiInit(env, ns_functiontest);
 
   // Add register for concat function
   Init_my_module_b_concat(env, ns_functiontest);
 
-  // ... 向 exports 注册 namespace xxx 对象，例如：Init__my_module_b_functiontest(env, exports);
+  // ... 向 exports 注册 namespace xxx 对象，例如：my_module_b::functiontest::NapiInit(env, exports);
 
 }   // napi register 文件中的原有函数
 ```
