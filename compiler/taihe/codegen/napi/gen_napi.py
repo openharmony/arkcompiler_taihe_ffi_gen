@@ -17,7 +17,6 @@ from json import dumps
 
 from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
-from taihe.codegen.ani.attributes import ReadOnlyAttr
 from taihe.codegen.cpp.analyses import (
     GlobFuncCppUserInfo,
     IfaceCppInfo,
@@ -38,6 +37,7 @@ from taihe.codegen.napi.analyses import (
     TypeNapiInfo,
     UnionNapiInfo,
 )
+from taihe.codegen.napi.attributes import ReadOnlyAttr
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,

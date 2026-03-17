@@ -15,6 +15,25 @@
 
 from dataclasses import dataclass
 
+from taihe.codegen.ani.attributes import (
+    ArrayBufferAttr,
+    AsyncAttribute,
+    BigIntAttr,
+    ClassAttr,
+    ConstAttr,
+    CtorAttr,
+    ExtendsAttr,
+    GetAttr,
+    NamespaceAttr,
+    NullAttr,
+    PromiseAttribute,
+    ReadOnlyAttr,
+    RecordAttr,
+    SetAttr,
+    StaticAttr,
+    TypedArrayAttr,
+    UndefinedAttr,
+)
 from taihe.semantics.attributes import (
     RepeatableAttribute,
     TypedAttribute,
@@ -138,4 +157,22 @@ all_napi_attr_types = [
     TsInjectIntoModuleAttr,
     TsInjectIntoClazzAttr,
     TsInjectIntoIfaceAttr,
+    # TODO: hack from ani
+    ArrayBufferAttr,
+    AsyncAttribute,
+    BigIntAttr,
+    ClassAttr,
+    ConstAttr,
+    CtorAttr,
+    ExtendsAttr,
+    GetAttr,
+    NamespaceAttr,
+    PromiseAttribute,
+    RecordAttr,
+    ReadOnlyAttr,
+    SetAttr,
+    StaticAttr,
+    TypedArrayAttr,
+    UndefinedAttr,
+    NullAttr,
 ]

@@ -20,23 +20,6 @@ from typing_extensions import override
 
 from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.abi.writer import CSourceWriter
-from taihe.codegen.ani.attributes import (
-    ArrayBufferAttr,
-    AsyncAttribute,
-    BigIntAttr,
-    ClassAttr,
-    ConstAttr,
-    CtorAttr,
-    ExtendsAttr,
-    GetAttr,
-    NamespaceAttr,
-    PromiseAttribute,
-    RecordAttr,
-    SetAttr,
-    StaticAttr,
-    TypedArrayAttr,
-    UndefinedAttr,
-)
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -45,15 +28,31 @@ from taihe.codegen.cpp.analyses import (
     UnionCppInfo,
 )
 from taihe.codegen.napi.attributes import (
+    ArrayBufferAttr,
+    AsyncAttribute,
+    BigIntAttr,
+    ClassAttr,
+    ConstAttr,
+    CtorAttr,
     DtsInjectAttr,
     DtsInjectIntoClazzAttr,
     DtsInjectIntoIfaceAttr,
     DtsInjectIntoModuleAttr,
     DtsTypeAttr,
+    ExtendsAttr,
+    GetAttr,
+    NamespaceAttr,
+    NullAttr,
+    PromiseAttribute,
+    RecordAttr,
+    SetAttr,
+    StaticAttr,
     TsInjectAttr,
     TsInjectIntoClazzAttr,
     TsInjectIntoIfaceAttr,
     TsInjectIntoModuleAttr,
+    TypedArrayAttr,
+    UndefinedAttr,
 )
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
@@ -1985,4 +1984,6 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
             and UndefinedAttr.get(t.ref.parent_type_holder)
         ):
             return UndefinedTypeNapiInfo(self.am, t)
+        if NullAttr.get(t.ref):
+            return NullTypeNapiInfo(self.am, t)
         return NullTypeNapiInfo(self.am, t)
