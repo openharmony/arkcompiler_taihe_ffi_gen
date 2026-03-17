@@ -63,3 +63,21 @@ interface OldMyInterface {
 
 @ctor("MyInterface")
 function MyInterfaceCtor(): OldMyInterface;
+
+enum EnumWithNull: i32 {
+    // `NULL` is a common macro defined in C/C++, so the following line will cause a syntax error in generated C/C++ code
+    // NULL = 0,
+
+    // Instead, you can name the enum item something else and use `@rename` to rename it to `NULL` in generated ArkTS code
+    @rename("NULL") fieldNULL = 0,
+}
+
+interface InterfaceWithUseFrom {
+    // `use` and `from` are Taihe keywords, so the following lines will cause syntax errors
+    // use();
+    // from();
+
+    // Instead, we can use `#` before the identifiers to escape the keywords
+    #use();
+    #from();
+}
