@@ -1979,7 +1979,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         self.t = t
         self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(f"escompat.{self.typedarray_attr.sts_type}")
+        self.sig_type = AniRuntimeClassType(f"std.core.{self.typedarray_attr.sts_type}")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
