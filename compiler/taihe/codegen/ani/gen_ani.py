@@ -1124,7 +1124,7 @@ class AniUnionImplGenerator:
                 self.target.writelns(
                     f"ani_boolean {is_field_ani} = {{}};",
                 )
-                final_ty_ani_info.check_type(
+                final_ty_ani_info.check_type_boxed(
                     self.target,
                     "env",
                     "ani_value",
