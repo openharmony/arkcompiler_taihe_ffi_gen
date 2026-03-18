@@ -1029,7 +1029,7 @@ class AniUnionImplGenerator:
                 self.target.writelns(
                     f"ani_boolean {is_field_ani} = {{}};",
                 )
-                final_ty_ani_info.check_type(self.target, "env", is_field_ani)
+                final_ty_ani_info.check_type(self.target, "env", "ani_value", is_field_ani)
                 with self.target.indented(
                     f"if ({is_field_ani}) {{",
                     f"}}",

@@ -1099,10 +1099,11 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         self,
         target: CSourceWriter,
         env: str,
+        ani_value: str,
         is_field_ani: str,
     ):
         target.writelns(
-            f'{env}->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{self.type_desc}"), &{is_field_ani});',
+            f'{env}->Object_InstanceOf(static_cast<ani_object>({ani_value}), TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), &{is_field_ani});',
         )
 
     def into_ani_boxed(
@@ -1435,10 +1436,11 @@ class NullTypeAniInfo(TypeAniInfo):
         self,
         target: CSourceWriter,
         env: str,
+        ani_value: str,
         is_field_ani: str,
     ):
         target.writelns(
-            f"{env}->Reference_IsNull(ani_value, &{is_field_ani});",
+            f"{env}->Reference_IsNull({ani_value}, &{is_field_ani});",
         )
 
 
@@ -1482,10 +1484,11 @@ class UndefinedTypeAniInfo(TypeAniInfo):
         self,
         target: CSourceWriter,
         env: str,
+        ani_value: str,
         is_field_ani: str,
     ):
         target.writelns(
-            f"{env}->Reference_IsUndefined(ani_value, &{is_field_ani});",
+            f"{env}->Reference_IsUndefined({ani_value}, &{is_field_ani});",
         )
 
 
@@ -1532,18 +1535,19 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         self,
         target: CSourceWriter,
         env: str,
+        ani_value: str,
         is_field_ani: str,
     ):
-        super().check_type(target, env, is_field_ani)
+        super().check_type(target, env, ani_value, is_field_ani)
         cpp_strv = f"{is_field_ani}_cpp_strv"
         ani_size = f"{is_field_ani}_size"
         cpp_buff = f"{is_field_ani}_buff"
         target.writelns(
             f"std::string_view {cpp_strv} = {dumps(self.value)};",
             f"ani_size {ani_size} = {{}};",
-            f"{env}->String_GetUTF8Size(static_cast<ani_string>(ani_value), &{ani_size});",
+            f"{env}->String_GetUTF8Size(static_cast<ani_string>({ani_value}), &{ani_size});",
             f"char {cpp_buff}[{ani_size} + 1];",
-            f"{env}->String_GetUTF8(static_cast<ani_string>(ani_value), {cpp_buff}, {ani_size} + 1, &{ani_size});",
+            f"{env}->String_GetUTF8(static_cast<ani_string>({ani_value}), {cpp_buff}, {ani_size} + 1, &{ani_size});",
             f"{cpp_buff}[{ani_size}] = '\\0';",
             f"{is_field_ani} &= {cpp_strv} == {cpp_buff};",
         )
