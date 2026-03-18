@@ -1272,7 +1272,7 @@ class StsAnyFuncDeclGenerator:
             opt = "?" if OptionalAttr.get(param) else ""
             param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-            params_ty_sts_sig.append(param_ty_ani_info.type_sig)
+            params_ty_sts_sig.append(param_ty_ani_info.ets_type.sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
                 f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
@@ -1496,7 +1496,7 @@ class StsAnyFuncGenerator:
             opt = "?" if OptionalAttr.get(param) else ""
             param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-            params_ty_sts_sig.append(param_ty_ani_info.type_sig)
+            params_ty_sts_sig.append(param_ty_ani_info.ets_type.sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
                 f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
@@ -1810,7 +1810,7 @@ class StsAnyCtorGenerator:
             opt = "?" if OptionalAttr.get(param) else ""
             param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-            params_ty_sts_sig.append(param_ty_ani_info.type_sig)
+            params_ty_sts_sig.append(param_ty_ani_info.ets_type.sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
                 f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
