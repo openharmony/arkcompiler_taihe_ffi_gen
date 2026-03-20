@@ -243,6 +243,7 @@ class AniPackageSourceGenerator:
     def gen_utils_bindings(self, subregisters: list[str]):
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
 
+        mod_member_infos: dict[str, str] = {}
         utils_ns = "local::utils"
         utils_register_ns = "local"
         utils_register_name = "ANIUtilsRegister"
@@ -251,24 +252,23 @@ class AniPackageSourceGenerator:
             f"}}",
             indent="",
         ):
-            mod_member_infos: dict[str, str] = {}
-            obj_drop_cpp_name = "_obj_drop"
+            obj_drop_cpp_name = "obj_drop"
             self.gen_obj_drop(obj_drop_cpp_name)
             mod_member_infos.setdefault(
                 pkg_ani_info.ns.mod.obj_drop,
                 f"{utils_ns}::{obj_drop_cpp_name}",
             )
-            obj_dup_cpp_name = "_obj_dup"
+            obj_dup_cpp_name = "obj_dup"
             self.gen_obj_dup(obj_dup_cpp_name)
             mod_member_infos.setdefault(
                 pkg_ani_info.ns.mod.obj_dup,
                 f"{utils_ns}::{obj_dup_cpp_name}",
             )
-            native_invoke_cpp_name = "_native_invoke"
-            self.gen_native_invoke(native_invoke_cpp_name)
+            callback_invoke_cpp_name = "callback_invoke"
+            self.gen_callback_invoke(callback_invoke_cpp_name)
             mod_member_infos.setdefault(
-                pkg_ani_info.ns.mod.native_invoke,
-                f"{utils_ns}::{native_invoke_cpp_name}",
+                pkg_ani_info.ns.mod.callback_invoke,
+                f"{utils_ns}::{callback_invoke_cpp_name}",
             )
         with self.target.indented(
             f"namespace {utils_register_ns} {{",
@@ -285,6 +285,7 @@ class AniPackageSourceGenerator:
     def gen_funcs_bindings(self, subregisters: list[str]):
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
 
+        pkg_member_infos: dict[str, str] = {}
         funcs_ns = "local::funcs"
         funcs_register_ns = "local"
         funcs_register_name = "ANIFuncsRegister"
@@ -293,7 +294,6 @@ class AniPackageSourceGenerator:
             f"}}",
             indent="",
         ):
-            pkg_member_infos: dict[str, str] = {}
             for func in self.pkg.functions:
                 func_nat_info = GlobFuncAniInfo.get(self.am, func)
                 self.gen_native_func(
@@ -302,7 +302,7 @@ class AniPackageSourceGenerator:
                     func_nat_info,
                 )
                 pkg_member_infos.setdefault(
-                    func_nat_info.native_name,
+                    func_nat_info.sts_native,
                     f"{funcs_ns}::{func.name}",
                 )
         with self.target.indented(
@@ -321,6 +321,7 @@ class AniPackageSourceGenerator:
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
 
         for iface in self.pkg.interfaces:
+            iface_member_infos: dict[str, str] = {}
             methods_ns = f"local::interfaces::{iface.name}::methods"
             methods_register_ns = f"local::interfaces::{iface.name}"
             methods_register_name = "ANIMethodsRegister"
@@ -329,7 +330,6 @@ class AniPackageSourceGenerator:
                 f"}}",
                 indent="",
             ):
-                iface_member_infos: dict[str, str] = {}
                 iface_abi_info = IfaceAbiInfo.get(self.am, iface)
                 for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
@@ -340,7 +340,7 @@ class AniPackageSourceGenerator:
                             method_nat_info,
                         )
                         iface_member_infos.setdefault(
-                            method_nat_info.native_name,
+                            method_nat_info.sts_native,
                             f"{methods_ns}::{method.name}",
                         )
             with self.target.indented(
@@ -513,7 +513,7 @@ class AniPackageSourceGenerator:
                 f"return reinterpret_cast<ani_long>(tobj_dup(reinterpret_cast<DataBlockHead*>(data_ptr)));",
             )
 
-    def gen_native_invoke(self, name: str):
+    def gen_callback_invoke(self, name: str):
         params_ani = []
         args_ani = []
         for i in range(16):
@@ -522,13 +522,13 @@ class AniPackageSourceGenerator:
             args_ani.append(arg_ani)
         params_ani_str = ", ".join(params_ani)
         args_ani_str = ", ".join(args_ani)
-        return_type_ani_name = "ani_ref"
+        return_ty_ani_name = "ani_ref"
         with self.target.indented(
-            f"static {return_type_ani_name} {name}([[maybe_unused]] ani_env *env, ani_long ani_cast_ptr, ani_long ani_func_ptr, ani_long ani_data_ptr, {params_ani_str}) {{",
+            f"static {return_ty_ani_name} {name}([[maybe_unused]] ani_env *env, ani_long ani_invoke_ptr, ani_long ani_vtbl_ptr, ani_long ani_data_ptr, {params_ani_str}) {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return reinterpret_cast<{return_type_ani_name} (*)(ani_env *env, ani_long ani_func_ptr, ani_long ani_data_ptr, {params_ani_str})>(ani_cast_ptr)(env, ani_func_ptr, ani_data_ptr, {args_ani_str});",
+                f"return reinterpret_cast<{return_ty_ani_name} (*)(ani_env *env, ani_long ani_vtbl_ptr, ani_long ani_data_ptr, {params_ani_str})>(ani_invoke_ptr)(env, ani_vtbl_ptr, ani_data_ptr, {args_ani_str});",
             )
 
 
@@ -734,7 +734,7 @@ class AniIfaceImplGenerator:
         else:
             return_ty_cpp_name = "void"
         pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
-        function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr)'
+        function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.sts_reverse}", nullptr)'
         result_ani = "ani_result"
         result_cpp = "cpp_result"
         if method_abi_info.is_noexcept:
@@ -859,7 +859,7 @@ class AniIfaceImplGenerator:
                     f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
                     f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                     f"cpp_obj.m_handle.data_ptr = nullptr;",
-                    f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
+                    f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
                 )
             self.target.writelns(
                 f"return ani_obj;",
@@ -996,7 +996,7 @@ class AniStructImplGenerator:
         fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
         self.target.writelns(
             f"ani_object ani_obj = {{}};",
-            f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
+            f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
             f"return ani_obj;",
         )
 

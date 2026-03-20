@@ -377,13 +377,16 @@ class ArkTsModule(ArkTsModuleOrNamespace):
 
     obj_drop = "_taihe_objDrop"
     obj_dup = "_taihe_objDup"
-    registry = "_taihe_registry"
-    native_invoke = "_taihe_nativeInvoke"
-    make_callback = "_taihe_makeCallback"
+    obj_registry = "_taihe_objRegistry"
+
+    callback_invoke = "_taihe_callbackInvoke"
+    callback_factory = "_taihe_callbackFactory"
+
     bigint_to_arrbuf = "_taihe_fromBigIntToArrayBuffer"
     arrbuf_to_bigint = "_taihe_fromArrayBufferToBigInt"
-    BEType = "_taihe_BusinessError"
-    ACType = "_taihe_AsyncCallback"
+
+    BE_type = "_taihe_BusinessError"
+    AC_type = "_taihe_AsyncCallback"
 
     @property
     def mod(self) -> "ArkTsModule":
@@ -641,13 +644,13 @@ class IfaceThunkKey:
 
 class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
     def __init__(self, am: AnalysisManager, c: IfaceThunkKey) -> None:
-        self.native_name = f"_taihe_{c.iface.name}_{c.method.name}_native"
+        self.sts_native = f"_taihe_{c.iface.name}_{c.method.name}_native"
         iface_ani_info = IfaceAniInfo.get(am, c.iface)
-        self.native_base_params: list[str] = [
+        self.sts_native_base_params: list[str] = [
             f"{iface_ani_info.vtbl_ptr}: long",
             f"{iface_ani_info.data_ptr}: long",
         ]
-        self.native_base_args: list[str] = [
+        self.sts_native_base_args: list[str] = [
             f"this.{iface_ani_info.vtbl_ptr}",
             f"this.{iface_ani_info.data_ptr}",
         ]
@@ -669,7 +672,7 @@ class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
 
 class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
-        self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
+        self.sts_reverse = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
 
     @classmethod
     @override
@@ -679,14 +682,14 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        self.native_name = f"_taihe_{f.name}_native"
-        self.native_base_params: list[str] = []
-        self.native_base_args: list[str] = []
+        self.sts_native = f"_taihe_{f.name}_native"
+        self.sts_native_base_params: list[str] = []
+        self.sts_native_base_args: list[str] = []
         self.c_native_base_params: list[str] = []
         func_cpp_user_info = GlobFuncCppUserInfo.get(am, f)
         self.c_native_call = func_cpp_user_info.full_name
 
-        self.reverse_name = f"_taihe_{f.name}_reverse"
+        self.sts_reverse = f"_taihe_{f.name}_reverse"
 
         self.static_scope = None
         self.ctor_scope = None
@@ -715,16 +718,16 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -740,7 +743,7 @@ class EnumObjectAniInfo(EnumAniInfo):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
 
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type}"
         self.ani_type = ANI_ENUM_ITEM
         self.ets_type = EtsEnumType(self.type_desc)
 
@@ -764,9 +767,9 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
 
         self.ani_type = ANI_REF
         ets_types: list[EtsNonPrimitiveType] = []
@@ -790,7 +793,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -810,16 +813,16 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -845,13 +848,13 @@ class StructObjectAniInfo(StructAniInfo):
         super().__init__(am, d)
 
         if ClassAttr.get(d):
-            self.sts_impl_name = self.sts_type_name
+            self.sts_impl = self.sts_type
         else:
-            self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.sts_factory_name = f"_taihe_{d.name}_ctor"
+            self.sts_impl = f"_taihe_{d.name}_inner"
+        self.sts_factory = f"_taihe_{d.name}_factory"
 
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
-        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type}"
+        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl}"
         self.ani_type = ANI_OBJECT
         self.ets_type = EtsClassType(self.type_desc)
 
@@ -901,7 +904,7 @@ class StructObjectAniInfo(StructAniInfo):
                 self.sts_local_fields.append(final)
 
     def is_class(self):
-        return self.sts_type_name == self.sts_impl_name
+        return self.sts_type == self.sts_impl
 
     @classmethod
     @override
@@ -923,17 +926,17 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
         if ClassAttr.get(d):
-            self.sts_impl_name = self.sts_type_name
+            self.sts_impl = self.sts_type
         else:
-            self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.sts_factory_name = f"_taihe_{d.name}_ctor"
+            self.sts_impl = f"_taihe_{d.name}_inner"
+        self.sts_factory = f"_taihe_{d.name}_factory"
 
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
-        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type}"
+        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl}"
         self.ani_type = ANI_OBJECT
         self.ets_type = EtsClassType(self.type_desc)
 
@@ -956,12 +959,12 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     def is_class(self):
-        return self.sts_type_name == self.sts_impl_name
+        return self.sts_type == self.sts_impl
 
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -2579,8 +2582,8 @@ class CallbackTypeAniInfo(TypeAniInfo):
         cpp_copy = f"{ani_after}_cpp_copy"
         cpp_scope = f"{ani_after}_cpp_scope"
         invoke_name = "invoke"
-        ani_cast_ptr = f"{ani_after}_ani_cast_ptr"
-        ani_func_ptr = f"{ani_after}_ani_func_ptr"
+        ani_invoke_ptr = f"{ani_after}_ani_invoke_ptr"
+        ani_vtbl_ptr = f"{ani_after}_ani_vtbl_ptr"
         ani_data_ptr = f"{ani_after}_ani_data_ptr"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         target.writelns(
@@ -2609,23 +2612,23 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 self.gen_native_invoke(target, invoke_name)
             target.writelns(
                 f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
-                f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
-                f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
+                f"ani_long {ani_invoke_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
+                f"ani_long {ani_vtbl_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
                 f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
                 f"{cpp_copy}.m_handle.data_ptr = nullptr;",
-                f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+                f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.callback_factory}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_invoke_ptr}, {ani_vtbl_ptr}, {ani_data_ptr});',
             )
 
     def gen_native_invoke(
         self,
         target: CSourceWriter,
-        cpp_cast_ptr: str,
+        cpp_invoke_ptr: str,
     ):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.t)
         params_ani = []
         args_ani = []
         params_ani.append("[[maybe_unused]] ani_env* env")
-        params_ani.append("[[maybe_unused]] ani_long ani_func_ptr")
+        params_ani.append("[[maybe_unused]] ani_long ani_vtbl_ptr")
         params_ani.append("[[maybe_unused]] ani_long ani_data_ptr")
         for i in range(16):
             arg_ani = f"ani_arg_{i}"
@@ -2638,11 +2641,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
             vals_cpp.append(val_cpp)
         return_ty_ani_name = "ani_ref"
         with target.indented(
-            f"static {return_ty_ani_name} {cpp_cast_ptr}({params_ani_str}) {{",
+            f"static {return_ty_ani_name} {cpp_invoke_ptr}({params_ani_str}) {{",
             f"}};",
         ):
             target.writelns(
-                f"{self.cpp_info.as_param}::vtable_type* cpp_vtbl_ptr = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_func_ptr);",
+                f"{self.cpp_info.as_param}::vtable_type* cpp_vtbl_ptr = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_vtbl_ptr);",
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
