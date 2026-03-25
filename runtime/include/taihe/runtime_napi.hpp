@@ -36,23 +36,6 @@ void set_type_error(::taihe::string_view msg, ::taihe::string_view errcode = "")
 void set_range_error(::taihe::string_view msg, ::taihe::string_view errcode = "");
 bool has_error();
 
-class EnvGuard {
-public:
-    explicit EnvGuard(napi_env env = nullptr);
-    ~EnvGuard();
-
-    EnvGuard(EnvGuard const &) = delete;
-    EnvGuard &operator=(EnvGuard const &) = delete;
-
-    napi_env env() const
-    {
-        return env_;
-    }
-
-private:
-    napi_env env_;
-};
-
 }  // namespace taihe
 
 #define NAPI_CALL(env, call)                                                                \
