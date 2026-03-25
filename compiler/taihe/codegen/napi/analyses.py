@@ -936,31 +936,23 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
+        base_tsfn_data_type = "tsfn_callback"
+        destruct_data_type = "destruct_data"
+        
         cpp_impl_class = f"{cpp_result}_cpp_impl_t"
         cpp_cb_data_type = f"{cpp_result}_cb_data"
+        cpp_cb_data = "cb_data"
+
         cpp_inputs = []
         target.add_include("optional")
         with target.indented(
-            f"struct {cpp_cb_data_type} {{",
+            f"struct {base_tsfn_data_type} {{",
             f"}};",
         ):
             target.writelns(
-                f"bool completed = false;",
-                f"std::mutex mutex;",
-                f"std::condition_variable cv;",
+                f"virtual void operator()(napi_env env) = 0;",
+                f"virtual ~{base_tsfn_data_type}() {{}};",
             )
-            for index, param in enumerate(self.type.ref.params):
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                cpp_input = f"cpp_input_{index}"
-                target.writelns(
-                    f"std::optional<{param_ty_cpp_info.as_owner}> {cpp_input};",
-                )
-                cpp_inputs.append(cpp_input)
-            if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                target.writelns(
-                    f"std::optional<{return_ty_cpp_info.as_owner}> cpp_result;",
-                )
 
         napi_resname = f"napi_resname"
         with target.indented(
@@ -969,15 +961,15 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         ):
             target.writelns(
                 f"napi_env env;",
-                f"napi_ref ref;",
-                f"napi_threadsafe_function tsfn;",
+                f"napi_ref _ref;",
+                f"napi_threadsafe_function _tsfn;",
             )
             with target.indented(
-                f"{cpp_impl_class}(napi_env env, napi_value callback): env(env), ref(nullptr), tsfn(nullptr) {{",
+                f"{cpp_impl_class}(napi_env env, napi_value callback): env(env), _ref(nullptr), _tsfn(nullptr) {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"NAPI_CALL(env, napi_create_reference(env, callback, 1, &ref));",
+                    f"NAPI_CALL(env, napi_create_reference(env, callback, 1, &_ref));",
                     f"napi_value {napi_resname};",
                     f'NAPI_CALL(env, napi_create_string_utf8(env, "MyWorkResource", NAPI_AUTO_LENGTH, &{napi_resname}));',
                 )
@@ -987,7 +979,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 ):
                     target.writelns(
                         f"env,",
-                        f"callback,",
+                        f"nullptr,",
                         f"nullptr,",
                         f"{napi_resname},",
                         f"0,",
@@ -1001,69 +993,77 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"}},",
                     ):
                         target.writelns(
-                            f"{cpp_cb_data_type}* cpp_cb =static_cast<{cpp_cb_data_type}*>(data);",
-                            f"napi_value global = nullptr;",
-                            f"NAPI_CALL(env, napi_get_global(env, &global));",
-                        )
-                        inner_napi_args = []
-                        for index, param in enumerate(self.type.ref.params):
-                            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-                            inner_napi_arg = f"napi_arg_{index}"
-                            inner_napi_args.append(inner_napi_arg)
-                            param_ty_napi_info.into_napi(
-                                target,
-                                f"(*(cpp_cb->{cpp_inputs[index]}))",
-                                inner_napi_arg,
-                            )
-                        inner_napi_args_str = ", ".join(inner_napi_args)
-                        if len(self.type.ref.params) != 0:
-                            target.writelns(
-                                f"napi_value napi_argv[{len(self.type.ref.params)}] = {{{inner_napi_args_str}}};",
-                            )
-                        else:
-                            target.writelns(
-                                f"napi_value napi_argv[] = {{}};",
-                            )
-                        inner_napi_res = "napi_result"
-                        inner_cpp_res = "cpp_result"
-                        target.writelns(
-                            f"napi_value {inner_napi_res} = nullptr;",
-                            f"NAPI_CALL(env, napi_call_function(env, global, js_cb, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
-                        )
-                        if isinstance(
-                            return_ty := self.type.ref.return_ty, NonVoidType
-                        ):
-                            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                            return_ty_napi_info.from_napi(
-                                target, inner_napi_res, inner_cpp_res
-                            )
-                            target.writelns(
-                                f"cpp_cb->cpp_result = {inner_cpp_res};",
-                            )
-                        target.writelns(
-                            f"cpp_cb->completed = true;",
-                            f"cpp_cb->cv.notify_one();",
+                            f"{base_tsfn_data_type}* cpp_cb =static_cast<{base_tsfn_data_type}*>(data);",
+                            f"(*cpp_cb)(env);",
                         )
                     target.writelns(
-                        f"&tsfn",
+                        f"&_tsfn",
                     )
+                target.writelns(
+                    f"napi_unref_threadsafe_function(env, _tsfn);",
+                )
             with target.indented(
                 f"~{cpp_impl_class}() {{",
                 f"}}",
             ):
                 with target.indented(
-                    f"if (ref) {{",
+                    f"if (_ref) {{",
                     f"}}",
                 ):
-                    target.writelns(
-                        f"NAPI_CALL(env, napi_delete_reference(env, ref));",
-                    )
+                    with target.indented(
+                        f"if (::taihe::_is_main_thread()) {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"NAPI_CALL(env, napi_delete_reference(env, _ref));",
+                        )
+                    with target.indented(
+                        f"else {{",
+                        f"}}",
+                    ):
+                        with target.indented(
+                            f"struct {destruct_data_type}: {base_tsfn_data_type} {{",
+                            f"}};",
+                        ):
+                            target.writelns(
+                                f"bool completed = false;",
+                                f"std::mutex mutex;",
+                                f"std::condition_variable cv;",
+                                f"napi_ref ref;",
+                            )
+                            with target.indented(
+                                f"void operator()(napi_env env) override {{",
+                                f"}}",
+                            ):
+                                target.writelns(
+                                    f"NAPI_CALL(env, napi_delete_reference(env, this->ref));",
+                                    f"this->completed = true;",
+                                    f"this->cv.notify_one();",
+                                )
+                        target.writelns(
+                            f"{destruct_data_type} del_ref_data;",
+                            f"del_ref_data.ref = _ref;",
+                        )
+                        with target.indented(
+                            f"NAPI_CALL(env, napi_call_threadsafe_function(",
+                            f"));",
+                        ):
+                            target.writelns(
+                                f"_tsfn,",
+                                f"static_cast<{base_tsfn_data_type}*>(&del_ref_data),",
+                                f"napi_tsfn_blocking",
+                            )
+                        target.writelns(
+                            f"std::unique_lock<std::mutex> lock(del_ref_data.mutex);",
+                            f"del_ref_data.cv.wait(lock, [&del_ref_data] {{ return del_ref_data.completed; }});",
+                        )
+
                 with target.indented(
-                    f"if (tsfn) {{",
+                    f"if (_tsfn) {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"NAPI_CALL(env, napi_release_threadsafe_function(tsfn, napi_tsfn_release));",
+                        f"NAPI_CALL(env, napi_release_threadsafe_function(_tsfn, napi_tsfn_release));",
                     )
 
             inner_cpp_params = []
@@ -1114,7 +1114,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     target.writelns(
                         f"napi_value {inner_napi_res} = nullptr;",
                         f"napi_value cb_ref = nullptr, global = nullptr;",
-                        f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
+                        f"NAPI_CALL(env, napi_get_reference_value(env, _ref, &cb_ref));",
                         f"napi_get_global(env, &global);",
                         f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
                     )
@@ -1130,13 +1130,85 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         target.writelns(
                             f"return;",
                         )
-                cpp_cb_data = "cb_data"
                 with target.indented(
                     f"else {{",
                     f"}}",
                 ):
+                    with target.indented(
+                        f"struct {cpp_cb_data_type}: {base_tsfn_data_type} {{",
+                        f"}};",
+                    ):
+                        target.writelns(
+                            f"bool completed = false;",
+                            f"std::mutex mutex;",
+                            f"std::condition_variable cv;",
+                            f"napi_ref ref;",
+                        )
+                        for index, param in enumerate(self.type.ref.params):
+                            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                            cpp_input = f"cpp_input_{index}"
+                            target.writelns(
+                                f"std::optional<{param_ty_cpp_info.as_owner}> {cpp_input};",
+                            )
+                            cpp_inputs.append(cpp_input)
+                        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                            target.writelns(
+                                f"std::optional<{return_ty_cpp_info.as_owner}> cpp_result;",
+                            )
+                        with target.indented(
+                            f"void operator()(napi_env env) override {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"napi_value global = nullptr;",
+                                f"NAPI_CALL(env, napi_get_global(env, &global));",
+                            )
+                            inner_napi_args = []
+                            for index, param in enumerate(self.type.ref.params):
+                                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+                                inner_napi_arg = f"napi_arg_{index}"
+                                inner_napi_args.append(inner_napi_arg)
+                                param_ty_napi_info.into_napi(
+                                    target,
+                                    f"(*(this->{cpp_inputs[index]}))",
+                                    inner_napi_arg,
+                                )
+                            inner_napi_args_str = ", ".join(inner_napi_args)
+                            if len(self.type.ref.params) != 0:
+                                target.writelns(
+                                    f"napi_value napi_argv[{len(self.type.ref.params)}] = {{{inner_napi_args_str}}};",
+                                )
+                            else:
+                                target.writelns(
+                                    f"napi_value napi_argv[] = {{}};",
+                                )
+                            inner_napi_res = "napi_result"
+                            inner_cpp_res = "cpp_result"
+                            target.writelns(
+                                f"napi_value {inner_napi_res} = nullptr;",
+                                f"napi_value cb = nullptr;",
+                                f"NAPI_CALL(env, napi_get_reference_value(env, this->ref, &cb));",
+                                f"NAPI_CALL(env, napi_call_function(env, global, cb, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
+                            )
+                            if isinstance(
+                                return_ty := self.type.ref.return_ty, NonVoidType
+                            ):
+                                return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                                return_ty_napi_info.from_napi(
+                                    target, inner_napi_res, inner_cpp_res
+                                )
+                                target.writelns(
+                                    f"this->cpp_result = {inner_cpp_res};",
+                                )
+                            target.writelns(
+                                f"this->completed = true;",
+                                f"this->cv.notify_one();",
+                            )
+                        
                     target.writelns(
                         f"{cpp_cb_data_type} {cpp_cb_data};",
+                        f"{cpp_cb_data}.ref = _ref;"
                     )
                     for index, param in enumerate(self.type.ref.params):
                         target.writelns(
@@ -1147,7 +1219,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"));",
                     ):
                         target.writelns(
-                            f"tsfn,",
+                            f"_tsfn,",
                             f"&{cpp_cb_data},",
                             f"napi_tsfn_blocking",
                         )
