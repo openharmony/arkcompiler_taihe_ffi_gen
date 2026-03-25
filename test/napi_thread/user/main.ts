@@ -15,7 +15,11 @@
 
 const lib = requireNapi('./thread_test.so', RequireBaseDir.SCRIPT_DIR);
 
-function main() {
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function main() {
     console.log("start");
     try {
         lib.invokeFromOtherThreadAfter(1.0, (a: number): number => {
@@ -29,6 +33,7 @@ function main() {
     let start = Date.now();
     while (Date.now() - start < 2000) {
         // do nothing
+        await sleep(20);
     }
 }
 
