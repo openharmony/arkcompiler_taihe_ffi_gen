@@ -46,6 +46,8 @@ struct MixedRefTuple {
     age: i32;
     score: f64;
     active: bool;
+    metadata: @record Map<String, String>;
+    callback: Optional<(data: String) => void>;
 }
 
 // Tuple as function return value (pass out)
@@ -65,7 +67,7 @@ function MakeStringPair(k: String, v: String): StringPair;
 function ConcatStringPair(p: StringPair): String;
 
 // Mixed ref tuple
-function MakeMixedRef(name: String, age: i32, score: f64, active: bool): MixedRefTuple;
+function MakeMixedRef(name: String, age: i32, score: f64, active: bool, metadata: Map<String, String>): MixedRefTuple;
 function DescribeMixedRef(m: MixedRefTuple): String;
 
 // Array of tuples
@@ -147,3 +149,68 @@ function MakeMyTuple16(
 ): MyTuple16;
 
 function SumMyTuple16(t: MyTuple16): i32;
+
+// Empty tuple is not supported since taihe does not allow zero-field struct
+// @tuple struct EmtyTuple {}
+
+// @optional actually has no effect on tuple fields since TS does not support optional fields in tuples
+// @tuple struct TupleWithOptionalField {
+//     @optional a: Optional<String>;
+// }
+
+// Single-field tuple
+@tuple struct SingleFieldTuple {
+    value: i32;
+}
+
+function MakeSingleFieldTuple(v: i32): SingleFieldTuple;
+function GetSingleFieldValue(t: SingleFieldTuple): i32;
+
+// Nested tuples
+@tuple struct InnerTuple {
+    a: i32;
+    b: String;
+}
+
+@tuple struct MiddleTuple {
+    a: i32;
+    b: InnerTuple;
+}
+
+@tuple struct OuterTuple {
+    a: i32;
+    b: MiddleTuple;
+}
+
+function MakeOuterTuple(a: i32, b: i32, c: i32, s: String): OuterTuple;
+function DescribeOuterTuple(t: OuterTuple): String;
+
+// Tuple with enum, struct, union, interface fields
+enum Color: i32 {
+    Red,
+    Green,
+    Blue,
+}
+
+struct Point {
+    x: f64;
+    y: f64;
+}
+
+union NameOrId {
+    name: String;
+    id: i32;
+}
+
+interface Printable {
+    print(): String;
+}
+
+@tuple struct ComplexTuple {
+    color: Color;
+    point: Point;
+    nameOrId: NameOrId;
+    printable: Printable;
+}
+
+function DescribeComplexTuple(t: ComplexTuple): String;
