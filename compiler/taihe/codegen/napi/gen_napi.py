@@ -881,7 +881,7 @@ class NapiCodeGenerator:
         ):
             base_tsfn_data_type = "tsfn_callback"
             destruct_data_type = "destruct_data"
-            
+
             iface_napi_impl_target.add_include("optional")
             with iface_napi_impl_target.indented(
                 f"struct {base_tsfn_data_type} {{",
@@ -1006,7 +1006,9 @@ class NapiCodeGenerator:
 
                 for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
-                        self.gen_iface_napi_method(method, base_tsfn_data_type, iface_napi_impl_target)
+                        self.gen_iface_napi_method(
+                            method, base_tsfn_data_type, iface_napi_impl_target
+                        )
             iface_napi_impl_target.writelns(
                 f"return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, napi_obj);",
             )
@@ -1019,7 +1021,7 @@ class NapiCodeGenerator:
     ):
         iface_method_data_type = "iface_method_data_type"
         iface_method_data = "iface_method_data"
-        
+
         method_napi_info = IfaceMethodNapiInfo.get(self.am, method)
         params_cpp = []
         for param in method.params:
@@ -1144,9 +1146,7 @@ class NapiCodeGenerator:
                             f"NAPI_CALL(env, napi_get_reference_value(env, this->ref, &cb));",
                             f"NAPI_CALL(env, napi_call_function(env, global, cb, {len(method.params)}, napi_argv, &{inner_napi_res}));",
                         )
-                        if isinstance(
-                            return_ty := method.return_ty, NonVoidType
-                        ):
+                        if isinstance(return_ty := method.return_ty, NonVoidType):
                             return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
                             return_ty_napi_info.from_napi(
                                 iface_napi_impl_target, inner_napi_res, inner_cpp_res
@@ -1158,10 +1158,10 @@ class NapiCodeGenerator:
                             f"this->completed = true;",
                             f"this->cv.notify_one();",
                         )
-                    
+
                 iface_napi_impl_target.writelns(
                     f"{iface_method_data_type} {iface_method_data};",
-                    f"{iface_method_data}.ref = _ref;"
+                    f"{iface_method_data}.ref = _ref;",
                 )
                 for index, param in enumerate(method.params):
                     iface_napi_impl_target.writelns(

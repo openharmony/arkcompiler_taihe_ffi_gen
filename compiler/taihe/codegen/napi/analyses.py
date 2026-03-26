@@ -938,7 +938,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
     ):
         base_tsfn_data_type = "tsfn_callback"
         destruct_data_type = "destruct_data"
-        
+
         cpp_impl_class = f"{cpp_result}_cpp_impl_t"
         cpp_cb_data_type = f"{cpp_result}_cb_data"
         cpp_cb_data = "cb_data"
@@ -1151,7 +1151,9 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                                 f"std::optional<{param_ty_cpp_info.as_owner}> {cpp_input};",
                             )
                             cpp_inputs.append(cpp_input)
-                        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                        if isinstance(
+                            return_ty := self.type.ref.return_ty, NonVoidType
+                        ):
                             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                             target.writelns(
                                 f"std::optional<{return_ty_cpp_info.as_owner}> cpp_result;",
@@ -1194,7 +1196,9 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                             if isinstance(
                                 return_ty := self.type.ref.return_ty, NonVoidType
                             ):
-                                return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                                return_ty_napi_info = TypeNapiInfo.get(
+                                    self.am, return_ty
+                                )
                                 return_ty_napi_info.from_napi(
                                     target, inner_napi_res, inner_cpp_res
                                 )
@@ -1205,10 +1209,10 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                                 f"this->completed = true;",
                                 f"this->cv.notify_one();",
                             )
-                        
+
                     target.writelns(
                         f"{cpp_cb_data_type} {cpp_cb_data};",
-                        f"{cpp_cb_data}.ref = _ref;"
+                        f"{cpp_cb_data}.ref = _ref;",
                     )
                     for index, param in enumerate(self.type.ref.params):
                         target.writelns(
