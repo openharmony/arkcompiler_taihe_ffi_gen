@@ -17,7 +17,6 @@ from collections.abc import Collection
 from json import dumps
 
 from taihe.codegen.abi.analyses import IfaceAbiInfo
-from taihe.codegen.napi.attributes import ReadOnlyAttr
 from taihe.codegen.napi.analyses import (
     EnumNapiInfo,
     GlobFuncNapiInfo,
@@ -29,6 +28,7 @@ from taihe.codegen.napi.analyses import (
     TypeNapiInfo,
     UnionNapiInfo,
 )
+from taihe.codegen.napi.attributes import ReadOnlyAttr
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
     EnumDecl,
