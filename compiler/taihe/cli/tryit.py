@@ -15,6 +15,7 @@
 
 import argparse
 import logging
+import shutil
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -22,6 +23,7 @@ from pathlib import Path
 from taihe.driver.toolchain import (
     ArkToolchain,
     CppToolchain,
+    TsToolchain,
     clean_directory,
     create_directory,
     extract_file,
@@ -104,7 +106,7 @@ class BuildSystem(ABC):
 
         clean_directory(self.generated_dir)
 
-        logger.info("Generating author and ani codes...")
+        logger.info("Generating author and bridge codes...")
 
         # Generate author codes
         backend_names: list[str] = []
@@ -121,7 +123,7 @@ class BuildSystem(ABC):
 
     def build(self, opt_level: str) -> None:
         """Run the complete build process."""
-        logger.info("Starting ANI compilation...")
+        logger.info("Starting cpp compilation...")
 
         # Clean and prepare the build directory
         clean_directory(self.build_dir)
@@ -400,9 +402,167 @@ class StsBuildSystem(BuildSystem):
         logger.info("Done, time = %f s", elapsed_time)
 
 
+class TsBuildSystem(BuildSystem):
+    def __init__(
+        self,
+        target_dir: str,
+        verbosity: int = logging.INFO,
+    ):
+        super().__init__(target_dir, verbosity)
+
+        self.ts_toolchain = TsToolchain()
+
+        self.user_dir = self.target_path / "user"
+        self.generate_proxy_dir = self.generated_dir / "proxy"
+
+        self.build_generated_dir = self.build_dir / "generated"
+
+        self.runtime_includes = [
+            RuntimeHeader.resolve_path(),
+        ]
+        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
+        self.author_includes = [*self.generated_includes, self.author_include_dir]
+
+        self.runtime_sys_includes = [
+            self.ts_toolchain.sdk.bounds_checking_function_header_dir,
+            self.ts_toolchain.sdk.interfaces_inner_api,
+            self.ts_toolchain.sdk.interfaces_kits,
+            self.ts_toolchain.sdk.libuv_header_dir,
+            self.ts_toolchain.sdk.native_engine,
+            self.ts_toolchain.sdk.native_engine_impl_ark,
+            self.ts_toolchain.sdk.node_src,
+        ]
+        self.generated_sys_includes = self.runtime_sys_includes
+        self.author_sys_includes = self.runtime_sys_includes
+
+        runtime_src_dir = RuntimeSource.resolve_path()
+        self.runtime_sources = [
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
+            runtime_src_dir / "runtime_napi.cpp",
+        ]
+
+        self.abc_target = self.build_dir / "main.abc"
+
+        self.lib_files = []
+        self.user_backend_names = ["napi-bridge"]
+
+    def _create_user_files(self) -> None:
+        """Create a simple example user TS file."""
+        create_directory(self.user_dir)
+        with open(self.user_dir / "main.ts", "w") as f:
+            f.write(
+                f"const hello = requireNapi('./hello.so', RequireBaseDir.SCRIPT_DIR);\n"
+                f"\n"
+                f"function main() {{\n"
+                f"    hello.sayHello();\n"
+                f"}}\n"
+                f"main()\n"
+            )
+
+    def _compile_shared_library(self, opt_level: str):
+        create_directory(self.build_runtime_src_dir)
+        create_directory(self.build_generated_src_dir)
+        create_directory(self.build_author_src_dir)
+
+        runtime_objects = self.cpp_toolchain.compile(
+            self.build_runtime_src_dir,
+            self.runtime_sources,
+            self.runtime_includes,
+            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
+            system_include_dirs=self.runtime_sys_includes,
+        )
+
+        generated_objects = self.cpp_toolchain.compile(
+            self.build_generated_src_dir,
+            self.generated_src_dir.glob("*.[cC]*"),
+            self.generated_includes,
+            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
+            system_include_dirs=self.generated_sys_includes,
+        )
+
+        author_objects = self.cpp_toolchain.compile(
+            self.build_author_src_dir,
+            self.author_src_dir.glob("*.[cC]*"),
+            self.author_includes,
+            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
+            system_include_dirs=self.author_sys_includes,
+        )
+
+        # TODO: One node file corresponds to multiple ts files
+        for path in self.generated_dir.glob("*.d.ts"):
+            file_name = path.with_suffix("").stem
+
+            so_target = self.build_dir / f"{file_name}.so"
+            # Link all objects
+            if all_objects := runtime_objects + generated_objects + author_objects:
+                self.cpp_toolchain.link(
+                    so_target,
+                    all_objects,
+                    shared=True,
+                    link_options=[
+                        f"-L{self.ts_toolchain.sdk.lib_dir}",
+                        f"-lace_napi",
+                        f"-luv",
+                        f"-lhmicuuc",
+                        f"-lark_jsruntime",
+                        f"-lsec_shared",
+                        f"-lhmicui18n",
+                        f"-lark_jsoptimizer",
+                    ],
+                )
+                logger.info("Shared library compiled: %s", so_target)
+            else:
+                logger.warning(
+                    "No object files to link, skipping shared library compilation"
+                )
+
+    def _compile_user_executable(self, opt_level: str) -> None:
+        """Compile TS files."""
+        logger.info("Compile TS files...")
+
+        paths: dict[str, Path] = {}
+        for path in self.generated_dir.glob("*.d.ts"):
+            file_name = path.with_suffix("").stem
+            paths[file_name] = path
+
+        for proxy_file in self.generate_proxy_dir.glob("*.ts"):
+            new_proxy_file = self.build_dir / proxy_file.name
+            shutil.copy2(proxy_file, new_proxy_file)
+
+            proxy_abc_target = self.build_dir / f"{proxy_file.stem}.abc"
+            self.ts_toolchain.compile(
+                new_proxy_file,
+                proxy_abc_target,
+            )
+
+        for user_file in self.user_dir.glob("*.ts"):
+            new_user_file = self.build_dir / user_file.name
+            shutil.copy2(user_file, new_user_file)
+
+            user_abc_target = self.build_dir / f"{user_file.stem}.abc"
+            self.ts_toolchain.compile(
+                new_user_file,
+                user_abc_target,
+            )
+
+    def _run_user_executable(self) -> None:
+        """Run the JS file with node."""
+        logger.info("Running ABC file with Ark runtime...")
+
+        if self.abc_target.exists():
+            elapsed_time = self.ts_toolchain.run(
+                self.abc_target,
+            )
+            logger.info("Done, time = %f s", elapsed_time)
+        else:
+            logger.warning("No main ABC file to run, skipping execution")
+
+
 BUILD_MODES = {
     "cpp": CppBuildSystem,
     "sts": StsBuildSystem,
+    "ts": TsBuildSystem,
 }
 
 

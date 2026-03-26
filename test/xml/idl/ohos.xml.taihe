@@ -52,16 +52,16 @@ enum EventType: i32 {
 }
 
 interface ParseInfo {
-    getColumnNumber(): u64;
-    getDepth(): u64;
-    getLineNumber(): u64;
+    getColumnNumber(): u32;
+    getDepth(): u32;
+    getLineNumber(): u32;
     getName(): String;
     getNamespace(): String;
     getPrefix(): String;
     getText(): String;
     isEmptyElementTag(): bool;
     isWhitespace(): bool;
-    getAttributeCount(): u64;
+    getAttributeCount(): u32;
 }
 
 struct ParseOptions {

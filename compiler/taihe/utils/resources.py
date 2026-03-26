@@ -536,6 +536,74 @@ class TaiheNapiBuild(CachedResource):
         return self
 
 
+@dataclass
+class NapiSdk(CachedResource):
+    CLI_NAME = "napi-sdk"
+    PATH_CACHE = "napi-sdk"
+    VERSION: Final = "napi-sdk-0.1"
+    URL: Final = "https://gitcode.com/m0_52007851/panda_vm/releases/download/napi-0.1"
+
+    # Computed attributes
+    bounds_checking_function_header_dir: Path = field(init=False)
+    interfaces_inner_api: Path = field(init=False)
+    interfaces_kits: Path = field(init=False)
+    libuv_header_dir: Path = field(init=False)
+    native_engine: Path = field(init=False)
+    native_engine_impl_ark: Path = field(init=False)
+    node_src: Path = field(init=False)
+    es2abc: Path = field(init=False)
+    napi_runner: Path = field(init=False)
+    lib_dir: Path = field(init=False)
+
+    def __post_init__(self):
+        self.bounds_checking_function_header_dir = (
+            self.base_path / "bounds_checking_function" / "include"
+        )
+        self.interfaces_inner_api = self.base_path / "interfaces" / "inner_api"
+        self.interfaces_kits = self.base_path / "interfaces" / "kits"
+        self.libuv_header_dir = self.base_path / "libuv" / "include"
+        self.native_engine = self.base_path / "native_engine"
+        self.native_engine_impl_ark = self.base_path / "native_engine" / "impl" / "ark"
+        self.node_src = self.base_path / "node" / "src"
+        self.es2abc = self.base_path / "bin" / "es2abc"
+        self.napi_runner = self.base_path / "bin" / "napi_runner"
+        self.lib_dir = self.base_path / "lib"
+
+    def _read_version(self) -> str:
+        try:
+            version_file = self.base_path / "version.txt"
+            return version_file.read_text().strip()
+        except (FileNotFoundError, OSError):
+            return ""
+
+    def _write_version(self, version: str):
+        version_file = self.base_path / "version.txt"
+        version_file.write_text(version)
+
+    @override
+    @classmethod
+    def locate(cls, ctx: ResourceContext) -> Path:
+        base_dir = super().locate(ctx)
+        return base_dir / "napi-sdk"
+
+    @override
+    def exists(self) -> bool:
+        return self._read_version() == self.VERSION
+
+    @override
+    def fetch(self):
+        tgz = self.base_path.parent / f"{self.VERSION}.tgz"
+        url = f"{self.URL}/{self.VERSION}.tgz"
+        if not tgz.exists():
+            fetch_url(url, tgz)
+
+        shutil.rmtree(self.base_path, ignore_errors=True)
+        with tarfile.open(tgz, "r:gz") as tar:
+            tar.extractall(self.base_path.parent, filter="tar")
+
+        self._write_version(self.VERSION)
+
+
 class PythonBuild(CachedResource):
     CLI_NAME = "python-packages"
     PATH_CACHE = "python-packages"
@@ -658,6 +726,7 @@ ALL_RESOURCES: Sequence[ResourceT] = [
     *BUILTIN_RESOURCES,
     PandaVm,
     TaiheNapiBuild,
+    NapiSdk,
     PythonBuild,
     Antlr,
 ]
