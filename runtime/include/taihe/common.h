@@ -34,6 +34,8 @@
         }                                                                      \
     } while (0)
 
+#define TH_VISIBLE __attribute__((visibility("default")))
+
 #ifdef __cplusplus
 #define TH_EXPORT extern "C" __attribute__((visibility("default")))
 #else

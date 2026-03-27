@@ -313,7 +313,7 @@ class NapiCodeGenerator:
                 indent="",
             ):
                 target.writelns(
-                    f"napi_value NapiInit(napi_env env, napi_value exports);",
+                    f"TH_VISIBLE napi_value NapiInit(napi_env env, napi_value exports);",
                 )
 
     def gen_module_init(
