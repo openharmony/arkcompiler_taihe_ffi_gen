@@ -69,7 +69,9 @@ class NapiCodeGenerator:
     def generate(self, pg: PackageGroup):
         for pkg in pg.iterate():
             self.gen_package(pkg)
-        self.gen_register(pg)
+        pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
+        for module, ns in pg_napi_info.module_dict.items():
+            self.gen_register(module, ns)
         self.gen_utils_file()
 
     def gen_ns_register(self, ns: Namespace, reg_obj: str, target: CSourceWriter):
@@ -90,19 +92,17 @@ class NapiCodeGenerator:
                 f"{pkg_napi_info.cpp_ns}::NapiInit(env, {reg_obj});",
             )
 
-    def gen_register(self, pg: PackageGroup):
+    def gen_register(self, module: str, ns: Namespace):
         with CSourceWriter(
             self.oc,
-            f"temp/napi_register.cpp",
+            f"temp/{module}.napi_register.cpp",
             group=None,
         ) as target:
-            pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
             with target.indented(
                 f"napi_value Init(napi_env env, napi_value exports) {{",
                 f"}}",
             ):
-                for ns in pg_napi_info.module_dict.values():
-                    self.gen_ns_register(ns, "exports", target)
+                self.gen_ns_register(ns, "exports", target)
                 target.writelns(
                     f"return exports;",
                 )
