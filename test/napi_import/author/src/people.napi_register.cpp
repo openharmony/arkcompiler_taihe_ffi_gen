@@ -12,22 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// This file is a test file.
-// NOLINTBEGIN
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-#pragma clang diagnostic warning "-Wextra"
-#pragma clang diagnostic warning "-Wall"
-#include "ohos.security.huks.huks.napi.h"
+
+#include "people.napi.h"
 
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    napi_value exports_huks;
-    napi_create_object(env, &exports_huks);
-    ohos::security::huks::huks::NapiInit(env, exports_huks);
-    NAPI_CALL(env, napi_set_named_property(env, exports, "huks", exports_huks));
+    people::NapiInit(env, exports);
     return exports;
 }
 
@@ -48,5 +42,3 @@ extern "C" __attribute__((constructor)) void RegisterEntryModule(void)
 }
 
 #pragma clang diagnostic pop
-
-// NOLINTEND

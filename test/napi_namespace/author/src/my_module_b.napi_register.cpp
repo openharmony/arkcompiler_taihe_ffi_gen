@@ -12,17 +12,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// This file is a test file.
-// NOLINTBEGIN
 
-#include "building.napi.h"
-#include "people.napi.h"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+
+#include "my_module_b.functiontest.napi.h"
 
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    building::NapiInit(env, exports);
-    people::NapiInit(env, exports);
+    napi_value exports_functiontest;
+    napi_create_object(env, &exports_functiontest);
+    my_module_b::functiontest::NapiInit(env, exports_functiontest);
+    NAPI_CALL(env, napi_set_named_property(env, exports, "functiontest", exports_functiontest));
     return exports;
 }
 
@@ -42,4 +44,4 @@ extern "C" __attribute__((constructor)) void RegisterEntryModule(void)
     napi_module_register(&demoModule);
 }
 
-// NOLINTEND
+#pragma clang diagnostic pop
