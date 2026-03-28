@@ -86,7 +86,10 @@ function testConcatStringPair() {
 
 // ====== Test 6: MixedRefTuple - mixed ref and primitive types ======
 function testMakeMixedRef() {
-    let t = TupleTest.makeMixedRef("Alice", 30, 95.5, true);
+    let metadata = new Record<string, string>();
+    metadata["key1"] = "value1";
+    metadata["key2"] = "value2";
+    let t = TupleTest.makeMixedRef("Alice", 30, 95.5, true, metadata);
     console.log(
         "makeMixedRef: [" + t[0] + ", " + t[1] + ", " + t[2] + ", " + t[3] +
         "]");
@@ -94,13 +97,23 @@ function testMakeMixedRef() {
     arktest.assertEQ(t[1], 30);
     arktest.assertTrue(t[2] > 95.4 && t[2] < 95.6);
     arktest.assertEQ(t[3], true);
+    arktest.assertEQ(t[4]["key1"], "value1");
+    arktest.assertEQ(t[4]["key2"], "value2");
+    arktest.assertEQ(t[5], undefined);
 }
 
 function testDescribeMixedRef() {
-    let t: TupleTest.MixedRefTuple = ["Bob", 25, 88.0, false];
+    let metadata = new Record<string, string>();
+    metadata["info"] = "data";
+    let t: TupleTest.MixedRefTuple = [
+        "Bob", 25, 88.0, false, metadata,
+        (data: String) => {
+            console.log("Callback: " + data);
+        }
+    ];
     let desc = TupleTest.describeMixedRef(t);
     console.log("describeMixedRef: " + desc);
-    arktest.assertEQ(desc, "Bob,25,88,false");
+    arktest.assertEQ(desc, "[Bob,25,88,false,{info:data,},callback]");
 }
 
 // ====== Test 7: Array<IntPair> - tuple as Array element ======
@@ -248,6 +261,57 @@ function testSumMyTuple16() {
     arktest.assertEQ(result, sum);
 }
 
+function testMakeSingleFieldTuple() {
+    let t = TupleTest.makeSingleFieldTuple(42);
+    console.log("MakeSingleFieldTuple: " + t[0]);
+    arktest.assertEQ(t[0], 42);
+}
+
+function testGetSingleFieldValue() {
+    let t: TupleTest.SingleFieldTuple = [99];
+    let v = TupleTest.getSingleFieldValue(t);
+    console.log("GetSingleFieldValue: " + v);
+    arktest.assertEQ(v, 99);
+}
+
+function testMakeOuterTuple() {
+    let t = TupleTest.makeOuterTuple(1, 2, 3, "test");
+    console.log("MakeOuterTuple: " + t);
+    arktest.assertEQ(t[0], 1);
+    arktest.assertEQ(t[1][0], 2);
+    arktest.assertEQ(t[1][1][0], 3);
+    arktest.assertEQ(t[1][1][1], "test");
+}
+
+function testDescribeOuterTuple() {
+    let t: TupleTest.OuterTuple = [10, [20, [30, "hello"]]];
+    let desc = TupleTest.describeOuterTuple(t);
+    console.log("DescribeOuterTuple: " + desc);
+    arktest.assertEQ(desc, "[10,[20,[30,hello]]]");
+}
+
+class MyPrintable implements TupleTest.Printable {
+    private value: String;
+    constructor(value: String) {
+        this.value = value;
+    }
+    print(): String {
+        return "MyPrintable(" + this.value + ")";
+    }
+}
+
+function testDescribeComplexTuple() {
+    let t: TupleTest.ComplexTuple = [
+        TupleTest.Color.Green,
+        {x: 1.5, y: 2.5},
+        "Alice",
+        new MyPrintable("data"),
+    ];
+    let desc = TupleTest.describeComplexTuple(t);
+    console.log("DescribeComplexTuple: " + desc);
+    arktest.assertEQ(desc, "[1,{x:1.5,y:2.5},Alice,MyPrintable(data)]");
+}
+
 // ====== Run all tests ======
 function main() {
     const suite = new arktest.ArkTestsuite("Tuple Tests");
@@ -269,6 +333,11 @@ function main() {
     suite.addTest("TransposeArrayMyTuple4", testTransposeArrayMyTuple4);
     suite.addTest("MakeMyTuple16", testMakeMyTuple16);
     suite.addTest("SumMyTuple16", testSumMyTuple16);
+    suite.addTest("MakeSingleFieldTuple", testMakeSingleFieldTuple);
+    suite.addTest("GetSingleFieldValue", testGetSingleFieldValue);
+    suite.addTest("MakeOuterTuple", testMakeOuterTuple);
+    suite.addTest("DescribeOuterTuple", testDescribeOuterTuple);
+    suite.addTest("DescribeComplexTuple", testDescribeComplexTuple);
 
     exit(suite.run());
 }
