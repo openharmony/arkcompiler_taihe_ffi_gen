@@ -12,22 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// This file is a test file.
-// NOLINTBEGIN
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-#pragma clang diagnostic warning "-Wextra"
-#pragma clang diagnostic warning "-Wall"
-#include "my_module_a.napi.h"
-#include "my_module_a.ns1.napi.h"
-#include "my_module_a.ns1.ns2.ns3.ns4.ns5.napi.h"
+
 #include "my_module_b.functiontest.napi.h"
 
-// implement the inject declare in .d.ts file
-// implement for inject overload functions
 #include "my_module_b_functiontest.h"
-#include "taihe/runtime.hpp"
 
 static napi_value my_module_a_concat(napi_env env, [[maybe_unused]] napi_callback_info info)
 {
@@ -68,9 +59,6 @@ static napi_value my_module_a_concat(napi_env env, [[maybe_unused]] napi_callbac
 
 napi_value Init_my_module_b_concat(napi_env env, napi_value exports)
 {
-    if (::taihe::get_env() == nullptr) {
-        ::taihe::set_env(env);
-    }
     napi_property_descriptor desc[] = {
         {"concat", nullptr, my_module_a_concat, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
@@ -81,35 +69,12 @@ napi_value Init_my_module_b_concat(napi_env env, napi_value exports)
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    napi_value ns_ns1;
-    napi_create_object(env, &ns_ns1);
-    my_module_a::ns1::NapiInit(env, ns_ns1);
-    napi_value ns_ns1_ns2;
-    napi_create_object(env, &ns_ns1_ns2);
-    napi_value ns_ns1_ns2_ns3;
-    napi_create_object(env, &ns_ns1_ns2_ns3);
-    napi_value ns_ns1_ns2_ns3_ns4;
-    napi_create_object(env, &ns_ns1_ns2_ns3_ns4);
-    napi_value ns_ns1_ns2_ns3_ns4_ns5;
-    napi_create_object(env, &ns_ns1_ns2_ns3_ns4_ns5);
-    my_module_a::ns1::ns2::ns3::ns4::ns5::NapiInit(env, ns_ns1_ns2_ns3_ns4_ns5);
-    my_module_a::ns1::ns2::ns3::ns4::ns5::NapiInit(env, exports);
-    NAPI_CALL(env, napi_set_named_property(env, ns_ns1_ns2_ns3_ns4, "ns5", ns_ns1_ns2_ns3_ns4_ns5));
-    NAPI_CALL(env, napi_set_named_property(env, ns_ns1_ns2_ns3, "ns4", ns_ns1_ns2_ns3_ns4));
-    NAPI_CALL(env, napi_set_named_property(env, ns_ns1_ns2, "ns3", ns_ns1_ns2_ns3));
-    NAPI_CALL(env, napi_set_named_property(env, ns_ns1, "ns2", ns_ns1_ns2));
-    my_module_a::ns1::NapiInit(env, exports);
-    NAPI_CALL(env, napi_set_named_property(env, exports, "ns1", ns_ns1));
-    my_module_a::NapiInit(env, exports);
-    napi_value ns_functiontest;
-    napi_create_object(env, &ns_functiontest);
-    my_module_b::functiontest::NapiInit(env, ns_functiontest);
+    napi_value exports_functiontest;
+    napi_create_object(env, &exports_functiontest);
+    my_module_b::functiontest::NapiInit(env, exports_functiontest);
 
     // Add register for concat function
-    Init_my_module_b_concat(env, ns_functiontest);
-
-    my_module_b::functiontest::NapiInit(env, exports);
-    NAPI_CALL(env, napi_set_named_property(env, exports, "functiontest", ns_functiontest));
+    Init_my_module_b_concat(env, exports_functiontest);
 
     // implement the inject declare in .d.ts file
     // implement for inject module const variable
@@ -118,6 +83,7 @@ napi_value Init(napi_env env, napi_value exports)
     napi_create_double(env, OFFSET, &value_rate);
     napi_set_named_property(env, exports, "rate", value_rate);
 
+    NAPI_CALL(env, napi_set_named_property(env, exports, "functiontest", exports_functiontest));
     return exports;
 }
 
@@ -138,5 +104,3 @@ extern "C" __attribute__((constructor)) void RegisterEntryModule(void)
 }
 
 #pragma clang diagnostic pop
-
-// NOLINTEND
