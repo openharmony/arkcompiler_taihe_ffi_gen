@@ -169,23 +169,28 @@ def run_core_tests(project_root: Path, **config: Path | str):
 def run_napi_tests(project_root: Path, **config: Path | str):
     log_stage("Run napi tests...")
     base_dir = project_root / "test"
-    
+
     # TODO: Waiting for expected system
     skip_dirs = ["napi_maythrow", "napi_error", "napi_async"]
-    
+
     for test_dir in base_dir.glob("napi_*"):
-        if test_dir.is_dir() and test_dir.name not in skip_dirs:
+        if (
+            test_dir.is_dir()
+            and test_dir.name not in skip_dirs
+            and any(test_dir.glob("idl/*.taihe"))
+        ):
             log_stage(f"Testing: {test_dir}")
             run_taihe_tryit(["test", "-u", "ts", test_dir], project_root)
         else:
             log_stage(f"Skipping: {test_dir}")
+
 
 def run_ani_test_build(
     project_root: Path,
     build_dir_name: str,
     enable_coverage: bool = True,
     taihec_path: Path | None = None,
-    panda_home: Path | str | None = None
+    panda_home: Path | str | None = None,
 ):
     build_dir = project_root / build_dir_name
 
@@ -205,14 +210,16 @@ def run_ani_test_build(
     build_cmd = ["cmake", "--build", str(build_dir), "--verbose"]
     run_command(build_cmd, cwd=project_root)
 
+
 def run_ani_tests(project_root: Path, **config: Path | str):
     log_stage("Run ANI tests...")
     run_ani_test_build(
         project_root,
         build_dir_name="build",
         enable_coverage=True,
-        panda_home=config.get("panda_home")
+        panda_home=config.get("panda_home"),
     )
+
 
 def run_bin_ani_tests(project_root: Path, **config: Path | str):
     log_stage("Run BIN-ANI tests...")
@@ -225,9 +232,12 @@ def run_bin_ani_tests(project_root: Path, **config: Path | str):
     if not taihe_bin_tar_path.exists():
         log_verbose("Downloading Taihe binary package...")
         try:
-            run_command(["curl", "-fSL", "-o", str(taihe_bin_tar_path), taihe_bin_tar_url], cwd=project_root)
+            run_command(
+                ["curl", "-fSL", "-o", str(taihe_bin_tar_path), taihe_bin_tar_url],
+                cwd=project_root,
+            )
         except CalledProcessError as e:
-            log_error(f"Failed to download Taihe binary package from {taihe_bin_tar_url}")
+            log_error(f"Failed to download Taihe binary package")
             log_error(f"curl exited with code {e.returncode}")
             raise
     else:
@@ -235,8 +245,14 @@ def run_bin_ani_tests(project_root: Path, **config: Path | str):
 
     if not taihe_bin_extract_dir.exists():
         log_verbose("Extracting Taihe binary package...")
-        run_command(["mkdir", "-p", str(taihe_bin_extract_dir)], cwd=project_root)
-        run_command(["tar", "-xzf", str(taihe_bin_tar_path), "-C", str(taihe_bin_extract_dir)], cwd=project_root)
+        run_command(
+            ["mkdir", "-p", str(taihe_bin_extract_dir)],
+            cwd=project_root,
+        )
+        run_command(
+            ["tar", "-xzf", str(taihe_bin_tar_path), "-C", str(taihe_bin_extract_dir)],
+            cwd=project_root,
+        )
     else:
         log_verbose("Taihe binary directory already exists. Skipping extraction.")
 
@@ -250,7 +266,7 @@ def run_bin_ani_tests(project_root: Path, **config: Path | str):
         build_dir_name="build_bin",
         enable_coverage=False,
         taihec_path=taihe_bin_path,
-        panda_home=config.get("panda_home")
+        panda_home=config.get("panda_home"),
     )
 
 

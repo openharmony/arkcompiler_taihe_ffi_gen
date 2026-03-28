@@ -86,7 +86,10 @@ class NapiTaiheBundle:
 
     def extract(self):
         self.napi_taihe_dir.mkdir(parents=True, exist_ok=True)
-        TaiheNapiBuild.resolve().extract_to(self.napi_taihe_dir, system=self.platform.value)
+        TaiheNapiBuild.resolve().extract_to(
+            self.napi_taihe_dir,
+            system=self.platform.value,
+        )
 
 
 class PythonBundle:
@@ -132,7 +135,7 @@ class PythonBundle:
                 'exec "$TAIHE_ROOT/_PYTHON_REL_" "$TAIHE_ROOT/_PYMOD_REL_" "$@"\n'
             )
 
-        python_path = self.pyrt_dir / f"bin"/ python_executable
+        python_path = self.pyrt_dir / "bin" / python_executable
         python_rel = python_path.relative_to(self.root_dir)
         pymod_path = (self.sitepkg_dir / pymod.replace(".", "/")).with_suffix(".py")
         pymod_rel = pymod_path.relative_to(self.root_dir)
