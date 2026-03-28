@@ -1993,7 +1993,6 @@ class StsOnOffFuncGenerator:
             with self.target.indented(
                 f"switch (type as string) {{",
                 f"}}",
-                indent="",
             ):
                 for on_off_cases in self.on_off_info.values():
                     for on_off_type, (
@@ -2007,8 +2006,9 @@ class StsOnOffFuncGenerator:
                                 args_sts, params_ty_sts_name, strict=False
                             )
                         )
+                        self.target.write_label(f'case "{on_off_type}":')
                         self.target.writelns(
-                            f'case "{on_off_type}": return {self.func_kind.call_from_local(orig_name)}({args_sts_str});',
+                            f"return {self.func_kind.call_from_local(orig_name)}({args_sts_str});",
                         )
                 self.target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -2044,7 +2044,6 @@ class StsOnOffFuncGenerator:
                 with self.target.indented(
                     f"switch (type) {{",
                     f"}}",
-                    indent="",
                 ):
                     for on_off_type, (
                         orig_name,
@@ -2057,8 +2056,9 @@ class StsOnOffFuncGenerator:
                                 args_sts, params_ty_sts_name, strict=True
                             )
                         )
+                        self.target.write_label(f'case "{on_off_type}":')
                         self.target.writelns(
-                            f'case "{on_off_type}": return {self.func_kind.call_from_local(orig_name)}({args_sts_str});',
+                            f"return {self.func_kind.call_from_local(orig_name)}({args_sts_str});",
                         )
                     self.target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -2127,7 +2127,6 @@ class StsOnOffCtorGenerator:
             with self.target.indented(
                 f"switch (type as object) {{",
                 f"}}",
-                indent="",
             ):
                 for on_off_cases in self.on_off_info.values():
                     for on_off_type, (
@@ -2141,8 +2140,9 @@ class StsOnOffCtorGenerator:
                                 args_sts, params_ty_sts_name, strict=False
                             )
                         )
+                        self.target.write_label(f'case "{on_off_type}":')
                         self.target.writelns(
-                            f'case "{on_off_type}": {self.ctor_kind.call_from_local(orig_name)}({args_sts_str});',
+                            f"{self.ctor_kind.call_from_local(orig_name)}({args_sts_str});",
                         )
                 self.target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -2178,7 +2178,6 @@ class StsOnOffCtorGenerator:
                 with self.target.indented(
                     f"switch (type) {{",
                     f"}}",
-                    indent="",
                 ):
                     for on_off_type, (
                         orig_name,
@@ -2191,8 +2190,9 @@ class StsOnOffCtorGenerator:
                                 args_sts, params_ty_sts_name, strict=True
                             )
                         )
+                        self.target.write_label(f'case "{on_off_type}":')
                         self.target.writelns(
-                            f'case "{on_off_type}": {self.ctor_kind.call_from_local(orig_name)}({args_sts_str});',
+                            f"{self.ctor_kind.call_from_local(orig_name)}({args_sts_str});",
                         )
                     self.target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",

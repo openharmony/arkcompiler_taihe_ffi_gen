@@ -1194,11 +1194,12 @@ class AniUnionImplGenerator:
             with self.target.indented(
                 f"switch (cpp_value.get_tag()) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
+                    tag = f"{union_cpp_info.full_name}::tag_t::{field.name}"
+                    self.target.write_label(f"case {tag}:")
                     with self.target.indented(
-                        f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
+                        f"{{",
                         f"}}",
                     ):
                         field_ani = f"ani_field_{field.name}"

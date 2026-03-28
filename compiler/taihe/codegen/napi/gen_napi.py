@@ -2708,11 +2708,12 @@ class NapiCodeGenerator:
             with union_napi_impl_target.indented(
                 f"switch (cpp_value.get_tag()) {{",
                 f"}}",
-                indent="",
             ):
                 for field in union.fields:
+                    tag = f"{union_cpp_info.full_name}::tag_t::{field.name}"
+                    union_napi_impl_target.write_label(f"case {tag}:")
                     with union_napi_impl_target.indented(
-                        f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
+                        f"{{",
                         f"}}",
                     ):
                         type_napi_info = TypeNapiInfo.get(self.am, field.ty)

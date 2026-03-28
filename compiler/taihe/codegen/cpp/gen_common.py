@@ -190,16 +190,12 @@ class CppEnumDefnGenerator:
                 f"struct {enum_cpp_info.name} {{",
                 f"}};",
             ):
-                self.target.writelns(
-                    f"public:",
-                )
+                self.target.write_label(f"public:")
                 self.gen_enum_key_type()
                 self.gen_enum_basic_methods()
                 self.gen_enum_key_utils()
                 self.gen_enum_value_utils()
-                self.target.writelns(
-                    f"private:",
-                )
+                self.target.write_label(f"private:")
                 self.gen_enum_properties()
 
     def gen_enum_key_type(self):
@@ -448,17 +444,13 @@ class CppUnionDefnGenerator:
                 f"struct {union_cpp_info.name} {{",
                 f"}};",
             ):
-                self.target.writelns(
-                    f"public:",
-                )
+                self.target.write_label(f"public:")
                 self.gen_union_tag_type()
                 self.gen_union_storage_type()
                 self.gen_union_basic_methods()
                 self.gen_union_utils()
                 self.gen_union_named_utils()
-                self.target.writelns(
-                    f"private:",
-                )
+                self.target.write_label(f"private:")
                 self.gen_union_properties()
 
     def gen_union_tag_type(self):
@@ -509,17 +501,13 @@ class CppUnionDefnGenerator:
             with self.target.indented(
                 f"switch (m_tag) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
-                    with self.target.indented(
-                        f"case tag_t::{field.name}: {{",
-                        f"}}",
-                    ):
-                        self.target.writelns(
-                            f"new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
-                            f"break;",
-                        )
+                    self.target.write_label(f"case tag_t::{field.name}:")
+                    self.target.writelns(
+                        f"new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
+                        f"break;",
+                    )
         # move constructor
         with self.target.indented(
             f"{union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
@@ -528,17 +516,13 @@ class CppUnionDefnGenerator:
             with self.target.indented(
                 f"switch (m_tag) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
-                    with self.target.indented(
-                        f"case tag_t::{field.name}: {{",
-                        f"}}",
-                    ):
-                        self.target.writelns(
-                            f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
-                            f"break;",
-                        )
+                    self.target.write_label(f"case tag_t::{field.name}:")
+                    self.target.writelns(
+                        f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
+                        f"break;",
+                    )
         # destructor
         with self.target.indented(
             f"~{union_cpp_info.name}() {{",
@@ -547,17 +531,13 @@ class CppUnionDefnGenerator:
             with self.target.indented(
                 f"switch (m_tag) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
-                    with self.target.indented(
-                        f"case tag_t::{field.name}: {{",
-                        f"}}",
-                    ):
-                        self.target.writelns(
-                            f"::std::destroy_at(&m_data.{field.name});",
-                            f"break;",
-                        )
+                    self.target.write_label(f"case tag_t::{field.name}:")
+                    self.target.writelns(
+                        f"::std::destroy_at(&m_data.{field.name});",
+                        f"break;",
+                    )
         # copy assignment
         with self.target.indented(
             f"{union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
@@ -713,16 +693,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
+                        )
             # rvalue reference visitor
             self.target.writelns(
                 f"template<typename ReturnType, typename Visitor>",
@@ -734,16 +710,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, std::move(m_data).{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return visitor(::taihe::static_tag<tag_t::{field.name}>, std::move(m_data).{field.name});",
+                        )
 
     def gen_union_named_utils(self):
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
@@ -820,16 +792,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return matcher.case_{field.name}(m_data.{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return matcher.case_{field.name}(m_data.{field.name});",
+                        )
             # rvalue reference matcher
             self.target.writelns(
                 f"template<typename ReturnType, typename Matcher>",
@@ -841,16 +809,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return matcher.case_{field.name}(std::move(m_data).{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return matcher.case_{field.name}(std::move(m_data).{field.name});",
+                        )
 
     def gen_union_same(self):
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
@@ -885,17 +849,16 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (val.get_tag()) {{",
                     f"}}",
-                    indent="",
                 ):
+                    self.target.writelns(
+                        f"::std::size_t seed;",
+                    )
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"::std::size_t seed = ::std::hash<{union_abi_info.tag_type}>()(static_cast<{union_abi_info.tag_type}>({union_cpp_info.full_name}::tag_t::{field.name}));",
-                                f"return seed ^ (0x9e3779b9 + (seed << 6) + (seed >> 2) + ::std::hash<{TypeCppInfo.get(self.am, field.ty).as_owner}>()(val.get_{field.name}_ref()));",
-                            )
+                        self.target.write_label(f"case {union_cpp_info.full_name}::tag_t::{field.name}:")  # fmt: skip
+                        self.target.writelns(
+                            f"seed = ::std::hash<{union_abi_info.tag_type}>()(static_cast<{union_abi_info.tag_type}>({union_cpp_info.full_name}::tag_t::{field.name}));",
+                            f"return seed ^ (0x9e3779b9 + (seed << 6) + (seed >> 2) + ::std::hash<{TypeCppInfo.get(self.am, field.ty).as_owner}>()(val.get_{field.name}_ref()));",
+                        )
 
 
 class CppUnionImplGenerator:
