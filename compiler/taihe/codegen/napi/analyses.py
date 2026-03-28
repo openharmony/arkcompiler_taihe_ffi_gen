@@ -178,13 +178,9 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.am = am
         self.name = p.name
-        self.scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
         self.source = f"{p.name}.napi.cpp"
         self.header = f"{p.name}.napi.h"
-        self.ts_decl = f"{p.name}.d.ts"
         self.cpp_ns = "::".join(p.segments)
-        self.init_func = f"Init{self.scope_name}"
-        self.macro_name = f"{self.scope_name}_NAPI_H"
         pg_napi_info = PackageGroupNapiInfo.get(am, p.parent_group)
         self.ns = pg_napi_info.get_namespace(p)
 
@@ -192,10 +188,6 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
     @override
     def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageNapiInfo":
         return PackageNapiInfo(am, p)
-
-    def get_dts_type_name(self, target: DtsWriter, dts_type_name: str):
-        target.add_import_module(f"./{self.name}", self.scope_name)
-        return f"{self.scope_name}.{dts_type_name}"
 
 
 class StructNapiInfo(AbstractAnalysis[StructDecl]):

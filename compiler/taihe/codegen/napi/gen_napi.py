@@ -69,59 +69,44 @@ class NapiCodeGenerator:
     def generate(self, pg: PackageGroup):
         for pkg in pg.iterate():
             self.gen_package(pkg)
-        self.gen_register(pg)
+        pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
+        for module, ns in pg_napi_info.module_dict.items():
+            self.gen_register(module, ns)
         self.gen_utils_file()
 
-    def gen_ns_register(
-        self, ns: Namespace, reg_obj: str, ns_name: str, target: CSourceWriter
-    ):
+    def gen_ns_register(self, ns: Namespace, reg_obj: str, target: CSourceWriter):
         for child_ns_name, child_ns in ns.children.items():
-            ns_obj = f"{ns_name}_{child_ns_name}"
+            child_reg_obj = f"{reg_obj}_{child_ns_name}"
             target.writelns(
-                f"napi_value {ns_obj};",
-                f"napi_create_object(env, &{ns_obj});",
+                f"napi_value {child_reg_obj};",
+                f"napi_create_object(env, &{child_reg_obj});",
             )
-            for pkg in child_ns.packages:
-                pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
-                target.add_include(pkg_napi_info.header)
-                target.writelns(
-                    f"{pkg_napi_info.init_func}(env, {ns_obj});",
-                )
-            self.gen_ns_register(child_ns, ns_obj, ns_obj, target)
+            self.gen_ns_register(child_ns, child_reg_obj, target)
             target.writelns(
-                f'NAPI_CALL(env, napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {ns_obj}));',
+                f'NAPI_CALL(env, napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {child_reg_obj}));',
             )
         for pkg in ns.packages:
             pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
             target.add_include(pkg_napi_info.header)
             target.writelns(
-                f"{pkg_napi_info.init_func}(env, exports);",
+                f"{pkg_napi_info.cpp_ns}::NapiInit(env, {reg_obj});",
             )
 
-    def gen_register(self, pg: PackageGroup):
+    def gen_register(self, module: str, ns: Namespace):
         with CSourceWriter(
             self.oc,
-            f"temp/napi_register.cpp",
+            f"temp/{module}.napi_register.cpp",
             group=None,
         ) as target:
-            for pkg in pg.iterate():
-                pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
-                target.add_include(pkg_napi_info.header)
-            target.writelns(
-                f"EXTERN_C_START",
-            )
-            pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
             with target.indented(
                 f"napi_value Init(napi_env env, napi_value exports) {{",
                 f"}}",
             ):
-                for ns in pg_napi_info.module_dict.values():
-                    self.gen_ns_register(ns, "exports", "ns", target)
+                self.gen_ns_register(ns, "exports", target)
                 target.writelns(
                     f"return exports;",
                 )
             target.writelns(
-                f"EXTERN_C_END",
                 f"static napi_module demoModule = {{",
                 f"    .nm_version = 1,",
                 f"    .nm_flags = 0,",
@@ -211,7 +196,7 @@ class NapiCodeGenerator:
 
     def gen_utils_file(self):
         """Generate util functions for main thread."""
-        with CSourceWriter(
+        with CHeaderWriter(
             self.oc,
             f"include/napi_utils.hpp",
             group=None,
@@ -221,10 +206,6 @@ class NapiCodeGenerator:
             target.add_include("condition_variable")
             target.add_include("pthread.h")
             target.writelns(
-                f"#ifndef TAIHE_THREAD_UTILS_HPP",
-                f"#define TAIHE_THREAD_UTILS_HPP",
-                f"#include <pthread.h>",
-                f"#include <mutex>",
                 f"namespace taihe {{",
                 f"class ThreadContext {{",
                 f"public:",
@@ -307,7 +288,6 @@ class NapiCodeGenerator:
                 f"    return taihe::array<uint64_t>(buf, size);",
                 f"}}",
                 f"}}",
-                f"#endif // TAIHE_THREAD_UTILS_HPP",
             )
 
     def gen_napi_header_file(self, pkg_napi_info: PackageNapiInfo):
@@ -326,8 +306,6 @@ class NapiCodeGenerator:
                 f"#else",
                 f'#error "Please ensure the napi is correctly installed."',
                 f"#endif",
-                f"#ifndef {pkg_napi_info.macro_name}",
-                f"#define {pkg_napi_info.macro_name}",
             )
             with target.indented(
                 f"namespace {pkg_napi_info.cpp_ns} {{",
@@ -335,11 +313,8 @@ class NapiCodeGenerator:
                 indent="",
             ):
                 target.writelns(
-                    f"napi_value NapiInit(napi_env env, napi_value exports);",
+                    f"TH_VISIBLE napi_value NapiInit(napi_env env, napi_value exports);",
                 )
-            target.writelns(
-                f"#endif",
-            )
 
     def gen_module_init(
         self,
