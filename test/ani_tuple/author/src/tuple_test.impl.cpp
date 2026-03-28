@@ -18,6 +18,7 @@
 #include "tuple_test.impl.hpp"
 #include "tuple_test.proj.hpp"
 
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -66,16 +67,20 @@ string ConcatStringPair(StringPair const &p)
 
 // --- MixedRefTuple tests ---
 
-MixedRefTuple MakeMixedRef(string_view name, int32_t age, double score, bool active)
+MixedRefTuple MakeMixedRef(string_view name, int32_t age, double score, bool active, map_view<string, string> metadata)
 {
-    return {name, age, score, active};
+    return {name, age, score, active, metadata, std::nullopt};
 }
 
 string DescribeMixedRef(MixedRefTuple const &m)
 {
     std::ostringstream oss;
-    oss << std::string(m.name.data(), m.name.size()) << "," << m.age << "," << m.score << ","
-        << (m.active ? "true" : "false");
+    oss << "[" << std::string(m.name.data(), m.name.size()) << "," << m.age << "," << m.score << ","
+        << (m.active ? "true" : "false") << ",{";
+    for (auto const &[k, v] : m.metadata) {
+        oss << std::string(k.data(), k.size()) << ":" << std::string(v.data(), v.size()) << ",";
+    }
+    oss << "}," << (m.callback.has_value() ? "callback" : "undefined") << "]";
     return string(oss.str());
 }
 
@@ -247,6 +252,47 @@ int32_t SumMyTuple16(MyTuple16 const &t)
     return result;
 }
 
+SingleFieldTuple MakeSingleFieldTuple(int32_t v)
+{
+    return {v};
+}
+
+int32_t GetSingleFieldValue(SingleFieldTuple const &t)
+{
+    return t.value;
+}
+
+OuterTuple MakeOuterTuple(int32_t a, int32_t b, int32_t c, string_view s)
+{
+    return {a, {b, {c, s}}};
+}
+
+string DescribeOuterTuple(OuterTuple const &t)
+{
+    std::ostringstream oss;
+    oss << "[" << t.a << ",[" << t.b.a << ",[" << t.b.b.a << "," << std::string(t.b.b.b.data(), t.b.b.b.size())
+        << "]]]";
+    return string(oss.str());
+}
+
+string DescribeComplexTuple(ComplexTuple const &t)
+{
+    std::ostringstream oss;
+    oss << "[" << t.color << ",{x:" << t.point.x << ",y:" << t.point.y << "},";
+    switch (t.nameOrId.get_tag()) {
+        case NameOrId::tag_t::name:
+            oss << std::string(t.nameOrId.get_name_ref().data(), t.nameOrId.get_name_ref().size());
+            break;
+        case NameOrId::tag_t::id:
+            oss << t.nameOrId.get_id_ref();
+            break;
+        default:
+            oss << "unknown";
+            break;
+    }
+    oss << "," << t.printable->print() << "]";
+    return oss.str();
+}
 }  // namespace
 
 // Since these macros are auto-generated, lint will cause false positive.
@@ -268,4 +314,9 @@ TH_EXPORT_CPP_API_TransposeMyTuple4Array(TransposeMyTuple4Array);
 TH_EXPORT_CPP_API_TransposeArrayMyTuple4(TransposeArrayMyTuple4);
 TH_EXPORT_CPP_API_MakeMyTuple16(MakeMyTuple16);
 TH_EXPORT_CPP_API_SumMyTuple16(SumMyTuple16);
+TH_EXPORT_CPP_API_MakeSingleFieldTuple(MakeSingleFieldTuple);
+TH_EXPORT_CPP_API_GetSingleFieldValue(GetSingleFieldValue);
+TH_EXPORT_CPP_API_MakeOuterTuple(MakeOuterTuple);
+TH_EXPORT_CPP_API_DescribeOuterTuple(DescribeOuterTuple);
+TH_EXPORT_CPP_API_DescribeComplexTuple(DescribeComplexTuple);
 // NOLINTEND
