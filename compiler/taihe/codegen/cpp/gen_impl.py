@@ -465,9 +465,7 @@ class CppTemplateClassHeaderGenerator:
             f"class {iface_cpp_impl_info.template_class} {{",
             f"}};",
         ):
-            self.target.writelns(
-                f"public:",
-            )
+            self.target.write_label(f"public:")
             self.target.writelns(
                 f"// You can add member variables and constructor here.",
             )
