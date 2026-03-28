@@ -270,6 +270,24 @@ class AniPackageSourceGenerator:
                 pkg_ani_info.ns.mod.callback_invoke,
                 f"{utils_ns}::{callback_invoke_cpp_name}",
             )
+            async_handler_on_fullfilled_cpp_name = "async_handler_on_fullfilled"
+            self.gen_async_handler_on_fullfilled(async_handler_on_fullfilled_cpp_name)
+            mod_member_infos.setdefault(
+                pkg_ani_info.ns.mod.async_handler_on_fullfilled,
+                f"{utils_ns}::{async_handler_on_fullfilled_cpp_name}",
+            )
+            async_handler_on_rejected_cpp_name = "async_handler_on_rejected"
+            self.gen_async_handler_on_rejected(async_handler_on_rejected_cpp_name)
+            mod_member_infos.setdefault(
+                pkg_ani_info.ns.mod.async_handler_on_rejected,
+                f"{utils_ns}::{async_handler_on_rejected_cpp_name}",
+            )
+            async_handler_drop_cpp_name = "async_handler_drop"
+            self.gen_async_handler_drop(async_handler_drop_cpp_name)
+            mod_member_infos.setdefault(
+                pkg_ani_info.ns.mod.async_handler_drop,
+                f"{utils_ns}::{async_handler_drop_cpp_name}",
+            )
         with self.target.indented(
             f"namespace {utils_register_ns} {{",
             f"}}",
@@ -296,11 +314,7 @@ class AniPackageSourceGenerator:
         ):
             for func in self.pkg.functions:
                 func_nat_info = GlobFuncAniInfo.get(self.am, func)
-                self.gen_native_func(
-                    func.name,
-                    func,
-                    func_nat_info,
-                )
+                self.gen_native_func(func.name, func, func_nat_info)
                 pkg_member_infos.setdefault(
                     func_nat_info.sts_native,
                     f"{funcs_ns}::{func.name}",
@@ -334,11 +348,7 @@ class AniPackageSourceGenerator:
                 for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
                         method_nat_info = IfaceThunkAniInfo.get(self.am, IfaceThunkKey(iface, method))  # fmt: skip
-                        self.gen_native_func(
-                            method.name,
-                            method,
-                            method_nat_info,
-                        )
+                        self.gen_native_func(method.name, method, method_nat_info)
                         iface_member_infos.setdefault(
                             method_nat_info.sts_native,
                             f"{methods_ns}::{method.name}",
@@ -529,6 +539,33 @@ class AniPackageSourceGenerator:
         ):
             self.target.writelns(
                 f"return reinterpret_cast<{return_ty_ani_name} (*)(ani_env *env, ani_long ani_vtbl_ptr, ani_long ani_data_ptr, {params_ani_str})>(ani_invoke_ptr)(env, ani_vtbl_ptr, ani_data_ptr, {args_ani_str});",
+            )
+
+    def gen_async_handler_on_fullfilled(self, name: str):
+        with self.target.indented(
+            f"static void {name}([[maybe_unused]] ani_env *env, ani_long ani_on_fullfilled_ptr, ani_long ani_context_ptr, ani_ref data) {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"reinterpret_cast<void (*)(ani_env *env, ani_long ani_context_ptr, ani_ref data)>(ani_on_fullfilled_ptr)(env, ani_context_ptr, data);",
+            )
+
+    def gen_async_handler_on_rejected(self, name: str):
+        with self.target.indented(
+            f"static void {name}([[maybe_unused]] ani_env *env, ani_long ani_on_rejected_ptr, ani_long ani_context_ptr, ani_ref data) {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"reinterpret_cast<void (*)(ani_env *env, ani_long ani_context_ptr, ani_ref data)>(ani_on_rejected_ptr)(env, ani_context_ptr, data);",
+            )
+
+    def gen_async_handler_drop(self, name: str):
+        with self.target.indented(
+            f"static void {name}([[maybe_unused]] ani_env *env, ani_long ani_free_ptr, ani_long ani_context_ptr) {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"reinterpret_cast<void (*)(ani_env *env, ani_long ani_context_ptr)>(ani_free_ptr)(env, ani_context_ptr);",
             )
 
 

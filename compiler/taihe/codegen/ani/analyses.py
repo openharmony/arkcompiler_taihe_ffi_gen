@@ -382,6 +382,7 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     obj_registry = "_taihe_objRegistry"
 
     callback_invoke = "_taihe_callbackInvoke"
+    callback_inner = "_taihe_CallbackInner"
     callback_factory = "_taihe_callbackFactory"
 
     bigint_to_arrbuf = "_taihe_fromBigIntToArrayBuffer"
@@ -389,6 +390,14 @@ class ArkTsModule(ArkTsModuleOrNamespace):
 
     BE_type = "_taihe_BusinessError"
     AC_type = "_taihe_AsyncCallback"
+
+    async_handler_on_fullfilled = "_taihe_asyncHandlerOnFullfilled"
+    async_handler_on_rejected = "_taihe_asyncHandlerOnRejected"
+    async_handler_drop = "_taihe_asyncHandlerDrop"
+    async_handler_registry = "_taihe_asyncHandlerRegistry"
+    async_handler = "_taihe_AsyncHandler"
+    async_completer_factory = "_taihe_asyncCompleterFactory"
+    async_future_completory = "_taihe_asyncFutureCompletory"
 
     @property
     def mod(self) -> "ArkTsModule":

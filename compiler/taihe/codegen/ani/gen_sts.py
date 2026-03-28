@@ -276,30 +276,89 @@ class StsModuleGenerator:
             f"): Object | null | undefined;",
         )
         self.target.writelns(
-            f"function {self.mod.callback_factory}(invokePtr: long, vtblPtr: long, dataPtr: long) {{",
-            f"    let callback = (",
+            f"class {self.mod.callback_inner} {{",
+            f"    invokePtr: long;",
+            f"    vtblPtr: long;",
+            f"    dataPtr: long;",
+            f"    constructor(invokePtr: long, vtblPtr: long, dataPtr: long) {{",
+            f"        this.invokePtr = invokePtr;",
+            f"        this.vtblPtr = vtblPtr;",
+            f"        this.dataPtr = dataPtr;",
+            f"        {self.mod.obj_registry}.register(this, dataPtr);",
+            f"    }}",
+            f"    invoke(",
             f"        arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
             f"        arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
             f"        arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
             f"        arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
-            f"    ): Object | null | undefined => {{",
+            f"    ): Object | null | undefined {{",
             f"        return {self.mod.callback_invoke}(",
-            f"            invokePtr, vtblPtr, dataPtr,",
+            f"            this.invokePtr, this.vtblPtr, this.dataPtr,",
             f"            arg_0, arg_1, arg_2, arg_3,",
             f"            arg_4, arg_5, arg_6, arg_7,",
             f"            arg_8, arg_9, arg_a, arg_b,",
             f"            arg_c, arg_d, arg_e, arg_f,",
             f"        );",
-            f"    }};",
-            f"    {self.mod.obj_registry}.register(callback, dataPtr);",
-            f"    return callback;",
+            f"    }}",
             f"}}",
         )
-
+        self.target.writelns(
+            f"function {self.mod.callback_factory}(invokePtr: long, vtblPtr: long, dataPtr: long) {{",
+            f"    let callback = new {self.mod.callback_inner}(invokePtr, vtblPtr, dataPtr);",
+            f"    return callback.invoke;",
+            f"}}",
+        )
         self.target.writelns(
             f"native function {self.mod.obj_drop}(dataPtr: long): void;",
             f"native function {self.mod.obj_dup}(dataPtr: long): long;",
             f"const {self.mod.obj_registry} = new FinalizationRegistry<long>({self.mod.obj_drop});",
+        )
+
+        self.target.writelns(
+            f"native function {self.mod.async_handler_on_fullfilled}(onFullfilledPtr: long, contextPtr: long, data: Any): void;",
+            f"native function {self.mod.async_handler_on_rejected}(onRejectedPtr: long, contextPtr: long, error: Any): void;",
+            f"native function {self.mod.async_handler_drop}(freePtr: long, contextPtr: long): void;",
+            f"const {self.mod.async_handler_registry} = new FinalizationRegistry<[long, long]>((value: [long, long]) => {self.mod.async_handler_drop}(value[0], value[1]));",
+        )
+        self.target.writelns(
+            f"class {self.mod.async_handler}<T> {{",
+            f"    onFullfilledPtr: long;",
+            f"    onRejectedPtr: long;",
+            f"    contextPtr: long;",
+            f"    constructor(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long) {{",
+            f"        this.onFullfilledPtr = onFullfilledPtr;",
+            f"        this.onRejectedPtr = onRejectedPtr;",
+            f"        this.contextPtr = contextPtr;",
+            f"        {self.mod.async_handler_registry}.register(this, [freePtr, contextPtr]);",
+            f"    }}",
+            f"    onFullfilled(data: T): void {{",
+            f"        {self.mod.async_handler_on_fullfilled}(this.onFullfilledPtr, this.contextPtr, data);",
+            f"    }}",
+            f"    onRejected(error: Error): void {{",
+            f"        {self.mod.async_handler_on_rejected}(this.onRejectedPtr, this.contextPtr, error);",
+            f"    }}",
+            f"}}",
+        )
+        self.target.writelns(
+            f"function {self.mod.async_completer_factory}<T>(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long) {{",
+            f"    let handler = new {self.mod.async_handler}<T>(onFullfilledPtr, onRejectedPtr, freePtr, contextPtr);",
+            f"    return (error: {self.mod.BE_type} | null, data: T | undefined) => {{",
+            f"        if (error) {{",
+            f"            handler.onRejected(error);",
+            f"        }} else {{",
+            f"            handler.onFullfilled(data!);",
+            f"        }}",
+            f"    }};",
+            f"}}",
+        )
+        self.target.writelns(
+            f"function {self.mod.async_future_completory}<T>(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long, promise: Promise<T>) {{",
+            f"    let handler = new {self.mod.async_handler}<T>(onFullfilledPtr, onRejectedPtr, freePtr, contextPtr);",
+            f"    promise.then(",
+            f"        handler.onFullfilled,",
+            f"        handler.onRejected,",
+            f"    );",
+            f"}}",
         )
 
 
