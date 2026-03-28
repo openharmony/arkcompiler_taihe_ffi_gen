@@ -48,15 +48,6 @@ TRACE_VERBOSE = TRACE_CONCISE - 1
 class BuildSystem(ABC):
     """Main build system class."""
 
-    runtime_includes: list[Path]
-    generated_includes: list[Path]
-    author_includes: list[Path]
-
-    runtime_sources: list[Path]
-
-    author_backend_names: list[str]
-    user_backend_names: list[str]
-
     def __init__(
         self,
         target_dir: str,
@@ -84,10 +75,61 @@ class BuildSystem(ABC):
         self.build_generated_src_dir = self.build_dir / "generated" / "src"
         self.build_author_src_dir = self.build_dir / "author" / "src"
 
-        self.lib_name = self.target_path.absolute().name
-        self.lib_target = self.build_dir / f"lib{self.lib_name}.so"
+        self.lib_target = self.build_dir / "libcore.so"
 
-        self.author_backend_names = ["cpp-author"]
+    @property
+    def runtime_includes(self) -> list[Path]:
+        """Get the list of runtime include directories."""
+        return [RuntimeHeader.resolve_path()]
+
+    @property
+    def generated_includes(self) -> list[Path]:
+        """Get the list of generated include directories."""
+        return [*self.runtime_includes, self.generated_include_dir]
+
+    @property
+    def author_includes(self) -> list[Path]:
+        """Get the list of author include directories."""
+        return [*self.generated_includes, self.author_include_dir]
+
+    @property
+    def runtime_sources(self) -> list[Path]:
+        """Get the list of runtime source files."""
+        runtime_src_dir = RuntimeSource.resolve_path()
+        return [
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
+        ]
+
+    @property
+    def generated_sources(self) -> list[Path]:
+        """Get the list of generated source files."""
+        return list(self.generated_src_dir.glob("*.[cC]*"))
+
+    @property
+    def author_sources(self) -> list[Path]:
+        """Get the list of author source files."""
+        return list(self.author_src_dir.glob("*.impl.[cC]*"))
+
+    @property
+    def author_compile_flags(self) -> list[str]:
+        """Get the list of extra compile flags."""
+        return []
+
+    @property
+    def author_link_flags(self) -> list[str]:
+        """Get the list of extra link flags."""
+        return ["-Wl,--no-undefined"]
+
+    @property
+    def author_backend_names(self) -> list[str]:
+        """Get the list of author backend names."""
+        return ["cpp-author"]
+
+    @property
+    @abstractmethod
+    def user_backend_names(self) -> list[str]:
+        """Get the list of user backend names."""
 
     def create(self) -> None:
         """Create a simple example project."""
@@ -169,47 +211,38 @@ class BuildSystem(ABC):
     def _create_user_files(self) -> None:
         """Create user files based on the user type."""
 
-    def _compile_shared_library(self, opt_level: str):
+    def _compile_shared_library(self, opt_level: str) -> None:
         """Compile the shared library."""
-        logger.info("Compiling shared library...")
-
         create_directory(self.build_runtime_src_dir)
-        runtime_objects = self.cpp_toolchain.compile(
+        runtime_objects = self.cpp_toolchain.compile_all(
             self.build_runtime_src_dir,
             self.runtime_sources,
             self.runtime_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=[*self.author_compile_flags, f"-O{opt_level}"],
         )
 
         create_directory(self.build_generated_src_dir)
-        generated_objects = self.cpp_toolchain.compile(
+        generated_objects = self.cpp_toolchain.compile_all(
             self.build_generated_src_dir,
-            self.generated_src_dir.glob("*.[cC]*"),
+            self.generated_sources,
             self.generated_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=[*self.author_compile_flags, f"-O{opt_level}"],
         )
 
         create_directory(self.build_author_src_dir)
-        author_objects = self.cpp_toolchain.compile(
+        author_objects = self.cpp_toolchain.compile_all(
             self.build_author_src_dir,
-            self.author_src_dir.glob("*.[cC]*"),
+            self.author_sources,
             self.author_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=[*self.author_compile_flags, f"-O{opt_level}"],
         )
 
-        # Link all objects
-        if all_objects := runtime_objects + generated_objects + author_objects:
-            self.cpp_toolchain.link(
-                self.lib_target,
-                all_objects,
-                shared=True,
-                link_options=["-Wl,--no-undefined"],
-            )
-            logger.info("Shared library compiled: %s", self.lib_target)
-        else:
-            logger.warning(
-                "No object files to link, skipping shared library compilation"
-            )
+        self.cpp_toolchain.link(
+            self.lib_target,
+            [*runtime_objects, *generated_objects, *author_objects],
+            shared=True,
+            link_options=self.author_link_flags,
+        )
 
     @abstractmethod
     def _compile_user_executable(self, opt_level: str) -> None:
@@ -234,25 +267,17 @@ class CppBuildSystem(BuildSystem):
         self.user_include_dir = self.user_dir / "include"
         self.user_src_dir = self.user_dir / "src"
 
-        self.build_user_src_dir = self.build_dir / "user" / "src"
-
-        self.runtime_includes = [RuntimeHeader.resolve_path()]
-        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
-        self.author_includes = [*self.generated_includes, self.author_include_dir]
         self.user_includes = [*self.generated_includes, self.user_include_dir]
 
-        runtime_src_dir = RuntimeSource.resolve_path()
-        self.runtime_sources = [
-            runtime_src_dir / "string.cpp",
-            runtime_src_dir / "object.cpp",
-        ]
-
+        self.build_user_src_dir = self.build_dir / "user" / "src"
         self.exe_target = self.build_dir / "main"
 
-        self.user_backend_names = ["cpp-user"]
+    @property
+    def user_backend_names(self) -> list[str]:
+        """Get the list of user backend names."""
+        return ["cpp-user"]
 
     def _create_user_files(self) -> None:
-        """Create a simple example user source file."""
         create_directory(self.user_dir)
         create_directory(self.user_include_dir)
         create_directory(self.user_src_dir)
@@ -270,15 +295,16 @@ class CppBuildSystem(BuildSystem):
             )
 
     def _compile_user_executable(self, opt_level: str) -> None:
-        """Compile and link the executable."""
         logger.info("Compiling and linking executable...")
 
+        compile_flags = [f"-O{opt_level}"]
+
         create_directory(self.build_user_src_dir)
-        user_objects = self.cpp_toolchain.compile(
+        user_objects = self.cpp_toolchain.compile_all(
             self.build_user_src_dir,
             self.user_src_dir.glob("*.[cC]*"),
             self.user_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=compile_flags,
         )
 
         # Link the executable
@@ -292,7 +318,6 @@ class CppBuildSystem(BuildSystem):
             logger.warning("No object files to link, skipping executable compilation")
 
     def _run_user_executable(self) -> None:
-        """Run the compiled executable."""
         logger.info("Running executable...")
 
         elapsed_time = self.cpp_toolchain.run(
@@ -317,44 +342,76 @@ class StsBuildSystem(BuildSystem):
 
         self.user_dir = self.target_path / "user"
 
+        self.ani_lib_dir = self.build_dir / "lib"
+        self.ani_lib_default_name = self.target_path.absolute().name
         self.build_generated_dir = self.build_dir / "generated"
         self.build_user_dir = self.build_dir / "user"
+        self.arktsconfig_file = self.build_dir / "arktsconfig.json"
+        self.abc_target = self.build_dir / "main.abc"
 
-        self.runtime_includes = [
-            RuntimeHeader.resolve_path(),
+    @property
+    def runtime_includes(self) -> list[Path]:
+        return [
+            *super().runtime_includes,
             self.ark_toolchain.vm.ani_header_dir,
         ]
-        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
-        self.author_includes = [*self.generated_includes, self.author_include_dir]
 
+    @property
+    def runtime_sources(self) -> list[Path]:
         runtime_src_dir = RuntimeSource.resolve_path()
-        self.runtime_sources = [
-            runtime_src_dir / "string.cpp",
-            runtime_src_dir / "object.cpp",
+        return [
+            *super().runtime_sources,
             runtime_src_dir / "runtime_ani.cpp",
         ]
 
-        self.abc_target = self.build_dir / "main.abc"
-        self.arktsconfig_file = self.build_dir / "arktsconfig.json"
+    @property
+    def author_compile_flags(self) -> list[str]:
+        return ["-DTAIHE_USE_NAPI_RUNTIME"]
 
-        self.user_backend_names = ["ani-bridge"]
+    @property
+    def user_backend_names(self) -> list[str]:
+        return ["ani-bridge"]
 
     def _create_user_files(self) -> None:
-        """Create a simple example user ETS file."""
         create_directory(self.user_dir)
         with open(self.user_dir / "main.ets", "w") as f:
             f.write(
                 f'import * as hello from "hello";\n'
                 f"\n"
-                f'loadLibrary("{self.lib_name}");\n'
+                f'loadLibrary("{self.ani_lib_default_name}");\n'
                 f"\n"
                 f"function main() {{\n"
                 f"    hello.sayHello();\n"
                 f"}}\n"
             )
 
+    def _compile_shared_library(self, opt_level: str) -> None:
+        super()._compile_shared_library(opt_level)
+
+        ani_libs = list[tuple[Path, Path]]()
+        for ani_lib_src in self.author_src_dir.glob("*.ani_constructor.cpp"):
+            name = ani_lib_src.stem.removesuffix(".ani_constructor")
+            ani_libs.append((ani_lib_src, self.ani_lib_dir / f"lib{name}.so"))
+        if (ani_lib_src := self.author_src_dir / "ani_constructor.cpp").exists():
+            name = self.ani_lib_default_name
+            ani_libs.append((ani_lib_src, self.ani_lib_dir / f"lib{name}.so"))
+
+        create_directory(self.ani_lib_dir)
+        for ani_lib_src, ani_lib_target in ani_libs:
+            ani_lib_object = self.cpp_toolchain.compile_one(
+                self.build_author_src_dir,
+                ani_lib_src,
+                self.author_includes,
+                compile_flags=[*self.author_compile_flags, f"-O{opt_level}"],
+            )
+            self.cpp_toolchain.link(
+                ani_lib_target,
+                [self.lib_target, ani_lib_object],
+                shared=True,
+                link_options=self.author_link_flags,
+            )
+
     def _compile_user_executable(self, opt_level: str) -> None:
-        """Compile and link ABC files."""
         logger.info("Compiling and linking ABC files...")
 
         paths: dict[str, Path] = {}
@@ -390,12 +447,11 @@ class StsBuildSystem(BuildSystem):
             logger.warning("No ABC files to link, skipping ABC compilation")
 
     def _run_user_executable(self) -> None:
-        """Run the compiled ABC file with the Ark runtime."""
         logger.info("Running ABC file with Ark runtime...")
 
         elapsed_time = self.ark_toolchain.run(
             self.abc_target,
-            self.lib_target.parent,
+            self.ani_lib_dir,
             entry="main.ETSGLOBAL::main",
         )
 
@@ -412,18 +468,21 @@ class TsBuildSystem(BuildSystem):
 
         self.ts_toolchain = TsToolchain()
 
+        self.proxy_dir = self.generated_dir / "proxy"
         self.user_dir = self.target_path / "user"
-        self.generate_proxy_dir = self.generated_dir / "proxy"
 
-        self.build_generated_dir = self.build_dir / "generated"
+        self.napi_lib_dir = self.build_dir / "lib"
+        self.napi_lib_default_name = self.target_path.absolute().name
+        self.logic_proxy_dir = self.napi_lib_dir
+        self.logic_user_dir = self.napi_lib_dir
+        self.build_proxy_dir = self.build_dir
+        self.build_user_dir = self.build_dir
+        self.abc_target = self.build_user_dir / "main.abc"
 
-        self.runtime_includes = [
-            RuntimeHeader.resolve_path(),
-        ]
-        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
-        self.author_includes = [*self.generated_includes, self.author_include_dir]
-
-        self.runtime_sys_includes = [
+    @property
+    def runtime_includes(self) -> list[Path]:
+        return [
+            *super().runtime_includes,
             self.ts_toolchain.sdk.bounds_checking_function_header_dir,
             self.ts_toolchain.sdk.interfaces_inner_api,
             self.ts_toolchain.sdk.interfaces_kits,
@@ -432,27 +491,42 @@ class TsBuildSystem(BuildSystem):
             self.ts_toolchain.sdk.native_engine_impl_ark,
             self.ts_toolchain.sdk.node_src,
         ]
-        self.generated_sys_includes = self.runtime_sys_includes
-        self.author_sys_includes = self.runtime_sys_includes
 
+    @property
+    def runtime_sources(self) -> list[Path]:
         runtime_src_dir = RuntimeSource.resolve_path()
-        self.runtime_sources = [
-            runtime_src_dir / "string.cpp",
-            runtime_src_dir / "object.cpp",
+        return [
+            *super().runtime_sources,
             runtime_src_dir / "runtime_napi.cpp",
         ]
 
-        self.abc_target = self.build_dir / "main.abc"
+    @property
+    def author_compile_flags(self) -> list[str]:
+        return ["-DTAIHE_USE_NAPI_RUNTIME"]
 
-        self.lib_files = []
-        self.user_backend_names = ["napi-bridge"]
+    @property
+    def author_link_flags(self) -> list[str]:
+        return [
+            *super().author_link_flags,
+            f"-L{self.ts_toolchain.sdk.lib_dir}",
+            f"-lace_napi",
+            f"-luv",
+            f"-lhmicuuc",
+            f"-lark_jsruntime",
+            f"-lsec_shared",
+            f"-lhmicui18n",
+            f"-lark_jsoptimizer",
+        ]
+
+    @property
+    def user_backend_names(self) -> list[str]:
+        return ["napi-bridge"]
 
     def _create_user_files(self) -> None:
-        """Create a simple example user TS file."""
         create_directory(self.user_dir)
         with open(self.user_dir / "main.ts", "w") as f:
             f.write(
-                f"const hello = requireNapi('./hello.so', RequireBaseDir.SCRIPT_DIR);\n"
+                f"const hello = requireNapi('hello.so', RequireBaseDir.SCRIPT_DIR);\n"
                 f"\n"
                 f"function main() {{\n"
                 f"    hello.sayHello();\n"
@@ -461,64 +535,35 @@ class TsBuildSystem(BuildSystem):
             )
 
     def _compile_shared_library(self, opt_level: str):
-        create_directory(self.build_runtime_src_dir)
-        create_directory(self.build_generated_src_dir)
-        create_directory(self.build_author_src_dir)
+        super()._compile_shared_library(opt_level)
 
-        runtime_objects = self.cpp_toolchain.compile(
-            self.build_runtime_src_dir,
-            self.runtime_sources,
-            self.runtime_includes,
-            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
-            system_include_dirs=self.runtime_sys_includes,
-        )
-
-        generated_objects = self.cpp_toolchain.compile(
-            self.build_generated_src_dir,
-            self.generated_src_dir.glob("*.[cC]*"),
-            self.generated_includes,
-            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
-            system_include_dirs=self.generated_sys_includes,
-        )
-
-        author_objects = self.cpp_toolchain.compile(
-            self.build_author_src_dir,
-            self.author_src_dir.glob("*.[cC]*"),
-            self.author_includes,
-            compile_flags=["-DTAIHE_USE_NAPI_RUNTIME", f"-O{opt_level}"],
-            system_include_dirs=self.author_sys_includes,
-        )
-
-        # TODO: One node file corresponds to multiple ts files
-        for path in self.generated_dir.glob("*.d.ts"):
-            file_name = path.with_suffix("").stem
-
-            so_target = self.build_dir / f"{file_name}.so"
-            # Link all objects
-            if all_objects := runtime_objects + generated_objects + author_objects:
-                self.cpp_toolchain.link(
-                    so_target,
-                    all_objects,
-                    shared=True,
-                    link_options=[
-                        f"-L{self.ts_toolchain.sdk.lib_dir}",
-                        f"-lace_napi",
-                        f"-luv",
-                        f"-lhmicuuc",
-                        f"-lark_jsruntime",
-                        f"-lsec_shared",
-                        f"-lhmicui18n",
-                        f"-lark_jsoptimizer",
-                    ],
-                )
-                logger.info("Shared library compiled: %s", so_target)
-            else:
-                logger.warning(
-                    "No object files to link, skipping shared library compilation"
-                )
+        create_directory(self.napi_lib_dir)
+        for napi_lib_dts in self.generated_dir.glob("*.d.ts"):
+            napi_lib_name = napi_lib_dts.name.removesuffix(".d.ts")
+            napi_lib_target = self.napi_lib_dir / f"{napi_lib_name}.so"
+            napi_lib_src = self.author_src_dir / f"{napi_lib_name}.napi_register.cpp"
+            if not napi_lib_src.exists():
+                napi_lib_src = self.author_src_dir / f"napi_register.cpp"
+                if not napi_lib_src.exists():
+                    logger.warning(
+                        "No NAPI register source found for '%s', skipping NAPI library generation",
+                        napi_lib_name,
+                    )
+                    continue
+            napi_lib_object = self.cpp_toolchain.compile_one(
+                self.build_author_src_dir,
+                napi_lib_src,
+                self.author_includes,
+                compile_flags=[*self.author_compile_flags, f"-O{opt_level}"],
+            )
+            self.cpp_toolchain.link(
+                napi_lib_target,
+                [self.lib_target, napi_lib_object],
+                shared=True,
+                link_options=self.author_link_flags,
+            )
 
     def _compile_user_executable(self, opt_level: str) -> None:
-        """Compile TS files."""
         logger.info("Compile TS files...")
 
         paths: dict[str, Path] = {}
@@ -526,28 +571,27 @@ class TsBuildSystem(BuildSystem):
             file_name = path.with_suffix("").stem
             paths[file_name] = path
 
-        for proxy_file in self.generate_proxy_dir.glob("*.ts"):
-            new_proxy_file = self.build_dir / proxy_file.name
-            shutil.copy2(proxy_file, new_proxy_file)
+        for proxy_file in self.proxy_dir.glob("*.ts"):
+            logic_proxy_file = self.logic_proxy_dir / proxy_file.name
+            shutil.copy2(proxy_file, logic_proxy_file)
 
-            proxy_abc_target = self.build_dir / f"{proxy_file.stem}.abc"
+            proxy_abc_target = self.build_proxy_dir / f"{proxy_file.stem}.abc"
             self.ts_toolchain.compile(
-                new_proxy_file,
+                logic_proxy_file,
                 proxy_abc_target,
             )
 
         for user_file in self.user_dir.glob("*.ts"):
-            new_user_file = self.build_dir / user_file.name
-            shutil.copy2(user_file, new_user_file)
+            logic_user_file = self.logic_user_dir / user_file.name
+            shutil.copy2(user_file, logic_user_file)
 
-            user_abc_target = self.build_dir / f"{user_file.stem}.abc"
+            user_abc_target = self.build_user_dir / f"{user_file.stem}.abc"
             self.ts_toolchain.compile(
-                new_user_file,
+                logic_user_file,
                 user_abc_target,
             )
 
     def _run_user_executable(self) -> None:
-        """Run the JS file with node."""
         logger.info("Running ABC file with Ark runtime...")
 
         if self.abc_target.exists():

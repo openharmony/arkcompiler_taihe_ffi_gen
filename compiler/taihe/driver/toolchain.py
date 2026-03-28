@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 
 def run_command(
     command: Sequence[Path | str],
-    capture_output: bool = False,
     env: Mapping[str, Path | str] | None = None,
+    capture_output: bool = False,
 ) -> float:
     """Run a command with environment variables."""
     command_str = " ".join(map(str, command))
@@ -193,52 +193,64 @@ class CppToolchain:
         self.cxx = os.getenv("CXX", "clang++")
         self.cc = os.getenv("CC", "clang")
 
-    def compile(
+    def compile_one(
+        self,
+        output_dir: Path,
+        input_file: Path,
+        include_dirs: Sequence[Path] = (),
+        compile_flags: Sequence[str] = (),
+    ) -> Path:
+        """Compile a single source file."""
+        name = input_file.name
+        output_file = output_dir / f"{name}.o"
+
+        if name.endswith(".c"):
+            compiler = self.cc
+            std = "gnu11"
+        else:
+            compiler = self.cxx
+            std = "gnu++17"
+
+        command = [
+            compiler,
+            "-c",
+            "-fvisibility=hidden",
+            "-fPIC",
+            "-Wall",
+            "-Wextra",
+            # "-Werror",
+            f"-std={std}",
+            "-o",
+            output_file,
+            input_file,
+            *compile_flags,
+        ]
+
+        for include_dir in include_dirs:
+            if include_dir.exists():  # Only include directories that exist
+                command.append(f"-I{include_dir}")
+
+        run_command(command)
+
+        return output_file
+
+    def compile_all(
         self,
         output_dir: Path,
         input_files: Iterable[Path],
         include_dirs: Sequence[Path] = (),
         compile_flags: Sequence[str] = (),
-        system_include_dirs: Sequence[Path] = (),
     ) -> list[Path]:
-        """Compile source files."""
+        """Compile multiple source files."""
         output_files: list[Path] = []
 
         for input_file in input_files:
-            name = input_file.name
-            output_file = output_dir / f"{name}.o"
-
-            if name.endswith(".c"):
-                compiler = self.cc
-                std = "gnu11"
-            else:
-                compiler = self.cxx
-                std = "gnu++17"
-
-            command = [
-                compiler,
-                "-c",
-                "-fvisibility=hidden",
-                "-fPIC",
-                "-Wall",
-                "-Wextra",
-                # "-Werror",
-                f"-std={std}",
-                "-o",
-                output_file,
+            output_file = self.compile_one(
+                output_dir,
                 input_file,
-                *compile_flags,
-            ]
-
-            for include_dir in include_dirs:
-                if include_dir.exists():  # Only include directories that exist
-                    command.append(f"-I{include_dir}")
-
-            for system_include_dir in system_include_dirs:
-                if system_include_dir.exists():
-                    command.append(f"-isystem{system_include_dir}")
-
-            run_command(command)
+                include_dirs,
+                compile_flags,
+            )
 
             output_files.append(output_file)
 
@@ -282,10 +294,11 @@ class CppToolchain:
             *args,
         ]
 
-        return run_command(
-            command,
-            env={"LD_LIBRARY_PATH": ld_lib_path},
-        )
+        env = {
+            "LD_LIBRARY_PATH": ld_lib_path,
+        }
+
+        return run_command(command, env=env)
 
 
 class ArkToolchain:
@@ -388,10 +401,8 @@ class ArkToolchain:
         entry: str,
     ) -> float:
         """Run the compiled ABC file with the Ark runtime."""
-        ark_path = self.vm.tool("ark")
-
         command = [
-            ark_path,
+            self.vm.tool("ark"),
             f"--boot-panda-files={self.vm.sdk_lib}",
             f"--boot-panda-files={self.vm.stdlib_lib}",
             f"--load-runtimes=ets",
@@ -399,10 +410,11 @@ class ArkToolchain:
             entry,
         ]
 
-        return run_command(
-            command,
-            env={"LD_LIBRARY_PATH": ld_lib_path},
-        )
+        env = {
+            "LD_LIBRARY_PATH": ld_lib_path,
+        }
+
+        return run_command(command, env=env)
 
 
 class TsToolchain:
@@ -417,14 +429,15 @@ class TsToolchain:
         main_abc_file: Path,
     ) -> None:
         """Compile TS files to ABC."""
-        command_compiler = [
+        command = [
             self.sdk.es2abc,
             "--module",
             main_ts_file,
             "--output",
             main_abc_file,
         ]
-        run_command(command_compiler)
+
+        run_command(command)
 
     def run(
         self,
@@ -433,11 +446,11 @@ class TsToolchain:
         """Run the ABC file."""
         command_run = [
             self.sdk.napi_runner,
-            str(abc_target),
+            abc_target,
         ]
 
-        env_dict = {
-            "LD_LIBRARY_PATH": str(self.sdk.lib_dir),
+        env = {
+            "LD_LIBRARY_PATH": self.sdk.lib_dir,
         }
 
-        return run_command(command_run, capture_output=False, env=env_dict)
+        return run_command(command_run, env=env, capture_output=False)
