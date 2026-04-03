@@ -29,7 +29,9 @@ Taihe 遵从经典的“三阶段”编译器设计，具体地：
 4. 调用 `CompilerInstance.run()` 完成编译。该函数串接了前端、语义分析、代码生成等编译流水线。
     - `CompilerInstance.collect()`: 扫描目录，收集待处理的 `.taihe` 源文件。
     - `CompilerInstance.parse()`: 执行语言前端，解析 `.taihe` 源文件，并转换到 IR。
-    - `CompilerInstance.validate()`: 分析语义，验证 `.taihe` 源文件的正确性。
+    - `CompilerInstance.resolve()`: 将语法 IR 转换为语义 IR（名称解析、类型解析、枚举值填充、属性转换）。
+    - `CompilerInstance.post_process()`: 调用语言后端的后处理钩子，在已解析的 IR 上添加后端特有的元数据。
+    - `CompilerInstance.validate()`: 验证语义 IR 的正确性和一致性。
     - `CompilerInstance.generate()`: 根据 IR 生成目标语言的代码。
 
 ## 文法解析
@@ -99,11 +101,12 @@ Taihe IR 由三部分组成：
 
 Taihe IR 的生命周期是：
 
-1. 产生：在 `CompilerInstance.parse()` 阶段，由 `taihe.parse.convert` 从源文件生成 IR。
-2. 后处理：在 `CompilerInstance.parse()` 阶段，由 `Backend.post_process()` 完成 IR 的后处理，例如添加某些隐式声明。
-3. 内置的语义分析：在 `CompilerInstance.validate()` 阶段，由 `taihe.semantics.analysis` 进行语义分析和检查。**自此，IR 不再可变。**
-4. 语言后端的语义分析：在 `CompilerInstance.validate()` 阶段，由 `Backend.validate()` 完成自定义的语义检查。
-5. 代码生成：在 `CompilerInstance.generate()` 阶段，由 `Backend.generate()` 完成自定义的代码生成。
+1. 产生：在 `CompilerInstance.parse()` 阶段，由 `taihe.parse.convert` 从源文件生成语法 IR。
+2. 解析：在 `CompilerInstance.resolve()` 阶段，由 `taihe.semantics.analysis.resolve_ir` 将语法 IR 转换为语义 IR（完成名称解析、类型解析、枚举值填充、属性转换）。
+3. 后处理：在 `CompilerInstance.post_process()` 阶段，由 `Backend.post_process()` 在已解析的语义 IR 上添加后端特有的元数据（例如根据命令行选项注入默认属性）。
+4. 内置的语义验证：在 `CompilerInstance.validate()` 阶段，由 `taihe.semantics.analysis.validate_ir` 进行语义检查。**自此，IR 不再可变。**
+5. 语言后端的语义验证：在 `CompilerInstance.validate()` 阶段，由 `Backend.validate()` 完成自定义的语义检查。
+6. 代码生成：在 `CompilerInstance.generate()` 阶段，由 `Backend.generate()` 完成自定义的代码生成。
 
 ### 中间表示的常见数据结构
 
@@ -186,8 +189,8 @@ Taihe 的语言后端由以下几个组件组成：
 - `Backend`：语言后端实例，在编译流水线的不同阶段被回调。
   - `register()`：在编译器启动时被调用，此时可注册后端相关注解、分析等组件。
   - `inject()`：在完成源码收集（`collect`）后被调用，此时可注入新的文件到编译器中。
-  - `post_process()`：在完成 IR 解析（`parse`）后被调用，此时可修改 IR。
-  - `validate()`：在完成语义分析（`validate`）后被调用，此时不可修改 IR，但可返回错误。
+  - `post_process()`：在完成 IR 解析（`resolve`）后被调用，此时语义 IR 已完整（类型已解析、属性已转换），可在 IR 上添加后端特有的元数据。
+  - `validate()`：在完成语义验证（`validate`）后被调用，此时不可修改 IR，但可报告错误。
   - `generate()`：在通过全部语义检查、进入代码生成（`generate`）时调用，用于生成目标代码，此时不可修改 IR。
 
 ### 生命周期
@@ -256,7 +259,7 @@ func_abi_info = GlobFuncAbiInfo.get(am, func)
   - `_create(am, decl)`：是工厂方法，用于创建分析结果。编译器驱动在第一次查询分析结果时会调用该方法来创建分析结果。
   - `get(am, decl)`：是查询方法，用于获取分析结果。编译器驱动在查询分析结果时会调用该方法来获取分析结果，如果分析结果不存在，则调用 `_create()` 来创建。
 - `AnalysisManager`：分析结果的缓存。由于 Taihe IR 在代码生成阶段不可变，`AnalysisManager` 缓存了相同对象的相同分析结果查询。首次查询时需要计算，后续查询时直接拿到结果。
-  - `provide(am, decl, analysis)`：有时一些分析结果需要由语言后端提供，此时可以调用该方法来主动提供分析结果。该方法通常在语言后端的 `register()` 方法中被调用，用于将一些后端配置通过分析结果的方式注入到 `AnalysisManager` 中。
+  - `provide(am, decl, analysis)`：有时一些分析结果需要由语言后端提供，此时可以调用该方法来主动提供分析结果。该方法通常在语言后端的 `post_process()` 方法中被调用，用于将一些后端配置通过分析结果的方式注入到 `AnalysisManager` 中。
 
 相比于备选方案，中间分析有如下优点：
 
