@@ -78,7 +78,7 @@ class Backend(ABC):  # noqa: B024
         return
 
     def post_process(self):
-        """Post-processes the IR just after parsing.
+        """Post-processes the semantics IR after resolution.
 
         Language backend may transform the IR in-place in this stage.
 
