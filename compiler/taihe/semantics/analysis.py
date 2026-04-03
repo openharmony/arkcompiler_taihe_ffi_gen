@@ -83,24 +83,27 @@ from taihe.utils.exceptions import (
 )
 
 
-def analyze_semantics(
+def resolve_ir(
     pg: PackageGroup,
     dm: DiagnosticsManager,
     am: AttributeRegistry,
 ):
-    """Runs semantic analysis passes on the given package group."""
-    _check_decl_confilct_with_namespace(pg, dm)
+    """Converts the syntax IR to the semantics IR."""
     pg.accept(_ResolveImportsPass(dm))
     pg.accept(_ResolveTypePass(dm))
-    pg.accept(_CheckEnumTypePass(dm))
+    pg.accept(_ResolveEnumItemValuePass(dm))
+    pg.accept(_ResolveAttributePass(dm, am))
+
+
+def validate_ir(
+    pg: PackageGroup,
+    dm: DiagnosticsManager,
+):
+    """Validates the semantics IR for correctness and consistency."""
+    _check_decl_confilct_with_namespace(pg, dm)
     pg.accept(_CheckStructAndUnionNotEmptyPass(dm))
     pg.accept(_CheckRecursiveInclusionPass(dm))
-
-    if dm.has_error:
-        return
-
-    pg.accept(_ConvertAttrPass(dm, am))
-    pg.accept(_CheckAttrPass(dm))
+    pg.accept(_CheckAttributePass(dm))
 
 
 def _check_decl_confilct_with_namespace(
@@ -412,7 +415,7 @@ class _ResolveTypePass(RecursiveDeclVisitor):
         return None
 
 
-class _CheckEnumTypePass(RecursiveDeclVisitor):
+class _ResolveEnumItemValuePass(RecursiveDeclVisitor):
     """Validated enum item types."""
 
     def __init__(self, dm: DiagnosticsManager):
@@ -618,7 +621,7 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
                 type_list.append(((d, i.ty_ref), ty.decl))
 
 
-class _ConvertAttrPass(RecursiveDeclVisitor):
+class _ResolveAttributePass(RecursiveDeclVisitor):
     dm: DiagnosticsManager
     am: AttributeRegistry
 
@@ -633,7 +636,7 @@ class _ConvertAttrPass(RecursiveDeclVisitor):
                 d.add_attribute(checked_attr)
 
 
-class _CheckAttrPass(RecursiveDeclVisitor):
+class _CheckAttributePass(RecursiveDeclVisitor):
     dm: DiagnosticsManager
 
     def __init__(self, dm: DiagnosticsManager):
