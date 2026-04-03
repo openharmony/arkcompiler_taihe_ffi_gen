@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -21,7 +22,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, TextIO
 
-from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from setuptools.command.build_py import build_py
 
 g_compiler_dir = Path(__file__).parent
 g_repo_dir = g_compiler_dir.parent
@@ -169,12 +170,10 @@ def has_generated(out_file: Path, *dep_files: Path) -> bool:
     return all(dep.exists() and dep.stat().st_mtime <= out_mtime for dep in dep_files)
 
 
-class TaiheBuildHook(BuildHookInterface):
-    """Hatch build hook for generating ANTLR-based AST and visitor classes."""
+class TaiheBuildHook(build_py):
+    """Setuptools build_py hook for generating ANTLR-based AST and visitor classes."""
 
-    PLUGIN_NAME = "taihe-build"
-
-    def initialize(self, version: str, build_data: dict[str, Any]) -> None:
+    def run(self) -> None:
         # Build modes
         #
         # | Source | Target | Has Git? | Artifacts |
@@ -182,7 +181,6 @@ class TaiheBuildHook(BuildHookInterface):
         # | source | sdist  | Maybe    | Generate  |
         # | source | wheel  | Maybe    | Generate  |
         # | sdist  | wheel  | N        | Reuse     |
-        del version
 
         # Setup paths first.
         self.repo_root = g_repo_dir
@@ -191,23 +189,27 @@ class TaiheBuildHook(BuildHookInterface):
         self.antlr_in = g_compiler_dir / "Taihe.g4"
         self.antlr_dir = g_compiler_dir / ANTLR_PKG.replace(".", "/")
 
-        # Always bundle artifacts.
-        self._setup_artifacts(build_data)
-
         # Determine if we are building from sdist.
         if (self.repo_root / "PKG-INFO").exists():
             print("Building from sdist, reusing existing artifacts")
-            return
+        else:
+            # Now generate version.py and antlr.
+            self._generate_version()
+            self._generate_grammar()
 
-        # Now generate version.py and antlr.
-        self._generate_version()
-        self._generate_grammar()
+        super().run()
 
-    def _setup_artifacts(self, build_data: dict[str, Any]):
-        build_data["artifacts"] += [
-            f"{self.version_path.relative_to(g_repo_dir)}",
-            f"{self.antlr_dir.relative_to(g_repo_dir)}/*.py",
-        ]
+        # Copy resource directories into the build tree (setuptools build_py hook).
+        # Must run after super().run() so that self.build_lib is finalized.
+        self._copy_resources()
+
+    def _copy_resources(self) -> None:
+        for name in ("runtime", "stdlib", "cmake"):
+            src = g_repo_dir / name
+            dst = Path(self.build_lib) / "taihe" / "data" / name
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
 
     def _git(self, *args: str) -> str:
         return subprocess.run(
@@ -219,6 +221,8 @@ class TaiheBuildHook(BuildHookInterface):
         ).stdout
 
     def _generate_version(self):
+        from setuptools_scm import get_version
+
         try:
             self._git("rev-parse", "--is-inside-work-tree")
             git_commit = self._git("rev-parse", "HEAD").strip()
@@ -227,12 +231,20 @@ class TaiheBuildHook(BuildHookInterface):
             git_commit = "0" * 40
             git_message = ""
 
+        version = get_version(
+            root=str(self.repo_root),
+            search_parent_directories=True,
+            fallback_version="0.0.0+thunk",
+            local_scheme="dirty-tag",
+            version_scheme="python-simplified-semver",
+        )
+
         now = datetime.now()
         build_timestamp = now.astimezone(timezone.utc).timestamp()
         build_date = now.strftime("%Y%m%d")
 
         self.version_path.write_text(
-            f"version = {self.metadata.version!r}\n"
+            f"version = {version!r}\n"
             f"git_commit = {git_commit!r}\n"
             f"git_message = {git_message!r}\n"
             f"build_date = {build_date!r}\n"

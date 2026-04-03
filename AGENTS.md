@@ -18,7 +18,7 @@ Key capabilities:
 
 ## Tooling Requirements
 
-- Python 3.10+, uv package manager
+- Python 3.11+, uv package manager
 - Clang 15+, CMake 3.14+
 - Linux recommended (Windows not fully supported)
 
