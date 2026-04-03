@@ -9,7 +9,7 @@
     - Clang 15，GCC 不保证完整支持
     - CMake 3.14
   - **编译器**
-    - Python 3.10
+    - Python 3.11.4
     - uv，安装可参考[官方文档](https://github.com/astral-sh/uv)
 
 ## 编译器

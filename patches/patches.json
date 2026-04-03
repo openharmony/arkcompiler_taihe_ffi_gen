@@ -1,0 +1,14 @@
+{
+    "patches": [
+        {
+            "project":"productdefine_common",
+            "path":"productdefine/common",
+            "pr_url":"https://gitcode.com/openharmony/productdefine_common/pull/1108"
+        },
+        {
+            "project":"build",
+            "path":"build",
+            "pr_url":"https://gitcode.com/openharmony/build/pull/6556"
+        }
+    ]
+}

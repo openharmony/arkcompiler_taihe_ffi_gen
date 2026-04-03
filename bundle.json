@@ -1,0 +1,26 @@
+{
+    "name": "@ohos/taihe_ffi_gen",
+    "version": "",
+    "description": "多语言系统接口编程模型",
+    "homePage": "https://gitcode.com/openharmony",
+    "license": "Apache License 2.0",
+    "publishAs": "code-segment",
+    "segment": {
+        "destPath": "arkcompiler/taihe_ffi_gen"
+    },
+    "component": {
+        "name": "taihe_ffi_gen",
+        "subsystem": "arkcompiler",
+        "build": {
+            "sub_component": [
+                "//arkcompiler/taihe_ffi_gen:build_taihe_wrapper",
+                "//arkcompiler/taihe_ffi_gen:build_taihe"
+            ],
+            "inner_kits": [
+                {
+                    "name": "//arkcompiler/taihe_ffi_gen:build_taihe_wrapper"
+                }
+            ]
+        }
+    }
+}

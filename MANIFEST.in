@@ -1,0 +1,48 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Include compiler directory
+recursive-include compiler/taihe *
+
+# Exclude test directories
+recursive-exclude test *
+recursive-exclude cookbook *
+
+# Exclude build artifacts
+exclude build/*
+exclude dist/*
+exclude *.egg-info
+exclude .eggs/*
+
+# Exclude cache directories
+recursive-exclude compiler/taihe/__pycache__ *
+recursive-exclude compiler/taihe/parse/antlr/__pycache__ *
+
+# Exclude IDE and editor files
+exclude .cursor/*
+exclude .vscode/*
+exclude .idea/*
+
+# Exclude documentation (unless needed)
+exclude docs/*
+
+# Exclude CI/CD files
+exclude .github/*
+exclude .gitignore
+
+# Exclude test output files
+exclude *test_output*.txt
+exclude self_test_output.txt
+
+# Exclude coverage reports
+exclude htmlcov/*
