@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -65,6 +65,7 @@ class CppUserPackageGenerator:
             # functions
             self.target.add_include("taihe/common.hpp")
             self.target.add_include(pkg_abi_info.header)
+            self.target.add_include("taihe/invoke.hpp")
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -86,6 +87,18 @@ class CppUserPackageGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if func_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+            call_abi_func_name = "::taihe::call_abi_func"
+        else:
+            return_name = return_ty_expected_name
+            args_tmpl.append(func_abi_info.ret_type_name)
+            call_abi_func_name = "::taihe::checked::call_abi_func"
+
         args_tmpl.append(return_ty_cpp_name)
         for param in func.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -103,9 +116,9 @@ class CppUserPackageGenerator:
             indent="",
         ):
             with self.target.indented(
-                f"inline {return_ty_cpp_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
+                f"inline {return_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
                 f"}}",
             ):
                 self.target.writelns(
-                    f"return ::taihe::call_abi_func<{args_tmpl_str}>({args_call_str});",
+                    f"return {call_abi_func_name}<{args_tmpl_str}>({args_call_str});",
                 )
