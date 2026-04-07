@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -73,6 +73,8 @@ class CppMacroPackageGenerator:
         with self.target:
             self.target.add_include("taihe/common.hpp")
             self.target.add_include(pkg_abi_info.header)
+            self.target.add_include("taihe/expected.hpp")
+            self.target.add_include("taihe/invoke.hpp")
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -85,10 +87,16 @@ class CppMacroPackageGenerator:
     def gen_func(self, func: GlobFuncDecl):
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
+        out_param_name = "_taihe_out"
         func_impl = "CPP_FUNC_IMPL"
         params_abi = []
         args_tmpl = []
         args_call = []
+        if not func_abi_info.is_noexcept:
+            args_call.append(out_param_name)
+            params_abi.append(f"{func_abi_info.ret_type_name}* {out_param_name}")
+            args_tmpl.append(func_abi_info.ret_type_name)
+
         args_call.append(f"&{func_impl}")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
@@ -111,10 +119,18 @@ class CppMacroPackageGenerator:
         params_abi_str = ", ".join(params_abi)
         args_tmpl_str = ", ".join(args_tmpl)
         args_call_str = ", ".join(args_call)
+
+        if func_abi_info.is_noexcept:
+            return_name = return_ty_abi_name
+            call_cpp_func_name = "::taihe::call_cpp_func"
+        else:
+            return_name = "int32_t"
+            call_cpp_func_name = "::taihe::checked::call_cpp_func"
+
         self.target.writelns(
             f"#define {func_cpp_impl_info.macro}({func_impl}) \\",
-            f"    {return_ty_abi_name} {func_abi_info.impl_name}({params_abi_str}) {{ \\",
-            f"        return ::taihe::call_cpp_func<{args_tmpl_str}>({args_call_str}); \\",
+            f"    {return_name} {func_abi_info.impl_name}({params_abi_str}) {{ \\",
+            f"        return {call_cpp_func_name}<{args_tmpl_str}>({args_call_str}); \\",
             f"    }}",
         )
 
@@ -136,6 +152,8 @@ class CppMacroIfaceGenerator:
         with self.target:
             self.target.add_include("taihe/common.hpp")
             self.target.add_include(iface_cpp_info.impl_header)
+            self.target.add_include("taihe/expected.hpp")
+            self.target.add_include("taihe/invoke.hpp")
             for method in self.iface.methods:
                 for param in method.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -148,11 +166,18 @@ class CppMacroIfaceGenerator:
     def gen_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_impl_info = IfaceMethodCppImplInfo.get(self.am, method)
+        out_param_name = "_taihe_out"
         method_impl = "CPP_METHOD_IMPL"
         params_abi = []
         args_tmpl = []
         args_call = []
+        if not method_abi_info.is_noexcept:
+            args_call.append(out_param_name)
+            params_abi.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
+            args_tmpl.append(method_abi_info.ret_type_name)
+
         args_call.append(f"&{method_impl}")
+        params_abi.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
@@ -182,10 +207,18 @@ class CppMacroIfaceGenerator:
         params_abi_str = ", ".join(params_abi)
         args_tmpl_str = ", ".join(args_tmpl)
         args_call_str = ", ".join(args_call)
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_abi_name
+            call_cpp_func_name = "::taihe::call_cpp_func"
+        else:
+            return_name = "int32_t"
+            call_cpp_func_name = "::taihe::checked::call_cpp_func"
+
         self.target.writelns(
             f"#define {method_cpp_impl_info.macro}({method_impl}) \\",
-            f"    {return_ty_abi_name} {method_abi_info.impl_name}({params_abi_str}) {{ \\",
-            f"        return ::taihe::call_cpp_func<{args_tmpl_str}>({args_call_str}); \\",
+            f"    {return_name} {method_abi_info.impl_name}({params_abi_str}) {{ \\",
+            f"        return {call_cpp_func_name}<{args_tmpl_str}>({args_call_str}); \\",
             f"    }}",
         )
 
@@ -292,6 +325,7 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
             )
 
     def gen_func_impl(self, func: GlobFuncDecl):
+        func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
         params_cpp = []
         for param in func.params:
@@ -305,8 +339,17 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
             return_ty_cpp_name = self.mask(return_ty_cpp_info.as_owner)
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if func_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+        else:
+            return_name = return_ty_expected_name
+
         with self.target.indented(
-            f"{return_ty_cpp_name} {func_cpp_impl_info.function}({params_cpp_str}) {{",
+            f"{return_name} {func_cpp_impl_info.function}({params_cpp_str}) {{",
             f"}}",
         ):
             if isinstance(return_ty := func.return_ty, IfaceType):
@@ -366,6 +409,7 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
             )
 
     def gen_method_impl(self, method: IfaceMethodDecl):
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_impl_info = IfaceMethodCppImplInfo.get(self.am, method)
         params_cpp = []
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
@@ -383,8 +427,17 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
             return_ty_cpp_name = self.mask(return_ty_cpp_info.as_owner)
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+        else:
+            return_name = return_ty_expected_name
+
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_impl_info.function}({params_cpp_str}) {{",
+            f"{return_name} {method_cpp_impl_info.function}({params_cpp_str}) {{",
             f"}}",
         ):
             if isinstance(return_ty := method.return_ty, IfaceType):
@@ -451,6 +504,7 @@ class CppTemplateClassHeaderGenerator:
                     self.gen_iface_method_decl(method)
 
     def gen_iface_method_decl(self, method: IfaceMethodDecl):
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         params_cpp = []
         for param in method.params:
@@ -464,8 +518,17 @@ class CppTemplateClassHeaderGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+        else:
+            return_name = return_ty_expected_name
+
         self.target.writelns(
-            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str});",
+            f"{return_name} {method_cpp_info.call_name}({params_cpp_str});",
         )
 
 
@@ -494,6 +557,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
 
     def gen_iface_method_impl(self, method: IfaceMethodDecl):
         iface_cpp_impl_info = IfaceCppImplInfo.get(self.am, self.iface)
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         params_cpp = []
         for param in method.params:
@@ -507,8 +571,17 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
             return_ty_cpp_name = self.mask(return_ty_cpp_info.as_owner)
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+        else:
+            return_name = return_ty_expected_name
+
         with self.target.indented(
-            f"{return_ty_cpp_name} {iface_cpp_impl_info.template_class}::{method_cpp_info.impl_name}({params_cpp_str}) {{",
+            f"{return_name} {iface_cpp_impl_info.template_class}::{method_cpp_info.impl_name}({params_cpp_str}) {{",
             f"}}",
         ):
             if isinstance(return_ty := method.return_ty, IfaceType):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,9 @@ from abc import ABC
 
 from typing_extensions import override
 
+from taihe.codegen.abi.analyses import (
+    CallbackAbiInfo,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -354,8 +357,15 @@ class CallbackTypeCppInfo(TypeCppInfo):
             *return_ty_impl_headers,
             *params_ty_impl_headers,
         ]
-        self.as_owner = f"::taihe::callback<{return_ty_as_owner}({params_fmt})>"
-        self.as_param = f"::taihe::callback_view<{return_ty_as_owner}({params_fmt})>"
+        cb_abi_info = CallbackAbiInfo.get(am, t)
+        if cb_abi_info.is_noexcept:
+            signature = f"{return_ty_as_owner}({params_fmt})"
+        else:
+            signature = (
+                f"::taihe::expected<{return_ty_as_owner}, ::taihe::error>({params_fmt})"
+            )
+        self.as_owner = f"::taihe::callback<{signature}>"
+        self.as_param = f"::taihe::callback_view<{signature}>"
 
 
 class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):

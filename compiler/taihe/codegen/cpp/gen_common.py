@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -1110,6 +1110,7 @@ class CppIfaceDeclGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/object.hpp")
+            self.target.add_include("taihe/expected.hpp")
             self.target.add_include(iface_abi_info.decl_header)
             with self.target.indented(
                 f"namespace {iface_cpp_info.weakspace} {{",
@@ -1565,6 +1566,7 @@ class CppIfaceImplGenerator:
         with self.target:
             self.target.add_include(iface_cpp_info.defn_header)
             self.target.add_include(iface_abi_info.impl_header)
+            self.target.add_include("taihe/invoke.hpp")
             for method in self.iface.methods:
                 for param in method.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -1610,6 +1612,8 @@ class CppIfaceImplGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
+        if not method_abi_info.is_noexcept:
+            args_tmpl.append(method_abi_info.ret_type_name)
         args_tmpl.append(return_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         iface_ty_cpp_name = iface_cpp_info.as_param
@@ -1625,12 +1629,23 @@ class CppIfaceImplGenerator:
         params_cpp_str = ", ".join(params_cpp)
         args_tmpl_str = ", ".join(args_tmpl)
         args_call_str = ", ".join(args_call)
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+            call_abi_func_name = "::taihe::call_abi_func"
+        else:
+            return_name = return_ty_expected_name
+            call_abi_func_name = "::taihe::checked::call_abi_func"
+
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+            f"{return_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::call_abi_func<{args_tmpl_str}>({args_call_str});",
+                f"return {call_abi_func_name}<{args_tmpl_str}>({args_call_str});",
             )
 
     def gen_iface_methods_impl_impl(self):
@@ -1648,9 +1663,16 @@ class CppIfaceImplGenerator:
 
     def gen_iface_methods_impl_method(self, method: IfaceMethodDecl):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        out_param_name = "_taihe_out"
         params_abi = []
         args_tmpl = []
         args_call = []
+        if not method_abi_info.is_noexcept:
+            args_call.append(out_param_name)
+            params_abi.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
+            args_tmpl.append(method_abi_info.ret_type_name)
+
         args_call.append(f"&Impl::{method_cpp_info.impl_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
@@ -1678,12 +1700,20 @@ class CppIfaceImplGenerator:
         params_abi_str = ", ".join(params_abi)
         args_call_str = ", ".join(args_call)
         args_tmpl_str = ", ".join(args_tmpl)
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_abi_name
+            call_cpp_method_name = "::taihe::call_cpp_method"
+        else:
+            return_name = "int32_t"
+            call_cpp_method_name = "::taihe::checked::call_cpp_method"
+
         with self.target.indented(
-            f"static {return_ty_abi_name} {method.name}({params_abi_str}) {{",
+            f"static {return_name} {method.name}({params_abi_str}) {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::call_cpp_method<{args_tmpl_str}>({args_call_str});",
+                f"return {call_cpp_method_name}<{args_tmpl_str}>({args_call_str});",
             )
 
     def gen_iface_ftbl_impl(self):
