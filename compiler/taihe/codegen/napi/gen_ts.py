@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -450,7 +450,7 @@ class TsCodeGenerator:
                     f"}}",
                 ):
                     target.writelns(
-                        f"return this.{nativa_class_name}.{iface_method_napi_info.get_name}({args_str});",
+                        f"return this.{nativa_class_name}.{iface_method_napi_info.get_name};",
                     )
             elif iface_method_napi_info.set_name is not None:
                 with target.indented(
@@ -458,16 +458,38 @@ class TsCodeGenerator:
                     f"}}",
                 ):
                     target.writelns(
-                        f"this.{nativa_class_name}.{iface_method_napi_info.set_name}({args_str});",
+                        f"this.{nativa_class_name}.{iface_method_napi_info.set_name} = {args_str};",
                     )
             else:
-                with target.indented(
-                    f"{iface_method_napi_info.norm_name}({params_str}): {return_ty} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return this.{nativa_class_name}.{iface_method_napi_info.norm_name}({args_str});",
-                    )
+                if iface_method_napi_info.async_name is not None:
+                    cbname = "callback"
+                    callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
+                    callback_ts = f"{cbname}: {callback_ty_ts_name}"
+                    params_with_callback_ts_str = ", ".join([*params, callback_ts])
+                    with target.indented(
+                        f"{iface_method_napi_info.async_name}({params_with_callback_ts_str}): void {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"return this.{nativa_class_name}.{iface_method_napi_info.norm_name}({args_str});",
+                        )
+                elif iface_method_napi_info.promise_name is not None:
+                    promise_ty = f"Promise<{return_ty}>"
+                    with target.indented(
+                        f"{iface_method_napi_info.promise_name}({params_str}): {promise_ty} {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"return this.{nativa_class_name}.{iface_method_napi_info.norm_name}({args_str});",
+                        )
+                else:
+                    with target.indented(
+                        f"{iface_method_napi_info.norm_name}({params_str}): {return_ty} {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"return this.{nativa_class_name}.{iface_method_napi_info.norm_name}({args_str});",
+                        )
 
     def gen_enum(
         self,
