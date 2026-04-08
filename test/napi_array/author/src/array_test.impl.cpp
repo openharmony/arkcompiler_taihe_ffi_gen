@@ -151,14 +151,6 @@ public:
                    });
 
     return result;
-
-    // auto result = array<map<string, int64_t>>::make(value.size(), value[0]);
-    // map<string, int64_t> record;
-    // record.emplace(k, v);
-    // std::transform(value.begin(), value.end(), result.begin(), [record](map<string, int64_t> m) {
-    //     return record;
-    // });
-    // return result;
 }
 }  // namespace
 

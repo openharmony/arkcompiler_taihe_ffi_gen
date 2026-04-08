@@ -38,6 +38,7 @@ class NoexceptAllOption(AbstractConfigOption):
     def parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
+
 all_abi_config_options = [
     NoexceptAllOption,
 ]

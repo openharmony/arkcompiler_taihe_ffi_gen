@@ -1340,14 +1340,8 @@ taihe::error err("Network timeout", 110);
 // 获取错误信息
 taihe::string msg = err.message();
 
-// 检查是否有错误码
-bool hasCode = err.has_code();  // 返回 true
-
 // 获取错误码
 int32_t code = err.code();  // 返回 110
-
-// 获取错误码或默认值
-int32_t codeOrDefault = err.code_or(-1);  // 有错误码时返回 110，否则返回 -1
 ```
 
 #### 8.1.3 比较 Error 对象
@@ -1409,21 +1403,9 @@ if (result) {
 ```cpp
 // 安全访问
 taihe::expected<int, taihe::error> result = some_function();
+int value = result.value();
 
-// 访问值（如果不包含值会抛出 bad_expected_access 异常）
-try {
-    int value = result.value();
-    // 使用 value
-} catch (taihe::bad_expected_access& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-}
-
-// 访问错误（如果包含值会抛出异常）
-try {
-    taihe::error err = result.error();
-} catch (taihe::bad_expected_access& e) {
-    std::cerr << "Has value: " << e.what() << std::endl;
-}
+taihe::error err = result.error();
 
 // 获取指针访问
 taihe::expected<Data, taihe::error> result = load_data();

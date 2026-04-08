@@ -45,7 +45,7 @@ Taihe 支持的基本数据类型包括数字、布尔值和[字符串](../backe
 
 注意，ArkTS-Dyn 的 Map 和 Record 在 Taihe 中本质上都是 Map，所以在 C++ 实现时可以参考 Taihe [Map](../backend-cpp/CppUsageGuide.md#65-映射map) 的用法， ArkTS-Dyn 的 Array，bigint，arraybuffer 和 typedarray 在 Taihe 中本质上都是 Array，所以在 C++ 实现时可以参考 Taihe [Array](../backend-cpp/CppUsageGuide.md#62-数组array) 的用法。
 
-注意，由于 NAPI 接口只提供了针对 int32_t, uint32_t, int64_t, double 类型的接口，所以也推荐用户在 Taihe 中只使用 i32, u32, i64, f64，如用户实际需要使用其他类型建议在 Taihe 中声明为以上类型，在实现代码中手动进行类型转换。
+注意，由于 NAPI 接口只提供了针对 int32_t, uint32_t, int64_t, double 类型的接口，所以也推荐用户在 Taihe 中只使用 i32, u32, i64, f64，如用户实际需要使用其余类型建议在 Taihe 中声明为以上类型，在实现代码中手动进行类型转换。
 
 # 包
 

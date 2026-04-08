@@ -40,7 +40,8 @@ namespace {
     for (auto const &[outer_key, inner_map] : a) {
         ::taihe::map<::taihe::string, int32_t> new_inner_map;
         for (auto const &[inner_key, value] : inner_map) {
-            new_inner_map.emplace(inner_key, value * 2);
+            constexpr int VALUE = 2;
+            new_inner_map.emplace(inner_key, value * VALUE);
         }
         result.emplace(outer_key, std::move(new_inner_map));
     }

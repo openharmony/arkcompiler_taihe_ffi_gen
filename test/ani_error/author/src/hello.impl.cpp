@@ -16,6 +16,7 @@
 // NOLINTBEGIN
 
 #include "hello.impl.hpp"
+#include <cstdint>
 #include <iostream>
 #include <taihe/expected.hpp>
 #include "hello.proj.hpp"
@@ -25,8 +26,9 @@ class FooImpl {
 public:
     ::taihe::expected<void, taihe::error> bar()
     {
-        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "A Error in bar", 12);
-        // return {};
+        ::taihe::string ERROR_MESSAGE = "A Error in bar";
+        constexpr int ERROR_CODE = 12;
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE, ERROR_CODE);
     }
 
     ::taihe::expected<int32_t, ::taihe::error> bar_ii(int32_t a)
@@ -54,8 +56,11 @@ public:
 
 ::taihe::expected<int32_t, taihe::error> sayHello_ii(int32_t a)
 {
-    if (a >= 10) {
-        return ::taihe::unexpected<::taihe::error>(::taihe::error("Index out of range", 10));
+    int32_t range = 10;
+    ::taihe::string ERROR_MESSAGE = "Index out of range";
+    constexpr int32_t ERROR_CODE = 10;
+    if (a >= range) {
+        return ::taihe::unexpected<::taihe::error>(::taihe::error(ERROR_MESSAGE, ERROR_CODE));
     }
     return a;
 }
@@ -82,7 +87,7 @@ public:
 {
     ::taihe::expected<void, ::taihe::error> res = f();
     if (!res.has_value()) {
-        std::cout << "catch error in cpp callcb: " << res.error().message() << ", code: " << res.error().code_or(0)
+        std::cout << "catch error in cpp callcb: " << res.error().message() << ", code: " << res.error().code()
                   << std::endl;
     }
     return res;
@@ -95,7 +100,7 @@ public:
     if (res.has_value()) {
         std::cout << "success from callcb_ii: " << res.value() << std::endl;
     } else {
-        std::cout << "catch error in cpp callcb_ii: " << res.error().message() << ", code: " << res.error().code_or(0)
+        std::cout << "catch error in cpp callcb_ii: " << res.error().message() << ", code: " << res.error().code()
                   << std::endl;
     }
     return {};
