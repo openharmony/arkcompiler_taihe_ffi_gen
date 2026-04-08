@@ -21,8 +21,12 @@
 #include <taihe/runtime.hpp>
 #include <chrono>
 #include <thread>
+#include "taihe/string.hpp"
 
 namespace {
+constexpr int32_t const SLEEPTIME = 50;
+constexpr int32_t const SLEEPTIMELONG = 100;
+
 class IBaseImpl {
 public:
     ::taihe::expected<void, ::taihe::error> makeSync()
@@ -33,14 +37,14 @@ public:
 
     ::taihe::expected<void, ::taihe::error> makeRetPromise()
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIMELONG));
         std::cout << "makeRetPromise" << std::endl;
         return {};
     }
 
     ::taihe::expected<void, ::taihe::error> makeWithAsync()
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIME));
         std::cout << "makeWithAsync" << std::endl;
         return {};
     }
@@ -56,16 +60,18 @@ public:
 
     ::taihe::expected<void, ::taihe::error> makeRetPromise()
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIMELONG));
         std::cout << "make In shape RetPromise" << std::endl;
         return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "Error in makeRetPromise", 1);
     }
 
     ::taihe::expected<void, ::taihe::error> makeWithAsync()
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIME));
         std::cout << "make In shape WithAsync" << std::endl;
-        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "Error in makeWithAsync", 2);
+        ::taihe::string ERROR_MESSAGE = "Error in makeWithAsync";
+        constexpr int ERROR_CODE = 2;
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE, ERROR_CODE);
     }
 };
 
@@ -82,7 +88,7 @@ public:
 
 ::taihe::expected<int32_t, ::taihe::error> addRetPromise(int32_t a, int32_t b)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIMELONG));
 
     if (a == 0) {
         std::cout << "ERROR in addRetPromise" << std::endl;
@@ -95,7 +101,7 @@ public:
 
 ::taihe::expected<int32_t, ::taihe::error> addWithAsync(int32_t a, int32_t b)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIME));
 
     if (a == 0) {
         std::cout << "ERROR in addWithAsync" << std::endl;
@@ -121,14 +127,14 @@ public:
 
 ::taihe::expected<void, ::taihe::error> printRetPromise()
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIMELONG));
     std::cout << "printRetPromise" << std::endl;
     return {};
 }
 
 ::taihe::expected<void, ::taihe::error> printWithAsync()
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIME));
     std::cout << "printWithAsync" << std::endl;
     return {};
 }
@@ -144,7 +150,7 @@ public:
 
 ::taihe::expected<void, ::taihe::error> fromStructRetPromise(::async_test::Data const &data)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIMELONG));
     std::cout << "fromStructRetPromise" << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
     if (data.c == 0) {
         return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "some error happen in fromStructRetPromise");
@@ -154,7 +160,7 @@ public:
 
 ::taihe::expected<void, ::taihe::error> fromStructWithAsync(::async_test::Data const &data)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIME));
     std::cout << "fromStructWithAsync" << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
     if (data.c == 0) {
         return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "some error happen in fromStructWithAsync");
@@ -175,7 +181,7 @@ public:
 ::taihe::expected<::async_test::Data, ::taihe::error> toStructRetPromise(::taihe::string_view a, ::taihe::string_view b,
                                                                          int32_t c)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIMELONG));
     if (c == 0) {
         return ::taihe::expected<::async_test::Data, ::taihe::error>(::taihe::unexpect,
                                                                      "some error happen in toStructRetPromise");
@@ -186,7 +192,7 @@ public:
 ::taihe::expected<::async_test::Data, ::taihe::error> toStructWithAsync(::taihe::string_view a, ::taihe::string_view b,
                                                                         int32_t c)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEPTIME));
     if (c == 0) {
         return ::taihe::expected<::async_test::Data, ::taihe::error>(::taihe::unexpect,
                                                                      "some error happen in toStructWithAsync");
@@ -208,7 +214,8 @@ public:
 
 ::taihe::expected<int32_t, ::taihe::error> sumSync()
 {
-    return 10;
+    int32_t res = 10;
+    return res;
 }
 
 ::taihe::expected<int32_t, ::taihe::error> sumRetPromise()

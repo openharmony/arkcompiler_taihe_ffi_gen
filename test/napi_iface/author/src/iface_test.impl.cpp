@@ -243,7 +243,9 @@ public:
 
 ::taihe::expected<::iface_test::CTest, ::taihe::error> changeCTest(::iface_test::weak::CTest a)
 {
-    ::taihe::expected<int32_t, ::taihe::error> x = a->add(3, 4);
+    constexpr int OPERAND_A = 3;
+    constexpr int OPERAND_B = 4;
+    ::taihe::expected<int32_t, ::taihe::error> x = a->add(OPERAND_A, OPERAND_B);
     if (x.has_value()) {
         return ::taihe::make_holder<CTestImpl, ::iface_test::CTest>(x.value());
     } else {

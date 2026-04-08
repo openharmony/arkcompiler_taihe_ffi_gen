@@ -20,7 +20,7 @@ from taihe.driver.backend import Backend, BackendConfig
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
-    from taihe.driver.options import OptionStore
+    from taihe.driver.options import OptionRegistry, OptionStore
     from taihe.utils.diagnostics import DiagnosticsManager
 
 
@@ -52,7 +52,7 @@ class AbiHeaderBackendConfig(BackendConfig):
 class AbiSourcesBackendConfig(BackendConfig):
     NAME = "abi-source"
     DEPS: ClassVar = ["abi-header"]
-    
+
     noexcept_all: bool = False
 
     @classmethod
@@ -71,8 +71,8 @@ class AbiSourcesBackendConfig(BackendConfig):
         )
 
     def construct(self, instance: "CompilerInstance"):
-        from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
         from taihe.codegen.abi.attributes import NoexceptAttr
+        from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
         from taihe.semantics.declarations import CallbackTypeRefDecl
 
         class AbiSourcesBackendImpl(Backend):

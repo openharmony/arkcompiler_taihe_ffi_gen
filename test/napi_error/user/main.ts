@@ -82,10 +82,6 @@ function testCallFoo() {
     } catch (error) {
         console.error('testCallFoo Error caught:', error.message);
     }
-    // if (str !== "A Error in bar") {
-    //     throw new Error(`Unexpected result`);
-    // }
-    // console.log('testCallFoo Success:', str);
 }
 
 function testCallback() {
