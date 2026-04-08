@@ -16,6 +16,7 @@
 #include <taihe/runtime_ani.hpp>
 
 #include <iostream>
+#include "taihe/expected.hpp"
 
 namespace taihe {
 ani_vm *global_vm = nullptr;
@@ -135,5 +136,43 @@ bool has_error()
     env_guard guard;
     ani_env *env = guard.get_env();
     return ani_has_error(env);
+}
+
+::taihe::error from_ani_error(ani_error err)
+{
+    env_guard guard;
+    ani_env *env = guard.get_env();
+    ani_string ani_error_message;
+    env->Object_GetPropertyByName_Ref(ani_object(err), "message", reinterpret_cast<ani_ref *>(&ani_error_message));
+    ani_size ani_error_message_len;
+    env->String_GetUTF8Size(ani_error_message, &ani_error_message_len);
+    TString ani_error_message_tstr;
+    char *ani_error_message_buf = tstr_initialize(&ani_error_message_tstr, ani_error_message_len + 1);
+    env->String_GetUTF8(ani_error_message, ani_error_message_buf, ani_error_message_len + 1, &ani_error_message_len);
+    ani_error_message_buf[ani_error_message_len] = '\0';
+    ani_error_message_tstr.length = ani_error_message_len;
+    ::taihe::string ani_error_message_taihe = ::taihe::string(ani_error_message_tstr);
+    ani_int ani_error_code = 0;
+    if (ANI_OK == env->Object_GetPropertyByName_Int(err, "code", &ani_error_code)) {
+        return ::taihe::error(ani_error_message_taihe, ani_error_code);
+    } else {
+        return ::taihe::error(ani_error_message_taihe);
+    }
+}
+
+ani_error into_ani_error(::taihe::error err)
+{
+    env_guard guard;
+    ani_env *env = guard.get_env();
+    ani_string result_string {};
+    env->String_NewUTF8(err.message().c_str(), err.message().size(), &result_string);
+    ani_ref undefined;
+    env->GetUndefined(&undefined);
+
+    if (err.has_code()) {
+        return create_ani_business_error(env, err.code(), err.message());
+    } else {
+        return create_ani_error(env, err.message());
+    }
 }
 }  // namespace taihe
