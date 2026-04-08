@@ -16,6 +16,7 @@
 #ifndef TAIHE_PLATFORM_ANI_HPP
 #define TAIHE_PLATFORM_ANI_HPP
 
+#include <taihe/expected.hpp>
 #include <taihe/object.hpp>
 #include <taihe/runtime_ani.hpp>
 

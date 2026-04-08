@@ -14,5 +14,5 @@
  */
 
 interface AniObject {
-    getGlobalReference(): Opaque;
+    @noexcept getGlobalReference(): Opaque;
 }
