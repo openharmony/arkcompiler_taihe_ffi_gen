@@ -163,20 +163,16 @@ def run_core_tests(project_root: Path, **config: Path | str):
     log_stage("Run core tests...")
     for test_dir in [project_root / "test/rgb", project_root / "test/object"]:
         log_stage(f"Testing: {test_dir}")
-        run_taihe_tryit(["test", "-u", "cpp", test_dir], project_root)
+        run_taihe_tryit(["test", "-u", "cpp", test_dir, "-Cnoexcept-all"], project_root)
 
 
 def run_napi_tests(project_root: Path, **config: Path | str):
     log_stage("Run napi tests...")
     base_dir = project_root / "test"
 
-    # TODO: Waiting for expected system
-    skip_dirs = ["napi_maythrow", "napi_error", "napi_async"]
-
     for test_dir in base_dir.glob("napi_*"):
         if (
             test_dir.is_dir()
-            and test_dir.name not in skip_dirs
             and any(test_dir.glob("idl/*.taihe"))
         ):
             log_stage(f"Testing: {test_dir}")
