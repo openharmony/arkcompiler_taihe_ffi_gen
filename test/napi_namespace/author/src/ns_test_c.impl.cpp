@@ -35,26 +35,27 @@ public:
         std::cout << "del base " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
-::my_module_b::functiontest::IBase makeIBase(::taihe::string_view id)
+::taihe::expected<::my_module_b::functiontest::IBase, ::taihe::error> makeIBase(::taihe::string_view id)
 {
     return taihe::make_holder<Base, ::my_module_b::functiontest::IBase>(id);
 }
 
-void bar()
+::taihe::expected<void, ::taihe::error> bar()
 {
     std::cout << "namespace: my_module_b.functiontest, func: bar" << std::endl;
+    return {};
 }
 }  // namespace
 

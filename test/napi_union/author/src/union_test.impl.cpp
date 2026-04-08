@@ -19,7 +19,7 @@
 #include "union_test.proj.hpp"
 
 namespace {
-::taihe::string printUnion(::union_test::union_primitive const &data)
+::taihe::expected<::taihe::string, ::taihe::error> printUnion(::union_test::union_primitive const &data)
 {
     switch (data.get_tag()) {
         case ::union_test::union_primitive::tag_t::sValue:
@@ -47,7 +47,7 @@ namespace {
     }
 }
 
-::union_test::union_primitive makeUnion(::taihe::string_view kind)
+::taihe::expected<::union_test::union_primitive, ::taihe::error> makeUnion(::taihe::string_view kind)
 {
     ::taihe::string s_value = "string";
     constexpr double f64_value = 1.12345;

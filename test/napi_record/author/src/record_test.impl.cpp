@@ -19,12 +19,12 @@
 #include "record_test.proj.hpp"
 
 namespace {
-int32_t getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
+::taihe::expected<int32_t, ::taihe::error> getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
 {
     return r.size();
 }
 
-::taihe::map<::taihe::string, ::taihe::string> createStringString(int32_t a)
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::string>, ::taihe::error> createStringString(int32_t a)
 {
     ::taihe::map<::taihe::string, ::taihe::string> m;
     while (a--) {
@@ -33,15 +33,29 @@ int32_t getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
     return m;
 }
 
-void setStringColor(::taihe::map_view<::taihe::string, ::record_test::Color> m)
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::map<::taihe::string, int32_t>>, ::taihe::error> changeRecRec(
+    ::taihe::map_view<::taihe::string, ::taihe::map<::taihe::string, int32_t>> a)
+{
+    ::taihe::map<::taihe::string, ::taihe::map<::taihe::string, int32_t>> result;
+    for (auto const &[outer_key, inner_map] : a) {
+        ::taihe::map<::taihe::string, int32_t> new_inner_map;
+        for (auto const &[inner_key, value] : inner_map) {
+            new_inner_map.emplace(inner_key, value * 2);
+        }
+        result.emplace(outer_key, std::move(new_inner_map));
+    }
+    return result;
+}
+
+::taihe::expected<void, ::taihe::error> setStringColor(::taihe::map_view<::taihe::string, ::record_test::Color> m)
 {
     for (auto const &[key, val] : m) {
         std::cout << "C++ MapStringColor: key: " << key << " value: " << val << std::endl;
     }
-    return;
+    return {};
 }
 
-::taihe::map<::taihe::string, ::record_test::Color> getStringColor()
+::taihe::expected<::taihe::map<::taihe::string, ::record_test::Color>, ::taihe::error> getStringColor()
 {
     ::taihe::map<::taihe::string, ::record_test::Color> result;
     result.emplace("key1", record_test::Color::key_t::RED);
@@ -49,15 +63,16 @@ void setStringColor(::taihe::map_view<::taihe::string, ::record_test::Color> m)
     return result;
 }
 
-void setStringData(::taihe::map_view<::taihe::string, ::record_test::Data> m)
+::taihe::expected<void, ::taihe::error> setStringData(::taihe::map_view<::taihe::string, ::record_test::Data> m)
 {
     for (auto const &[key, val] : m) {
         std::cout << "C++ MapStringColor: key: " << key << " value: ";
         std::cout << val.a << " " << val.b << " " << val.c << std::endl;
     }
+    return {};
 }
 
-::taihe::map<::taihe::string, ::record_test::Data> getStringData()
+::taihe::expected<::taihe::map<::taihe::string, ::record_test::Data>, ::taihe::error> getStringData()
 {
     ::taihe::map<::taihe::string, ::record_test::Data> result;
     result.emplace("key1", ::record_test::Data {"a1", "b1", 1});
@@ -80,27 +95,30 @@ public:
         std::cout << "del shape " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
-void setStringIBase(::taihe::map_view<::taihe::string, ::record_test::IBase> m)
+::taihe::expected<void, ::taihe::error> setStringIBase(::taihe::map_view<::taihe::string, ::record_test::IBase> m)
 {
     for (auto const &[key, val] : m) {
-        std::cout << "C++ MapStringIBase: key: " << key << " value: " << val->getId() << std::endl;
+        ::taihe::expected<::taihe::string, ::taihe::error> res = val->getId();
+        if (res.has_value()) {
+            std::cout << "C++ MapStringIBase: key: " << key << " value: " << res.value() << std::endl;
+        }
     }
-    return;
+    return {};
 }
 
-::taihe::map<::taihe::string, ::record_test::IBase> getStringIBase()
+::taihe::expected<::taihe::map<::taihe::string, ::record_test::IBase>, ::taihe::error> getStringIBase()
 {
     auto basea = ::taihe::make_holder<Base, ::record_test::IBase>("basea");
     auto baseb = ::taihe::make_holder<Base, ::record_test::IBase>("baseb");
@@ -114,6 +132,7 @@ void setStringIBase(::taihe::map_view<::taihe::string, ::record_test::IBase> m)
 
 TH_EXPORT_CPP_API_getStringIntSize(getStringIntSize);
 TH_EXPORT_CPP_API_createStringString(createStringString);
+TH_EXPORT_CPP_API_changeRecRec(changeRecRec);
 TH_EXPORT_CPP_API_setStringColor(setStringColor);
 TH_EXPORT_CPP_API_getStringColor(getStringColor);
 TH_EXPORT_CPP_API_setStringData(setStringData);

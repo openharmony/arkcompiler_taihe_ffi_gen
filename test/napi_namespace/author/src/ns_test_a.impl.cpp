@@ -20,7 +20,7 @@
 #include "my_module_a.ns1.proj.hpp"
 
 namespace {
-::taihe::string Funtest(::my_module_a::ns1::Color s)
+::taihe::expected<::taihe::string, ::taihe::error> Funtest(::my_module_a::ns1::Color s)
 {
     switch (s.get_key()) {
         case ::my_module_a::ns1::Color::key_t::BLUE:
@@ -33,9 +33,10 @@ namespace {
     return "error";
 }
 
-void noo()
+::taihe::expected<void, ::taihe::error> noo()
 {
     std::cout << "namespace: my_module_a.ns1, func: noo" << std::endl;
+    return {};
 }
 }  // namespace
 

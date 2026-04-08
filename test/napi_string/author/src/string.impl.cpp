@@ -19,32 +19,32 @@
 
 namespace {
 
-taihe::string ohos_concat_str(taihe::string_view a, taihe::string_view b)
+::taihe::expected<taihe::string, ::taihe::error> ohos_concat_str(taihe::string_view a, taihe::string_view b)
 {
     return a + b;
 }
 
-taihe::string ohos_int_to_str(int32_t n)
+::taihe::expected<taihe::string, ::taihe::error> ohos_int_to_str(int32_t n)
 {
     return taihe::to_string(n);
 }
 
-int32_t ohos_str_to_int(taihe::string_view pstr)
+::taihe::expected<int32_t, ::taihe::error> ohos_str_to_int(taihe::string_view pstr)
 {
     return std::atoi(pstr.c_str());
 }
 
-taihe::string ohos_show()
+::taihe::expected<taihe::string, ::taihe::error> ohos_show()
 {
     return "success";
 }
 
-int32_t add(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-uint64_t sum(uint64_t a, uint64_t b)
+::taihe::expected<uint32_t, ::taihe::error> sum(uint32_t a, uint32_t b)
 {
     return (a * b);
 }

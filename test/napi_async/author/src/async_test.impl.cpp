@@ -19,105 +19,206 @@
 #include <cstdint>
 #include <iostream>
 #include <taihe/runtime.hpp>
+#include <chrono>
+#include <thread>
 
 namespace {
 class IBaseImpl {
 public:
-    void makeSync()
+    ::taihe::expected<void, ::taihe::error> makeSync()
     {
-        std::cout << "make" << std::endl;
+        std::cout << "makeSync" << std::endl;
+        return {};
     }
 
-    void makeRetPromise()
+    ::taihe::expected<void, ::taihe::error> makeRetPromise()
     {
-        std::cout << "make" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::cout << "makeRetPromise" << std::endl;
+        return {};
     }
 
-    void makeWithAsync()
+    ::taihe::expected<void, ::taihe::error> makeWithAsync()
     {
-        std::cout << "make" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::cout << "makeWithAsync" << std::endl;
+        return {};
     }
 };
 
-int32_t addSync(int32_t a, int32_t b)
+class IShapeImpl {
+public:
+    ::taihe::expected<void, ::taihe::error> makeSync()
+    {
+        std::cout << "make In shape" << std::endl;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> makeRetPromise()
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::cout << "make In shape RetPromise" << std::endl;
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "Error in makeRetPromise", 1);
+    }
+
+    ::taihe::expected<void, ::taihe::error> makeWithAsync()
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::cout << "make In shape WithAsync" << std::endl;
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "Error in makeWithAsync", 2);
+    }
+};
+
+::taihe::expected<int32_t, ::taihe::error> addSync(int32_t a, int32_t b)
 {
     if (a == 0) {
-        ::taihe::set_error("some error happen");
-        return b;
+        std::cout << "throw error in addSync impl " << std::endl;
+        return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect, "some error happen");
     } else {
         std::cout << "add impl " << a + b << std::endl;
         return a + b;
     }
 }
 
-int32_t addRetPromise(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> addRetPromise(int32_t a, int32_t b)
 {
-    return addSync(a, b);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    if (a == 0) {
+        std::cout << "ERROR in addRetPromise" << std::endl;
+        return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect, "some error happen");
+    } else {
+        std::cout << "SUCCESS in addRetPromise: " << a + b << std::endl;
+        return a + b;
+    }
 }
 
-int32_t addWithAsync(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> addWithAsync(int32_t a, int32_t b)
 {
-    return addSync(a, b);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    if (a == 0) {
+        std::cout << "ERROR in addWithAsync" << std::endl;
+        return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect, "some error happen");
+    } else {
+        std::cout << "SUCCESS in addWithAsync: " << a + b << std::endl;
+        return a + b;
+    }
 }
 
-::async_test::IBase createIBase()
+::taihe::expected<::async_test::IBase, ::taihe::error> createIBase()
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<IBaseImpl, ::async_test::IBase>();
 }
 
-void printSync()
+::taihe::expected<void, ::taihe::error> printSync()
 {
     std::cout << "print Sync" << std::endl;
+    return {};
 }
 
-void printRetPromise()
+::taihe::expected<void, ::taihe::error> printRetPromise()
 {
-    printSync();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "printRetPromise" << std::endl;
+    return {};
 }
 
-void printWithAsync()
+::taihe::expected<void, ::taihe::error> printWithAsync()
 {
-    printSync();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::cout << "printWithAsync" << std::endl;
+    return {};
 }
 
-void fromStructSync(::async_test::Data const &data)
+::taihe::expected<void, ::taihe::error> fromStructSync(::async_test::Data const &data)
 {
-    std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
+    std::cout << "fromStructSync" << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
     if (data.c == 0) {
-        taihe::set_error("some error happen in fromStructSync_impl");
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "some error happen in fromStructSync");
     }
-    return;
+    return {};
 }
 
-void fromStructRetPromise(::async_test::Data const &data)
+::taihe::expected<void, ::taihe::error> fromStructRetPromise(::async_test::Data const &data)
 {
-    fromStructSync(data);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "fromStructRetPromise" << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
+    if (data.c == 0) {
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "some error happen in fromStructRetPromise");
+    }
+    return {};
 }
 
-void fromStructWithAsync(::async_test::Data const &data)
+::taihe::expected<void, ::taihe::error> fromStructWithAsync(::async_test::Data const &data)
 {
-    fromStructSync(data);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::cout << "fromStructWithAsync" << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
+    if (data.c == 0) {
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "some error happen in fromStructWithAsync");
+    }
+    return {};
 }
 
-::async_test::Data toStructSync(::taihe::string_view a, ::taihe::string_view b, int32_t c)
+::taihe::expected<::async_test::Data, ::taihe::error> toStructSync(::taihe::string_view a, ::taihe::string_view b,
+                                                                   int32_t c)
 {
     if (c == 0) {
-        taihe::set_error("some error happen in toStructSync_impl");
-        return {a, b, c};
+        return ::taihe::expected<::async_test::Data, ::taihe::error>(::taihe::unexpect,
+                                                                     "some error happen in toStructSync");
     }
-    return {a, b, c};
+    return ::async_test::Data {a, b, c};
 }
 
-::async_test::Data toStructRetPromise(::taihe::string_view a, ::taihe::string_view b, int32_t c)
+::taihe::expected<::async_test::Data, ::taihe::error> toStructRetPromise(::taihe::string_view a, ::taihe::string_view b,
+                                                                         int32_t c)
 {
-    return toStructSync(a, b, c);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (c == 0) {
+        return ::taihe::expected<::async_test::Data, ::taihe::error>(::taihe::unexpect,
+                                                                     "some error happen in toStructRetPromise");
+    }
+    return ::async_test::Data {a, b, c};
 }
 
-::async_test::Data toStructWithAsync(::taihe::string_view a, ::taihe::string_view b, int32_t c)
+::taihe::expected<::async_test::Data, ::taihe::error> toStructWithAsync(::taihe::string_view a, ::taihe::string_view b,
+                                                                        int32_t c)
 {
-    return toStructSync(a, b, c);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    if (c == 0) {
+        return ::taihe::expected<::async_test::Data, ::taihe::error>(::taihe::unexpect,
+                                                                     "some error happen in toStructWithAsync");
+    }
+    return ::async_test::Data {a, b, c};
+}
+
+::taihe::expected<::async_test::IShape, ::taihe::error> createIShape()
+{
+    // The parameters in the make_holder function should be of the same type
+    // as the parameters in the constructor of the actual implementation class.
+    return taihe::make_holder<IShapeImpl, ::async_test::IShape>();
+}
+
+::taihe::expected<::async_test::MyStruct, ::taihe::error> createMyStruct()
+{
+    return ::async_test::MyStruct {1, 2};
+}
+
+::taihe::expected<int32_t, ::taihe::error> sumSync()
+{
+    return 10;
+}
+
+::taihe::expected<int32_t, ::taihe::error> sumRetPromise()
+{
+    return sumSync();
+}
+
+::taihe::expected<int32_t, ::taihe::error> sumWithAsync()
+{
+    return sumSync();
 }
 }  // namespace
 
@@ -135,4 +236,9 @@ TH_EXPORT_CPP_API_fromStructSync(fromStructSync);
 TH_EXPORT_CPP_API_toStructRetPromise(toStructRetPromise);
 TH_EXPORT_CPP_API_toStructWithAsync(toStructWithAsync);
 TH_EXPORT_CPP_API_toStructSync(toStructSync);
+TH_EXPORT_CPP_API_createIShape(createIShape);
+TH_EXPORT_CPP_API_createMyStruct(createMyStruct);
+TH_EXPORT_CPP_API_sumRetPromise(sumRetPromise);
+TH_EXPORT_CPP_API_sumWithAsync(sumWithAsync);
+TH_EXPORT_CPP_API_sumSync(sumSync);
 // NOLINTEND

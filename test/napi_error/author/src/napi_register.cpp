@@ -15,24 +15,35 @@
 // This file is a test file.
 // NOLINTBEGIN
 
-#include <iostream>
-#include "my_module_a.ns1.ns2.ns3.ns4.ns5.impl.hpp"
-#include "my_module_a.ns1.ns2.ns3.ns4.ns5.proj.hpp"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+#pragma clang diagnostic warning "-Wextra"
+#pragma clang diagnostic warning "-Wall"
+#include "hello.napi.h"
 
-namespace {
-
-::taihe::expected<int32_t, ::taihe::error> Funtest(::my_module_a::ns1::ns2::ns3::ns4::ns5::MyStruct const &s)
+EXTERN_C_START
+napi_value Init(napi_env env, napi_value exports)
 {
-    return s.a + s.b;
+    hello::NapiInit(env, exports);
+    return exports;
 }
 
-::taihe::expected<void, ::taihe::error> foo()
-{
-    std::cout << "namespace: my_module_a.ns1.ns2.ns3.ns4.ns5, func: noo" << std::endl;
-    return {};
-}
-}  // namespace
+EXTERN_C_END
+static napi_module demoModule = {
+    .nm_version = 1,
+    .nm_flags = 0,
+    .nm_filename = nullptr,
+    .nm_register_func = Init,
+    .nm_modname = "entry",
+    .nm_priv = ((void *)0),
+    .reserved = {0},
+};
 
-TH_EXPORT_CPP_API_Funtest(Funtest);
-TH_EXPORT_CPP_API_foo(foo);
+extern "C" __attribute__((constructor)) void RegisterEntryModule(void)
+{
+    napi_module_register(&demoModule);
+}
+
+#pragma clang diagnostic pop
+
 // NOLINTEND
