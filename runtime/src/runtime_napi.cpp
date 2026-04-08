@@ -114,7 +114,7 @@ napi_value into_napi_error(::taihe::error err)
     napi_value errorMessage = nullptr;
     napi_create_string_utf8(env, err.message().c_str(), NAPI_AUTO_LENGTH, &errorMessage);
     napi_value error = nullptr;
-    if (err.has_code()) {
+    if (err.code() != 0) {
         std::string code_str = std::to_string(err.code());
         char const *code = code_str.c_str();
         napi_value errorCode = nullptr;

@@ -169,7 +169,7 @@ ani_error into_ani_error(::taihe::error err)
     ani_ref undefined;
     env->GetUndefined(&undefined);
 
-    if (err.has_code()) {
+    if (err.code() != 0) {
         return create_ani_business_error(env, err.code(), err.message());
     } else {
         return create_ani_error(env, err.message());
