@@ -38,6 +38,10 @@ function main() {
   if (ibase_1.getId() !== "xyz") throw new Error(`Unexpected result`);
   console.log("ibase_1 setId: ", ibase_1.getId());
 
+  if (ibase_1.Name !== "default_base_name") throw new Error(`Unexpected result`);
+  ibase_1.Name = "new_base_name";
+  if (ibase_1.Name !== "new_base_name") throw new Error(`Unexpected result`);
+
   let ibase_2 = lib.makeIBase("test");
   lib.copyIBase(ibase_1, ibase_2);
   if (ibase_1.getId() !== ibase_2.getId()) throw new Error(`Unexpected result`);
@@ -47,6 +51,10 @@ function main() {
   console.log("makeIShape: ", ishape_1.calculateArea());
   if (ishape_1.getId() !== "shape") throw new Error(`Unexpected result`);
   console.log("interface extends: ", ishape_1.getId());
+
+  if (ishape_1.Name !== "default_shape_name") throw new Error(`Unexpected result`);
+  ishape_1.Name = "new_shape_name";
+  if (ishape_1.Name !== "new_shape_name") throw new Error(`Unexpected result`);
 
   ishape_1.setId("aaaaa");
   if (ishape_1.getId() !== "aaaaa") throw new Error(`Unexpected result`);
@@ -65,6 +73,10 @@ function main() {
   let ctest = new lib.CTest(100);
   if (ctest.add(1, 2) !== 103) throw new Error(`Unexpected result`);
   console.log("CTets: ", ctest.add(1, 2));
+
+  if (ctest.Id !== "default_ctest_id") throw new Error(`Unexpected result`);
+  ctest.Id = "new_ctest_id";
+  if (ctest.Id !== "new_ctest_id") throw new Error(`Unexpected result`);
 
   let new_ctest = lib.changeCTest(ctest);
   if (new_ctest.add(5, 6) !== 118) throw new Error(`Unexpected result`);
@@ -87,6 +99,10 @@ function main() {
   d.call();
   if (d.getId() !== "d") throw new Error(`Unexpected result`);
   console.log(d.getId());
+
+  if (d.Name !== "default_derived_name") throw new Error(`Unexpected result`);
+  d.Name = "new_derived_name";
+  if (d.Name !== "new_derived_name") throw new Error(`Unexpected result`);
 }
 
 main();

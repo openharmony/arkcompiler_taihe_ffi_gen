@@ -21,12 +21,12 @@
 #include "taihe/object.hpp"
 
 namespace {
-int32_t sumArray(::taihe::array_view<int32_t> nums, int32_t base)
+::taihe::expected<int32_t, ::taihe::error> sumArray(::taihe::array_view<int32_t> nums, int32_t base)
 {
     return std::accumulate(nums.begin(), nums.end(), base);
 }
 
-int64_t getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx)
+::taihe::expected<int64_t, ::taihe::error> getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx)
 {
     if (idx >= 0 && idx < nums.size()) {
         return nums[idx];
@@ -34,7 +34,7 @@ int64_t getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx)
     return 0;
 }
 
-::taihe::array<::taihe::string> toStingArray(::taihe::array_view<int32_t> nums)
+::taihe::expected<::taihe::array<::taihe::string>, ::taihe::error> toStingArray(::taihe::array_view<int32_t> nums)
 {
     auto result = ::taihe::array<::taihe::string>::make(nums.size(), "");
     std::transform(nums.begin(), nums.end(), result.begin(), [](int32_t n) {
@@ -43,24 +43,26 @@ int64_t getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx)
     return result;
 }
 
-::taihe::array<int32_t> makeIntArray(int32_t value, int32_t num)
+::taihe::expected<::taihe::array<int32_t>, ::taihe::error> makeIntArray(int32_t value, int32_t num)
 {
     return ::taihe::array<int32_t>::make(num, value);
 }
 
-::taihe::array<::array_test::Color> makeEnumArray(::array_test::Color value, int32_t num)
+::taihe::expected<::taihe::array<::array_test::Color>, ::taihe::error> makeEnumArray(::array_test::Color value,
+                                                                                     int32_t num)
 {
     return ::taihe::array<::array_test::Color>::make(num, value);
 }
 
-::taihe::array<::array_test::Data> makeStructArray(::taihe::string_view a, ::taihe::string_view b, int32_t c,
-                                                   int32_t num)
+::taihe::expected<::taihe::array<::array_test::Data>, ::taihe::error> makeStructArray(::taihe::string_view a,
+                                                                                      ::taihe::string_view b, int32_t c,
+                                                                                      int32_t num)
 {
     return ::taihe::array<::array_test::Data>::make(num, ::array_test::Data {a, b, c});
 }
 
-::taihe::array<::array_test::Color> changeEnumArray(::taihe::array_view<::array_test::Color> value,
-                                                    ::array_test::Color color)
+::taihe::expected<::taihe::array<::array_test::Color>, ::taihe::error> changeEnumArray(
+    ::taihe::array_view<::array_test::Color> value, ::array_test::Color color)
 {
     auto result = ::taihe::array<::array_test::Color>::make(value.size(), value[0]);
     std::transform(value.begin(), value.end(), result.begin(), [color](::array_test::Color c) {
@@ -69,8 +71,8 @@ int64_t getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx)
     return result;
 }
 
-::taihe::array<::array_test::Data> changeStructArray(::taihe::array_view<::array_test::Data> value,
-                                                     ::taihe::string_view a, ::taihe::string_view b, int32_t c)
+::taihe::expected<::taihe::array<::array_test::Data>, ::taihe::error> changeStructArray(
+    ::taihe::array_view<::array_test::Data> value, ::taihe::string_view a, ::taihe::string_view b, int32_t c)
 {
     auto result = ::taihe::array<::array_test::Data>::make(value.size(), value[0]);
     std::transform(value.begin(), value.end(), result.begin(), [a, b, c](::array_test::Data d) {
@@ -79,8 +81,8 @@ int64_t getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx)
     return result;
 }
 
-::taihe::array<::taihe::array<::array_test::Data>> makeStructArrayArray(::taihe::string_view a, ::taihe::string_view b,
-                                                                        int32_t c, int32_t num1, int32_t num2)
+::taihe::expected<::taihe::array<::taihe::array<::array_test::Data>>, ::taihe::error> makeStructArrayArray(
+    ::taihe::string_view a, ::taihe::string_view b, int32_t c, int32_t num1, int32_t num2)
 {
     auto arr = ::taihe::array<::array_test::Data>::make(num1, ::array_test::Data {a, b, c});
     return ::taihe::array<::taihe::array<::array_test::Data>>::make(num2, arr);
@@ -101,32 +103,62 @@ public:
         std::cout << "del shape " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
-::taihe::array<::array_test::IBase> makeIfaceArray(::taihe::string_view a)
+::taihe::expected<::taihe::array<::array_test::IBase>, ::taihe::error> makeIfaceArray(::taihe::string_view a)
 {
     auto base = ::taihe::make_holder<Base, ::array_test::IBase>(a);
     return ::taihe::array<::array_test::IBase>::make(1, base);
 }
 
-::taihe::array<::array_test::IBase> changeIfaceArray(::taihe::array_view<::array_test::IBase> value,
-                                                     ::taihe::string_view a)
+::taihe::expected<::taihe::array<::array_test::IBase>, ::taihe::error> changeIfaceArray(
+    ::taihe::array_view<::array_test::IBase> value, ::taihe::string_view a)
 {
     ::taihe::array<::array_test::IBase> res = value;
     for (int i = 0; i < value.size(); i++) {
         res[i]->setId(a);
     }
     return res;
+}
+
+::taihe::expected<::taihe::array<::taihe::map<::taihe::string, int64_t>>, ::taihe::error> MakeRecordArray(
+    ::taihe::string_view key, int64_t val, int32_t num)
+{
+    ::taihe::map<::taihe::string, int64_t> record;
+    record.emplace(key, val);
+    return ::taihe::array<::taihe::map<::taihe::string, int64_t>>::make(num, record);
+}
+
+::taihe::expected<::taihe::array<::taihe::map<::taihe::string, int64_t>>, ::taihe::error> ChangeRecordArray(
+    ::taihe::array_view<::taihe::map<::taihe::string, int64_t>> value, ::taihe::string_view k, int64_t v)
+{
+    auto result = ::taihe::array<::taihe::map<::taihe::string, int64_t>>::make(value.size());
+    std::transform(value.begin(), value.end(), result.begin(),
+                   [k = ::taihe::string(k), v](::taihe::map<::taihe::string, int64_t> const &m) {
+                       ::taihe::map<::taihe::string, int64_t> new_record;
+                       new_record.emplace(k, v);
+                       return new_record;
+                   });
+
+    return result;
+
+    // auto result = array<map<string, int64_t>>::make(value.size(), value[0]);
+    // map<string, int64_t> record;
+    // record.emplace(k, v);
+    // std::transform(value.begin(), value.end(), result.begin(), [record](map<string, int64_t> m) {
+    //     return record;
+    // });
+    // return result;
 }
 }  // namespace
 
@@ -141,4 +173,6 @@ TH_EXPORT_CPP_API_changeStructArray(changeStructArray);
 TH_EXPORT_CPP_API_makeStructArrayArray(makeStructArrayArray);
 TH_EXPORT_CPP_API_makeIfaceArray(makeIfaceArray);
 TH_EXPORT_CPP_API_changeIfaceArray(changeIfaceArray);
+TH_EXPORT_CPP_API_MakeRecordArray(MakeRecordArray);
+TH_EXPORT_CPP_API_ChangeRecordArray(ChangeRecordArray);
 // NOLINTEND

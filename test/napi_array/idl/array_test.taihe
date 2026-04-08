@@ -41,3 +41,6 @@ interface IBase {
 }
 function makeIfaceArray(a: String): Array<IBase>;
 function changeIfaceArray(value: Array<IBase>, a: String): Array<IBase>;
+
+function MakeRecordArray(key: String, val: i64, num: i32): Array<@record Map<String, i64>>;
+function ChangeRecordArray(value: Array<@record Map<String, i64>>, k: String, v: i64): Array<@record Map<String, i64>>;

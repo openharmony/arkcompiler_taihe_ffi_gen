@@ -12,26 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// This file is a test file.
-// NOLINTBEGIN
 
-#include "bigint_test.impl.hpp"
-#include <iostream>
-#include "bigint_test.proj.hpp"
-
-namespace {
-
-::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> processBigInt(::taihe::array_view<uint64_t> a)
-{
-    ::taihe::array<uint64_t> res(a.size() + 1);
-    res[0] = 0;
-    for (int i = 0; i < a.size(); i++) {
-        res[i + 1] = a[i];
-        std::cout << "arr[" << i << "] = " << a[i] << std::endl;
-    }
-    return res;
+function sayHello(): void;
+function sayHello_ii(a: i32): i32;
+interface Foo{
+    bar(): void;
+    bar_ii(a: i32): i32;
+    @noexcept bar_ss(a: String): String;
 }
-}  // namespace
-
-TH_EXPORT_CPP_API_processBigInt(processBigInt);
-// NOLINTEND
+function createFoo(): Foo;
+function callFoo(a: Foo): String;
+function callcb(f: () => void): void;
+function callcb_ii(f: (a: i32) => i32): void;
+@noexcept function concat(a: String, b: String): String;
+function test_cb_v(f: @noexcept () => void): void;

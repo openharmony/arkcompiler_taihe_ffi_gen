@@ -20,7 +20,7 @@
 #include "people.proj.hpp"
 
 namespace {
-::building::group make_group()
+::taihe::expected<::building::group, ::taihe::error> make_group()
 {
     return ::building::group {::people::student {"mary", 20}, 23};
 }

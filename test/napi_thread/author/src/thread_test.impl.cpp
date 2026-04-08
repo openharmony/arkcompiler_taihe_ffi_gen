@@ -26,7 +26,8 @@ using namespace taihe;
 namespace {
 static constexpr int32_t THOUSAND = 1000;
 
-void invokeFromOtherThreadAfter(double sec, ::taihe::callback_view<int32_t(int32_t a)> cb)
+::taihe::expected<void, ::taihe::error> invokeFromOtherThreadAfter(
+    double sec, ::taihe::callback_view<::taihe::expected<int32_t, ::taihe::error>(int32_t a)> cb)
 {
     // Directly call
     cb(1);
@@ -34,13 +35,17 @@ void invokeFromOtherThreadAfter(double sec, ::taihe::callback_view<int32_t(int32
     // call in the new thread
     std::cout << "!!!!!!!!!!" << std::endl;
     std::cerr << "-- begin invokeFromOtherThreadAfter --" << std::endl;
-    std::thread thread([sec, cb = callback<int32_t(int32_t a)>(cb)]() {
+    std::thread thread([sec, cb = ::taihe::callback<::taihe::expected<int32_t, ::taihe::error>(int32_t a)>(cb)]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(sec * THOUSAND)));
         std::cerr << "invokeFromOtherThreadAfter: " << sec << " seconds" << std::endl;
-        std::cout << "result: " << cb(1) << std::endl;
+        ::taihe::expected<int32_t, ::taihe::error> cb_res = cb(1);
+        if (cb_res.has_value()) {
+            std::cout << "result: " << cb_res.value() << std::endl;
+        }
     });
     thread.detach();
     std::cerr << "-- end invokeFromOtherThreadAfter --" << std::endl;
+    return {};
 }
 }  // namespace
 
