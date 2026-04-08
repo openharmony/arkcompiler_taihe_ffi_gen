@@ -16,6 +16,7 @@
 #ifndef TAIHE_EXPECTED_HPP
 #define TAIHE_EXPECTED_HPP
 
+#include <stdexcept>
 #pragma once
 #include <taihe/expected.abi.h>
 #include <taihe/common.hpp>
@@ -48,19 +49,9 @@ public:
         return message_;
     }
 
-    bool has_code() const noexcept
-    {
-        return code_ != 0;
-    }
-
     int32_t code() const noexcept
     {
         return code_;
-    }
-
-    int32_t code_or(int32_t default_code = 0) const noexcept
-    {
-        return has_code() ? code_ : default_code;
     }
 
     friend bool operator==(error const &lhs, error const &rhs) noexcept
@@ -79,27 +70,6 @@ struct unexpect_t {
 };
 
 constexpr inline unexpect_t unexpect {};
-
-class bad_expected_access : public std::exception {
-private:
-    ::taihe::string message_;
-
-public:
-    bad_expected_access(::taihe::string const &msg) : message_(msg)
-    {
-    }
-
-    bad_expected_access(char const *msg) : message_(msg)
-    {
-    }
-
-    ~bad_expected_access() noexcept override = default;
-
-    char const *what() const noexcept override
-    {
-        return message_.c_str();
-    }
-};
 
 template<typename E>
 class unexpected {
@@ -178,6 +148,44 @@ public:
         }
     }
 
+    expected &operator=(expected const &other) noexcept(std::is_nothrow_copy_constructible_v<E> &&
+                                                        std::is_nothrow_destructible_v<E>)
+    {
+        if (this != &other) {
+            if (has_val != other.has_val) {
+                if (!has_val) {
+                    unex.~E();
+                }
+                has_val = other.has_val;
+                if (!has_val) {
+                    new (&unex) E(other.unex);
+                }
+            } else if (!has_val) {
+                unex = other.unex;
+            }
+        }
+        return *this;
+    }
+
+    expected &operator=(expected &&other) noexcept(std::is_nothrow_move_constructible_v<E> &&
+                                                   std::is_nothrow_destructible_v<E>)
+    {
+        if (this != &other) {
+            if (has_val != other.has_val) {
+                if (!has_val) {
+                    unex.~E();
+                }
+                has_val = other.has_val;
+                if (!has_val) {
+                    new (&unex) E(std::move(other.unex));
+                }
+            } else if (!has_val) {
+                unex = std::move(other.unex);
+            }
+        }
+        return *this;
+    }
+
     template<class G>
     constexpr expected(unexpected<G> const &other) : has_val(false), unex(other.error())
     {
@@ -199,36 +207,6 @@ public:
         if (!has_val) unex.~E();
     }
 
-    expected &operator=(expected const &other) noexcept(std::is_nothrow_copy_constructible_v<E> &&
-                                                        std::is_nothrow_destructible_v<E>)
-    {
-        if (this != &other) {
-            if (has_val != other.has_val) {
-                if (!has_val) unex.~E();
-                has_val = other.has_val;
-                if (!has_val) new (&unex) E(other.unex);
-            } else if (!has_val) {
-                unex = other.unex;
-            }
-        }
-        return *this;
-    }
-
-    expected &operator=(expected &&other) noexcept(std::is_nothrow_move_constructible_v<E> &&
-                                                   std::is_nothrow_destructible_v<E>)
-    {
-        if (this != &other) {
-            if (has_val != other.has_val) {
-                if (!has_val) unex.~E();
-                has_val = other.has_val;
-                if (!has_val) new (&unex) E(std::move(other.unex));
-            } else if (!has_val) {
-                unex = std::move(other.unex);
-            }
-        }
-        return *this;
-    }
-
     constexpr explicit operator bool() const noexcept
     {
         return has_val;
@@ -241,30 +219,30 @@ public:
 
     constexpr void value() const
     {
-        if (!has_val) TH_THROW(bad_expected_access, "no value");
+        if (!has_val) TH_THROW(std::runtime_error, "no value");
     }
 
     constexpr E const &error() const &
     {
-        if (has_val) TH_THROW(bad_expected_access, "has value");
+        if (has_val) TH_THROW(std::runtime_error, "has value");
         return unex;
     }
 
     constexpr E &error() &
     {
-        if (has_val) TH_THROW(bad_expected_access, "has value");
+        if (has_val) TH_THROW(std::runtime_error, "has value");
         return unex;
     }
 
     constexpr E const &&error() const &&
     {
-        if (has_val) TH_THROW(bad_expected_access, "has value");
+        if (has_val) TH_THROW(std::runtime_error, "has value");
         return std::move(unex);
     }
 
     constexpr E &&error() &&
     {
-        if (has_val) TH_THROW(bad_expected_access, "has value");
+        if (has_val) TH_THROW(std::runtime_error, "has value");
         return std::move(unex);
     }
 
@@ -425,7 +403,7 @@ public:
     constexpr T const &value() const &
     {
         if (!has_val) {
-            TH_THROW(bad_expected_access, "No value");
+            TH_THROW(std::runtime_error, "No value");
         }
         return val;
     }
@@ -433,7 +411,7 @@ public:
     constexpr T &value() &
     {
         if (!has_val) {
-            TH_THROW(bad_expected_access, "No value");
+            TH_THROW(std::runtime_error, "No value");
         }
         return val;
     }
@@ -441,7 +419,7 @@ public:
     constexpr T const &&value() const &&
     {
         if (!has_val) {
-            TH_THROW(bad_expected_access, "No value");
+            TH_THROW(std::runtime_error, "No value");
         }
         return std::move(val);
     }
@@ -449,7 +427,7 @@ public:
     constexpr T &&value() &&
     {
         if (!has_val) {
-            TH_THROW(bad_expected_access, "No value");
+            TH_THROW(std::runtime_error, "No value");
         }
         return std::move(val);
     }
@@ -457,7 +435,7 @@ public:
     constexpr E const &error() const &
     {
         if (has_val) {
-            TH_THROW(bad_expected_access, "Has value, no error");
+            TH_THROW(std::runtime_error, "Has value, no error");
         }
         return unex;
     }
@@ -465,7 +443,7 @@ public:
     constexpr E &error() &
     {
         if (has_val) {
-            TH_THROW(bad_expected_access, "Has value, no error");
+            TH_THROW(std::runtime_error, "Has value, no error");
         }
         return unex;
     }
@@ -473,7 +451,7 @@ public:
     constexpr E const &&error() const &&
     {
         if (has_val) {
-            TH_THROW(bad_expected_access, "Has value, no error");
+            TH_THROW(std::runtime_error, "Has value, no error");
         }
         return std::move(unex);
     }
@@ -481,7 +459,7 @@ public:
     constexpr E &&error() &&
     {
         if (has_val) {
-            TH_THROW(bad_expected_access, "Has value, no error");
+            TH_THROW(std::runtime_error, "Has value, no error");
         }
         return std::move(unex);
     }
