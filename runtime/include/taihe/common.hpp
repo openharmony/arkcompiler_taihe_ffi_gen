@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -36,6 +36,14 @@
     } while (0)
 #endif
 
+#ifdef __cpp_lib_remove_cvref
+#include <type_traits>
+using std::remove_cvref_t;
+#else
+template<typename T>
+using remove_cvref_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+#endif
+
 namespace taihe {
 template<typename cpp_t, typename = void>
 struct as_abi;
@@ -63,46 +71,6 @@ template<>
 struct as_abi<void> {
     using type = void;
 };
-
-template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t &&cpp_val)
-{
-    as_abi_t<cpp_t> abi_val;
-    new (&abi_val) cpp_t(std::move(cpp_val));
-    return abi_val;
-}
-
-template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t &cpp_val)
-{
-    as_abi_t<cpp_t> abi_val;
-    new (&abi_val) cpp_t(std::move(cpp_val));
-    return abi_val;
-}
-
-template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t &&from_abi(as_abi_t<cpp_t> &abi_val)
-{
-    return reinterpret_cast<cpp_t &&>(abi_val);
-}
-
-template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t &&from_abi(as_abi_t<cpp_t> &&abi_val)
-{
-    return reinterpret_cast<cpp_t &&>(abi_val);
-}
-
-template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val)
-{
-    return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
-}
-
-template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t from_abi(as_abi_t<cpp_t> abi_val)
-{
-    return reinterpret_cast<cpp_t>(*abi_val);
-}
 
 ///////////////
 // enum tags //

@@ -15,6 +15,7 @@
 
 function getStringIntSize(r: Map<String, i32>): i32;
 function createStringString(a: i32): Map<String, String>;
+function changeMapMap(a: Map<String, Map<String, i32>>): Map<String, Map<String, i32>>;
 
 function changeIntString(a: Map<i32, String>): Map<i32, String>;
 

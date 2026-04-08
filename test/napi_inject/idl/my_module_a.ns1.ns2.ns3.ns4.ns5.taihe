@@ -17,6 +17,25 @@
 
 @!namespace("my_module_a", "ns1.ns2.ns3.ns4.ns5")
 @!ts_inject_into_module("export const PI = 3.14159;")
+@!ts_inject("export const PI = 3.14159;")
+
+union MyUnion {
+  sValue: String;
+  oValue: Opaque;
+}
+
+enum MyEnum: i32 {
+    A = 0,
+    B,
+    C,
+}
+
+@const
+enum Flags: i32 {
+    FLAG_A = 1,
+    FLAG_B = 1 + 2,
+}
+
 function Funtest(s: MyStruct): i32;
 struct MyStruct {
     a: i32;
@@ -28,7 +47,7 @@ function foo(): void;
 @class
 struct MyClass {
     a: bool;
-    b: f32;
+    b: i32;
 @!ts_inject_into_class("""mul(a: number, b: number): number {
     return a * b;
 }
@@ -36,7 +55,7 @@ struct MyClass {
 }
 
 @ctor("MyClass")
-function create_myclass(a: bool, b: f32): MyClass;
+function create_myclass(a: bool, b: i32): MyClass;
 
 @static("MyClass")
 function add(a: i32, b: i32): i32;

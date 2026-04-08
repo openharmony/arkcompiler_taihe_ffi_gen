@@ -13,5 +13,5 @@
  * limitations under the License.
  */
 
-function SumArrayU8(nums: @arraybuffer Array<u8>): u8;
-function GetArrayBuffer(nums: u8): @arraybuffer Array<u8>;
+function SumArrayU8(nums: @arraybuffer Array<u8>): u32;
+function GetArrayBuffer(nums: u32): @arraybuffer Array<u8>;

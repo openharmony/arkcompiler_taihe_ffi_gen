@@ -26,6 +26,7 @@ function main() {
 
     try {
         let res = lib.maythrow(1);
+        if (res !== 11) throw new Error(`Unexpected result`);
         console.log('Success:', res);
     } catch (error) {
         console.error('maythrow Error caught:', error.message);
@@ -35,25 +36,29 @@ function main() {
         let res = lib.getDataMaythrow();
         console.log('Success:', res);
     } catch (error) {
+        if (error.message !== "error in getDataMaythrow") throw new Error(`Unexpected result`);
         console.error('getDataMaythrow Error caught:', error.message);
     }
 
     try {
         lib.noReturnMaythrow();
     } catch (error) {
+        if (error.message !== "error in noReturnMaythrow") throw new Error(`Unexpected result`);
         console.error('noReturnMaythrow Error caught:', error.message);
     }
 
     try {
         lib.noReturnTypeError();
     } catch (error) {
-        console.error('noReturnTypeError Error caught:', error.message, error.code);
+        if (error.message !== "noReturnTypeError") throw new Error(`Unexpected result`);
+        console.error('noReturnTypeError Error caught:', error.message);
     }
     
     try {
         lib.noReturnRangeError();
     } catch (error) {
-        console.error('noReturnRangeError Error caught:', error.message, error.code);
+        if (error.message !== "noReturnRangeError") throw new Error(`Unexpected result`);
+        console.error('noReturnRangeError Error caught:', error.message);
     }
 }
 

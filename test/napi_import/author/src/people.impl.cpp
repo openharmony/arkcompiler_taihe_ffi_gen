@@ -19,7 +19,7 @@
 #include "people.proj.hpp"
 
 namespace {
-::people::student make_student()
+::taihe::expected<::people::student, ::taihe::error> make_student()
 {
     return ::people::student {"mike", 22};
 }

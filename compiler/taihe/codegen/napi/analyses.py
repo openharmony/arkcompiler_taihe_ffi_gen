@@ -18,7 +18,10 @@ from collections import defaultdict
 
 from typing_extensions import override
 
-from taihe.codegen.abi.analyses import IfaceAbiInfo
+from taihe.codegen.abi.analyses import (
+    CallbackAbiInfo,
+    IfaceAbiInfo,
+)
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -587,16 +590,10 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         self.type = t
         napi_type = {
             ScalarKind.BOOL: "napi_boolean",
-            ScalarKind.F32: "napi_number",
             ScalarKind.F64: "napi_number",
-            ScalarKind.I8: "napi_number",
-            ScalarKind.I16: "napi_number",
             ScalarKind.I32: "napi_number",
             ScalarKind.I64: "napi_number",
-            ScalarKind.U8: "napi_number",
-            ScalarKind.U16: "napi_number",
             ScalarKind.U32: "napi_number",
-            ScalarKind.U64: "napi_number",
         }.get(self.type.kind)
         if napi_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -606,16 +603,10 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
     def dts_type_in(self, target: DtsWriter) -> str:
         dts_type = {
             ScalarKind.BOOL: "boolean",
-            ScalarKind.F32: "number",
             ScalarKind.F64: "number",
-            ScalarKind.I8: "number",
-            ScalarKind.I16: "number",
             ScalarKind.I32: "number",
             ScalarKind.I64: "number",
-            ScalarKind.U8: "number",
-            ScalarKind.U16: "number",
             ScalarKind.U32: "number",
-            ScalarKind.U64: "number",
         }.get(self.type.kind)
         if dts_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -631,36 +622,18 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
-        as_napi_c = {
-            ScalarKind.BOOL: "bool",
-            ScalarKind.F32: "double",
-            ScalarKind.F64: "double",
-            ScalarKind.I8: "int32_t",
-            ScalarKind.I16: "int32_t",
-            ScalarKind.I32: "int32_t",
-            ScalarKind.I64: "int64_t",
-            ScalarKind.U8: "uint32_t",
-            ScalarKind.U16: "uint32_t",
-            ScalarKind.U32: "uint32_t",
-            ScalarKind.U64: "double",
-        }.get(self.type.kind)
         from_js_to_c_func = {
             ScalarKind.BOOL: "napi_get_value_bool",
-            ScalarKind.F32: "napi_get_value_double",
             ScalarKind.F64: "napi_get_value_double",
-            ScalarKind.I8: "napi_get_value_int32",
-            ScalarKind.I16: "napi_get_value_int32",
             ScalarKind.I32: "napi_get_value_int32",
             ScalarKind.I64: "napi_get_value_int64",
-            ScalarKind.U8: "napi_get_value_uint32",
-            ScalarKind.U16: "napi_get_value_uint32",
             ScalarKind.U32: "napi_get_value_uint32",
-            ScalarKind.U64: "napi_get_value_double",
         }.get(self.type.kind)
+        if from_js_to_c_func is None:
+            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         target.writelns(
-            f"{as_napi_c} {cpp_result}_tmp;",
-            f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}_tmp));",
-            f"{self.cpp_info.as_owner} {cpp_result} = {cpp_result}_tmp;",
+            f"{self.cpp_info.as_owner} {cpp_result};",
+            f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}));",
         )
 
     def into_napi(
@@ -671,16 +644,13 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
     ):
         from_c_to_js_func = {
             ScalarKind.BOOL: "napi_get_boolean",
-            ScalarKind.F32: "napi_create_double",
             ScalarKind.F64: "napi_create_double",
-            ScalarKind.I8: "napi_create_int32",
-            ScalarKind.I16: "napi_create_int32",
             ScalarKind.I32: "napi_create_int32",
             ScalarKind.I64: "napi_create_int64",
-            ScalarKind.U8: "napi_create_uint32",
             ScalarKind.U32: "napi_create_uint32",
-            ScalarKind.U64: "napi_create_double",
         }.get(self.type.kind)
+        if from_c_to_js_func is None:
+            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
             f"NAPI_CALL(env, {from_c_to_js_func}(env, {cpp_value}, &{napi_result}));",
@@ -853,6 +823,7 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
             f"{item_ty_cpp_info.as_owner}* {cpp_pointer} = nullptr;",
             f"napi_valuetype {napi_ty};",
             f"napi_status {napi_status} = napi_typeof(env, {napi_value}, &{napi_ty});",
+            f"{self.cpp_info.as_owner} {cpp_result};",
         )
         with target.indented(
             f"if ({napi_status} == napi_ok && {napi_ty} != napi_undefined) {{",
@@ -861,11 +832,15 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
             item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
             item_ty_napi_info.from_napi(target, napi_value, cpp_spec)
             target.writelns(
-                f"{cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));",
+                f"{cpp_result} = {self.cpp_info.as_owner}(std::in_place, {cpp_spec});",
             )
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result}({cpp_pointer});",
-        )
+        with target.indented(
+            f"else {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"{cpp_result} = std::nullopt;",
+            )
 
     @override
     def into_napi(
@@ -932,10 +907,6 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         destruct_data_type = "destruct_data"
 
         cpp_impl_class = f"{cpp_result}_cpp_impl_t"
-        cpp_cb_data_type = f"{cpp_result}_cb_data"
-        cpp_cb_data = "cb_data"
-
-        cpp_inputs = []
         target.add_include("optional")
         with target.indented(
             f"struct {base_tsfn_data_type} {{",
@@ -994,61 +965,58 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 target.writelns(
                     f"napi_unref_threadsafe_function(env, _tsfn);",
                 )
+
             with target.indented(
                 f"~{cpp_impl_class}() {{",
                 f"}}",
             ):
                 with target.indented(
-                    f"if (_ref) {{",
+                    f"if (::taihe::_is_main_thread()) {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"NAPI_CALL(env, napi_delete_reference(env, _ref));",
+                    )
+                with target.indented(
+                    f"else {{",
                     f"}}",
                 ):
                     with target.indented(
-                        f"if (::taihe::_is_main_thread()) {{",
-                        f"}}",
+                        f"struct {destruct_data_type}: {base_tsfn_data_type} {{",
+                        f"}};",
                     ):
                         target.writelns(
-                            f"NAPI_CALL(env, napi_delete_reference(env, _ref));",
+                            f"bool completed = false;",
+                            f"std::mutex mutex;",
+                            f"std::condition_variable cv;",
+                            f"napi_ref ref;",
                         )
+                        with target.indented(
+                            f"void operator()(napi_env env) override {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"NAPI_CALL(env, napi_delete_reference(env, this->ref));",
+                                f"this->completed = true;",
+                                f"this->cv.notify_one();",
+                            )
+                    target.writelns(
+                        f"{destruct_data_type} del_ref_data;",
+                        f"del_ref_data.ref = _ref;",
+                    )
                     with target.indented(
-                        f"else {{",
-                        f"}}",
+                        f"NAPI_CALL(env, napi_call_threadsafe_function(",
+                        f"));",
                     ):
-                        with target.indented(
-                            f"struct {destruct_data_type}: {base_tsfn_data_type} {{",
-                            f"}};",
-                        ):
-                            target.writelns(
-                                f"bool completed = false;",
-                                f"std::mutex mutex;",
-                                f"std::condition_variable cv;",
-                                f"napi_ref ref;",
-                            )
-                            with target.indented(
-                                f"void operator()(napi_env env) override {{",
-                                f"}}",
-                            ):
-                                target.writelns(
-                                    f"NAPI_CALL(env, napi_delete_reference(env, this->ref));",
-                                    f"this->completed = true;",
-                                    f"this->cv.notify_one();",
-                                )
                         target.writelns(
-                            f"{destruct_data_type} del_ref_data;",
-                            f"del_ref_data.ref = _ref;",
+                            f"_tsfn,",
+                            f"static_cast<{base_tsfn_data_type}*>(&del_ref_data),",
+                            f"napi_tsfn_blocking",
                         )
-                        with target.indented(
-                            f"NAPI_CALL(env, napi_call_threadsafe_function(",
-                            f"));",
-                        ):
-                            target.writelns(
-                                f"_tsfn,",
-                                f"static_cast<{base_tsfn_data_type}*>(&del_ref_data),",
-                                f"napi_tsfn_blocking",
-                            )
-                        target.writelns(
-                            f"std::unique_lock<std::mutex> lock(del_ref_data.mutex);",
-                            f"del_ref_data.cv.wait(lock, [&del_ref_data] {{ return del_ref_data.completed; }});",
-                        )
+                    target.writelns(
+                        f"std::unique_lock<std::mutex> lock(del_ref_data.mutex);",
+                        f"del_ref_data.cv.wait(lock, [&del_ref_data] {{ return del_ref_data.completed; }});",
+                    )
 
                 with target.indented(
                     f"if (_tsfn) {{",
@@ -1058,24 +1026,46 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"NAPI_CALL(env, napi_release_threadsafe_function(_tsfn, napi_tsfn_release));",
                     )
 
-            inner_cpp_params = []
-            inner_napi_args = []
-            inner_cpp_args = []
-            for index, param in enumerate(self.type.ref.params):
-                inner_cpp_arg = f"cpp_arg_{index}"
-                inner_napi_arg = f"napi_arg_{index}"
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
-                inner_napi_args.append(inner_napi_arg)
-                inner_cpp_args.append(inner_cpp_arg)
-            cpp_params_str = ", ".join(inner_cpp_params)
-            if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                return_ty_as_owner = return_ty_cpp_info.as_owner
-            else:
-                return_ty_as_owner = "void"
+            self.gen_invoke_operator(cpp_result, base_tsfn_data_type, target)
+
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}>(env, {napi_value});",
+        )
+
+    def gen_invoke_operator(
+        self,
+        cpp_result: str,
+        base_tsfn_data_type: str,
+        target: CSourceWriter,
+    ):
+        cpp_cb_data_type = f"{cpp_result}_cb_data"
+        cpp_cb_data = "cb_data"
+
+        cpp_inputs = []
+
+        inner_cpp_params = []
+        inner_napi_args = []
+        inner_cpp_args = []
+        for index, param in enumerate(self.type.ref.params):
+            inner_cpp_arg = f"cpp_arg_{index}"
+            inner_napi_arg = f"napi_arg_{index}"
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
+            inner_napi_args.append(inner_napi_arg)
+            inner_cpp_args.append(inner_cpp_arg)
+        cpp_params_str = ", ".join(inner_cpp_params)
+        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
+        else:
+            return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+        cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
+        if cb_abi_info.is_noexcept:
             with target.indented(
-                f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
+                f"{return_ty_cpp_name} operator()({cpp_params_str}) {{",
                 f"}}",
             ):
                 with target.indented(
@@ -1231,10 +1221,206 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         target.writelns(
                             f"return;",
                         )
+        else:
+            with target.indented(
+                f"{return_ty_expected_name} operator()({cpp_params_str}) {{",
+                f"}}",
+            ):
+                with target.indented(
+                    f"if (::taihe::_is_main_thread()) {{",
+                    f"}}",
+                ):
+                    for inner_napi_arg, inner_cpp_arg, param in zip(
+                        inner_napi_args,
+                        inner_cpp_args,
+                        self.type.ref.params,
+                        strict=True,
+                    ):
+                        param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+                        param_ty_napi_info.into_napi(
+                            target, inner_cpp_arg, inner_napi_arg
+                        )
+                    inner_napi_args_str = ", ".join(inner_napi_args)
+                    inner_napi_res = "napi_result"
+                    inner_cpp_res = "cpp_result"
+                    if len(self.type.ref.params) != 0:
+                        target.writelns(
+                            f"napi_value napi_argv[{len(self.type.ref.params)}] = {{{inner_napi_args_str}}};",
+                        )
+                    else:
+                        target.writelns(
+                            f"napi_value napi_argv[] = {{}};",
+                        )
+                    target.writelns(
+                        f"napi_value {inner_napi_res} = nullptr;",
+                        f"napi_value cb_ref = nullptr, global = nullptr;",
+                        f"NAPI_CALL(env, napi_get_reference_value(env, _ref, &cb_ref));",
+                        f"napi_get_global(env, &global);",
+                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
+                    )
+                    target.writelns(
+                        f"bool has_error = false;",
+                        f"napi_is_exception_pending(env, &has_error);",
+                    )
+                    with target.indented(
+                        f"if (has_error) {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"napi_value exception = nullptr;",
+                            f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                            f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(exception));",
+                        )
+                    with target.indented(
+                        f"else {{",
+                        f"}}",
+                    ):
+                        if isinstance(
+                            return_ty := self.type.ref.return_ty, NonVoidType
+                        ):
+                            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                            return_ty_napi_info.from_napi(
+                                target, inner_napi_res, inner_cpp_res
+                            )
+                            target.writelns(
+                                f"return {inner_cpp_res};",
+                            )
+                        else:
+                            target.writelns(
+                                f"return {{}};",
+                            )
+                with target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    with target.indented(
+                        f"struct {cpp_cb_data_type}: {base_tsfn_data_type} {{",
+                        f"}};",
+                    ):
+                        target.writelns(
+                            f"bool completed = false;",
+                            f"std::mutex mutex;",
+                            f"std::condition_variable cv;",
+                            f"napi_ref ref;",
+                        )
+                        for index, param in enumerate(self.type.ref.params):
+                            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                            cpp_input = f"cpp_input_{index}"
+                            target.writelns(
+                                f"std::optional<{param_ty_cpp_info.as_owner}> {cpp_input};",
+                            )
+                            cpp_inputs.append(cpp_input)
+                        if isinstance(
+                            return_ty := self.type.ref.return_ty, NonVoidType
+                        ):
+                            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                            return_ty_cpp_name = return_ty_cpp_info.as_owner
+                        else:
+                            return_ty_cpp_name = "void"
+                        return_ty_expected_name = (
+                            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+                        )
+                        target.writelns(
+                            f"std::optional<{return_ty_expected_name}> cpp_result;",
+                        )
+                        with target.indented(
+                            f"void operator()(napi_env env) override {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"napi_value global = nullptr;",
+                                f"NAPI_CALL(env, napi_get_global(env, &global));",
+                            )
+                            inner_napi_args = []
+                            for index, param in enumerate(self.type.ref.params):
+                                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+                                inner_napi_arg = f"napi_arg_{index}"
+                                inner_napi_args.append(inner_napi_arg)
+                                param_ty_napi_info.into_napi(
+                                    target,
+                                    f"(*(this->{cpp_inputs[index]}))",
+                                    inner_napi_arg,
+                                )
+                            inner_napi_args_str = ", ".join(inner_napi_args)
+                            if len(self.type.ref.params) != 0:
+                                target.writelns(
+                                    f"napi_value napi_argv[{len(self.type.ref.params)}] = {{{inner_napi_args_str}}};",
+                                )
+                            else:
+                                target.writelns(
+                                    f"napi_value napi_argv[] = {{}};",
+                                )
+                            inner_napi_res = "napi_result"
+                            inner_cpp_res = "cpp_result"
+                            target.writelns(
+                                f"napi_value {inner_napi_res} = nullptr;",
+                                f"napi_value cb = nullptr;",
+                                f"NAPI_CALL(env, napi_get_reference_value(env, this->ref, &cb));",
+                                f"NAPI_CALL(env, napi_call_function(env, global, cb, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
+                            )
+                            target.writelns(
+                                f"bool has_error = false;",
+                                f"napi_is_exception_pending(env, &has_error);",
+                            )
+                            with target.indented(
+                                f"if (has_error) {{",
+                                f"}}",
+                            ):
+                                target.writelns(
+                                    f"napi_value exception = nullptr;",
+                                    f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                                    f"this->cpp_result = ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(exception));",
+                                )
+                            with target.indented(
+                                f"else {{",
+                                f"}}",
+                            ):
+                                if isinstance(
+                                    return_ty := self.type.ref.return_ty, NonVoidType
+                                ):
+                                    return_ty_napi_info = TypeNapiInfo.get(
+                                        self.am, return_ty
+                                    )
+                                    return_ty_napi_info.from_napi(
+                                        target, inner_napi_res, inner_cpp_res
+                                    )
+                                    target.writelns(
+                                        f"this->cpp_result = {inner_cpp_res};",
+                                    )
+                            target.writelns(
+                                f"this->completed = true;",
+                                f"this->cv.notify_one();",
+                            )
 
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}>(env, {napi_value});",
-        )
+                    target.writelns(
+                        f"{cpp_cb_data_type} {cpp_cb_data};",
+                        f"{cpp_cb_data}.ref = _ref;",
+                    )
+                    for index, param in enumerate(self.type.ref.params):
+                        target.writelns(
+                            f"{cpp_cb_data}.{cpp_inputs[index]} = {inner_cpp_args[index]};",
+                        )
+                    with target.indented(
+                        f"NAPI_CALL(env, napi_call_threadsafe_function(",
+                        f"));",
+                    ):
+                        target.writelns(
+                            f"_tsfn,",
+                            f"&{cpp_cb_data},",
+                            f"napi_tsfn_blocking",
+                        )
+                    target.writelns(
+                        f"std::unique_lock<std::mutex> lock({cpp_cb_data}.mutex);",
+                        f"{cpp_cb_data}.cv.wait(lock, [&{cpp_cb_data}] {{ return {cpp_cb_data}.completed; }});",
+                    )
+                    if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                        target.writelns(
+                            f"return *{cpp_cb_data}.cpp_result;",
+                        )
+                    else:
+                        target.writelns(
+                            f"return {{}};",
+                        )
 
     def into_napi(
         self,
@@ -1242,22 +1428,15 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        cpp_copy = f"{napi_result}_cpp_copy"
         cpp_scope = f"{napi_result}_cpp_scope"
         invoke_name = "invoke"
-        napi_vtbl_ptr = f"{napi_result}_napi_vtbl_ptr"
-        napi_data_ptr = f"{napi_result}_napi_data_ptr"
         with target.indented(
             f"struct {cpp_scope} {{",
             f"}};",
         ):
-            self.gen_native_invoke(target, invoke_name)
+            self.gen_native_invoke(invoke_name, target)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_copy} = {cpp_value};",
-            f"{self.cpp_info.as_param}::vtable_type* {napi_vtbl_ptr} = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>({cpp_copy}.m_handle.vtbl_ptr);",
-            f"DataBlockHead* {napi_data_ptr} = reinterpret_cast<DataBlockHead*>({cpp_copy}.m_handle.data_ptr);",
-            f"{cpp_copy}.m_handle.data_ptr = nullptr;",
-            f"{self.cpp_info.as_owner}* cpp_ptr = new {self.cpp_info.as_owner}({{{napi_vtbl_ptr}, {napi_data_ptr}}});",
+            f"{self.cpp_info.as_owner}* cpp_ptr = new {self.cpp_info.as_owner}({cpp_value});",
             f"napi_value {napi_result} = nullptr;",
             f"NAPI_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, {cpp_scope}::{invoke_name}, cpp_ptr, &{napi_result}));",
         )
@@ -1271,8 +1450,8 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
 
     def gen_native_invoke(
         self,
-        target: CSourceWriter,
         cpp_cast_ptr: str,
+        target: CSourceWriter,
     ):
         inner_napi_args = []
         inner_cpp_args = []
@@ -1318,28 +1497,74 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"if (cpp_cb) {{",
                 f"}}",
             ):
+                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                    cpp_return_info = TypeCppInfo.get(self.am, return_ty)
+                    return_ty_cpp_name = cpp_return_info.as_owner
+                else:
+                    return_ty_cpp_name = "void"
+                return_ty_cpp_name_expected = (
+                    f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+                )
                 result_cpp = "cpp_result"
                 result_napi = "napi_result"
-                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                result_expected = "expected_result"
+                result_error = "error_result"
+                cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
+                if cb_abi_info.is_noexcept:
+                    if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                        return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                        return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                        target.writelns(
+                            f"{return_ty_cpp_info.as_owner} {result_cpp} = (*cpp_cb)({args_cpp_str});",
+                        )
+                        return_ty_napi_info.into_napi(
+                            target,
+                            result_cpp,
+                            result_napi,
+                        )
+                    else:
+                        target.writelns(
+                            f"napi_value {result_napi} = nullptr;",
+                            f"(*cpp_cb)({args_cpp_str});",
+                            f"napi_get_undefined(env, &{result_napi});",
+                        )
                     target.writelns(
-                        f"{return_ty_cpp_info.as_owner} {result_cpp} = (*cpp_cb)({args_cpp_str});",
-                    )
-                    return_ty_napi_info.into_napi(
-                        target,
-                        result_cpp,
-                        result_napi,
+                        f"return {result_napi};",
                     )
                 else:
                     target.writelns(
-                        f"napi_value {result_napi} = nullptr;",
-                        f"(*cpp_cb)({args_cpp_str});",
-                        f"napi_get_undefined(env, &{result_napi});",
+                        f"{return_ty_cpp_name_expected} {result_expected} = (*cpp_cb)({args_cpp_str});",
                     )
-                target.writelns(
-                    f"return {result_napi};",
-                )
+                    with target.indented(
+                        f"if ({result_expected}) {{",
+                        f"}}",
+                    ):
+                        if isinstance(
+                            return_ty := self.type.ref.return_ty, NonVoidType
+                        ):
+                            target.writelns(
+                                f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                            )
+                            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                            return_ty_napi_info.into_napi(
+                                target, result_cpp, result_napi
+                            )
+                            target.writelns(
+                                f"return {result_napi};",
+                            )
+                        else:
+                            target.writelns(
+                                f"return nullptr;",
+                            )
+                    with target.indented(
+                        f"else {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"::taihe::error {result_error} = {result_expected}.error();",
+                            f"napi_throw(env, ::taihe::into_napi_error({result_error}));",
+                            f"return nullptr;",
+                        )
             with target.indented(
                 f"else {{",
                 f"}}",
@@ -1349,6 +1574,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     f'    "ERR_NOT_FOUND",',
                     f'    "No cpp function pointer"',
                     f");",
+                    f"return nullptr;",
                 )
 
 
@@ -1603,6 +1829,24 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         napi_data = f"{cpp_result}_data"
         napi_arrbuf = f"{cpp_result}_arrbuf"
         napi_byte_offset = f"{cpp_result}_byoff"
+        element_length = f"{cpp_result}_element_length"
+        element_size = None
+        if isinstance(self.type.item_ty, ScalarType):
+            element_size = {
+                ScalarKind.F32: "float",
+                ScalarKind.F64: "double",
+                ScalarKind.I8: "int8_t",
+                ScalarKind.I16: "int16_t",
+                ScalarKind.I32: "int32_t",
+                ScalarKind.I64: "int64_t",
+                ScalarKind.U8: "uint8_t",
+                ScalarKind.U16: "uint16_t",
+                ScalarKind.U32: "uint32_t",
+                ScalarKind.U64: "uint64_t",
+            }.get(self.type.item_ty.kind)
+        if element_size is None:
+            raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
+
         target.writelns(
             f"napi_typedarray_type {napi_ta_type};",
             f"size_t {napi_length};",
@@ -1610,7 +1854,8 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             f"napi_value {napi_arrbuf};",
             f"size_t {napi_byte_offset};",
             f"NAPI_CALL(env, napi_get_typedarray_info(env, {napi_value}, &{napi_ta_type}, &{napi_length}, &{napi_data}, &{napi_arrbuf}, &{napi_byte_offset}));",
-            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
+            f"size_t {element_length} = {napi_length} / sizeof({element_size});",
+            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {element_length});",
         )
 
     def into_napi(
@@ -1949,6 +2194,13 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
+        if not (
+            isinstance(self.type.item_ty, ScalarType)
+            and self.type.item_ty.kind == ScalarKind.U64
+        ):
+            raise ValueError(
+                "Attribute bigint can only be attached to array types with u64 items"
+            )
         # TODO: check the attribute should be used in Array<u64>
 
     @override

@@ -21,42 +21,34 @@
 #include <taihe/runtime.hpp>
 
 namespace {
-int32_t maythrow_impl(int32_t a)
+::taihe::expected<int32_t, ::taihe::error> maythrow_impl(int32_t a)
 {
     if (a == 0) {
-        ::taihe::set_error("some error happen");
-        return -1;
+        return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect, "some error happen");
     } else {
         int const tempnum = 10;
         return a + tempnum;
     }
 }
 
-maythrow::Data getDataMaythrow()
+::taihe::expected<maythrow::Data, ::taihe::error> getDataMaythrow()
 {
-    ::taihe::set_error("error in getDataMaythrow");
-    return {
-        taihe::string("C++ Object"),
-        (float)1.0,
-        {"data.obj", "file.txt"},
-    };
+    return ::taihe::expected<maythrow::Data, ::taihe::error>(::taihe::unexpect, "error in getDataMaythrow");
 }
 
-void noReturnMaythrow()
+::taihe::expected<void, ::taihe::error> noReturnMaythrow()
 {
-    std::cout << "C++ if has error before: " << ::taihe::has_error() << std::endl;
-    ::taihe::set_error("error in noReturnMaythrow");
-    std::cout << "C++ if has error after: " << ::taihe::has_error() << std::endl;
+    return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "error in noReturnMaythrow");
 }
 
-void noReturnTypeError()
+::taihe::expected<void, ::taihe::error> noReturnTypeError()
 {
-    ::taihe::set_type_error("noReturnTypeError", "TypeError");
+    return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "noReturnTypeError");
 }
 
-void noReturnRangeError()
+::taihe::expected<void, ::taihe::error> noReturnRangeError()
 {
-    ::taihe::set_range_error("noReturnRangeError", "RangeError");
+    return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "noReturnRangeError");
 }
 }  // namespace
 

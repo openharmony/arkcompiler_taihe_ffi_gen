@@ -45,6 +45,8 @@ Taihe 支持的基本数据类型包括数字、布尔值和[字符串](../backe
 
 注意，ArkTS-Dyn 的 Map 和 Record 在 Taihe 中本质上都是 Map，所以在 C++ 实现时可以参考 Taihe [Map](../backend-cpp/CppUsageGuide.md#65-映射map) 的用法， ArkTS-Dyn 的 Array，bigint，arraybuffer 和 typedarray 在 Taihe 中本质上都是 Array，所以在 C++ 实现时可以参考 Taihe [Array](../backend-cpp/CppUsageGuide.md#62-数组array) 的用法。
 
+注意，由于 NAPI 接口只提供了针对 int32_t, uint32_t, int64_t, double 类型的接口，所以也推荐用户在 Taihe 中只使用 i32, u32, i64, f64，如用户实际需要使用其余类型建议在 Taihe 中声明为以上类型，在实现代码中手动进行类型转换。
+
 # 包
 
 在 Taihe 原生的语言能力中，只有“[包](../spec/IdlReference.md#包)”的概念，包名和 Taihe IDL 文件名一一对应。以 `foo.bar.baz.ohidl` 为例，对应的 C++ 命名空间为 `::foo::bar::baz`，对应的声明文件为 `foo.bar.baz.d.ts`。

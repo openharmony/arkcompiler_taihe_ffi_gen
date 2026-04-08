@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 
 from typing_extensions import override
 
+from taihe.codegen.abi.attributes import NoexceptAttr
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -65,6 +66,8 @@ class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         segments = [*f.parent_pkg.segments, f.name]
         self.impl_name = encode(segments, DeclKind.FUNC)
+        self.ret_type_name = self.impl_name + "_out"
+        self.is_noexcept = NoexceptAttr.get(f) is not None
 
     @classmethod
     @override
@@ -78,11 +81,23 @@ class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.impl_name = encode(segments, DeclKind.FUNC)
         self.wrap_name = encode(segments, DeclKind.METHOD)
         self.min_version = 0
+        self.ret_type_name = self.impl_name + "_out"
+        self.is_noexcept = NoexceptAttr.get(f) is not None
 
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAbiInfo":
         return IfaceMethodAbiInfo(am, f)
+
+
+class CallbackAbiInfo(AbstractAnalysis[CallbackType]):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        self.is_noexcept = NoexceptAttr.get(t.ref) is not None
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, t: CallbackType) -> "CallbackAbiInfo":
+        return CallbackAbiInfo(am, t)
 
 
 class EnumAbiInfo(AbstractAnalysis[EnumDecl]):

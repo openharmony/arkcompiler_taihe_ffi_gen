@@ -20,16 +20,17 @@
 #include "opt_test.proj.hpp"
 
 namespace {
-void showOptionalInt(::taihe::optional_view<int32_t> x)
+::taihe::expected<void, ::taihe::error> showOptionalInt(::taihe::optional_view<int32_t> x)
 {
     if (x) {
         std::cout << *x << std::endl;
     } else {
         std::cout << "Null" << std::endl;
     }
+    return {};
 }
 
-::taihe::optional<int32_t> makeOptionalInt(bool b)
+::taihe::expected<::taihe::optional<int32_t>, ::taihe::error> makeOptionalInt(bool b)
 {
     if (b) {
         int const optionalMakeValue = 10;

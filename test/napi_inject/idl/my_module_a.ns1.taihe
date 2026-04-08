@@ -26,6 +26,8 @@ function noo(): void;
 
 interface IBase {
 @!ts_inject_into_interface("add(a: number, b: number): number;")
+    @get getName(): String;
+    @set setName(s: String): void;
     getId(): String;
     setId(s: String): void;
 }
@@ -39,7 +41,9 @@ interface CTest{
     return a * b;
 }
 """)
-    add(a: i32, b: i32): f32;
+    @get getName(): String;
+    @set setName(s: String): void;
+    add(a: i32, b: i32): i32;
 }
 
 @ctor("CTest")
@@ -49,3 +53,37 @@ function changeCTest(a: CTest): CTest;
 
 @static("CTest")
 function multiply(a: i32, b: i32): i32;
+
+struct A {
+    a: i32;
+}
+
+struct B {
+    @extends basea: A;
+    b: i32;
+}
+
+@class
+struct C {
+    @extends baseb: B;
+    c: i32;
+}
+
+@ctor("C")
+function createC(): C;
+
+interface IfaceA {
+    func1(): void;
+}
+
+interface IfaceB: IfaceA {
+    func2(): void;
+}
+
+@class
+interface IfaceC: IfaceB {
+    func3(): void;
+}
+
+@ctor("IfaceC")
+function createIfaceC(): IfaceC;

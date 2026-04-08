@@ -44,10 +44,6 @@ class DtsWriter(FileWriter):
             module_name, decl_name = decl_pair
             if decl_name is None:
                 import_str = f"* as {import_name}"
-            elif decl_name == "default":
-                import_str = import_name
-            elif decl_name == import_name:
-                import_str = f"{{{decl_name}}}"
             else:
                 import_str = f"{{{decl_name} as {import_name}}}"
             f.write(f"import {import_str} from '{module_name}';\n")
@@ -58,23 +54,6 @@ class DtsWriter(FileWriter):
         import_name: str,
     ):
         self._add_import(import_name, (module_name, None))
-
-    def add_import_default(
-        self,
-        module_name: str,
-        import_name: str,
-    ):
-        self._add_import(import_name, (module_name, "default"))
-
-    def add_import_decl(
-        self,
-        module_name: str,
-        decl_name: str,
-        import_name: str | None = None,
-    ):
-        if import_name is None:
-            import_name = decl_name
-        self._add_import(import_name, (module_name, decl_name))
 
     def _add_import(
         self,
