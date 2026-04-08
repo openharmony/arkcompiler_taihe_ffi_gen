@@ -192,6 +192,8 @@ class BuildSystem(ABC):
         with open(self.author_dir / "compile_flags.txt", "w") as f:
             for author_include_dir in self.author_includes:
                 f.write(f"-I{author_include_dir}\n")
+            for author_compile_flag in self.author_compile_flags:
+                f.write(f"{author_compile_flag}\n")
         with open(self.author_src_dir / "hello.impl.cpp", "w") as f:
             f.write(
                 f'#include "hello.proj.hpp"\n'
@@ -266,6 +268,7 @@ class CppBuildSystem(BuildSystem):
         self.user_dir = self.target_path / "user"
         self.user_include_dir = self.user_dir / "include"
         self.user_src_dir = self.user_dir / "src"
+        self.user_compile_flags: list[str] = []
 
         self.user_includes = [*self.generated_includes, self.user_include_dir]
 
@@ -284,6 +287,8 @@ class CppBuildSystem(BuildSystem):
         with open(self.user_dir / "compile_flags.txt", "w") as f:
             for user_include_dir in self.user_includes:
                 f.write(f"-I{user_include_dir}\n")
+            for user_compile_flag in self.user_compile_flags:
+                f.write(f"{user_compile_flag}\n")
         with open(self.user_src_dir / "main.cpp", "w") as f:
             f.write(
                 f'#include "hello.user.hpp"\n'
@@ -297,14 +302,12 @@ class CppBuildSystem(BuildSystem):
     def _compile_user_executable(self, opt_level: str) -> None:
         logger.info("Compiling and linking executable...")
 
-        compile_flags = [f"-O{opt_level}"]
-
         create_directory(self.build_user_src_dir)
         user_objects = self.cpp_toolchain.compile_all(
             self.build_user_src_dir,
             self.user_src_dir.glob("*.[cC]*"),
             self.user_includes,
-            compile_flags=compile_flags,
+            compile_flags=[*self.user_compile_flags, f"-O{opt_level}"],
         )
 
         # Link the executable
@@ -366,7 +369,7 @@ class StsBuildSystem(BuildSystem):
 
     @property
     def author_compile_flags(self) -> list[str]:
-        return ["-DTAIHE_USE_NAPI_RUNTIME"]
+        return ["-DTAIHE_USE_ANI_RUNTIME"]
 
     @property
     def user_backend_names(self) -> list[str]:
