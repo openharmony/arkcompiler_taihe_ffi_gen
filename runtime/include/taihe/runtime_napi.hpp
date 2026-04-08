@@ -26,6 +26,7 @@
 
 #include <sstream>
 #include <taihe/string.hpp>
+#include <taihe/expected.hpp>
 
 namespace taihe {
 void set_env(napi_env env);
@@ -36,12 +37,15 @@ void set_type_error(::taihe::string_view msg, ::taihe::string_view errcode = "")
 void set_range_error(::taihe::string_view msg, ::taihe::string_view errcode = "");
 bool has_error();
 
+::taihe::error from_napi_error(napi_value err);
+napi_value into_napi_error(::taihe::error err);
+
 }  // namespace taihe
 
 #define NAPI_CALL(env, call)                                                                \
     do {                                                                                    \
         napi_status status = (call);                                                        \
-        if (status != napi_ok) {                                                            \
+        if (status != napi_ok && status != napi_pending_exception) {                        \
             const napi_extended_error_info *error_info;                                     \
             napi_get_last_error_info(env, &error_info);                                     \
             const char *message = error_info ? error_info->error_message : "Unknown error"; \

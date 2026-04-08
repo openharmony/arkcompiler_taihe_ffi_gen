@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,9 @@ from abc import ABC
 
 from typing_extensions import override
 
+from taihe.codegen.abi.analyses import (
+    CallbackAbiInfo,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -159,14 +162,6 @@ class TypeCppInfo(AbstractAnalysis[NonVoidType], ABC):
     @override
     def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeCppInfo":
         return t.accept(TypeCppInfoDispatcher(am))
-
-
-def into_abi(ty: str, val: str) -> str:
-    return f"::taihe::into_abi<{ty}>({val})"
-
-
-def from_abi(ty: str, val: str) -> str:
-    return f"::taihe::from_abi<{ty}>({val})"
 
 
 class EnumTypeCppInfo(TypeCppInfo):
@@ -343,7 +338,9 @@ class CallbackTypeCppInfo(TypeCppInfo):
             param_ty_cpp_info = TypeCppInfo.get(am, param.ty)
             params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
             params_ty_impl_headers.extend(param_ty_cpp_info.impl_headers)
-            params_ty_as_param.append(f"{param_ty_cpp_info.as_param} {param.name}")
+            param_ty_cpp_name = param_ty_cpp_info.as_param
+            param_name = param.name
+            params_ty_as_param.append(f"{param_ty_cpp_name} {param_name}")
         params_fmt = ", ".join(params_ty_as_param)
         self.decl_headers = [
             "taihe/callback.hpp",
@@ -360,8 +357,15 @@ class CallbackTypeCppInfo(TypeCppInfo):
             *return_ty_impl_headers,
             *params_ty_impl_headers,
         ]
-        self.as_owner = f"::taihe::callback<{return_ty_as_owner}({params_fmt})>"
-        self.as_param = f"::taihe::callback_view<{return_ty_as_owner}({params_fmt})>"
+        cb_abi_info = CallbackAbiInfo.get(am, t)
+        if cb_abi_info.is_noexcept:
+            signature = f"{return_ty_as_owner}({params_fmt})"
+        else:
+            signature = (
+                f"::taihe::expected<{return_ty_as_owner}, ::taihe::error>({params_fmt})"
+            )
+        self.as_owner = f"::taihe::callback<{signature}>"
+        self.as_param = f"::taihe::callback_view<{signature}>"
 
 
 class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):

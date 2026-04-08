@@ -19,7 +19,7 @@
 #include <taihe/runtime.hpp>
 
 namespace {
-bool is_string(uintptr_t s)
+::taihe::expected<bool, ::taihe::error> is_string(uintptr_t s)
 {
     napi_env env = ::taihe::get_env();
     napi_valuetype value_ty;
@@ -31,7 +31,7 @@ bool is_string(uintptr_t s)
     }
 }
 
-uintptr_t get_object()
+::taihe::expected<uintptr_t, ::taihe::error> get_object()
 {
     napi_env env = ::taihe::get_env();
     napi_value napi_arr_0 = nullptr;
@@ -40,7 +40,7 @@ uintptr_t get_object()
     return (uintptr_t)napi_arr_0;
 }
 
-::taihe::array<uintptr_t> get_objects()
+::taihe::expected<::taihe::array<uintptr_t>, ::taihe::error> get_objects()
 {
     napi_env env = ::taihe::get_env();
     napi_value napi_arr_0 = nullptr;
@@ -51,7 +51,7 @@ uintptr_t get_object()
     return ::taihe::array<uintptr_t>({(uintptr_t)napi_arr_0, (uintptr_t)napi_arr_1});
 }
 
-bool is_opaque(::opaque_test::Union const &s)
+::taihe::expected<bool, ::taihe::error> is_opaque(::opaque_test::Union const &s)
 {
     if (s.get_tag() == ::opaque_test::Union::tag_t::oValue) {
         return true;

@@ -16,6 +16,8 @@
 interface IBase {
     getId(): String;
     setId(s: String): void;
+    @get getName(): String;
+    @set setName(s: String): void;
 }
 
 function makeIBase(id: String): IBase;
@@ -37,7 +39,9 @@ function createIDerived(): IDerived;
 
 @class
 interface CTest{
-    add(a: i32, b: i32): f32;
+    add(a: i32, b: i32): i32;
+    @get getId(): String;
+    @set setId(s: String): void;
 }
 
 @ctor("CTest")

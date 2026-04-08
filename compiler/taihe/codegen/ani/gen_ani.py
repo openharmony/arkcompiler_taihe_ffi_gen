@@ -14,7 +14,9 @@
 # limitations under the License.
 
 from taihe.codegen.abi.analyses import (
+    GlobFuncAbiInfo,
     IfaceAbiInfo,
+    IfaceMethodAbiInfo,
 )
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
@@ -395,6 +397,10 @@ class AniPackageSourceGenerator:
             "[[maybe_unused]] ani_env *env",
             *func_nat_info.c_native_base_params,
         ]
+        if isinstance(func, GlobFuncDecl):
+            func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+        else:
+            func_abi_info = IfaceMethodAbiInfo.get(self.am, func)
         args_ani = []
         vals_cpp = []
         for param in func.params:
@@ -435,25 +441,73 @@ class AniPackageSourceGenerator:
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 return_ty_cpp_name = return_ty_cpp_info.as_owner
-                result_cpp = "cpp_result"
-                result_ani = "ani_result"
-                self.target.writelns(
-                    f"{return_ty_cpp_name} {result_cpp} = {method_call};",
-                    f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
-                )
-                return_ty_ani_info.into_ani(
-                    self.target,
-                    "env",
-                    result_cpp,
-                    result_ani,
-                )
-                self.target.writelns(
-                    f"return {result_ani};",
-                )
+                return_val = f"{return_ty_ani_info.ani_type}{{}}"
+            else:
+                return_ty_cpp_name = "void"
+                return_val = ""
+            result_cpp = "cpp_result"
+            result_ani = "ani_result"
+            result_expected = "expected_result"
+            result_error = "error_result"
+            return_ty_cpp_name_expected = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+            if func_abi_info.is_noexcept:
+                if isinstance(return_ty := func.return_ty, NonVoidType):
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    self.target.writelns(
+                        f"{return_ty_cpp_name} {result_cpp} = {method_call};",
+                        f"if (::taihe::has_error()) {{ return {return_val}; }}",
+                    )
+                    return_ty_ani_info.into_ani(
+                        self.target,
+                        "env",
+                        result_cpp,
+                        result_ani,
+                    )
+                    self.target.writelns(
+                        f"return {result_ani};",
+                    )
+                else:
+                    self.target.writelns(
+                        f"{method_call};",
+                    )
             else:
                 self.target.writelns(
-                    f"{method_call};",
+                    f"{return_ty_cpp_name_expected} {result_expected} = {method_call};",
+                    f"if (::taihe::has_error()) {{ return {return_val}; }}",
                 )
+                with self.target.indented(
+                    f"if ({result_expected}) {{",
+                    f"}}",
+                ):
+                    if isinstance(return_ty := func.return_ty, NonVoidType):
+                        self.target.writelns(
+                            f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                        )
+                        return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                        return_ty_ani_info.into_ani(
+                            self.target,
+                            "env",
+                            result_cpp,
+                            result_ani,
+                        )
+                        self.target.writelns(
+                            f"return {result_ani};",
+                        )
+                    else:
+                        self.target.writelns(
+                            f"return;",
+                        )
+                with self.target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"::taihe::error {result_error} = {result_expected}.error();",
+                        f"env->ThrowError(into_ani_error({result_error}));",
+                        f"return {return_val};",
+                    )
 
     def gen_obj_drop(self, name: str):
         with self.target.indented(
@@ -675,6 +729,7 @@ class AniIfaceImplGenerator:
     def gen_iface_method(self, method: IfaceMethodDecl):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         method_ani_info = IfaceMethodAniInfo.get(self.am, method)
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         params_cpp = []
         args_cpp = []
         args_ani = []
@@ -691,48 +746,124 @@ class AniIfaceImplGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
-        with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
-            f"}}",
-        ):
-            self.target.writelns(
-                f"::taihe::env_guard guard;",
-                f"ani_env *env = guard.get_env();",
-            )
-            for param, arg_cpp, arg_ani in zip(
-                method.params, args_cpp, args_ani, strict=True
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+        if method_abi_info.is_noexcept:
+            with self.target.indented(
+                f"{return_ty_cpp_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
+                f"}}",
             ):
-                param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                param_ty_ani_info.into_ani(
-                    self.target,
-                    "env",
-                    arg_cpp,
-                    arg_ani,
+                self.target.writelns(
+                    f"::taihe::env_guard guard;",
+                    f"ani_env *env = guard.get_env();",
                 )
-            args_ani_str = ", ".join(["static_cast<ani_object>(this->ref)", *args_ani])
-            pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
-            function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr)'
-            if isinstance(return_ty := method.return_ty, NonVoidType):
+                for param, arg_cpp, arg_ani in zip(
+                    method.params, args_cpp, args_ani, strict=True
+                ):
+                    param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+                    param_ty_ani_info.into_ani(
+                        self.target,
+                        "env",
+                        arg_cpp,
+                        arg_ani,
+                    )
+                args_ani_str = ", ".join(
+                    ["static_cast<ani_object>(this->ref)", *args_ani]
+                )
+                pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
+                function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr)'
+                if isinstance(return_ty := method.return_ty, NonVoidType):
+                    result_ani = "ani_result"
+                    result_cpp = "cpp_result"
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    self.target.writelns(
+                        f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
+                        f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
+                    )
+                    return_ty_ani_info.from_ani(
+                        self.target,
+                        "env",
+                        result_ani,
+                        result_cpp,
+                    )
+                    self.target.writelns(
+                        f"return {result_cpp};",
+                    )
+                else:
+                    self.target.writelns(
+                        f"env->Function_Call_Void({function}, {args_ani_str});",
+                    )
+        else:
+            with self.target.indented(
+                f"{return_ty_expected_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"::taihe::env_guard guard;",
+                    f"ani_env *env = guard.get_env();",
+                )
+                for param, arg_cpp, arg_ani in zip(
+                    method.params, args_cpp, args_ani, strict=True
+                ):
+                    param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+                    param_ty_ani_info.into_ani(
+                        self.target,
+                        "env",
+                        arg_cpp,
+                        arg_ani,
+                    )
+                args_ani_str = ", ".join(
+                    ["static_cast<ani_object>(this->ref)", *args_ani]
+                )
+                pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
+                function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr)'
                 result_ani = "ani_result"
                 result_cpp = "cpp_result"
-                return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                if isinstance(return_ty := method.return_ty, NonVoidType):
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    self.target.writelns(
+                        f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
+                        f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
+                    )
+                else:
+                    self.target.writelns(
+                        f"env->Function_Call_Void({function}, {args_ani_str});",
+                    )
+
                 self.target.writelns(
-                    f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
-                    f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
+                    f"ani_boolean _ets_has_error = false;",
+                    f"env->ExistUnhandledError(&_ets_has_error);",
                 )
-                return_ty_ani_info.from_ani(
-                    self.target,
-                    "env",
-                    result_ani,
-                    result_cpp,
-                )
-                self.target.writelns(
-                    f"return {result_cpp};",
-                )
-            else:
-                self.target.writelns(
-                    f"env->Function_Call_Void({function}, {args_ani_str});",
-                )
+                with self.target.indented(
+                    f"if (_ets_has_error) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"ani_error _ets_error = nullptr;",
+                        f"env->GetUnhandledError(&_ets_error);",
+                        f"env->ResetError();",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(_ets_error));",
+                    )
+                with self.target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    if isinstance(return_ty := method.return_ty, NonVoidType):
+                        return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                        return_ty_ani_info.from_ani(
+                            self.target,
+                            "env",
+                            result_ani,
+                            result_cpp,
+                        )
+                        self.target.writelns(
+                            f"return {result_cpp};",
+                        )
+                    else:
+                        self.target.writelns(
+                            f"return {{}};",
+                        )
 
     def gen_iface_into_ani_func(self):
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)

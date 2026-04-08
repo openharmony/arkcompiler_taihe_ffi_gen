@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,8 +32,6 @@ from taihe.codegen.cpp.analyses import (
     StructCppInfo,
     TypeCppInfo,
     UnionCppInfo,
-    from_abi,
-    into_abi,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -1112,6 +1110,7 @@ class CppIfaceDeclGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/object.hpp")
+            self.target.add_include("taihe/expected.hpp")
             self.target.add_include(iface_abi_info.decl_header)
             with self.target.indented(
                 f"namespace {iface_cpp_info.weakspace} {{",
@@ -1567,6 +1566,7 @@ class CppIfaceImplGenerator:
         with self.target:
             self.target.add_include(iface_cpp_info.defn_header)
             self.target.add_include(iface_abi_info.impl_header)
+            self.target.add_include("taihe/invoke.hpp")
             for method in self.iface.methods:
                 for param in method.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -1604,29 +1604,48 @@ class CppIfaceImplGenerator:
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         params_cpp = []
-        args_abi = []
-        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        args_abi.append(f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)")  # fmt: skip
-        for param in method.params:
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-            params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
-            args_abi.append(into_abi(param_ty_cpp_info.as_param, param.name))
-        params_cpp_str = ", ".join(params_cpp)
-        args_abi_str = ", ".join(args_abi)
-        result_abi = f"{method_abi_info.wrap_name}({args_abi_str})"
+        args_tmpl = []
+        args_call = []
+        args_call.append(f"&{method_abi_info.wrap_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
-            result_cpp = from_abi(return_ty_cpp_info.as_owner, result_abi)
         else:
             return_ty_cpp_name = "void"
-            result_cpp = result_abi
+        if not method_abi_info.is_noexcept:
+            args_tmpl.append(method_abi_info.ret_type_name)
+        args_tmpl.append(return_ty_cpp_name)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
+        iface_ty_cpp_name = iface_cpp_info.as_param
+        args_tmpl.append(iface_ty_cpp_name)
+        args_call.append(f"*reinterpret_cast<{iface_ty_cpp_name} const*>(this)")
+        for param in method.params:
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            param_ty_cpp_name = param_ty_cpp_info.as_param
+            param_name = param.name
+            params_cpp.append(f"{param_ty_cpp_name} {param_name}")
+            args_tmpl.append(param_ty_cpp_name)
+            args_call.append(f"::std::forward<{param_ty_cpp_name}>({param_name})")
+        params_cpp_str = ", ".join(params_cpp)
+        args_tmpl_str = ", ".join(args_tmpl)
+        args_call_str = ", ".join(args_call)
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_cpp_name
+            call_abi_func_name = "::taihe::call_abi_func"
+        else:
+            return_name = return_ty_expected_name
+            call_abi_func_name = "::taihe::checked::call_abi_func"
+
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+            f"{return_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return {result_cpp};",
+                f"return {call_abi_func_name}<{args_tmpl_str}>({args_call_str});",
             )
 
     def gen_iface_methods_impl_impl(self):
@@ -1644,32 +1663,57 @@ class CppIfaceImplGenerator:
 
     def gen_iface_methods_impl_method(self, method: IfaceMethodDecl):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        out_param_name = "_taihe_out"
         params_abi = []
-        args_cpp = []
-        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        params_abi.append(f"{iface_abi_info.as_param} tobj")
-        for param in method.params:
-            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-            params_abi.append(f"{param_ty_abi_info.as_param} {param.name}")
-            args_cpp.append(from_abi(param_ty_cpp_info.as_param, param.name))
-        params_abi_str = ", ".join(params_abi)
-        args_cpp_str = ", ".join(args_cpp)
-        result_cpp = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_cpp_str})"
+        args_tmpl = []
+        args_call = []
+        if not method_abi_info.is_noexcept:
+            args_call.append(out_param_name)
+            params_abi.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
+            args_tmpl.append(method_abi_info.ret_type_name)
+
+        args_call.append(f"&Impl::{method_cpp_info.impl_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-            result_abi = into_abi(return_ty_cpp_info.as_owner, result_cpp)
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_abi_name = "void"
-            result_abi = result_cpp
+            return_ty_cpp_name = "void"
+        args_tmpl.append(return_ty_cpp_name)
+        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
+        iface_abi_name = iface_abi_info.as_param
+        iface_name = "tobj"
+        params_abi.append(f"{iface_abi_name} {iface_name}")
+        args_call.append(f"*::taihe::cast_data_ptr<Impl>({iface_name}.data_ptr)")
+        for param in method.params:
+            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            param_ty_abi_name = param_ty_abi_info.as_param
+            param_ty_cpp_name = param_ty_cpp_info.as_param
+            param_name = param.name
+            params_abi.append(f"{param_ty_abi_name} {param_name}")
+            args_tmpl.append(param_ty_cpp_name)
+            args_call.append(param_name)
+        params_abi_str = ", ".join(params_abi)
+        args_call_str = ", ".join(args_call)
+        args_tmpl_str = ", ".join(args_tmpl)
+
+        if method_abi_info.is_noexcept:
+            return_name = return_ty_abi_name
+            call_cpp_method_name = "::taihe::call_cpp_method"
+        else:
+            return_name = "int32_t"
+            call_cpp_method_name = "::taihe::checked::call_cpp_method"
+
         with self.target.indented(
-            f"static {return_ty_abi_name} {method.name}({params_abi_str}) {{",
+            f"static {return_name} {method.name}({params_abi_str}) {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return {result_abi};",
+                f"return {call_cpp_method_name}<{args_tmpl_str}>({args_call_str});",
             )
 
     def gen_iface_ftbl_impl(self):

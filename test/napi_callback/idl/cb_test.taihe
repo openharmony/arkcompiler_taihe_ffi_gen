@@ -27,3 +27,17 @@ struct Data {
 function test_cb_struct(f: (data: Data) => Data): void;
 
 function test_x(f: () => void): (a: String) => String;
+
+enum EnumData: i32 {
+  F32_A = 123,
+  F32_B = 456,
+} 
+
+interface MyInterface {
+  testCbIntString(f: (a: i32, b: i32) => void): String;
+  testCbIntBool(f: (a: i32, b: i32) =>void): bool;
+  testCbEnum(f:(a: EnumData) => EnumData): EnumData;
+}
+function getInterface(): MyInterface;
+
+function test_cb_iface(f: (a: MyInterface) => MyInterface): String;
