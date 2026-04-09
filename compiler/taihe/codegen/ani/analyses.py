@@ -98,10 +98,10 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
-    AsyncCompleterType,
-    AsyncFutureType,
     CallbackType,
+    CompleterType,
     EnumType,
+    FutureType,
     IfaceType,
     MapType,
     NonVoidType,
@@ -396,8 +396,8 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     async_handler_drop = "_taihe_asyncHandlerDrop"
     async_handler_registry = "_taihe_asyncHandlerRegistry"
     async_handler = "_taihe_AsyncHandler"
-    async_completer_factory = "_taihe_asyncCompleterFactory"
-    async_future_completory = "_taihe_asyncFutureCompletory"
+    completer_factory = "_taihe_CompleterFactory"
+    future_completory = "_taihe_FutureCompletory"
 
     @property
     def mod(self) -> "ArkTsModule":
@@ -2735,8 +2735,8 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     )
 
 
-class AsyncCompleterTypeAniInfo(TypeAniInfo):
-    def __init__(self, am: AnalysisManager, t: AsyncCompleterType) -> None:
+class CompleterTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
         super().__init__(am, t)
         self.am = am
         self.t = t
@@ -2818,11 +2818,11 @@ class AsyncCompleterTypeAniInfo(TypeAniInfo):
         cpp_value: str,
         ani_after: str,
     ):
-        raise NotImplementedError("AsyncCompleterType is not supported in ANI yet.")
+        raise NotImplementedError("CompleterType is not supported in ANI yet.")
 
 
-class AsyncFutureTypeAniInfo(TypeAniInfo):
-    def __init__(self, am: AnalysisManager, t: AsyncFutureType) -> None:
+class FutureTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: FutureType) -> None:
         super().__init__(am, t)
         self.am = am
         self.t = t
@@ -2843,7 +2843,7 @@ class AsyncFutureTypeAniInfo(TypeAniInfo):
         ani_value: str,
         cpp_after: str,
     ):
-        raise NotImplementedError("AsyncFutureType is not supported in ANI yet.")
+        raise NotImplementedError("FutureType is not supported in ANI yet.")
 
     @override
     def into_ani(
@@ -2980,12 +2980,12 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
         return VectorTypeAniInfo(self.am, t)
 
     @override
-    def visit_async_completer_type(self, t: AsyncCompleterType) -> TypeAniInfo:
-        return AsyncCompleterTypeAniInfo(self.am, t)
+    def visit_completer_type(self, t: CompleterType) -> TypeAniInfo:
+        return CompleterTypeAniInfo(self.am, t)
 
     @override
-    def visit_async_future_type(self, t: AsyncFutureType) -> TypeAniInfo:
-        return AsyncFutureTypeAniInfo(self.am, t)
+    def visit_future_type(self, t: FutureType) -> TypeAniInfo:
+        return FutureTypeAniInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAniInfo:

@@ -29,10 +29,10 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
-    AsyncCompleterType,
-    AsyncFutureType,
     CallbackType,
+    CompleterType,
     EnumType,
+    FutureType,
     IfaceType,
     MapType,
     NonVoidType,
@@ -320,24 +320,24 @@ class SetTypeCppInfo(TypeCppInfo):
         self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
 
 
-class AsyncCompleterTypeCppInfo(TypeCppInfo):
-    def __init__(self, am: AnalysisManager, t: AsyncCompleterType) -> None:
+class CompleterTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
         item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::async_completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
-        self.as_param = f"::taihe::async_completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_owner = f"::taihe::completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_param = f"::taihe::completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
 
 
-class AsyncFutureTypeCppInfo(TypeCppInfo):
-    def __init__(self, am: AnalysisManager, t: AsyncFutureType) -> None:
+class FutureTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: FutureType) -> None:
         item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::async_future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
-        self.as_param = f"::taihe::async_future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_owner = f"::taihe::future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_param = f"::taihe::future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
 
 
 class CallbackTypeCppInfo(TypeCppInfo):
@@ -428,12 +428,12 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
         return SetTypeCppInfo(self.am, t)
 
     @override
-    def visit_async_completer_type(self, t: AsyncCompleterType) -> TypeCppInfo:
-        return AsyncCompleterTypeCppInfo(self.am, t)
+    def visit_completer_type(self, t: CompleterType) -> TypeCppInfo:
+        return CompleterTypeCppInfo(self.am, t)
 
     @override
-    def visit_async_future_type(self, t: AsyncFutureType) -> TypeCppInfo:
-        return AsyncFutureTypeCppInfo(self.am, t)
+    def visit_future_type(self, t: FutureType) -> TypeCppInfo:
+        return FutureTypeCppInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeCppInfo:

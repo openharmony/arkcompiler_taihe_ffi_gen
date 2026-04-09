@@ -13,5 +13,5 @@
  * limitations under the License.
  */
 
-function futureResultWithCallback(ms: i64, result: String, set: AsyncCompleter<String>);
-function futureResultReturnsPromise(ms: i64, result: String): AsyncFuture<String>;
+function futureResultWithCallback(ms: i64, result: String, set: Completer<String>);
+function futureResultReturnsPromise(ms: i64, result: String): Future<String>;

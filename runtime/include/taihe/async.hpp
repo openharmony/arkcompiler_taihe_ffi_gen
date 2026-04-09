@@ -141,39 +141,39 @@ struct async_context {
 };
 
 template<typename Result>
-class async_completer;
+class completer;
 
 template<typename Result>
-class async_future;
+class future;
 
 template<typename Result>
-std::pair<async_completer<Result>, async_future<Result>> make_async_pair();
+std::pair<completer<Result>, future<Result>> make_async_pair();
 
 template<typename Result>
-class async_completer {
+class completer {
 public:
     async_context<Result> *m_ctx;
 
-    async_completer(async_context<Result> *ctx) : m_ctx(ctx)
+    completer(async_context<Result> *ctx) : m_ctx(ctx)
     {
     }
 
-    friend std::pair<async_completer<Result>, async_future<Result>> make_async_pair<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
-    async_completer(async_completer const &) = delete;
+    completer(completer const &) = delete;
 
-    async_completer(async_completer &&other) : m_ctx(other.m_ctx)
+    completer(completer &&other) : m_ctx(other.m_ctx)
     {
         other.m_ctx = nullptr;
     }
 
-    async_completer &operator=(async_completer other)
+    completer &operator=(completer other)
     {
         std::swap(this->m_ctx, other.m_ctx);
         return *this;
     }
 
-    ~async_completer()
+    ~completer()
     {
         if (m_ctx && m_ctx->dec_ref()) {
             delete m_ctx;
@@ -188,30 +188,30 @@ public:
 };
 
 template<typename Result>
-class async_future {
+class future {
 public:
     async_context<Result> *m_ctx;
 
-    async_future(async_context<Result> *ctx) : m_ctx(ctx)
+    future(async_context<Result> *ctx) : m_ctx(ctx)
     {
     }
 
-    friend std::pair<async_completer<Result>, async_future<Result>> make_async_pair<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
-    async_future(async_future const &) = delete;
+    future(future const &) = delete;
 
-    async_future(async_future &&other) : m_ctx(other.m_ctx)
+    future(future &&other) : m_ctx(other.m_ctx)
     {
         other.m_ctx = nullptr;
     }
 
-    async_future &operator=(async_future other)
+    future &operator=(future other)
     {
         std::swap(this->m_ctx, other.m_ctx);
         return *this;
     }
 
-    ~async_future()
+    ~future()
     {
         if (m_ctx && m_ctx->dec_ref()) {
             delete m_ctx;
@@ -237,59 +237,59 @@ public:
 };
 
 template<typename Result>
-std::pair<async_completer<Result>, async_future<Result>> make_async_pair()
+std::pair<completer<Result>, future<Result>> make_async_pair()
 {
     async_context<Result> *ctx = new async_context<Result>(2);
     return {
-        async_completer<Result>(ctx),
-        async_future<Result>(ctx),
+        completer<Result>(ctx),
+        future<Result>(ctx),
     };
 }
 
 template<typename Result>
-struct as_abi<async_completer<Result>> {
-    using type = TAsyncCompleter;
+struct as_abi<completer<Result>> {
+    using type = TCompleter;
 };
 
 template<typename Result>
-struct as_abi<async_future<Result>> {
-    using type = TAsyncFuture;
+struct as_abi<future<Result>> {
+    using type = TFuture;
 };
 
 template<typename Result>
-struct as_param<async_completer<Result>> {
-    using type = async_completer<Result>;
+struct as_param<completer<Result>> {
+    using type = completer<Result>;
 };
 
 template<typename Result>
-struct as_param<async_future<Result>> {
-    using type = async_future<Result>;
+struct as_param<future<Result>> {
+    using type = future<Result>;
 };
 
 template<typename Result>
-inline bool operator==(async_completer<Result> lhs, async_completer<Result> rhs)
+inline bool operator==(completer<Result> lhs, completer<Result> rhs)
 {
     return lhs.m_ctx == rhs.m_ctx;
 }
 
 template<typename Result>
-inline bool operator==(async_future<Result> lhs, async_future<Result> rhs)
+inline bool operator==(future<Result> lhs, future<Result> rhs)
 {
     return lhs.m_ctx == rhs.m_ctx;
 }
 }  // namespace taihe
 
 template<typename Result>
-struct std::hash<taihe::async_completer<Result>> {
-    std::size_t operator()(taihe::async_completer<Result> val) const
+struct std::hash<taihe::completer<Result>> {
+    std::size_t operator()(taihe::completer<Result> val) const
     {
         return std::hash<void *>()(val.m_ctx);
     }
 };
 
 template<typename Result>
-struct std::hash<taihe::async_future<Result>> {
-    std::size_t operator()(taihe::async_future<Result> val) const
+struct std::hash<taihe::future<Result>> {
+    std::size_t operator()(taihe::future<Result> val) const
     {
         return std::hash<void *>()(val.m_ctx);
     }
@@ -303,7 +303,7 @@ struct std::hash<taihe::async_future<Result>> {
 
 namespace taihe {
 template<typename Result>
-Result join(async_future<Result> future)
+Result join(future<Result> future)
 {
     struct JoinContext {
         std::mutex mtx;
@@ -338,7 +338,7 @@ Result join(async_future<Result> future)
 }
 
 template<typename Result>
-Result race(std::initializer_list<async_future<Result>> futures)
+Result race(std::initializer_list<future<Result>> futures)
 {
     struct RaceContext {
         std::mutex mtx;
@@ -384,23 +384,23 @@ template<typename...>
 constexpr inline bool dependent_false_v = false;
 
 template<typename Next, typename Last, typename Processor>
-async_future<Next> then(async_future<Last> prev, Processor &&processor)
+future<Next> then(future<Last> prev, Processor &&processor)
 {
     auto [completer, future] = make_async_pair<Next>();
 
     struct ProcessHandler {
         Processor processor;
-        async_completer<Next> completer;
+        completer<Next> completer;
 
-        ProcessHandler(Processor &&processor, async_completer<Next> completer)
+        ProcessHandler(Processor &&processor, completer<Next> completer)
             : processor(std::forward<Processor>(processor)), completer(std::move(completer))
         {
         }
 
         struct CompleterAsHandler {
-            async_completer<Next> completer;
+            completer<Next> completer;
 
-            CompleterAsHandler(async_completer<Next> completer) : completer(std::move(completer))
+            CompleterAsHandler(completer<Next> completer) : completer(std::move(completer))
             {
             }
 
@@ -412,10 +412,10 @@ async_future<Next> then(async_future<Last> prev, Processor &&processor)
 
         void handle_result(Last &&result)
         {
-            if constexpr (std::is_invocable_r_v<async_future<Next>, Processor, Last>) {
+            if constexpr (std::is_invocable_r_v<future<Next>, Processor, Last>) {
                 this->processor(std::forward<Last>(result))
                     .template emplace_handler<CompleterAsHandler>(std::move(this->completer));
-            } else if constexpr (std::is_invocable_v<Processor, Last, async_completer<Next>>) {
+            } else if constexpr (std::is_invocable_v<Processor, Last, completer<Next>>) {
                 this->processor(std::forward<Last>(result), std::move(this->completer));
             } else {
                 static_assert(dependent_false_v<Next, Last, Processor>,

@@ -39,11 +39,11 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.visitor import (
         ArrayTypeVisitor,
-        AsyncCompleterTypeVisitor,
-        AsyncFutureTypeVisitor,
         BuiltinTypeVisitor,
         CallbackTypeVisitor,
+        CompleterTypeVisitor,
         EnumTypeVisitor,
+        FutureTypeVisitor,
         GenericTypeVisitor,
         IfaceTypeVisitor,
         MapTypeVisitor,
@@ -417,20 +417,20 @@ class SetType(GenericType):
 
 
 @dataclass(frozen=True, repr=False)
-class AsyncCompleterType(GenericType):
+class CompleterType(GenericType):
     item_ty: NonVoidType
 
     @property
     @override
     def signature(self):
-        return f"AsyncCompleter<{self.item_ty.signature}>"
+        return f"Completer<{self.item_ty.signature}>"
 
     @classmethod
     def try_construct(
         cls,
         ref: "GenericTypeRefDecl",
         dm: DiagnosticsManager,
-    ) -> "AsyncCompleterType | None":
+    ) -> "CompleterType | None":
         if len(ref.args) != 1:
             dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
@@ -441,25 +441,25 @@ class AsyncCompleterType(GenericType):
         return cls(ref, item_ty)
 
     @override
-    def accept(self, v: "AsyncCompleterTypeVisitor[_R]") -> _R:
-        return v.visit_async_completer_type(self)
+    def accept(self, v: "CompleterTypeVisitor[_R]") -> _R:
+        return v.visit_completer_type(self)
 
 
 @dataclass(frozen=True, repr=False)
-class AsyncFutureType(GenericType):
+class FutureType(GenericType):
     item_ty: NonVoidType
 
     @property
     @override
     def signature(self):
-        return f"AsyncFuture<{self.item_ty.signature}>"
+        return f"Future<{self.item_ty.signature}>"
 
     @classmethod
     def try_construct(
         cls,
         ref: "GenericTypeRefDecl",
         dm: DiagnosticsManager,
-    ) -> "AsyncFutureType | None":
+    ) -> "FutureType | None":
         if len(ref.args) != 1:
             dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
@@ -470,8 +470,8 @@ class AsyncFutureType(GenericType):
         return cls(ref, item_ty)
 
     @override
-    def accept(self, v: "AsyncFutureTypeVisitor[_R]") -> _R:
-        return v.visit_async_future_type(self)
+    def accept(self, v: "FutureTypeVisitor[_R]") -> _R:
+        return v.visit_future_type(self)
 
 
 # Builtin Generics Map
@@ -481,8 +481,8 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
     "Vector": VectorType,
     "Map": MapType,
     "Set": SetType,
-    "AsyncCompleter": AsyncCompleterType,
-    "AsyncFuture": AsyncFutureType,
+    "Completer": CompleterType,
+    "Future": FutureType,
 }
 
 
