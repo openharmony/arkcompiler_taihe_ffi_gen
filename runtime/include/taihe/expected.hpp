@@ -28,14 +28,14 @@ namespace taihe {
 class error {
 private:
     int32_t code_;
-    ::taihe::string message_;
+    taihe::string message_;
 
 public:
-    explicit error(::taihe::string_view message) : code_(0), message_(message)
+    explicit error(taihe::string_view message) : code_(0), message_(message)
     {
     }
 
-    explicit error(::taihe::string_view message, int32_t code) : code_(code), message_(message)
+    explicit error(taihe::string_view message, int32_t code) : code_(code), message_(message)
     {
     }
 
@@ -44,7 +44,7 @@ public:
     error &operator=(error const &) = default;
     error &operator=(error &&) = default;
 
-    ::taihe::string const &message() const noexcept
+    taihe::string const &message() const noexcept
     {
         return message_;
     }
@@ -477,7 +477,7 @@ template<typename T>
 struct is_expected : std::false_type {};
 
 template<typename T, typename E>
-struct is_expected<::taihe::expected<T, E>> : std::true_type {};
+struct is_expected<taihe::expected<T, E>> : std::true_type {};
 
 template<typename T>
 constexpr inline bool is_expected_v = is_expected<T>::value;

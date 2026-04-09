@@ -2567,7 +2567,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"ani_error _ets_error = nullptr;",
                         f"env->GetUnhandledError(&_ets_error);",
                         f"env->ResetError();",
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(_ets_error));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, _ets_error));",
                     )
                 with target.indented(
                     f"else {{",
@@ -2757,7 +2757,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 ):
                     target.writelns(
                         f"::taihe::error {result_error} = {result_expected}.error();",
-                        f"env->ThrowError(into_ani_error({result_error}));",
+                        f"env->ThrowError(into_ani_error(env, {result_error}));",
                         f"return ani_ref{{}};",
                     )
 

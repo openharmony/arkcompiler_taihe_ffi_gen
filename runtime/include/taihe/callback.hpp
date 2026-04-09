@@ -31,7 +31,7 @@ template<typename Signature>
 struct callback;
 
 template<typename Return, typename... Params>
-struct callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> {
+struct callback_view<taihe::expected<Return, taihe::error>(Params...)> {
 private:
     template<typename T = Return>
     union cb_out_impl {
@@ -50,8 +50,8 @@ public:
     static constexpr bool is_holder = false;
 
     using vtable_type = int32_t(cb_out *_taihe_out, TCallback, as_abi_t<Params>...);
-    using view_type = callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>;
-    using holder_type = callback<::taihe::expected<Return, ::taihe::error>(Params...)>;
+    using view_type = callback_view<taihe::expected<Return, taihe::error>(Params...)>;
+    using holder_type = callback<taihe::expected<Return, taihe::error>(Params...)>;
 
     struct abi_type {
         vtable_type *vtbl_ptr;
@@ -78,9 +78,9 @@ public:
         return m_handle.vtbl_ptr == nullptr;
     }
 
-    ::taihe::expected<Return, ::taihe::error> operator()(Params... params) const &
+    taihe::expected<Return, taihe::error> operator()(Params... params) const &
     {
-        return ::taihe::checked::call_abi_func<cb_out, Return, callback_view, Params...>(
+        return taihe::checked::call_abi_func<cb_out, Return, callback_view, Params...>(
             m_handle.vtbl_ptr, *this, ::std::forward<Params>(params)...);
     }
 
@@ -88,7 +88,7 @@ public:
     template<typename Impl>
     static int32_t vtbl_impl(cb_out *_taihe_out, TCallback tobj, as_abi_t<Params>... params)
     {
-        return ::taihe::checked::call_cpp_method<cb_out, Return, Params...>(
+        return taihe::checked::call_cpp_method<cb_out, Return, Params...>(
             _taihe_out, &Impl::operator(), *cast_data_ptr<Impl>(tobj.data_ptr), params...);
     };
 
@@ -97,13 +97,13 @@ public:
 };
 
 template<typename Return, typename... Params>
-struct callback<::taihe::expected<Return, ::taihe::error>(Params...)>
-    : callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> {
+struct callback<taihe::expected<Return, taihe::error>(Params...)>
+    : callback_view<taihe::expected<Return, taihe::error>(Params...)> {
     static constexpr bool is_holder = true;
 
-    using typename callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>::abi_type;
+    using typename callback_view<taihe::expected<Return, taihe::error>(Params...)>::abi_type;
 
-    explicit callback(abi_type handle) : callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>(handle)
+    explicit callback(abi_type handle) : callback_view<taihe::expected<Return, taihe::error>(Params...)>(handle)
     {
     }
 
@@ -118,7 +118,7 @@ struct callback<::taihe::expected<Return, ::taihe::error>(Params...)>
         return *this;
     }
 
-    callback(callback<::taihe::expected<Return, ::taihe::error>(Params...)> &&other)
+    callback(callback<taihe::expected<Return, taihe::error>(Params...)> &&other)
         : callback({
               other.m_handle.vtbl_ptr,
               std::exchange(other.m_handle.data_ptr, nullptr),
@@ -126,7 +126,7 @@ struct callback<::taihe::expected<Return, ::taihe::error>(Params...)>
     {
     }
 
-    callback(callback<::taihe::expected<Return, ::taihe::error>(Params...)> const &other)
+    callback(callback<taihe::expected<Return, taihe::error>(Params...)> const &other)
         : callback({
               other.m_handle.vtbl_ptr,
               tobj_dup(other.m_handle.data_ptr),
@@ -134,7 +134,7 @@ struct callback<::taihe::expected<Return, ::taihe::error>(Params...)>
     {
     }
 
-    callback(callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> const &other)
+    callback(callback_view<taihe::expected<Return, taihe::error>(Params...)> const &other)
         : callback({
               other.m_handle.vtbl_ptr,
               tobj_dup(other.m_handle.data_ptr),
@@ -270,51 +270,51 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
 };
 
 template<typename Return, typename... Params>
-struct as_abi<::taihe::callback_view<Return(Params...)>> {
+struct as_abi<taihe::callback_view<Return(Params...)>> {
     using type = TCallback;
 };
 
 template<typename Return, typename... Params>
-struct as_abi<::taihe::callback<Return(Params...)>> {
+struct as_abi<taihe::callback<Return(Params...)>> {
     using type = TCallback;
 };
 
 template<typename Return, typename... Params>
-struct as_param<::taihe::callback<Return(Params...)>> {
-    using type = ::taihe::callback_view<Return(Params...)>;
+struct as_param<taihe::callback<Return(Params...)>> {
+    using type = taihe::callback_view<Return(Params...)>;
 };
 
 template<typename Return, typename... Params>
-inline bool operator==(::taihe::callback_view<Return(Params...)> lhs, ::taihe::callback_view<Return(Params...)> rhs)
+inline bool operator==(taihe::callback_view<Return(Params...)> lhs, taihe::callback_view<Return(Params...)> rhs)
 {
     return data_view(lhs) == data_view(rhs);
 }
 
 template<typename Return, typename... Params>
-struct as_abi<::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>> {
+struct as_abi<taihe::callback_view<taihe::expected<Return, taihe::error>(Params...)>> {
     using type = TCallback;
 };
 
 template<typename Return, typename... Params>
-struct as_abi<::taihe::callback<::taihe::expected<Return, ::taihe::error>(Params...)>> {
+struct as_abi<taihe::callback<taihe::expected<Return, taihe::error>(Params...)>> {
     using type = TCallback;
 };
 
 template<typename Return, typename... Params>
-struct as_param<::taihe::callback<::taihe::expected<Return, ::taihe::error>(Params...)>> {
-    using type = ::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>;
+struct as_param<taihe::callback<taihe::expected<Return, taihe::error>(Params...)>> {
+    using type = taihe::callback_view<taihe::expected<Return, taihe::error>(Params...)>;
 };
 
 template<typename Return, typename... Params>
-inline bool operator==(::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> lhs,
-                       ::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> rhs)
+inline bool operator==(taihe::callback_view<taihe::expected<Return, taihe::error>(Params...)> lhs,
+                       taihe::callback_view<taihe::expected<Return, taihe::error>(Params...)> rhs)
 {
     return data_view(lhs) == data_view(rhs);
 }
 }  // namespace taihe
 
 template<typename Return, typename... Params>
-struct std::hash<::taihe::callback<Return(Params...)>> {
+struct std::hash<taihe::callback<Return(Params...)>> {
     std::size_t operator()(taihe::callback_view<Return(Params...)> val) const noexcept
     {
         return std::hash<taihe::data_holder>()(val);
@@ -322,11 +322,11 @@ struct std::hash<::taihe::callback<Return(Params...)>> {
 };
 
 template<typename Return, typename... Params>
-struct std::hash<::taihe::callback<::taihe::expected<Return, ::taihe::error>(Params...)>> {
+struct std::hash<taihe::callback<taihe::expected<Return, taihe::error>(Params...)>> {
     std::size_t operator()(
-        ::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> val) const noexcept
+        taihe::callback_view<taihe::expected<Return, taihe::error>(Params...)> val) const noexcept
     {
-        return std::hash<::taihe::data_holder>()(val);
+        return std::hash<taihe::data_holder>()(val);
     }
 };
 #endif  // TAIHE_CALLBACK_HPP
