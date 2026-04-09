@@ -74,14 +74,14 @@ namespace taihe {
 static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
 {
     ani_class errCls;
-    char const *className = "std.core.Error";
+    char const *className = "escompat.Error";
     if (ANI_OK != env->FindClass(className, &errCls)) {
         TH_ANI_LOG_ERROR("Class not found: %s", className);
         return nullptr;
     }
 
     ani_method errCtor;
-    if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "C{std.core.String}C{std.core.ErrorOptions}:", &errCtor)) {
+    if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "C{std.core.String}C{escompat.ErrorOptions}:", &errCtor)) {
         TH_ANI_LOG_ERROR("Constructor not found: %s", className);
         return nullptr;
     }
@@ -116,7 +116,7 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
     }
 
     ani_method errCtor;
-    if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "iC{std.core.Error}:", &errCtor)) {
+    if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "iC{escompat.Error}:", &errCtor)) {
         TH_ANI_LOG_ERROR("Constructor not found: %s", className);
         return nullptr;
     }
