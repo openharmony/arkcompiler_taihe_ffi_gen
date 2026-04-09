@@ -30,7 +30,7 @@ void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::com
         std::cout << "[Future Result] Waiting for " << ms << " milliseconds..." << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         std::cout << "[Future Result] Task completed, setting result..." << std::endl;
-        setter.emplace_result(std::move(val));
+        setter.complete(std::move(val));
     }).detach();
 }
 

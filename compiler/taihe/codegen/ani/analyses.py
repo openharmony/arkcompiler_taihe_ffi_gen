@@ -2807,7 +2807,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     )
         target.writelns(
             f"auto [{cpp_after}, {cpp_promise}] = ::taihe::make_async_pair<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
-            f"{cpp_promise}.emplace_handler<{cpp_handler_t}>({env}, {ani_value});",
+            f"{cpp_promise}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
     @override
@@ -2897,7 +2897,7 @@ class FutureTypeAniInfo(TypeAniInfo):
             f"ani_object {ani_after} = {{}};",
             f"ani_resolver {ani_resolver} = {{}};",
             f"{env}->Promise_New(&{ani_resolver}, &{ani_after});",
-            f"{cpp_value}.emplace_handler<{cpp_handler_t}>({env}, reinterpret_cast<ani_ref>({ani_resolver}));",
+            f"{cpp_value}.on_complete<{cpp_handler_t}>({env}, reinterpret_cast<ani_ref>({ani_resolver}));",
         )
 
 
