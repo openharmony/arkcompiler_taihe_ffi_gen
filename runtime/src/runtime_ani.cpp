@@ -138,10 +138,24 @@ bool has_error()
     return ani_has_error(env);
 }
 
-taihe::error from_ani_error(ani_env *env, ani_error err)
+ani_error take_ani_error(ani_env *env)
+{
+    ani_boolean hasErr;
+    env->ExistUnhandledError(&hasErr);
+    if (hasErr) {
+        ani_error errObj;
+        env->GetUnhandledError(&errObj);
+        env->ResetError();
+        return errObj;
+    } else {
+        return nullptr;
+    }
+}
+
+taihe::error from_ani_error(ani_env *env, ani_error errObj)
 {
     ani_string errMsg {};
-    env->Object_GetPropertyByName_Ref(ani_object(err), "message", reinterpret_cast<ani_ref *>(&errMsg));
+    env->Object_GetPropertyByName_Ref(ani_object(errObj), "message", reinterpret_cast<ani_ref *>(&errMsg));
     ani_size msgLength;
     env->String_GetUTF8Size(errMsg, &msgLength);
     TString msgHandle;
@@ -152,19 +166,19 @@ taihe::error from_ani_error(ani_env *env, ani_error err)
     taihe::string msg(msgHandle);
 
     ani_int code = 0;
-    if (ANI_OK == env->Object_GetPropertyByName_Int(err, "code", &code)) {
+    if (ANI_OK == env->Object_GetPropertyByName_Int(errObj, "code", &code)) {
         return taihe::error(msg, code);
     } else {
         return taihe::error(msg);
     }
 }
 
-ani_error into_ani_error(ani_env *env, taihe::error err)
+void make_ani_error(ani_env *env, taihe::error err)
 {
     if (err.code() != 0) {
-        return create_ani_business_error(env, err.code(), err.message());
+        ani_set_business_error(env, err.code(), err.message());
     } else {
-        return create_ani_error(env, err.message());
+        ani_set_error(env, err.message());
     }
 }
 }  // namespace taihe
