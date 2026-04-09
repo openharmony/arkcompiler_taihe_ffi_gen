@@ -41,6 +41,8 @@ function test_with_callback(): void {
 }
 
 function main(): void {
-    test_returns_promise();
-    test_with_callback();
+    const suite = new arktest.ArkTestsuite("Hello Module Test");
+    suite.addTest("test_returns_promise", test_returns_promise);
+    suite.addTest("test_with_callback", test_with_callback);
+    exit(suite.run());
 }

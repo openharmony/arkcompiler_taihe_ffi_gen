@@ -147,96 +147,17 @@ function testCallbackVoid() {
 }
 
 function main() {
-    // const suite = new arktest.ArkTestsuite("Hello Module Test");
-    // suite.addTest("testSayHello", testSayHello);
-    // suite.addTest("testSayHelloWithNumber", testSayHelloWithNumber);
-    // suite.addTest("testSayHelloWithError", testSayHelloWithError);
-    // suite.addTest("testFooBar", testFooBar);
-    // suite.addTest("testFooBarWithNumber", testFooBarWithNumber);
-    // suite.addTest("testFooBarWithString", testFooBarWithString);
-    // suite.addTest("testCallFoo", testCallFoo);
-    // suite.addTest("testCallback", testCallback);
-    // suite.addTest("testCallbackWithReturn", testCallbackWithReturn);
-    // suite.addTest("testConcat", testConcat);
-    // suite.addTest("testCallbackVoid", testCallbackVoid);
-    // exit(suite.run());
-    {
-        let error_code: number = 0;
-        let errorMsg: string = "";
-        try {
-            hello.sayHello_ii(10);
-        } catch (error) {
-            errorMsg = error.toString();
-            error = error as BusinessError
-            error_code = error.code
-            console.log(
-                "error code: ", error_code, "error message: ", errorMsg);
-        }
-    }
-
-    // noexcept全局函数
-    {
-        let res: string = "";
-        try {
-            res = hello.concat("a", "b");
-            console.log("result: ", res);
-        } catch (error) {
-            console.log("Error in testConcat")
-        }
-
-        let x = hello.createFoo();
-    }
-
-    // 普通接口方法
-    {
-        let x = hello.createFoo();
-        let error_code: number = 0;
-        let errorMsg: string = "";
-        try {
-            x.bar();
-        } catch (error) {
-            errorMsg = error.toString();
-            error = error as BusinessError
-            error_code = error.code
-            console.log(
-                "error code: ", error_code, "error message: ", errorMsg);
-        }
-    }
-    // noexcept接口方法
-    {
-        let x = hello.createFoo();
-        let result: string = "";
-        try {
-            result = x.bar_ss("call_foo_bar_string");
-            console.log("result: ", result);
-        } catch (error) {
-            console.log("Error in testFooBarWithString")
-        }
-    }
-    // 普通回调
-    {
-        let error_code: number = 0;
-        let errorMsg: string = "";
-        try {
-            hello.callcb(() => {
-                console.log("Callback called");
-                throw new BusinessError(1001, new Error("Callback error"));
-            });
-        } catch (error) {
-            errorMsg = error.toString();
-            error = error as BusinessError
-            error_code = error.code
-            console.log(
-                "error code: ", error_code, "error message: ", errorMsg);
-        }
-    }
-
-    // noexcept 回调
-    try {
-        hello.test_cb_v(() => {
-            console.log("test_cb_v in ets");
-        });
-    } catch (error) {
-        console.log("Error in testCallbackVoid")
-    }
+    const suite = new arktest.ArkTestsuite("Hello Module Test");
+    suite.addTest("testSayHello", testSayHello);
+    suite.addTest("testSayHelloWithNumber", testSayHelloWithNumber);
+    suite.addTest("testSayHelloWithError", testSayHelloWithError);
+    suite.addTest("testFooBar", testFooBar);
+    suite.addTest("testFooBarWithNumber", testFooBarWithNumber);
+    suite.addTest("testFooBarWithString", testFooBarWithString);
+    suite.addTest("testCallFoo", testCallFoo);
+    suite.addTest("testCallback", testCallback);
+    suite.addTest("testCallbackWithReturn", testCallbackWithReturn);
+    suite.addTest("testConcat", testConcat);
+    suite.addTest("testCallbackVoid", testCallbackVoid);
+    exit(suite.run());
 }
