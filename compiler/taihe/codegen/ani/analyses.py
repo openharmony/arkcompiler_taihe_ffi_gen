@@ -2485,9 +2485,9 @@ class CallbackTypeAniInfo(TypeAniInfo):
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
-        return_ty_cpp_name_expected = (
-            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-        )
+        args_ani_str = ", ".join(args_ani)
+        result_ani = "ani_result"
+        result_cpp = "cpp_result"
         if cb_abi_info.is_noexcept:
             with target.indented(
                 f"{return_ty_cpp_name} operator()({params_cpp_str}) {{",
@@ -2507,15 +2507,12 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         arg_cpp,
                         arg_ani,
                     )
-                args_ani_str = ", ".join(args_ani)
-                result_ani = "ani_result"
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref {result_ani} = {{}};",
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
                 )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    result_cpp = "cpp_result"
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.from_ani_boxed(
                         target,
@@ -2531,8 +2528,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"return;",
                     )
         else:
+            expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            error_ani = "ani_err"
             with target.indented(
-                f"{return_ty_cpp_name_expected} operator()({params_cpp_str}) {{",
+                f"{expected_ty_cpp_name} operator()({params_cpp_str}) {{",
                 f"}}",
             ):
                 target.writelns(
@@ -2549,45 +2548,33 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         arg_cpp,
                         arg_ani,
                     )
-                args_ani_str = ", ".join(args_ani)
-                result_ani = "ani_result"
-                result_cpp = "cpp_result"
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref {result_ani} = {{}};",
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
-                    f"ani_boolean _ets_has_error = false;",
-                    f"env->ExistUnhandledError(&_ets_has_error);",
                 )
                 with target.indented(
-                    f"if (_ets_has_error) {{",
+                    f"if (ani_error {error_ani} = ::taihe::take_ani_error(env)) {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_error _ets_error = nullptr;",
-                        f"env->GetUnhandledError(&_ets_error);",
-                        f"env->ResetError();",
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, _ets_error));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, {error_ani}));",
                     )
-                with target.indented(
-                    f"else {{",
-                    f"}}",
-                ):
-                    if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                        return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                        return_ty_ani_info.from_ani_boxed(
-                            target,
-                            "env",
-                            result_ani,
-                            result_cpp,
-                        )
-                        target.writelns(
-                            f"return {result_cpp};",
-                        )
-                    else:
-                        target.writelns(
-                            f"return {{}};",
-                        )
+                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.from_ani_boxed(
+                        target,
+                        "env",
+                        result_ani,
+                        result_cpp,
+                    )
+                    target.writelns(
+                        f"return {result_cpp};",
+                    )
+                else:
+                    target.writelns(
+                        f"return {{}};",
+                    )
 
     @override
     def into_ani(
@@ -2647,7 +2634,6 @@ class CallbackTypeAniInfo(TypeAniInfo):
         cpp_cast_ptr: str,
     ):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.t)
-
         params_ani = []
         args_ani = []
         params_ani.append("[[maybe_unused]] ani_env* env")
@@ -2689,16 +2675,20 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
             args_cpp_str = ", ".join(args_cpp)
             lambda_invoke = f"cpp_func({args_cpp_str})"
+            if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                return_ty_cpp_name = return_ty_cpp_info.as_owner
+            else:
+                return_ty_cpp_name = "void"
+            result_cpp = "cpp_result"
+            result_ani = "ani_result"
             if cb_abi_info.is_noexcept:
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    result_cpp = "cpp_result"
-                    result_ani = "ani_result"
                     target.writelns(
-                        f"{return_ty_cpp_info.as_owner} {result_cpp} = {lambda_invoke};",
-                        f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
+                        f"{return_ty_cpp_name} {result_cpp} = {lambda_invoke};",
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.into_ani_boxed(
                         target,
                         "env",
@@ -2711,54 +2701,36 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 else:
                     target.writelns(
                         f"{lambda_invoke};",
-                        f"return ani_ref{{}};",
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
+                        f"return {{}};",
                     )
             else:
-                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_cpp_name = return_ty_cpp_info.as_owner
-                else:
-                    return_ty_cpp_name = "void"
-                return_ty_cpp_name_expected = (
-                    f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-                )
-                result_cpp = "cpp_result"
-                result_ani = "napi_result"
-                result_expected = "expected_result"
-                result_error = "error_result"
+                expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+                expected_ani = "ani_expected"
                 target.writelns(
-                    f"{return_ty_cpp_name_expected} {result_expected} = {lambda_invoke};",
+                    f"{expected_ty_cpp_name} {expected_ani} = {lambda_invoke};",
                 )
-                with target.indented(
-                    f"if ({result_expected}) {{",
-                    f"}}",
-                ):
-                    if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                        return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                        target.writelns(
-                            f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
-                        )
-                        return_ty_ani_info.into_ani_boxed(
-                            target,
-                            "env",
-                            result_cpp,
-                            result_ani,
-                        )
-                        target.writelns(
-                            f"return {result_ani};",
-                        )
-                    else:
-                        target.writelns(
-                            f"return ani_ref{{}};",
-                        )
-                with target.indented(
-                    f"else {{",
-                    f"}}",
-                ):
+                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
-                        f"::taihe::error {result_error} = {result_expected}.error();",
-                        f"env->ThrowError(into_ani_error(env, {result_error}));",
-                        f"return ani_ref{{}};",
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
+                    )
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.into_ani_boxed(
+                        target,
+                        "env",
+                        result_cpp,
+                        result_ani,
+                    )
+                    target.writelns(
+                        f"return {result_ani};",
+                    )
+                else:
+                    target.writelns(
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"return {{}};",
                     )
 
 
