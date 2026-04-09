@@ -22,7 +22,9 @@
 #include <thread>
 
 namespace {
-void futureResultWithCallback(int64_t ms, taihe::string_view val, taihe::async_completer<taihe::string> setter)
+using expected_type = ::taihe::expected<::taihe::string, ::taihe::error>;
+
+void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::async_completer<expected_type> setter)
 {
     std::thread([ms, val = taihe::string(val), setter = std::move(setter)]() mutable {
         std::cout << "[Future Result] Waiting for " << ms << " milliseconds..." << std::endl;
@@ -32,9 +34,9 @@ void futureResultWithCallback(int64_t ms, taihe::string_view val, taihe::async_c
     }).detach();
 }
 
-taihe::async_future<taihe::string> futureResultReturnsPromise(int64_t ms, taihe::string_view val)
+taihe::async_future<expected_type> futureResultReturnsPromise(int64_t ms, ::taihe::string_view val)
 {
-    auto [setter, result] = taihe::make_async_pair<taihe::string>();
+    auto [setter, result] = taihe::make_async_pair<expected_type>();
     futureResultWithCallback(ms, val, std::move(setter));
     return std::move(result);
 }

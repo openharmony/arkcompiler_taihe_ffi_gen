@@ -326,8 +326,8 @@ class AsyncCompleterTypeCppInfo(TypeCppInfo):
         self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::async_completer<{item_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::async_completer<{item_ty_cpp_info.as_owner}>"
+        self.as_owner = f"::taihe::async_completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_param = f"::taihe::async_completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
 
 
 class AsyncFutureTypeCppInfo(TypeCppInfo):
@@ -336,8 +336,8 @@ class AsyncFutureTypeCppInfo(TypeCppInfo):
         self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
         self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::async_future<{item_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::async_future<{item_ty_cpp_info.as_owner}>"
+        self.as_owner = f"::taihe::async_future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_param = f"::taihe::async_future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
 
 
 class CallbackTypeCppInfo(TypeCppInfo):
