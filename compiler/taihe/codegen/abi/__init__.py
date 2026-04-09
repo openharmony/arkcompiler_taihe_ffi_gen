@@ -33,11 +33,15 @@ class AbiHeaderBackendConfig(BackendConfig):
         return AbiHeaderBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
+        from taihe.codegen.abi.attributes import all_attr_types
         from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
         class AbiHeaderBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
                 self._ci = ci
+
+            def register(self):
+                self._ci.attribute_registry.register(*all_attr_types)
 
             def generate(self):
                 om = self._ci.output_manager
