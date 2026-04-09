@@ -80,8 +80,8 @@ struct async_context {
         TH_ASSERT(!(flags & ASYNC_CONTEXT_RESULT_SET), "Result is already being set");
         new (&buffer.result) Result(std::forward<Args>(args)...);
 
-        uint32_t old_falgs = set_flags(ASYNC_CONTEXT_RESULT_SET);
-        if (old_falgs & ASYNC_CONTEXT_HANDLER_SET) {
+        uint32_t old_flags = set_flags(ASYNC_CONTEXT_RESULT_SET);
+        if (old_flags & ASYNC_CONTEXT_HANDLER_SET) {
             process_handler();
         }
     }
@@ -100,8 +100,8 @@ struct async_context {
             reinterpret_cast<SmallConstHandler const *>(&storage.buf)->~SmallConstHandler();
         };
 
-        uint32_t old_falgs = set_flags(ASYNC_CONTEXT_HANDLER_SET);
-        if (old_falgs & ASYNC_CONTEXT_RESULT_SET) {
+        uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
+        if (old_flags & ASYNC_CONTEXT_RESULT_SET) {
             process_handler();
         }
     }
@@ -118,8 +118,8 @@ struct async_context {
             delete reinterpret_cast<LargeMutableHandler *>(storage.ptr);
         };
 
-        uint32_t old_falgs = set_flags(ASYNC_CONTEXT_HANDLER_SET);
-        if (old_falgs & ASYNC_CONTEXT_RESULT_SET) {
+        uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
+        if (old_flags & ASYNC_CONTEXT_RESULT_SET) {
             process_handler();
         }
     }
@@ -338,18 +338,18 @@ Result join(async_future<Result> future)
 }
 
 template<typename Result>
-Result select(std::initializer_list<async_future<Result>> futures)
+Result race(std::initializer_list<async_future<Result>> futures)
 {
-    struct SelectContext {
+    struct RaceContext {
         std::mutex mtx;
         std::condition_variable cv;
         std::optional<Result> joined;
     };
 
-    struct SelectHandler {
-        std::shared_ptr<SelectContext> ptr;
+    struct RaceHandler {
+        std::shared_ptr<RaceContext> ptr;
 
-        SelectHandler(std::shared_ptr<SelectContext> ptr) : ptr(ptr)
+        RaceHandler(std::shared_ptr<RaceContext> ptr) : ptr(ptr)
         {
         }
 
@@ -363,9 +363,9 @@ Result select(std::initializer_list<async_future<Result>> futures)
         }
     };
 
-    auto ptr = std::make_shared<SelectContext>();
+    auto ptr = std::make_shared<RaceContext>();
     for (auto const &old : futures) {
-        old.template emplace_handler<SelectHandler>(ptr);
+        old.template emplace_handler<RaceHandler>(ptr);
     }
 
     std::unique_lock<std::mutex> lock(ptr->mtx);

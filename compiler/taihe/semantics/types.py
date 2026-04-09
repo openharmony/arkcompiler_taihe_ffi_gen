@@ -423,7 +423,7 @@ class AsyncCompleterType(GenericType):
     @property
     @override
     def signature(self):
-        return f"AsyncCallback<{self.item_ty.signature}>"
+        return f"AsyncCompleter<{self.item_ty.signature}>"
 
     @classmethod
     def try_construct(
