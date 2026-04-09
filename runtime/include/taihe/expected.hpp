@@ -282,13 +282,13 @@ public:
         }
     }
 
-    template<class U = T,
-             typename std::enable_if<std::is_constructible<T, U &&>::value && std::is_convertible<U &&, T>::value &&
-                                         !std::is_same<remove_cvref_t<U>, std::in_place_t>::value &&
-                                         !std::is_same<remove_cvref_t<U>, expected>::value &&
-                                         !std::is_same<remove_cvref_t<U>, unexpected<E>>::value &&
-                                         !std::is_same<remove_cvref_t<U>, unexpect_t>::value,
-                                     int>::type = 0>
+    template<class U = T, typename std::enable_if<
+                              std::is_constructible<T, U &&>::value && std::is_convertible<U &&, T>::value &&
+                                  !std::is_same<std::remove_cv_t<std::remove_reference_t<U>>, std::in_place_t>::value &&
+                                  !std::is_same<std::remove_cv_t<std::remove_reference_t<U>>, expected>::value &&
+                                  !std::is_same<std::remove_cv_t<std::remove_reference_t<U>>, unexpected<E>>::value &&
+                                  !std::is_same<std::remove_cv_t<std::remove_reference_t<U>>, unexpect_t>::value,
+                              int>::type = 0>
     constexpr expected(U &&value) noexcept(std::is_nothrow_constructible<T, U &&>::value)
         : has_val(true), val(std::forward<U>(value))
     {

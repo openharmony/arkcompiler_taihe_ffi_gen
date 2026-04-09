@@ -84,16 +84,20 @@ class CMacroPackageGenerator:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
             args.append(param.name)
-        params_str = ", ".join(params)
-        args_str = ", ".join(args)
+        if not func_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
+            args.append("abi_err")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
+            params.append(f"{return_ty_abi_name}* abi_ret")
+            args.append("abi_ret")
+        params_str = ", ".join(params)
+        args_str = ", ".join(args)
         self.target.writelns(
             f"#define {func_c_impl_info.macro}({func_impl}) \\",
-            f"    {return_ty_abi_name} {func_abi_info.impl_name}({params_str}) {{ \\",
+            f"    void {func_abi_info.impl_name}({params_str}) {{ \\",
             f"        return {func_impl}({args_str}); \\",
             f"    }}",
         )
@@ -137,16 +141,20 @@ class CMacroIfaceGenerator:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
             args.append(param.name)
-        params_str = ", ".join(params)
-        args_str = ", ".join(args)
+        if not method_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
+            args.append("abi_err")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
+            params.append(f"{return_ty_abi_name}* abi_ret")
+            args.append("abi_ret")
+        params_str = ", ".join(params)
+        args_str = ", ".join(args)
         self.target.writelns(
             f"#define {method_c_impl_info.macro}({method_impl}) \\",
-            f"    {return_ty_abi_name} {method_abi_info.impl_name}({params_str}) {{ \\",
+            f"    void {method_abi_info.impl_name}({params_str}) {{ \\",
             f"        return {method_impl}({args_str}); \\",
             f"    }}",
         )
@@ -184,19 +192,22 @@ class CTemplatePackageGenerator:
                 self.gen_func(func)
 
     def gen_func(self, func: GlobFuncDecl):
+        func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_c_impl_info = GlobFuncCImplInfo.get(self.am, func)
         params = []
         for param in func.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
-        params_str = ", ".join(params)
+        if not func_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
+            params.append(f"{return_ty_abi_name}* abi_ret")
+        params_str = ", ".join(params)
         with self.target.indented(
-            f"{return_ty_abi_name} {func_c_impl_info.function}({params_str}) {{",
+            f"void {func_c_impl_info.function}({params_str}) {{",
             f"}}",
         ):
             self.target.writelns(
@@ -227,6 +238,7 @@ class CTemplateIfaceGenerator:
                 self.gen_method(method)
 
     def gen_method(self, method: IfaceMethodDecl):
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_c_impl_info = IfaceMethodCImplInfo.get(self.am, method)
         params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -234,14 +246,16 @@ class CTemplateIfaceGenerator:
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
-        params_str = ", ".join(params)
+        if not method_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
+            params.append(f"{return_ty_abi_name}* abi_ret")
+        params_str = ", ".join(params)
         with self.target.indented(
-            f"{return_ty_abi_name} {method_c_impl_info.function}({params_str}) {{",
+            f"void {method_c_impl_info.function}({params_str}) {{",
             f"}}",
         ):
             self.target.writelns(
