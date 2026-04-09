@@ -56,11 +56,11 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.types import (
         ArrayType,
-        AsyncCompleterType,
-        AsyncFutureType,
         BuiltinType,
         CallbackType,
+        CompleterType,
         EnumType,
+        FutureType,
         GenericType,
         IfaceType,
         MapType,
@@ -155,13 +155,13 @@ class SetTypeVisitor(Generic[_R]):
         raise NotImplementedError
 
 
-class AsyncCompleterTypeVisitor(Generic[_R]):
-    def visit_async_completer_type(self, t: "AsyncCompleterType") -> _R:
+class CompleterTypeVisitor(Generic[_R]):
+    def visit_completer_type(self, t: "CompleterType") -> _R:
         raise NotImplementedError
 
 
-class AsyncFutureTypeVisitor(Generic[_R]):
-    def visit_async_future_type(self, t: "AsyncFutureType") -> _R:
+class FutureTypeVisitor(Generic[_R]):
+    def visit_future_type(self, t: "FutureType") -> _R:
         raise NotImplementedError
 
 
@@ -172,8 +172,8 @@ class GenericTypeVisitor(
     VectorTypeVisitor[_R],
     MapTypeVisitor[_R],
     SetTypeVisitor[_R],
-    AsyncCompleterTypeVisitor[_R],
-    AsyncFutureTypeVisitor[_R],
+    CompleterTypeVisitor[_R],
+    FutureTypeVisitor[_R],
 ):
     def visit_generic_type(self, t: "GenericType") -> _R:
         raise NotImplementedError
@@ -199,11 +199,11 @@ class GenericTypeVisitor(
         return self.visit_generic_type(t)
 
     @override
-    def visit_async_completer_type(self, t: "AsyncCompleterType") -> _R:
+    def visit_completer_type(self, t: "CompleterType") -> _R:
         return self.visit_generic_type(t)
 
     @override
-    def visit_async_future_type(self, t: "AsyncFutureType") -> _R:
+    def visit_future_type(self, t: "FutureType") -> _R:
         return self.visit_generic_type(t)
 
 

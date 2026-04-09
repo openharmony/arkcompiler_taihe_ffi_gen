@@ -340,7 +340,7 @@ class StsModuleGenerator:
             f"}}",
         )
         self.target.writelns(
-            f"function {self.mod.async_completer_factory}<T>(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long) {{",
+            f"function {self.mod.completer_factory}<T>(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long) {{",
             f"    let handler = new {self.mod.async_handler}<T>(onFullfilledPtr, onRejectedPtr, freePtr, contextPtr);",
             f"    return (error: {self.mod.BE_type} | null, data: T | undefined) => {{",
             f"        if (error) {{",
@@ -352,7 +352,7 @@ class StsModuleGenerator:
             f"}}",
         )
         self.target.writelns(
-            f"function {self.mod.async_future_completory}<T>(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long, promise: Promise<T>) {{",
+            f"function {self.mod.future_completory}<T>(onFullfilledPtr: long, onRejectedPtr: long, freePtr: long, contextPtr: long, promise: Promise<T>) {{",
             f"    let handler = new {self.mod.async_handler}<T>(onFullfilledPtr, onRejectedPtr, freePtr, contextPtr);",
             f"    promise.then(",
             f"        handler.onFullfilled,",

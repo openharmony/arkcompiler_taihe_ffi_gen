@@ -31,10 +31,10 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
-    AsyncCompleterType,
-    AsyncFutureType,
     CallbackType,
+    CompleterType,
     EnumType,
+    FutureType,
     IfaceType,
     MapType,
     NonVoidType,
@@ -339,20 +339,20 @@ class SetTypeAbiInfo(TypeAbiInfo):
         self.as_param = "struct TSet"
 
 
-class AsyncCompleterTypeAbiInfo(TypeAbiInfo):
-    def __init__(self, am: AnalysisManager, t: AsyncCompleterType) -> None:
+class CompleterTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
         self.defn_headers = ["taihe/async.abi.h"]
         self.impl_headers = ["taihe/async.abi.h"]
-        self.as_owner = "struct TAsyncCompleter"
-        self.as_param = "struct TAsyncCompleter"
+        self.as_owner = "struct TCompleter"
+        self.as_param = "struct TCompleter"
 
 
-class AsyncFutureTypeAbiInfo(TypeAbiInfo):
-    def __init__(self, am: AnalysisManager, t: AsyncFutureType) -> None:
+class FutureTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: FutureType) -> None:
         self.defn_headers = ["taihe/async.abi.h"]
         self.impl_headers = ["taihe/async.abi.h"]
-        self.as_owner = "struct TAsyncFuture"
-        self.as_param = "struct TAsyncFuture"
+        self.as_owner = "struct TFuture"
+        self.as_param = "struct TFuture"
 
 
 class CallbackTypeAbiInfo(TypeAbiInfo):
@@ -420,12 +420,12 @@ class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
         return SetTypeAbiInfo(self.am, t)
 
     @override
-    def visit_async_completer_type(self, t: AsyncCompleterType) -> TypeAbiInfo:
-        return AsyncCompleterTypeAbiInfo(self.am, t)
+    def visit_completer_type(self, t: CompleterType) -> TypeAbiInfo:
+        return CompleterTypeAbiInfo(self.am, t)
 
     @override
-    def visit_async_future_type(self, t: AsyncFutureType) -> TypeAbiInfo:
-        return AsyncFutureTypeAbiInfo(self.am, t)
+    def visit_future_type(self, t: FutureType) -> TypeAbiInfo:
+        return FutureTypeAbiInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAbiInfo:

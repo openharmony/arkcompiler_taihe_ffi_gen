@@ -40,11 +40,11 @@ struct TAsyncContext {
     char buffer[];
 };
 
-struct TAsyncCompleter {
+struct TCompleter {
     struct TAsyncContext *m_ctx;
 };
 
-struct TAsyncFuture {
+struct TFuture {
     struct TAsyncContext *m_ctx;
 };
 
