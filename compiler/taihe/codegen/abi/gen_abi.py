@@ -335,7 +335,7 @@ class AbiIfaceImplGenerator:
     def gen_iface_impl_file(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
-            self.target.add_include("taihe/expected.abi.h")
+            self.target.add_include("taihe/error.abi.h")
             self.target.add_include(iface_abi_info.defn_header)
             for method in self.iface.methods:
                 for param in method.params:
