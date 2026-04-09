@@ -17,54 +17,12 @@
 #define TAIHE_EXPECTED_HPP
 
 #include <stdexcept>
-#pragma once
-#include <taihe/expected.abi.h>
-#include <taihe/common.hpp>
-#include <taihe/string.hpp>
-#include <type_traits>
 #include <utility>
+#include <type_traits>
+
+#include <taihe/error.hpp>
 
 namespace taihe {
-class error {
-private:
-    int32_t code_;
-    taihe::string message_;
-
-public:
-    explicit error(taihe::string_view message) : code_(0), message_(message)
-    {
-    }
-
-    explicit error(taihe::string_view message, int32_t code) : code_(code), message_(message)
-    {
-    }
-
-    error(error const &) = default;
-    error(error &&) = default;
-    error &operator=(error const &) = default;
-    error &operator=(error &&) = default;
-
-    taihe::string const &message() const noexcept
-    {
-        return message_;
-    }
-
-    int32_t code() const noexcept
-    {
-        return code_;
-    }
-
-    friend bool operator==(error const &lhs, error const &rhs) noexcept
-    {
-        return lhs.code_ == rhs.code_ && lhs.message_ == rhs.message_;
-    }
-};
-
-template<>
-struct as_abi<error> {
-    using type = TError;
-};
-
 struct unexpect_t {
     explicit unexpect_t() = default;
 };
