@@ -181,7 +181,7 @@ public:
     }
 
     template<typename... Args>
-    void emplace_result(Args &&...args) const
+    void complete(Args &&...args) const
     {
         m_ctx->emplace_result(std::forward<Args>(args)...);
     }
@@ -218,16 +218,14 @@ public:
         }
     }
 
-    template<typename SmallConstHandler, typename... Args>
-    void emplace_handler(Args &&...args) const
+    template<typename Handler, typename... Args>
+    void on_complete(Args &&...args) const
     {
-        m_ctx->template emplace_handler<SmallConstHandler>(std::forward<Args>(args)...);
-    }
-
-    template<typename LargeMutableHandler, typename... Args>
-    void new_handler(Args &&...args) const
-    {
-        m_ctx->template new_handler<LargeMutableHandler>(std::forward<Args>(args)...);
+        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buf)) {
+            m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
+        } else {
+            m_ctx->template new_handler<Handler>(std::forward<Args>(args)...);
+        }
     }
 
     bool is_ready() const
@@ -303,47 +301,47 @@ struct std::hash<taihe::future<Result>> {
 
 namespace taihe {
 template<typename Result>
-Result join(future<Result> future)
+Result wait(future<Result> fut)
 {
-    struct JoinContext {
+    struct WaitContext {
         std::mutex mtx;
         std::condition_variable cv;
-        std::optional<Result> joined;
+        std::optional<Result> waited;
     };
 
-    struct JoinHandler {
-        JoinContext &ctx;
+    struct WaitHandler {
+        WaitContext &ctx;
 
-        JoinHandler(JoinContext &ctx) : ctx(ctx)
+        WaitHandler(WaitContext &ctx) : ctx(ctx)
         {
         }
 
         void handle_result(Result &&result) const
         {
             std::unique_lock<std::mutex> lock(ctx.mtx);
-            ctx.joined.emplace(std::forward<Result>(result));
+            ctx.waited.emplace(std::forward<Result>(result));
             ctx.cv.notify_all();
         }
     };
 
-    JoinContext ctx;
-    future.template emplace_handler<JoinHandler>(ctx);
+    WaitContext ctx;
+    fut.template on_complete<WaitHandler>(ctx);
 
     std::unique_lock<std::mutex> lock(ctx.mtx);
     ctx.cv.wait(lock, [&ctx]() {
-        return ctx.joined.has_value();
+        return ctx.waited.has_value();
     });
 
-    return std::move(ctx.joined.value());
+    return std::move(ctx.waited.value());
 }
 
 template<typename Result>
-Result race(std::initializer_list<future<Result>> futures)
+Result race(std::initializer_list<future<Result>> futs)
 {
     struct RaceContext {
         std::mutex mtx;
         std::condition_variable cv;
-        std::optional<Result> joined;
+        std::optional<Result> waited;
     };
 
     struct RaceHandler {
@@ -356,24 +354,24 @@ Result race(std::initializer_list<future<Result>> futures)
         void handle_result(Result &&result) const
         {
             std::unique_lock<std::mutex> lock(ptr->mtx);
-            if (!ptr->joined.has_value()) {
-                ptr->joined.emplace(std::forward<Result>(result));
+            if (!ptr->waited.has_value()) {
+                ptr->waited.emplace(std::forward<Result>(result));
                 ptr->cv.notify_all();
             }
         }
     };
 
     auto ptr = std::make_shared<RaceContext>();
-    for (auto const &old : futures) {
-        old.template emplace_handler<RaceHandler>(ptr);
+    for (auto const &fut : futs) {
+        fut.template on_complete<RaceHandler>(ptr);
     }
 
     std::unique_lock<std::mutex> lock(ptr->mtx);
     ptr->cv.wait(lock, [ptr = ptr.get()]() {
-        return ptr->joined.has_value();
+        return ptr->waited.has_value();
     });
 
-    return std::move(ptr->joined.value());
+    return std::move(ptr->waited.value());
 }
 }  // namespace taihe
 
@@ -384,29 +382,29 @@ template<typename...>
 constexpr inline bool dependent_false_v = false;
 
 template<typename Next, typename Last, typename Processor>
-future<Next> then(future<Last> prev, Processor &&processor)
+future<Next> then(future<Last> old, Processor &&processor)
 {
-    auto [completer, future] = make_async_pair<Next>();
+    auto [com, fut] = make_async_pair<Next>();
 
     struct ProcessHandler {
         Processor processor;
-        completer<Next> completer;
+        completer<Next> com;
 
-        ProcessHandler(Processor &&processor, completer<Next> completer)
-            : processor(std::forward<Processor>(processor)), completer(std::move(completer))
+        ProcessHandler(Processor &&processor, completer<Next> com)
+            : processor(std::forward<Processor>(processor)), com(std::move(com))
         {
         }
 
         struct CompleterAsHandler {
-            completer<Next> completer;
+            completer<Next> com;
 
-            CompleterAsHandler(completer<Next> completer) : completer(std::move(completer))
+            CompleterAsHandler(completer<Next> com) : com(std::move(com))
             {
             }
 
             void handle_result(Next &&result) const
             {
-                completer.emplace_result(std::forward<Next>(result));
+                com.complete(std::forward<Next>(result));
             }
         };
 
@@ -414,9 +412,9 @@ future<Next> then(future<Last> prev, Processor &&processor)
         {
             if constexpr (std::is_invocable_r_v<future<Next>, Processor, Last>) {
                 this->processor(std::forward<Last>(result))
-                    .template emplace_handler<CompleterAsHandler>(std::move(this->completer));
+                    .template on_complete<CompleterAsHandler>(std::move(this->com));
             } else if constexpr (std::is_invocable_v<Processor, Last, completer<Next>>) {
-                this->processor(std::forward<Last>(result), std::move(this->completer));
+                this->processor(std::forward<Last>(result), std::move(this->com));
             } else {
                 static_assert(dependent_false_v<Next, Last, Processor>,
                               "Processor cannot handle result without completer or future return type");
@@ -424,8 +422,8 @@ future<Next> then(future<Last> prev, Processor &&processor)
         }
     };
 
-    prev.template new_handler<ProcessHandler>(std::forward<Processor>(processor), std::move(completer));
-    return std::move(future);
+    old.template on_complete<ProcessHandler>(std::forward<Processor>(processor), std::move(com));
+    return std::move(fut);
 }
 }  // namespace taihe
 
