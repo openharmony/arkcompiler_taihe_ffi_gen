@@ -235,7 +235,6 @@ class AbiIfaceDeclGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/object.abi.h")
-            self.target.add_include("taihe/expected.abi.h")
             self.target.writelns(
                 f"struct {iface_abi_info.mangled_name};",
             )
@@ -285,7 +284,7 @@ class AbiIfaceDefnGenerator:
     def gen_iface_defn(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         self.target.writelns(
-            f"TH_EXPORT void const* const {iface_abi_info.iid};",
+            f"TH_EXPORT InterfaceId const {iface_abi_info.iid};",
         )
         with self.target.indented(
             f"struct {iface_abi_info.mangled_name} {{",
@@ -336,6 +335,7 @@ class AbiIfaceImplGenerator:
     def gen_iface_impl_file(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
+            self.target.add_include("taihe/expected.abi.h")
             self.target.add_include(iface_abi_info.defn_header)
             for method in self.iface.methods:
                 for param in method.params:
@@ -344,7 +344,6 @@ class AbiIfaceImplGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     param_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*param_ty_abi_info.defn_headers)
-            self.gen_iface_meth_return_types()
             self.gen_iface_ftable()
             for method in self.iface.methods:
                 self.gen_method(method)
@@ -361,22 +360,6 @@ class AbiIfaceImplGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_abi_info.impl_headers)
-
-    def gen_iface_meth_return_types(self):
-        for method in self.iface.methods:
-            method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-            with self.target.indented(
-                f"typedef union {{",
-                f"}} {method_abi_info.ret_type_name};",
-            ):
-                if isinstance(return_ty := method.return_ty, NonVoidType):
-                    return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                    self.target.writelns(
-                        f"{return_ty_abi_info.as_owner} data;",
-                    )
-                self.target.writelns(
-                    f"struct TError error;",
-                )
 
     def gen_iface_ftable(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -395,64 +378,49 @@ class AbiIfaceImplGenerator:
                     self.gen_iface_ftable_method(method)
 
     def gen_iface_ftable_method(self, method: IfaceMethodDecl):
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-        out_param_name = "_taihe_out"
-        if not method_abi_info.is_noexcept:
-            params.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
         params.append(f"{iface_abi_info.as_param} tobj")
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
-        params_str = ", ".join(params)
-
+        if not method_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
-
-        if method_abi_info.is_noexcept:
-            return_name = return_ty_abi_name
-        else:
-            return_name = "int32_t"
-
+            params.append(f"{return_ty_abi_name}* abi_ret")
+        params_str = ", ".join(params)
         self.target.writelns(
-            f"{return_name} (*{method.name})({params_str});",
+            f"void (*{method.name})({params_str});",
         )
 
     def gen_method_call(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-        out_param_name = "_taihe_out"
         params = []
         args = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        if not method_abi_info.is_noexcept:
-            params.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
-            args.append(out_param_name)
         params.append(f"{iface_abi_info.as_param} tobj")
         args.append("tobj")
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
             args.append(param.name)
-        params_str = ", ".join(params)
-        args_str = ", ".join(args)
-
+        if not method_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
+            args.append("abi_err")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
-
-        if method_abi_info.is_noexcept:
-            return_name = return_ty_abi_name
-        else:
-            return_name = "int32_t"
-
+            params.append(f"{return_ty_abi_name}* abi_ret")
+            args.append("abi_ret")
+        params_str = ", ".join(params)
+        args_str = ", ".join(args)
         with self.target.indented(
-            f"TH_INLINE {return_name} {method_abi_info.wrap_name}({params_str}) {{",
+            f"TH_INLINE void {method_abi_info.wrap_name}({params_str}) {{",
             f"}}",
         ):
             ancestor_slot = iface_abi_info.ancestor_infos[self.iface].slots[0]
@@ -473,29 +441,22 @@ class AbiIfaceImplGenerator:
 
     def gen_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-        out_param_name = "_taihe_out"
         params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        if not method_abi_info.is_noexcept:
-            params.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
         params.append(f"{iface_abi_info.as_param} tobj")
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
-        params_str = ", ".join(params)
+        if not method_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
-
-        if method_abi_info.is_noexcept:
-            return_name = return_ty_abi_name
-        else:
-            return_name = "int32_t"
-
+            params.append(f"{return_ty_abi_name}* abi_ret")
+        params_str = ", ".join(params)
         self.target.writelns(
-            f"TH_EXPORT {return_name} {method_abi_info.impl_name}({params_str});",
+            f"TH_EXPORT void {method_abi_info.impl_name}({params_str});",
         )
 
 
@@ -523,7 +484,6 @@ class AbiPackageHeaderGenerator:
                 iface_abi_info = IfaceAbiInfo.get(self.am, iface)
                 self.target.add_include(iface_abi_info.impl_header)
             self.target.add_include("taihe/common.h")
-            self.target.add_include("taihe/expected.abi.h")
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
@@ -535,40 +495,20 @@ class AbiPackageHeaderGenerator:
 
     def gen_func(self, func: GlobFuncDecl):
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
-        out_param_name = "_taihe_out"
         params = []
-        if not func_abi_info.is_noexcept:
-            params.append(f"{func_abi_info.ret_type_name}* {out_param_name}")
         for param in func.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
-        params_str = ", ".join(params)
-        with self.target.indented(
-            f"typedef union {{",
-            f"}} {func_abi_info.ret_type_name};",
-        ):
-            if isinstance(return_ty := func.return_ty, NonVoidType):
-                return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                self.target.writelns(
-                    f"{return_ty_abi_info.as_owner} data;",
-                )
-            self.target.writelns(
-                f"struct TError error;",
-            )
-
+        if not func_abi_info.is_noexcept:
+            error_ty_abi_name = "TError"
+            params.append(f"{error_ty_abi_name}** abi_err")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
-
-        if func_abi_info.is_noexcept:
-            return_name = return_ty_abi_name
-        else:
-            return_name = "int32_t"
-
+            params.append(f"{return_ty_abi_name}* abi_ret")
+        params_str = ", ".join(params)
         self.target.writelns(
-            f"TH_EXPORT {return_name} {func_abi_info.impl_name}({params_str});",
+            f"TH_EXPORT void {func_abi_info.impl_name}({params_str});",
         )
 
 
@@ -604,5 +544,5 @@ class AbiPackageSourceGenerator:
     def gen_iface_iid(self, iface: IfaceDecl):
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         self.target.writelns(
-            f"void const* const {iface_abi_info.iid} = &{iface_abi_info.iid};",
+            f"InterfaceId const {iface_abi_info.iid} = &{iface_abi_info.iid};",
         )
