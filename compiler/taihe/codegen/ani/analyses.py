@@ -2172,9 +2172,9 @@ class MapTypeAniInfo(TypeAniInfo):
         cpp_after: str,
     ):
         ani_iter = f"{cpp_after}_ani_iter"
-        ani_item = f"{cpp_after}_ani_item"
         ani_next = f"{cpp_after}_ani_next"
         ani_done = f"{cpp_after}_ani_done"
+        ani_item = f"{cpp_after}_ani_item"
         ani_key = f"{cpp_after}_ani_key"
         ani_val = f"{cpp_after}_ani_val"
         cpp_key = f"{cpp_after}_cpp_key"
@@ -2269,7 +2269,6 @@ class SetTypeAniInfo(TypeAniInfo):
         cpp_after: str,
     ):
         ani_iter = f"{cpp_after}_ani_iter"
-        ani_item = f"{cpp_after}_ani_item"
         ani_next = f"{cpp_after}_ani_next"
         ani_done = f"{cpp_after}_ani_done"
         ani_val = f"{cpp_after}_ani_val"
@@ -2770,28 +2769,44 @@ class AsyncCompleterTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void handle_result({item_ty_cpp_info.as_owner} cpp_result) const {{",
+                f"void handle_result(::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> cpp_result) const {{",
                 f"}}",
             ):
                 target.writelns(
                     f"::taihe::env_guard guard;",
                     f"ani_env *env = guard.get_env();",
                 )
-                item_ty_ani_info.into_ani_boxed(
-                    target,
-                    "env",
-                    "cpp_result",
-                    "ani_result",
-                )
-                target.writelns(
-                    f"ani_ref ani_err = {{}};",
-                    f"env->GetNull(&ani_err);",
-                    f"ani_ref ani_argv[] = {{ani_err, ani_result}};",
-                    f"ani_ref ani_dummy = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
-                )
+                with target.indented(
+                    f"if (cpp_result) {{",
+                    f"}}",
+                ):
+                    item_ty_ani_info.into_ani_boxed(
+                        target,
+                        "env",
+                        "cpp_result.value()",
+                        "ani_result",
+                    )
+                    target.writelns(
+                        f"ani_ref ani_err = {{}};",
+                        f"env->GetNull(&ani_err);",
+                        f"ani_ref ani_argv[] = {{ani_err, ani_result}};",
+                        f"ani_ref ani_dummy = {{}};",
+                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
+                    )
+                with target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"ani_ref ani_result = {{}};",
+                        f"env->GetUndefined(&ani_result);",
+                        f"ani_ref ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"ani_ref ani_argv[] = {{ani_err, ani_result}};",
+                        f"ani_ref ani_dummy = {{}};",
+                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
+                    )
         target.writelns(
-            f"auto [{cpp_after}, {cpp_promise}] = ::taihe::make_async_pair<{item_ty_cpp_info.as_owner}>();",
+            f"auto [{cpp_after}, {cpp_promise}] = ::taihe::make_async_pair<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
             f"{cpp_promise}.emplace_handler<{cpp_handler_t}>({env}, {ani_value});",
         )
 
@@ -2850,22 +2865,34 @@ class AsyncFutureTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void handle_result({item_ty_cpp_info.as_owner} cpp_result) const {{",
+                f"void handle_result(::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> cpp_result) const {{",
                 f"}}",
             ):
                 target.writelns(
                     f"::taihe::env_guard guard;",
                     f"ani_env *env = guard.get_env();",
                 )
-                item_ty_ani_info.into_ani_boxed(
-                    target,
-                    "env",
-                    "cpp_result",
-                    "ani_result",
-                )
-                target.writelns(
-                    f"env->PromiseResolver_Resolve(reinterpret_cast<ani_resolver>(this->ref), ani_result);",
-                )
+                with target.indented(
+                    f"if (cpp_result) {{",
+                    f"}}",
+                ):
+                    item_ty_ani_info.into_ani_boxed(
+                        target,
+                        "env",
+                        "cpp_result.value()",
+                        "ani_result",
+                    )
+                    target.writelns(
+                        f"env->PromiseResolver_Resolve(reinterpret_cast<ani_resolver>(this->ref), ani_result);",
+                    )
+                with target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"ani_error ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"env->PromiseResolver_Reject(reinterpret_cast<ani_resolver>(this->ref), ani_err);",
+                    )
         target.writelns(
             f"ani_object {ani_after} = {{}};",
             f"ani_resolver {ani_resolver} = {{}};",

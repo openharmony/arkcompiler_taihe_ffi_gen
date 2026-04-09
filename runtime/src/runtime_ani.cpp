@@ -173,12 +173,18 @@ taihe::error from_ani_error(ani_env *env, ani_error errObj)
     }
 }
 
-void make_ani_error(ani_env *env, taihe::error err)
+ani_error into_ani_error(ani_env *env, taihe::error err)
 {
     if (err.code() != 0) {
-        ani_set_business_error(env, err.code(), err.message());
+        return create_ani_business_error(env, err.code(), err.message());
     } else {
-        ani_set_error(env, err.message());
+        return create_ani_error(env, err.message());
     }
+}
+
+void make_ani_error(ani_env *env, taihe::error err)
+{
+    ani_error errObj = into_ani_error(env, err);
+    env->ThrowError(errObj);
 }
 }  // namespace taihe

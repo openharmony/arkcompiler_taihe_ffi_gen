@@ -18,6 +18,7 @@
 
 #include <taihe/async.abi.h>
 #include <taihe/common.hpp>
+#include <taihe/expected.hpp>
 
 namespace taihe {
 template<typename Result>
