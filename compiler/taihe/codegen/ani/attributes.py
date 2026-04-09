@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 
 from typing_extensions import override
 
-from taihe.codegen.abi.attributes import NoexceptAttr
 from taihe.semantics.attributes import (
     AttributeGroupTag,
     CheckedAttrT,
@@ -803,6 +802,4 @@ all_attr_types: list[CheckedAttrT] = [
     PromiseAttribute,
     GenAsyncAttr,
     GenPromiseAttr,
-    # Function/Callback attributes
-    NoexceptAttr,
 ]

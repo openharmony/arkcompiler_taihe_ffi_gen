@@ -56,3 +56,8 @@ class NoexceptAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl | TypeRefDecl])
             )
 
         super().check_typed_context(parent, dm)
+
+
+all_attr_types = [
+    NoexceptAttr,
+]
