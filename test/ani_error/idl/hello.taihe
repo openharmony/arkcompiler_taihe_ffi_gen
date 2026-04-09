@@ -15,14 +15,50 @@
 
 function sayHello(): void;
 function sayHello_ii(a: i32): i32;
+function sayHelloParam(a: i32): void;
+function sayHelloReturn(): i32;
+
+@noexcept function processGlobalNoexceptNoParamNoReturn(): void;
+@noexcept function processGlobalNoexceptParamNoReturn(a: i32): void;
+@noexcept function processGlobalNoexceptParamReturn(a: i32): i32;
+@noexcept function processGlobalReturnNoexceptCallback(): i32;
+
+function callcb(f: () => void): i32;
+function callcb_vi(f: () => i32): i32;
+function callcb_iv(f: (a: i32) => void): i32;
+function callcb_ii(f: (a: i32) => i32): i32;
+
+function processGlobalVoidCallback(f: @noexcept () => void): i32;
+function processGlobalNoexceptCallback(f: @noexcept (a: i32) => i32): i32;
+function processGlobalVoidNoexceptCallback(f: @noexcept () => void): i32;
+function processGlobalParamNoexceptCallback(f: @noexcept (a: i32) => void): i32;
+
+@noexcept function test_cb_v(f: @noexcept () => void): i32;
+@noexcept function test_cb_vi(f: @noexcept () => void): i32;
+@noexcept function test_cb_iv(f: @noexcept (a: i32) => void): i32;
+@noexcept function test_cb_ii(f: @noexcept (a: i32) => i32): i32;
+
 interface Foo{
     bar(): void;
     bar_ii(a: i32): i32;
-    @noexcept bar_ss(a: String): String;
+    bar_iv(a: i32): void;
+    bar_vi(): i32;
+
+    @noexcept test_bar(): void;
+    @noexcept test_bar_ii(a: i32): i32;
+    @noexcept test_bar_iv(a: i32): void;
+    @noexcept test_bar_vi(): i32;
+
+    callcb(f: () => void): i32;
+    callcb_vi(f: () => i32): i32;
+    callcb_iv(f: (a: i32) => void): i32;
+    callcb_ii(f: (a: i32) => i32): i32;
+
+    @noexcept test_cb_v(f: @noexcept () => void): i32;
+    @noexcept test_cb_vi(f: @noexcept () => void): i32;
+    @noexcept test_cb_iv(f: @noexcept (a: i32) => void): i32;
+    @noexcept test_cb_ii(f: @noexcept (a: i32) => i32): i32;
 }
+
 function createFoo(): Foo;
 function callFoo(a: Foo): String;
-function callcb(f: () => void): void;
-function callcb_ii(f: (a: i32) => i32): void;
-@noexcept function concat(a: String, b: String): String;
-function test_cb_v(f: @noexcept () => void): void;
