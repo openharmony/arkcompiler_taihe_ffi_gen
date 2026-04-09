@@ -24,21 +24,21 @@
 namespace {
 using expected_type = ::taihe::expected<::taihe::string, ::taihe::error>;
 
-void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::completer<expected_type> setter)
+void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::completer<expected_type> completer)
 {
-    std::thread([ms, val = taihe::string(val), setter = std::move(setter)]() mutable {
+    std::thread([ms, val = taihe::string(val), completer = std::move(completer)]() mutable {
         std::cout << "[Future Result] Waiting for " << ms << " milliseconds..." << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-        std::cout << "[Future Result] Task completed, setting result..." << std::endl;
-        setter.complete(std::move(val));
+        std::cout << "[Future Result] Task completed, setting future..." << std::endl;
+        completer.complete(std::move(val));
     }).detach();
 }
 
 taihe::future<expected_type> futureResultReturnsPromise(int64_t ms, ::taihe::string_view val)
 {
-    auto [setter, result] = taihe::make_async_pair<expected_type>();
-    futureResultWithCallback(ms, val, std::move(setter));
-    return std::move(result);
+    auto [completer, future] = taihe::make_contract<expected_type>();
+    futureResultWithCallback(ms, val, std::move(completer));
+    return std::move(future);
 }
 }  // namespace
 

@@ -173,7 +173,7 @@ taihe::error from_ani_error(ani_env *env, ani_error errObj)
     }
 }
 
-ani_error into_ani_error(ani_env *env, taihe::error err)
+ani_error into_ani_error(ani_env *env, taihe::error const &err)
 {
     if (err.code() != 0) {
         return create_ani_business_error(env, err.code(), err.message());
@@ -182,7 +182,7 @@ ani_error into_ani_error(ani_env *env, taihe::error err)
     }
 }
 
-void make_ani_error(ani_env *env, taihe::error err)
+void make_ani_error(ani_env *env, taihe::error const &err)
 {
     ani_error errObj = into_ani_error(env, err);
     env->ThrowError(errObj);

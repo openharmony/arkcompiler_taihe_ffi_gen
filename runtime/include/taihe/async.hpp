@@ -49,7 +49,7 @@ struct async_context {
     async_context(async_context &&) = delete;
     async_context &operator=(async_context &&) = delete;
 
-    async_context(uint32_t ref_count)
+    explicit async_context(uint32_t ref_count)
         : ref_count(ref_count), flags(ASYNC_CONTEXT_NONE), process_handler_ptr(nullptr), cleanup_handler_ptr(nullptr)
     {
     }
@@ -147,18 +147,18 @@ template<typename Result>
 class future;
 
 template<typename Result>
-std::pair<completer<Result>, future<Result>> make_async_pair();
+std::pair<completer<Result>, future<Result>> make_contract();
 
 template<typename Result>
 class completer {
 public:
     async_context<Result> *m_ctx;
 
-    completer(async_context<Result> *ctx) : m_ctx(ctx)
+    explicit completer(async_context<Result> *ctx) : m_ctx(ctx)
     {
     }
 
-    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_contract<Result>();
 
     completer(completer const &) = delete;
 
@@ -192,11 +192,11 @@ class future {
 public:
     async_context<Result> *m_ctx;
 
-    future(async_context<Result> *ctx) : m_ctx(ctx)
+    explicit future(async_context<Result> *ctx) : m_ctx(ctx)
     {
     }
 
-    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_contract<Result>();
 
     future(future const &) = delete;
 
@@ -235,7 +235,7 @@ public:
 };
 
 template<typename Result>
-std::pair<completer<Result>, future<Result>> make_async_pair()
+std::pair<completer<Result>, future<Result>> make_contract()
 {
     async_context<Result> *ctx = new async_context<Result>(2);
     return {
@@ -312,7 +312,7 @@ Result wait(future<Result> fut)
     struct WaitHandler {
         WaitContext &ctx;
 
-        WaitHandler(WaitContext &ctx) : ctx(ctx)
+        explicit WaitHandler(WaitContext &ctx) : ctx(ctx)
         {
         }
 
@@ -347,7 +347,7 @@ Result race(std::initializer_list<future<Result>> futs)
     struct RaceHandler {
         std::shared_ptr<RaceContext> ptr;
 
-        RaceHandler(std::shared_ptr<RaceContext> ptr) : ptr(ptr)
+        explicit RaceHandler(std::shared_ptr<RaceContext> ptr) : ptr(ptr)
         {
         }
 
@@ -384,7 +384,7 @@ constexpr inline bool dependent_false_v = false;
 template<typename Next, typename Last, typename Processor>
 future<Next> then(future<Last> old, Processor &&processor)
 {
-    auto [com, fut] = make_async_pair<Next>();
+    auto [com, fut] = make_contract<Next>();
 
     struct ProcessHandler {
         Processor processor;
@@ -398,7 +398,7 @@ future<Next> then(future<Last> old, Processor &&processor)
         struct CompleterAsHandler {
             completer<Next> com;
 
-            CompleterAsHandler(completer<Next> com) : com(std::move(com))
+            explicit CompleterAsHandler(completer<Next> com) : com(std::move(com))
             {
             }
 
