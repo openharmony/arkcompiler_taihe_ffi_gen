@@ -2759,7 +2759,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        cpp_promise = f"{cpp_after}_cpp_promise"
+        cpp_future = f"{cpp_after}_cpp_future"
         cpp_handler_t = f"{cpp_after}_cpp_handler_t"
         with target.indented(
             f"struct {cpp_handler_t} : ::taihe::dref_guard {{",
@@ -2775,6 +2775,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 target.writelns(
                     f"::taihe::env_guard guard;",
                     f"ani_env *env = guard.get_env();",
+                    f"ani_ref ani_argv[2] = {{}};",
                 )
                 with target.indented(
                     f"if (cpp_result) {{",
@@ -2787,27 +2788,24 @@ class CompleterTypeAniInfo(TypeAniInfo):
                         "ani_result",
                     )
                     target.writelns(
-                        f"ani_ref ani_err = {{}};",
-                        f"env->GetNull(&ani_err);",
-                        f"ani_ref ani_argv[] = {{ani_err, ani_result}};",
-                        f"ani_ref ani_dummy = {{}};",
-                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
+                        f"ani_argv[1] = ani_result;",
+                        f"env->GetNull(&ani_argv[0]);",
                     )
                 with target.indented(
                     f"else {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_ref ani_result = {{}};",
-                        f"env->GetUndefined(&ani_result);",
-                        f"ani_ref ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
-                        f"ani_ref ani_argv[] = {{ani_err, ani_result}};",
-                        f"ani_ref ani_dummy = {{}};",
-                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
+                        f"ani_argv[0] = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"env->GetUndefined(&ani_argv[1]);",
                     )
+                target.writelns(
+                    f"ani_ref ani_dummy = {{}};",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
+                )
         target.writelns(
-            f"auto [{cpp_after}, {cpp_promise}] = ::taihe::make_async_pair<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
-            f"{cpp_promise}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
+            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_contract<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
+            f"{cpp_future}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
     @override
@@ -2855,7 +2853,7 @@ class FutureTypeAniInfo(TypeAniInfo):
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        ani_resolver = f"{ani_after}_ani_resolver"
+        ani_completer = f"{ani_after}_ani_completer"
         cpp_handler_t = f"{ani_after}_cpp_handler_t"
         with target.indented(
             f"struct {cpp_handler_t} : ::taihe::dref_guard {{",
@@ -2895,9 +2893,9 @@ class FutureTypeAniInfo(TypeAniInfo):
                     )
         target.writelns(
             f"ani_object {ani_after} = {{}};",
-            f"ani_resolver {ani_resolver} = {{}};",
-            f"{env}->Promise_New(&{ani_resolver}, &{ani_after});",
-            f"{cpp_value}.on_complete<{cpp_handler_t}>({env}, reinterpret_cast<ani_ref>({ani_resolver}));",
+            f"ani_resolver {ani_completer} = {{}};",
+            f"{env}->Promise_New(&{ani_completer}, &{ani_after});",
+            f"{cpp_value}.on_complete<{cpp_handler_t}>({env}, reinterpret_cast<ani_ref>({ani_completer}));",
         )
 
 
