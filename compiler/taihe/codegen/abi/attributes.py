@@ -25,11 +25,11 @@ from taihe.semantics.attributes import (
     TypedAttribute,
 )
 from taihe.semantics.declarations import (
-    CallbackTypeRefDecl,
     GlobFuncDecl,
     IfaceMethodDecl,
     TypeRefDecl,
 )
+from taihe.semantics.types import CallbackType
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import AdhocError
 
@@ -46,11 +46,11 @@ class NoexceptAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl | TypeRefDecl])
         dm: DiagnosticsManager,
     ) -> None:
         if isinstance(parent, TypeRefDecl) and not isinstance(
-            parent, CallbackTypeRefDecl
+            parent.resolved_ty, CallbackType
         ):
             dm.emit(
                 AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to fields with callback type not {type(parent)}.",
+                    f"Attribute '{self.NAME}' can only be attached to callback type.",
                     loc=self.loc,
                 )
             )
