@@ -41,7 +41,9 @@ if TYPE_CHECKING:
         ArrayTypeVisitor,
         BuiltinTypeVisitor,
         CallbackTypeVisitor,
+        CompleterTypeVisitor,
         EnumTypeVisitor,
+        FutureTypeVisitor,
         GenericTypeVisitor,
         IfaceTypeVisitor,
         MapTypeVisitor,
@@ -414,6 +416,64 @@ class SetType(GenericType):
         return v.visit_set_type(self)
 
 
+@dataclass(frozen=True, repr=False)
+class CompleterType(GenericType):
+    item_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"Completer<{self.item_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "CompleterType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        item_ty = ref.args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
+            return None
+        return cls(ref, item_ty)
+
+    @override
+    def accept(self, v: "CompleterTypeVisitor[_R]") -> _R:
+        return v.visit_completer_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class FutureType(GenericType):
+    item_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"Future<{self.item_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "FutureType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        item_ty = ref.args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
+            return None
+        return cls(ref, item_ty)
+
+    @override
+    def accept(self, v: "FutureTypeVisitor[_R]") -> _R:
+        return v.visit_future_type(self)
+
+
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, type[GenericType]] = {
     "Array": ArrayType,
@@ -421,6 +481,8 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
     "Vector": VectorType,
     "Map": MapType,
     "Set": SetType,
+    "Completer": CompleterType,
+    "Future": FutureType,
 }
 
 

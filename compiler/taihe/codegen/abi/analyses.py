@@ -32,7 +32,9 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     CallbackType,
+    CompleterType,
     EnumType,
+    FutureType,
     IfaceType,
     MapType,
     NonVoidType,
@@ -66,7 +68,7 @@ class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         segments = [*f.parent_pkg.segments, f.name]
         self.impl_name = encode(segments, DeclKind.FUNC)
-        self.ret_type_name = self.impl_name + "_out"
+
         self.is_noexcept = NoexceptAttr.get(f) is not None
 
     @classmethod
@@ -81,7 +83,7 @@ class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.impl_name = encode(segments, DeclKind.FUNC)
         self.wrap_name = encode(segments, DeclKind.METHOD)
         self.min_version = 0
-        self.ret_type_name = self.impl_name + "_out"
+
         self.is_noexcept = NoexceptAttr.get(f) is not None
 
     @classmethod
@@ -313,14 +315,6 @@ class OptionalTypeAbiInfo(TypeAbiInfo):
         self.as_param = "struct TOptional"
 
 
-class CallbackTypeAbiInfo(TypeAbiInfo):
-    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        self.defn_headers = ["taihe/callback.abi.h"]
-        self.impl_headers = ["taihe/callback.abi.h"]
-        self.as_owner = "struct TCallback"
-        self.as_param = "struct TCallback"
-
-
 class VectorTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         self.defn_headers = ["taihe/vector.abi.h"]
@@ -343,6 +337,30 @@ class SetTypeAbiInfo(TypeAbiInfo):
         self.impl_headers = ["taihe/set.abi.h"]
         self.as_owner = "struct TSet"
         self.as_param = "struct TSet"
+
+
+class CompleterTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
+        self.defn_headers = ["taihe/async.abi.h"]
+        self.impl_headers = ["taihe/async.abi.h"]
+        self.as_owner = "struct TCompleter"
+        self.as_param = "struct TCompleter"
+
+
+class FutureTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: FutureType) -> None:
+        self.defn_headers = ["taihe/async.abi.h"]
+        self.impl_headers = ["taihe/async.abi.h"]
+        self.as_owner = "struct TFuture"
+        self.as_param = "struct TFuture"
+
+
+class CallbackTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        self.defn_headers = ["taihe/callback.abi.h"]
+        self.impl_headers = ["taihe/callback.abi.h"]
+        self.as_owner = "struct TCallback"
+        self.as_param = "struct TCallback"
 
 
 class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
@@ -400,6 +418,14 @@ class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeAbiInfo:
         return SetTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_completer_type(self, t: CompleterType) -> TypeAbiInfo:
+        return CompleterTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_future_type(self, t: FutureType) -> TypeAbiInfo:
+        return FutureTypeAbiInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAbiInfo:

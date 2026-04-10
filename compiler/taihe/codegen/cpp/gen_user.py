@@ -64,8 +64,8 @@ class CppUserPackageGenerator:
             self.target.add_include(pkg_cpp_info.header)
             # functions
             self.target.add_include("taihe/common.hpp")
-            self.target.add_include(pkg_abi_info.header)
             self.target.add_include("taihe/invoke.hpp")
+            self.target.add_include(pkg_abi_info.header)
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -84,29 +84,20 @@ class CppUserPackageGenerator:
         args_call.append(f"&{func_abi_info.impl_name}")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_cpp_name = return_ty_cpp_info.as_owner
+            result_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            return_ty_cpp_name = "void"
-        return_ty_expected_name = (
-            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-        )
-
+            result_ty_cpp_name = "void"
         if func_abi_info.is_noexcept:
-            return_name = return_ty_cpp_name
-            call_abi_func_name = "::taihe::call_abi_func"
+            return_ty_cpp_name = result_ty_cpp_name
         else:
-            return_name = return_ty_expected_name
-            args_tmpl.append(func_abi_info.ret_type_name)
-            call_abi_func_name = "::taihe::checked::call_abi_func"
-
+            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         args_tmpl.append(return_ty_cpp_name)
         for param in func.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_cpp_name = param_ty_cpp_info.as_param
-            param_name = param.name
-            params_cpp.append(f"{param_ty_cpp_name} {param_name}")
+            params_cpp.append(f"{param_ty_cpp_name} {param.name}")
             args_tmpl.append(param_ty_cpp_name)
-            args_call.append(f"::std::forward<{param_ty_cpp_name}>({param_name})")
+            args_call.append(f"::std::forward<{param_ty_cpp_name}>({param.name})")
         params_cpp_str = ", ".join(params_cpp)
         args_tmpl_str = ", ".join(args_tmpl)
         args_call_str = ", ".join(args_call)
@@ -116,9 +107,9 @@ class CppUserPackageGenerator:
             indent="",
         ):
             with self.target.indented(
-                f"inline {return_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
+                f"inline {return_ty_cpp_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
                 f"}}",
             ):
                 self.target.writelns(
-                    f"return {call_abi_func_name}<{args_tmpl_str}>({args_call_str});",
+                    f"return ::taihe::call_abi_func<{args_tmpl_str}>({args_call_str});",
                 )

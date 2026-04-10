@@ -140,10 +140,12 @@ The compilation is driven by `CompilerInstance.run()`, which executes the follow
 
 | Phase | Compiler Action | Backend Hook | Backend Action | Hook Constraints |
 |-------|-----------------|--------------|----------------|------------------|
-| (init) | Construct backends | `register()` | Register analyses, attributes | - |
+| (init) | Construct backends | `register()` | Register attributes | - |
 | `collect()` | Scan and add source files | `inject()` | Add backend-specific sources (e.g., stdlib) | - |
-| `parse()` | Parse sources to IR | `post_process()` | Transform IR | Must be idempotent. Must not affect other backends or modify shared attributes, only for adding backend-specific metadata. |
-| `validate()` | Semantic analysis | `validate()` | Backend-specific validation | Must not transform IR. Must not break previously valid code, code without backend-specific features must always pass. |
+| `parse()` | Parse sources to syntax IR | - | - | - |
+| `resolve()` | Resolve names, types, enum values, attributes | - | - | - |
+| `post_process()` | - | `post_process()` | Add backend-specific metadata to resolved IR | Must be idempotent. Must not affect other backends or modify shared attributes, only for adding backend-specific metadata. May call `Analysis.provide()`. |
+| `validate()` | Semantic validation | `validate()` | Backend-specific validation | Must not transform IR. Must not break previously valid code, code without backend-specific features must always pass. |
 | `generate()` | Code generation (skip if errors) | `generate()` | Emit output files | Must not transform IR or report errors at this stage. |
 
 ### Key Modules
@@ -153,12 +155,12 @@ The compilation is driven by `CompilerInstance.run()`, which executes the follow
    - `taihe.parse.antlr`: Generated lexer/parser (regenerate with `uv build`)
    - `taihe.parse.convert`: AST to IR conversion
 
-2. **Semantics** (`taihe.semantics`): IR analysis and validation
+2. **Semantics** (`taihe.semantics`): IR resolution and validation
    - `declarations.py`: IR node types (GlobFuncDecl, StructDecl, EnumDecl, etc.)
    - `types.py`: Type system definitions
    - `attributes.py`: Language-agnostic annotation system
    - `visitor.py`: DeclVisitor, RecursiveDeclVisitor, TypeVisitor patterns
-   - `analysis.py`: Common semantic analyses (name resolution, type checking, etc.)
+   - `analysis.py`: IR resolution (name/type/attribute) and semantic validation passes
 
 3. **Code Generation** (`taihe.codegen`): IR -> Target source code
    - `abi/`: C ABI layer generation (mangle, analyses, gen_abi, gen_impl)

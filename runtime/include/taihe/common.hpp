@@ -36,14 +36,6 @@
     } while (0)
 #endif
 
-#ifdef __cpp_lib_remove_cvref
-#include <type_traits>
-using std::remove_cvref_t;
-#else
-template<typename T>
-using remove_cvref_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-#endif
-
 namespace taihe {
 template<typename cpp_t, typename = void>
 struct as_abi;
@@ -65,11 +57,6 @@ struct as_abi<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
 template<typename cpp_owner_t>
 struct as_param<cpp_owner_t, std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
     using type = cpp_owner_t;
-};
-
-template<>
-struct as_abi<void> {
-    using type = void;
 };
 
 ///////////////

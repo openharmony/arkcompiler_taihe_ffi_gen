@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,22 +13,5 @@
  * limitations under the License.
  */
 
-#ifndef TAIHE_CALLBACK_ABI_H
-#define TAIHE_CALLBACK_ABI_H
-
-#include <taihe/object.abi.h>
-
-struct TCallbackFTable {
-    void (*invoke)();  // The actual signature is unknown at this level, and will be casted in C++ code.
-};
-
-struct TCallbackVTable {
-    struct TCallbackFTable const *ftbl_ptr_0;
-};
-
-struct TCallback {
-    struct TCallbackVTable const *vtbl_ptr;
-    struct DataBlockHead *data_ptr;
-};
-
-#endif  // TAIHE_CALLBACK_ABI_H
+function futureResultWithCallback(ms: i64, result: String, set: Completer<String>);
+function futureResultReturnsPromise(ms: i64, result: String): Future<String>;

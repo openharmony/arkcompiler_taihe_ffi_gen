@@ -89,7 +89,7 @@ public:
         return {};
     }
 
-    ::taihe::expected<float, ::taihe::error> calculateArea()
+    ::taihe::expected<double, ::taihe::error> calculateArea()
     {
         return a * b;
     }

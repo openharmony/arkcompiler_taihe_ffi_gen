@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
+from taihe.semantics.declarations import PackageGroup
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
@@ -33,11 +34,15 @@ class AbiHeaderBackendConfig(BackendConfig):
         return AbiHeaderBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
+        from taihe.codegen.abi.attributes import all_attr_types
         from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
         class AbiHeaderBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
                 self._ci = ci
+
+            def register(self):
+                self._ci.attribute_registry.register(*all_attr_types)
 
             def generate(self):
                 om = self._ci.output_manager
@@ -73,7 +78,6 @@ class AbiSourcesBackendConfig(BackendConfig):
     def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.attributes import NoexceptAttr
         from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
-        from taihe.semantics.declarations import CallbackTypeRefDecl
 
         class AbiSourcesBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance", config: AbiSourcesBackendConfig):
@@ -82,45 +86,46 @@ class AbiSourcesBackendConfig(BackendConfig):
 
             def post_process(self):
                 if self._config.noexcept_all:
-                    self._add_noexcept_all()
+                    self._apply_noexcept_all()
 
-            def _add_noexcept_all(self):
-                """Helper method to add @noexcept to all applicable declarations."""
+            def _apply_noexcept_all(self):
                 from taihe.semantics.declarations import (
                     GlobFuncDecl,
                     IfaceMethodDecl,
+                    TypeRefDecl,
+                )
+                from taihe.semantics.types import (
+                    CallbackType,
                 )
                 from taihe.semantics.visitor import RecursiveDeclVisitor
 
                 class NoexceptCallbackVisitor(RecursiveDeclVisitor):
-                    """Visitor that adds @noexcept to all callback types."""
-
                     def __init__(self):
                         super().__init__()
 
                     def visit_glob_func(self, d: GlobFuncDecl) -> None:
-                        """Visit global function and add @noexcept if needed."""
                         if NoexceptAttr.get(d) is None:
                             d.add_attribute(NoexceptAttr(loc=d.loc))
                         super().visit_glob_func(d)
 
                     def visit_iface_method(self, d: IfaceMethodDecl) -> None:
-                        """Visit interface method and add @noexcept if needed."""
                         if NoexceptAttr.get(d) is None:
                             d.add_attribute(NoexceptAttr(loc=d.loc))
                         super().visit_iface_method(d)
 
-                    def visit_callback_type_ref(self, d: CallbackTypeRefDecl) -> None:
-                        """Visit callback type reference and add @noexcept."""
-                        if NoexceptAttr.get(d) is None:
+                    def visit_type_ref(self, d: TypeRefDecl) -> None:
+                        if (
+                            isinstance(d.resolved_ty, CallbackType)
+                            and NoexceptAttr.get(d) is None
+                        ):
                             d.add_attribute(NoexceptAttr(loc=d.loc))
-                        # Recurse into parameters and return type
-                        super().visit_callback_type_ref(d)
+                        super().visit_type_ref(d)
 
-                # Apply visitor to all packages
-                visitor = NoexceptCallbackVisitor()
-                for p in self._ci.package_group.iterate():
-                    p.accept(visitor)
+                    def visit_package_group(self, g: PackageGroup) -> None:
+                        for i in g.iterate():  # not including stdlib
+                            i.accept(self)
+
+                self._ci.package_group.accept(NoexceptCallbackVisitor())
 
             def generate(self):
                 self._ci.output_manager.register_runtime_cxx_src("string.cpp")

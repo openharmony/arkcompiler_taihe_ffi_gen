@@ -25,6 +25,7 @@
 #endif
 
 #include <sstream>
+
 #include <taihe/string.hpp>
 #include <taihe/expected.hpp>
 
@@ -32,14 +33,13 @@ namespace taihe {
 void set_env(napi_env env);
 napi_env get_env();
 
-void set_error(::taihe::string_view msg, ::taihe::string_view errcode = "");
-void set_type_error(::taihe::string_view msg, ::taihe::string_view errcode = "");
-void set_range_error(::taihe::string_view msg, ::taihe::string_view errcode = "");
+void set_error(taihe::string_view msg, taihe::string_view errcode = "");
+void set_type_error(taihe::string_view msg, taihe::string_view errcode = "");
+void set_range_error(taihe::string_view msg, taihe::string_view errcode = "");
 bool has_error();
 
-::taihe::error from_napi_error(napi_value err);
-napi_value into_napi_error(::taihe::error err);
-
+taihe::error from_napi_error(napi_env env, napi_value err);
+napi_value into_napi_error(napi_env env, taihe::error err);
 }  // namespace taihe
 
 #define NAPI_CALL(env, call)                                                                \
