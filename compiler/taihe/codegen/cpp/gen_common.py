@@ -1285,7 +1285,7 @@ class CppIfaceDefnGenerator:
         )
         with self.target.indented(
             f"static constexpr void const *qiid_impl(InterfaceId id) {{",
-            f"}};",
+            f"}}",
         ):
             for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
