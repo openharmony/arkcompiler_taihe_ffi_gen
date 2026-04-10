@@ -31,7 +31,3 @@
 ## 函数/方法注解
 
 - `@constructor("ClassName")`：将一个全局函数在用户侧绑定设置为类 `ClassName` 的构造器。
-
-- `@async`：将一个返回 `T` 类型同步函数封装为接受 `AsyncCallback<T>` 的异步函数。（`type AsyncCallback<T> = (error: BusinessError | null, data: T | undefined) => void;`）
-
-- `@promise`：将一个返回 `T` 的函数封装为返回 `Promise<T>` 的异步函数。
