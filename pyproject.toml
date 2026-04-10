@@ -27,6 +27,8 @@ dev = [
     "pyright[nodejs]==1.1.400",
     "pytest==8.3.5",
     "ruff==0.8.4",
+    "setuptools==80.0.0",
+    "setuptools-scm==9.2.1",
 ]
 
 [[tool.uv.index]]
@@ -36,7 +38,12 @@ default = true
 ### Build System ###
 
 [build-system]
-requires = ["setuptools==80.0.0", "setuptools-scm==9.2.1", "antlr4-python3-runtime", "typing-extensions"]
+requires = [
+    "setuptools==80.0.0",
+    "setuptools-scm==9.2.1",
+    "antlr4-python3-runtime==4.11.1",
+    "typing-extensions==4.13.2",
+]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
