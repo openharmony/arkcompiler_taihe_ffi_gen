@@ -33,7 +33,7 @@ from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.parse.convert import convert_ast
-from taihe.semantics.analysis import analyze_semantics
+from taihe.semantics.analysis import resolve_ir, validate_ir
 from taihe.semantics.attributes import AttributeRegistry
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
@@ -143,26 +143,44 @@ class CompilerInstance:
             b.inject()
 
     def parse(self):
+        """Parses the source files and constructs the IR."""
         convert_ast(
             self.source_manager,
             self.package_group,
             self.diagnostics_manager,
         )
 
+    def resolve(self):
+        """Converts the syntax IR to the semantics IR."""
+        resolve_ir(
+            self.package_group,
+            self.diagnostics_manager,
+            self.attribute_registry,
+        )
+
+    def post_process(self):
+        """Add backend specific metadata to the IR."""
+        if self.diagnostics_manager.has_error:
+            return
+
         for b in self.backends:
             b.post_process()
 
     def validate(self):
-        analyze_semantics(
+        """Validates the IR for correctness and consistency."""
+        if self.diagnostics_manager.has_error:
+            return
+
+        validate_ir(
             self.package_group,
             self.diagnostics_manager,
-            self.attribute_registry,
         )
 
         for b in self.backends:
             b.validate()
 
     def generate(self):
+        """Generates the output files."""
         if self.diagnostics_manager.has_error:
             return
 
@@ -174,5 +192,7 @@ class CompilerInstance:
     def run(self):
         self.collect()
         self.parse()
+        self.resolve()
+        self.post_process()
         self.validate()
         self.generate()

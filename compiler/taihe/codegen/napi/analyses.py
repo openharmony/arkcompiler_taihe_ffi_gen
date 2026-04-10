@@ -1269,7 +1269,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         target.writelns(
                             f"napi_value exception = nullptr;",
                             f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                            f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(exception));",
+                            f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
                         )
                     with target.indented(
                         f"else {{",
@@ -1369,7 +1369,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                                 target.writelns(
                                     f"napi_value exception = nullptr;",
                                     f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                                    f"this->cpp_result = ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(exception));",
+                                    f"this->cpp_result = ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
                                 )
                             with target.indented(
                                 f"else {{",
@@ -1562,7 +1562,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     ):
                         target.writelns(
                             f"::taihe::error {result_error} = {result_expected}.error();",
-                            f"napi_throw(env, ::taihe::into_napi_error({result_error}));",
+                            f"napi_throw(env, ::taihe::into_napi_error(env, {result_error}));",
                             f"return nullptr;",
                         )
             with target.indented(

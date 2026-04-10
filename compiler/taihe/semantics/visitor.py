@@ -58,7 +58,9 @@ if TYPE_CHECKING:
         ArrayType,
         BuiltinType,
         CallbackType,
+        CompleterType,
         EnumType,
+        FutureType,
         GenericType,
         IfaceType,
         MapType,
@@ -153,6 +155,16 @@ class SetTypeVisitor(Generic[_R]):
         raise NotImplementedError
 
 
+class CompleterTypeVisitor(Generic[_R]):
+    def visit_completer_type(self, t: "CompleterType") -> _R:
+        raise NotImplementedError
+
+
+class FutureTypeVisitor(Generic[_R]):
+    def visit_future_type(self, t: "FutureType") -> _R:
+        raise NotImplementedError
+
+
 class GenericTypeVisitor(
     Generic[_R],
     OptionalTypeVisitor[_R],
@@ -160,6 +172,8 @@ class GenericTypeVisitor(
     VectorTypeVisitor[_R],
     MapTypeVisitor[_R],
     SetTypeVisitor[_R],
+    CompleterTypeVisitor[_R],
+    FutureTypeVisitor[_R],
 ):
     def visit_generic_type(self, t: "GenericType") -> _R:
         raise NotImplementedError
@@ -182,6 +196,14 @@ class GenericTypeVisitor(
 
     @override
     def visit_set_type(self, t: "SetType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_completer_type(self, t: "CompleterType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_future_type(self, t: "FutureType") -> _R:
         return self.visit_generic_type(t)
 
 

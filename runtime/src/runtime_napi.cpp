@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include <taihe/runtime.hpp>
+#include <taihe/runtime_napi.hpp>
 
 namespace taihe {
 
@@ -31,21 +31,21 @@ napi_env get_env()
     return thread_env;
 }
 
-void set_error(taihe::string_view msg, ::taihe::string_view errcode)
+void set_error(taihe::string_view msg, taihe::string_view errcode)
 {
     napi_env env = get_env();
     char const *code = !errcode.empty() ? errcode.c_str() : nullptr;
     napi_throw_error(env, code, msg.c_str());
 }
 
-void set_type_error(taihe::string_view msg, ::taihe::string_view errcode)
+void set_type_error(taihe::string_view msg, taihe::string_view errcode)
 {
     napi_env env = get_env();
     char const *code = !errcode.empty() ? errcode.c_str() : nullptr;
     napi_throw_type_error(env, code, msg.c_str());
 }
 
-void set_range_error(taihe::string_view msg, ::taihe::string_view errcode)
+void set_range_error(taihe::string_view msg, taihe::string_view errcode)
 {
     napi_env env = get_env();
     char const *code = !errcode.empty() ? errcode.c_str() : nullptr;
@@ -60,9 +60,8 @@ bool has_error()
     return has_error;
 }
 
-::taihe::error from_napi_error(napi_value err)
+taihe::error from_napi_error(napi_env env, napi_value err)
 {
-    napi_env env = get_env();
     napi_value error_message_napi;
     NAPI_CALL(env, napi_get_named_property(env, err, "message", &error_message_napi));
     size_t error_message_cpp_len = 0;
@@ -108,9 +107,8 @@ bool has_error()
     }
 }
 
-napi_value into_napi_error(::taihe::error err)
+napi_value into_napi_error(napi_env env, taihe::error err)
 {
-    napi_env env = get_env();
     napi_value errorMessage = nullptr;
     napi_create_string_utf8(env, err.message().c_str(), NAPI_AUTO_LENGTH, &errorMessage);
     napi_value error = nullptr;

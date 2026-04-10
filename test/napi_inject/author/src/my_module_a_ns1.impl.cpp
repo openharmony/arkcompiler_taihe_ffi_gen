@@ -117,7 +117,7 @@ public:
         return {};
     }
 
-    ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b)
     {
         return a + b + this->x;
     }

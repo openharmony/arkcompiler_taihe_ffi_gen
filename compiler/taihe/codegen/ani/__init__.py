@@ -71,11 +71,6 @@ class AniBridgeBackendConfig(BackendConfig):
                 self._config = config
 
             def register(self):
-                ArkTsOutDir.provide(
-                    self._ci.analysis_manager,
-                    self._ci.package_group,
-                    ArkTsOutDir(self._config.module_prefix, self._config.path_prefix),
-                )
                 self._ci.attribute_registry.register(*all_attr_types)
 
             def inject(self):
@@ -87,6 +82,11 @@ class AniBridgeBackendConfig(BackendConfig):
                 )
 
             def post_process(self):
+                ArkTsOutDir.provide(
+                    self._ci.analysis_manager,
+                    self._ci.package_group,
+                    ArkTsOutDir(self._config.module_prefix, self._config.path_prefix),
+                )
                 if self._config.keep_name:
                     for p in self._ci.package_group.iterate():
                         if StsKeepNameAttr.get(p) is None:

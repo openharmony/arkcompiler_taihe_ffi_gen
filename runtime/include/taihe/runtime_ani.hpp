@@ -43,8 +43,10 @@ namespace taihe {
 void set_vm(ani_vm *vm);
 ani_vm *get_vm();
 
-::taihe::error from_ani_error(ani_error err);
-ani_error into_ani_error(::taihe::error err);
+ani_error take_ani_error(ani_env *env);
+taihe::error from_ani_error(ani_env *env, ani_error err);
+ani_error into_ani_error(ani_env *env, taihe::error const &err);
+void make_ani_error(ani_env *env, taihe::error const &err);
 
 inline ani_env *get_env()
 {

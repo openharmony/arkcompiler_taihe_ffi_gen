@@ -15,7 +15,6 @@
 
 from dataclasses import dataclass
 
-from taihe.codegen.abi.attributes import NoexceptAttr
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
     AsyncAttribute,
@@ -158,7 +157,6 @@ all_napi_attr_types = [
     TsInjectIntoModuleAttr,
     TsInjectIntoClazzAttr,
     TsInjectIntoIfaceAttr,
-    NoexceptAttr,
     # TODO: hack from ani
     ArrayBufferAttr,
     AsyncAttribute,

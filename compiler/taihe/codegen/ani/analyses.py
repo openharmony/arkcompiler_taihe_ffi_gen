@@ -99,7 +99,9 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     CallbackType,
+    CompleterType,
     EnumType,
+    FutureType,
     IfaceType,
     MapType,
     NonVoidType,
@@ -133,19 +135,19 @@ class ArkTsOutDir(AbstractAnalysis["PackageGroup"]):
 
 
 @dataclass
-class AniRuntimeType(ABC):
+class EtsType(ABC):
     @property
     @abstractmethod
     def sig(self) -> str: ...
 
     @property
     @abstractmethod
-    def boxed(self) -> "AniRuntimeNonPrimitiveType": ...
+    def boxed(self) -> "EtsNonPrimitiveType": ...
 
 
 @dataclass
-class AniRuntimePrimitiveType(AniRuntimeType):
-    _boxed: "AniRuntimeNonPrimitiveType"
+class EtsPrimitiveType(EtsType):
+    _boxed: "EtsNonPrimitiveType"
     _sig: str
 
     @property
@@ -153,37 +155,37 @@ class AniRuntimePrimitiveType(AniRuntimeType):
         return self._sig
 
     @property
-    def boxed(self) -> "AniRuntimeNonPrimitiveType":
+    def boxed(self) -> "EtsNonPrimitiveType":
         return self._boxed
 
 
 @dataclass
-class AniRuntimeNonPrimitiveType(AniRuntimeType, ABC):
+class EtsNonPrimitiveType(EtsType, ABC):
     @property
     @abstractmethod
     def desc(self) -> str: ...
 
     @property
-    def boxed(self) -> "AniRuntimeNonPrimitiveType":
+    def boxed(self) -> "EtsNonPrimitiveType":
         return self
 
     @abstractmethod
-    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]: ...
+    def as_union_members(self) -> Iterable["EtsUnionMemberType"]: ...
 
 
 @dataclass
-class AniRuntimeUnionMemberType(AniRuntimeNonPrimitiveType, ABC):
-    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
+class EtsUnionMemberType(EtsNonPrimitiveType, ABC):
+    def as_union_members(self) -> Iterable["EtsUnionMemberType"]:
         yield self
 
 
 @dataclass
-class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
-    members: list["AniRuntimeUnionMemberType"]
+class EtsUnionType(EtsNonPrimitiveType):
+    _members: list["EtsUnionMemberType"]
 
     @property
     def sig(self) -> str:
-        signatures = [union_member.sig for union_member in self.members]
+        signatures = [union_member.sig for union_member in self._members]
         signatures = sorted(set(signatures))
         signatures_str = "".join(signatures)
         return f"X{{{signatures_str}}}"
@@ -193,24 +195,22 @@ class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
         return self.sig
 
     @staticmethod
-    def union(*sig_types: AniRuntimeType) -> AniRuntimeNonPrimitiveType:
+    def union(*ets_types: EtsNonPrimitiveType) -> EtsNonPrimitiveType:
         members = [
-            member
-            for sig_type in sig_types
-            for member in sig_type.boxed.as_union_members()
+            member for ets_type in ets_types for member in ets_type.as_union_members()
         ]
         if len(members) == 0:
-            return AniRuntimeUndefinedType()
+            return EtsUndefinedType()
         if len(members) == 1:
             return members[0]
-        return AniRuntimeUnionType(members=members)
+        return EtsUnionType(members)
 
-    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
-        yield from self.members
+    def as_union_members(self) -> Iterable["EtsUnionMemberType"]:
+        yield from self._members
 
 
 @dataclass
-class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
+class EtsUndefinedType(EtsNonPrimitiveType):
     @property
     def sig(self) -> str:
         return "U"
@@ -219,17 +219,17 @@ class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
     def desc(self) -> str:
         return "std.core.Object"
 
-    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
+    def as_union_members(self) -> Iterable["EtsUnionMemberType"]:
         yield from ()
 
 
 @dataclass
-class AniRuntimeFixedArrayType(AniRuntimeUnionMemberType):
-    element: AniRuntimeType
+class EtsFixedArrayType(EtsUnionMemberType):
+    _element: EtsType
 
     @property
     def sig(self) -> str:
-        return f"A{{{self.element.sig}}}"
+        return f"A{{{self._element.sig}}}"
 
     @property
     def desc(self) -> str:
@@ -237,29 +237,29 @@ class AniRuntimeFixedArrayType(AniRuntimeUnionMemberType):
 
 
 @dataclass
-class AniRuntimeClassType(AniRuntimeUnionMemberType):
-    name: str
+class EtsClassType(EtsUnionMemberType):
+    _desc: str
 
     @property
     def sig(self) -> str:
-        return f"C{{{self.name}}}"
+        return f"C{{{self._desc}}}"
 
     @property
     def desc(self) -> str:
-        return self.name
+        return self._desc
 
 
 @dataclass
-class AniRuntimeEnumType(AniRuntimeUnionMemberType):
-    name: str
+class EtsEnumType(EtsUnionMemberType):
+    _desc: str
 
     @property
     def sig(self) -> str:
-        return f"E{{{self.name}}}"
+        return f"E{{{self._desc}}}"
 
     @property
     def desc(self) -> str:
-        return self.name
+        return self._desc
 
 
 # Ani Types
@@ -379,13 +379,25 @@ class ArkTsModule(ArkTsModuleOrNamespace):
 
     obj_drop = "_taihe_objDrop"
     obj_dup = "_taihe_objDup"
-    registry = "_taihe_registry"
-    native_invoke = "_taihe_nativeInvoke"
-    make_callback = "_taihe_makeCallback"
+    obj_registry = "_taihe_objRegistry"
+
+    callback_invoke = "_taihe_callbackInvoke"
+    callback_inner = "_taihe_CallbackInner"
+    callback_factory = "_taihe_callbackFactory"
+
     bigint_to_arrbuf = "_taihe_fromBigIntToArrayBuffer"
     arrbuf_to_bigint = "_taihe_fromArrayBufferToBigInt"
-    BEType = "_taihe_BusinessError"
-    ACType = "_taihe_AsyncCallback"
+
+    BE_type = "_taihe_BusinessError"
+    AC_type = "_taihe_AsyncCallback"
+
+    async_handler_on_fullfilled = "_taihe_asyncHandlerOnFullfilled"
+    async_handler_on_rejected = "_taihe_asyncHandlerOnRejected"
+    async_handler_drop = "_taihe_asyncHandlerDrop"
+    async_handler_registry = "_taihe_asyncHandlerRegistry"
+    async_handler = "_taihe_AsyncHandler"
+    completer_factory = "_taihe_CompleterFactory"
+    future_completory = "_taihe_FutureCompletory"
 
     @property
     def mod(self) -> "ArkTsModule":
@@ -643,13 +655,13 @@ class IfaceThunkKey:
 
 class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
     def __init__(self, am: AnalysisManager, c: IfaceThunkKey) -> None:
-        self.native_name = f"_taihe_{c.iface.name}_{c.method.name}_native"
+        self.sts_native = f"_taihe_{c.iface.name}_{c.method.name}_native"
         iface_ani_info = IfaceAniInfo.get(am, c.iface)
-        self.native_base_params: list[str] = [
+        self.sts_native_base_params: list[str] = [
             f"{iface_ani_info.vtbl_ptr}: long",
             f"{iface_ani_info.data_ptr}: long",
         ]
-        self.native_base_args: list[str] = [
+        self.sts_native_base_args: list[str] = [
             f"this.{iface_ani_info.vtbl_ptr}",
             f"this.{iface_ani_info.data_ptr}",
         ]
@@ -671,7 +683,7 @@ class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
 
 class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
-        self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
+        self.sts_reverse = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
 
     @classmethod
     @override
@@ -681,14 +693,14 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        self.native_name = f"_taihe_{f.name}_native"
-        self.native_base_params: list[str] = []
-        self.native_base_args: list[str] = []
+        self.sts_native = f"_taihe_{f.name}_native"
+        self.sts_native_base_params: list[str] = []
+        self.sts_native_base_args: list[str] = []
         self.c_native_base_params: list[str] = []
         func_cpp_user_info = GlobFuncCppUserInfo.get(am, f)
         self.c_native_call = func_cpp_user_info.full_name
 
-        self.reverse_name = f"_taihe_{f.name}_reverse"
+        self.sts_reverse = f"_taihe_{f.name}_reverse"
 
         self.static_scope = None
         self.ctor_scope = None
@@ -710,23 +722,23 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
 
 class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     ani_type: AniType
-    sig_type: AniRuntimeType
+    ets_type: EtsType
 
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -742,9 +754,9 @@ class EnumObjectAniInfo(EnumAniInfo):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
 
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type}"
         self.ani_type = ANI_ENUM_ITEM
-        self.sig_type = AniRuntimeEnumType(self.type_desc)
+        self.ets_type = EtsEnumType(self.type_desc)
 
 
 class EnumConstAniInfo(EnumAniInfo):
@@ -753,12 +765,12 @@ class EnumConstAniInfo(EnumAniInfo):
 
         enum_ty_ani_info = TypeAniInfo.get(am, d.ty)
         self.ani_type = enum_ty_ani_info.ani_type
-        self.sig_type = enum_ty_ani_info.sig_type
+        self.ets_type = enum_ty_ani_info.ets_type
 
 
 class UnionAniInfo(AbstractAnalysis[UnionDecl]):
     ani_type: AniType
-    sig_type: AniRuntimeType
+    ets_type: EtsType
 
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
@@ -766,16 +778,16 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
 
         self.ani_type = ANI_REF
-        sig_types: list[AniRuntimeType] = []
+        ets_types: list[EtsNonPrimitiveType] = []
         for field in d.fields:
             field_ani_info = TypeAniInfo.get(am, field.ty)
-            sig_types.append(field_ani_info.sig_type)
-        self.sig_type = AniRuntimeUnionType.union(*sig_types)
+            ets_types.append(field_ani_info.ets_type.boxed)
+        self.ets_type = EtsUnionType.union(*ets_types)
 
         self.sts_all_fields: list[list[UnionFieldDecl]] = []
         for field in d.fields:
@@ -792,7 +804,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -804,7 +816,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
 class StructAniInfo(AbstractAnalysis[StructDecl]):
     ani_type: AniType
-    sig_type: AniRuntimeType
+    ets_type: EtsType
 
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
@@ -812,16 +824,16 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -839,7 +851,7 @@ class StructTupleAniInfo(StructAniInfo):
 
         self.type_desc = f"std.core.Tuple{len(d.fields)}"
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(self.type_desc)
+        self.ets_type = EtsClassType(self.type_desc)
 
 
 class StructObjectAniInfo(StructAniInfo):
@@ -847,15 +859,15 @@ class StructObjectAniInfo(StructAniInfo):
         super().__init__(am, d)
 
         if ClassAttr.get(d):
-            self.sts_impl_name = self.sts_type_name
+            self.sts_impl = self.sts_type
         else:
-            self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.sts_factory_name = f"_taihe_{d.name}_ctor"
+            self.sts_impl = f"_taihe_{d.name}_inner"
+        self.sts_factory = f"_taihe_{d.name}_factory"
 
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
-        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type}"
+        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl}"
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(self.type_desc)
+        self.ets_type = EtsClassType(self.type_desc)
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
@@ -903,7 +915,7 @@ class StructObjectAniInfo(StructAniInfo):
                 self.sts_local_fields.append(final)
 
     def is_class(self):
-        return self.sts_type_name == self.sts_impl_name
+        return self.sts_type == self.sts_impl
 
     @classmethod
     @override
@@ -913,7 +925,7 @@ class StructObjectAniInfo(StructAniInfo):
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
     ani_type: AniType
-    sig_type: AniRuntimeType
+    ets_type: EtsType
 
     data_ptr = "_taihe_dataPtr"
     vtbl_ptr = "_taihe_vtblPtr"
@@ -925,19 +937,19 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         if rename_attr := RenameAttr.get(d):
-            self.sts_type_name = rename_attr.name
+            self.sts_type = rename_attr.name
         else:
-            self.sts_type_name = d.name
+            self.sts_type = d.name
         if ClassAttr.get(d):
-            self.sts_impl_name = self.sts_type_name
+            self.sts_impl = self.sts_type
         else:
-            self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.sts_factory_name = f"_taihe_{d.name}_ctor"
+            self.sts_impl = f"_taihe_{d.name}_inner"
+        self.sts_factory = f"_taihe_{d.name}_factory"
 
-        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
-        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type}"
+        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl}"
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(self.type_desc)
+        self.ets_type = EtsClassType(self.type_desc)
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
@@ -958,12 +970,12 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     def is_class(self):
-        return self.sts_type_name == self.sts_impl_name
+        return self.sts_type == self.sts_impl
 
     def sts_type_in(self, target: ArkTsImportManager):
         return self.parent_ns.get_type(
             self.is_default,
-            self.sts_type_name,
+            self.sts_type,
             target=target,
         )
 
@@ -1027,22 +1039,10 @@ class ParamAniInfo(AbstractAnalysis[ParamDecl]):
 
 class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     ani_type: AniType
-    sig_type: AniRuntimeType
+    ets_type: EtsType
 
     def __init__(self, am: AnalysisManager, t: NonVoidType):
         self.cpp_info = TypeCppInfo.get(am, t)
-
-    @property
-    def type_sig(self) -> str:
-        return self.sig_type.sig
-
-    @property
-    def type_sig_boxed(self) -> str:
-        return self.sig_type.boxed.sig
-
-    @property
-    def type_desc(self) -> str:
-        return self.sig_type.boxed.desc
 
     @abstractmethod
     def sts_type_in(self, target: ArkTsImportManager) -> str: ...
@@ -1065,7 +1065,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         ani_after: str,
     ): ...
 
-    def check_type(
+    def check_type_boxed(
         self,
         target: CSourceWriter,
         env: str,
@@ -1073,7 +1073,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         is_field_ani: str,
     ):
         target.writelns(
-            f'{env}->Object_InstanceOf(static_cast<ani_object>({ani_value}), TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), &{is_field_ani});',
+            f'{env}->Object_InstanceOf(static_cast<ani_object>({ani_value}), TH_ANI_FIND_CLASS({env}, "{self.ets_type.boxed.desc}"), &{is_field_ani});',
         )
 
     def into_ani_boxed(
@@ -1083,16 +1083,16 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         cpp_value: str,
         ani_boxed: str,
     ):
-        if self.ani_type.base == ANI_REF:
-            self.into_ani(target, env, cpp_value, ani_boxed)
-        else:
-            ani_after = f"{ani_boxed}_ani_after"
+        ani_after = f"{ani_boxed}_ani_after"
+        self.into_ani(target, env, cpp_value, ani_after)
+        if isinstance(self.ets_type, EtsNonPrimitiveType):
             target.writelns(
-                f"ani_object {ani_boxed} = {{}};",
+                f"ani_ref {ani_boxed} = {ani_after};",
             )
-            self.into_ani(target, env, cpp_value, ani_after)
+        else:
             target.writelns(
-                f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "<ctor>", "{self.type_sig}:"), &{ani_boxed}, {ani_after});',
+                f"ani_ref {ani_boxed} = {{}};",
+                f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.ets_type.boxed.desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.ets_type.boxed.desc}", "<ctor>", "{self.ets_type.sig}:"), reinterpret_cast<ani_object*>(&{ani_boxed}), {ani_after});',
             )
 
     def from_ani_boxed(
@@ -1102,16 +1102,17 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         ani_boxed: str,
         cpp_after: str,
     ):
-        if self.ani_type.base == ANI_REF:
-            ani_value = f"static_cast<{self.ani_type}>({ani_boxed})"
-            self.from_ani(target, env, ani_value, cpp_after)
+        ani_value = f"{cpp_after}_ani_value"
+        if isinstance(self.ets_type, EtsNonPrimitiveType):
+            target.writelns(
+                f"{self.ani_type} {ani_value} = static_cast<{self.ani_type}>({ani_boxed});",
+            )
         else:
-            ani_value = f"{cpp_after}_ani_value"
             target.writelns(
                 f"{self.ani_type} {ani_value} = {{}};",
-                f'{env}->Object_CallMethod_{self.ani_type.suffix}(static_cast<ani_object>({ani_boxed}), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "to{self.ani_type.suffix}", ":{self.type_sig}"), &{ani_value});',
+                f'{env}->Object_CallMethod_{self.ani_type.suffix}(static_cast<ani_object>({ani_boxed}), TH_ANI_FIND_CLASS_METHOD({env}, "{self.ets_type.boxed.desc}", "to{self.ani_type.suffix}", ":{self.ets_type.sig}"), &{ani_value});',
             )
-            self.from_ani(target, env, ani_value, cpp_after)
+        self.from_ani(target, env, ani_value, cpp_after)
 
     @classmethod
     @override
@@ -1126,7 +1127,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         self.t = t
         enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
         self.ani_type = enum_ani_info.ani_type
-        self.sig_type = enum_ani_info.sig_type
+        self.ets_type = enum_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1171,7 +1172,7 @@ class StructTypeAniInfo(TypeAniInfo):
         self.t = t
         struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
         self.ani_type = struct_ani_info.ani_type
-        self.sig_type = struct_ani_info.sig_type
+        self.ets_type = struct_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1216,7 +1217,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         self.t = t
         union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
         self.ani_type = union_ani_info.ani_type
-        self.sig_type = union_ani_info.sig_type
+        self.ets_type = union_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1261,7 +1262,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         self.t = t
         iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
         self.ani_type = iface_ani_info.ani_type
-        self.sig_type = iface_ani_info.sig_type
+        self.ets_type = iface_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1303,7 +1304,7 @@ class NullTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: UnitType):
         super().__init__(am, t)
         self.ani_type = ANI_REF
-        self.sig_type = AniRuntimeClassType("std.core.Null")
+        self.ets_type = EtsClassType("std.core.Null")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1335,7 +1336,7 @@ class NullTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def check_type(
+    def check_type_boxed(
         self,
         target: CSourceWriter,
         env: str,
@@ -1351,7 +1352,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: UnitType):
         super().__init__(am, t)
         self.ani_type = ANI_REF
-        self.sig_type = AniRuntimeUndefinedType()
+        self.ets_type = EtsUndefinedType()
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1383,7 +1384,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def check_type(
+    def check_type_boxed(
         self,
         target: CSourceWriter,
         env: str,
@@ -1399,7 +1400,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: UnitType, literal_attr: LiteralAttr):
         super().__init__(am, t)
         self.ani_type = ANI_STRING
-        self.sig_type = AniRuntimeClassType("std.core.String")
+        self.ets_type = EtsClassType("std.core.String")
         self.value = literal_attr.value
 
     @override
@@ -1434,14 +1435,14 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def check_type(
+    def check_type_boxed(
         self,
         target: CSourceWriter,
         env: str,
         ani_value: str,
         is_field_ani: str,
     ):
-        super().check_type(target, env, ani_value, is_field_ani)
+        super().check_type_boxed(target, env, ani_value, is_field_ani)
         cpp_strv = f"{is_field_ani}_cpp_strv"
         ani_size = f"{is_field_ani}_size"
         cpp_buff = f"{is_field_ani}_buff"
@@ -1473,9 +1474,9 @@ class ScalarTypeAniInfo(TypeAniInfo):
             ScalarKind.U64: (ANI_LONG, "long", "l"),
         }[t.kind]
         ani_type, sts_type, sig = sts_info
-        sig_type_boxed = AniRuntimeClassType(f"std.core.{sts_type.capitalize()}")
-        sig_type = AniRuntimePrimitiveType(sig_type_boxed, sig)
-        self.sig_type = sig_type
+        ets_type_boxed = EtsClassType(f"std.core.{sts_type.capitalize()}")
+        ets_type = EtsPrimitiveType(ets_type_boxed, sig)
+        self.ets_type = ets_type
         self.ani_type = ani_type
         self.sts_type = sts_type
 
@@ -1512,7 +1513,7 @@ class StringTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         super().__init__(am, t)
         self.ani_type = ANI_STRING
-        self.sig_type = AniRuntimeClassType("std.core.String")
+        self.ets_type = EtsClassType("std.core.String")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1564,7 +1565,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
             self.sts_type = sts_type_attr.type_name
         else:
             self.sts_type = "Object"
-        self.sig_type = AniRuntimeClassType("std.core.Object")
+        self.ets_type = EtsClassType("std.core.Object")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1602,7 +1603,7 @@ class OptionalTypeAniInfo(TypeAniInfo):
         self.t = t
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         self.ani_type = ANI_REF
-        self.sig_type = item_ty_ani_info.sig_type.boxed
+        self.ets_type = item_ty_ani_info.ets_type.boxed
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1677,7 +1678,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         self.t = t
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         self.ani_type = ANI_FIXEDARRAY_REF
-        self.sig_type = AniRuntimeFixedArrayType(item_ty_ani_info.sig_type)
+        self.ets_type = EtsFixedArrayType(item_ty_ani_info.ets_type)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1739,7 +1740,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
             f"ani_fixedarray_ref {ani_after} = {{}};",
             f"ani_ref {ani_init} = {{}};",
             f"{env}->GetUndefined(&{ani_init});",
-            f'{env}->FixedArray_New_Ref(TH_ANI_FIND_CLASS({env}, "{item_ty_ani_info.type_desc}"), {cpp_size}, {ani_init}, &{ani_after});',
+            f'{env}->FixedArray_New_Ref(TH_ANI_FIND_CLASS({env}, "{item_ty_ani_info.ets_type.boxed.desc}"), {cpp_size}, {ani_init}, &{ani_after});',
         )
         with target.indented(
             f"for (size_t {iterator} = 0; {iterator} < {cpp_size}; {iterator}++) {{",
@@ -1762,7 +1763,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_ARRAY
-        self.sig_type = AniRuntimeClassType("std.core.Array")
+        self.ets_type = EtsClassType("std.core.Array")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1853,7 +1854,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         self.t = t
         self.arraybuffer_attr = arraybuffer_attr
         self.ani_type = ANI_ARRAYBUFFER
-        self.sig_type = AniRuntimeClassType("std.core.ArrayBuffer")
+        self.ets_type = EtsClassType("std.core.ArrayBuffer")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1907,7 +1908,8 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         self.t = t
         self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType(f"std.core.{self.typedarray_attr.sts_type}")
+        self.ets_desc = f"std.core.{self.typedarray_attr.sts_type}"
+        self.ets_type = EtsClassType(self.ets_desc)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1935,16 +1937,16 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         assert isinstance(self.t.item_ty, ScalarType), self.t.item_ty
         if self.t.item_ty.kind.is_signed:
             target.writelns(
-                f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.type_desc}", "byteLength"), &{ani_byte_length});',
-                f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.type_desc}", "byteOffset"), &{ani_byte_offset});',
+                f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "byteLength"), &{ani_byte_length});',
+                f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "byteOffset"), &{ani_byte_offset});',
             )
         else:
             target.writelns(
-                f'{env}->Object_CallMethod_Int({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "%%get-byteLength", ":i"), &{ani_byte_length});',
-                f'{env}->Object_CallMethod_Int({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "%%get-byteOffset", ":i"), &{ani_byte_offset});',
+                f'{env}->Object_CallMethod_Int({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.ets_desc}", "%%get-byteLength", ":i"), &{ani_byte_length});',
+                f'{env}->Object_CallMethod_Int({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.ets_desc}", "%%get-byteOffset", ":i"), &{ani_byte_offset});',
             )
         target.writelns(
-            f'{env}->Object_GetField_Ref({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.type_desc}", "buffer"), reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
+            f'{env}->Object_GetField_Ref({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "buffer"), reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
@@ -1974,7 +1976,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             f"ani_ref {ani_byte_offset} = {{}};",
             f"{env}->GetUndefined(&{ani_byte_offset});",
             f"ani_object {ani_after} = {{}};",
-            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "<ctor>", "C{{std.core.ArrayBuffer}}C{{std.core.Double}}C{{std.core.Double}}:"), &{ani_after}, {ani_arrbuf}, {ani_byte_length}, {ani_byte_offset});',
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.ets_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.ets_desc}", "<ctor>", "C{{std.core.ArrayBuffer}}C{{std.core.Double}}C{{std.core.Double}}:"), &{ani_after}, {ani_arrbuf}, {ani_byte_length}, {ani_byte_offset});',
         )
 
 
@@ -1990,7 +1992,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         self.t = t
         self.bigint_attr = bigint_attr
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType("std.core.BigInt")
+        self.ets_type = EtsClassType("std.core.BigInt")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2052,7 +2054,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         self.t = t
         self.record_attr = record_attr
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType("std.core.Record")
+        self.ets_type = EtsClassType("std.core.Record")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2151,7 +2153,7 @@ class MapTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType("std.core.Map")
+        self.ets_type = EtsClassType("std.core.Map")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2170,9 +2172,9 @@ class MapTypeAniInfo(TypeAniInfo):
         cpp_after: str,
     ):
         ani_iter = f"{cpp_after}_ani_iter"
-        ani_item = f"{cpp_after}_ani_item"
         ani_next = f"{cpp_after}_ani_next"
         ani_done = f"{cpp_after}_ani_done"
+        ani_item = f"{cpp_after}_ani_item"
         ani_key = f"{cpp_after}_ani_key"
         ani_val = f"{cpp_after}_ani_val"
         cpp_key = f"{cpp_after}_cpp_key"
@@ -2250,7 +2252,7 @@ class SetTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_OBJECT
-        self.sig_type = AniRuntimeClassType("std.core.Set")
+        self.ets_type = EtsClassType("std.core.Set")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2267,7 +2269,6 @@ class SetTypeAniInfo(TypeAniInfo):
         cpp_after: str,
     ):
         ani_iter = f"{cpp_after}_ani_iter"
-        ani_item = f"{cpp_after}_ani_item"
         ani_next = f"{cpp_after}_ani_next"
         ani_done = f"{cpp_after}_ani_done"
         ani_val = f"{cpp_after}_ani_val"
@@ -2335,7 +2336,7 @@ class VectorTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_ARRAY
-        self.sig_type = AniRuntimeClassType("std.core.Array")
+        self.ets_type = EtsClassType("std.core.Array")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2416,7 +2417,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_FN_OBJECT
-        self.sig_type = AniRuntimeClassType(f"std.core.Function{len(t.ref.params)}")
+        self.ets_type = EtsClassType(f"std.core.Function{len(t.ref.params)}")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2485,9 +2486,9 @@ class CallbackTypeAniInfo(TypeAniInfo):
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
-        return_ty_cpp_name_expected = (
-            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-        )
+        args_ani_str = ", ".join(args_ani)
+        result_ani = "ani_result"
+        result_cpp = "cpp_result"
         if cb_abi_info.is_noexcept:
             with target.indented(
                 f"{return_ty_cpp_name} operator()({params_cpp_str}) {{",
@@ -2507,15 +2508,12 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         arg_cpp,
                         arg_ani,
                     )
-                args_ani_str = ", ".join(args_ani)
-                result_ani = "ani_result"
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref {result_ani} = {{}};",
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
                 )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    result_cpp = "cpp_result"
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.from_ani_boxed(
                         target,
@@ -2531,8 +2529,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"return;",
                     )
         else:
+            expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            error_ani = "ani_err"
             with target.indented(
-                f"{return_ty_cpp_name_expected} operator()({params_cpp_str}) {{",
+                f"{expected_ty_cpp_name} operator()({params_cpp_str}) {{",
                 f"}}",
             ):
                 target.writelns(
@@ -2549,45 +2549,33 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         arg_cpp,
                         arg_ani,
                     )
-                args_ani_str = ", ".join(args_ani)
-                result_ani = "ani_result"
-                result_cpp = "cpp_result"
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref {result_ani} = {{}};",
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
-                    f"ani_boolean _ets_has_error = false;",
-                    f"env->ExistUnhandledError(&_ets_has_error);",
                 )
                 with target.indented(
-                    f"if (_ets_has_error) {{",
+                    f"if (ani_error {error_ani} = ::taihe::take_ani_error(env)) {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_error _ets_error = nullptr;",
-                        f"env->GetUnhandledError(&_ets_error);",
-                        f"env->ResetError();",
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(_ets_error));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, {error_ani}));",
                     )
-                with target.indented(
-                    f"else {{",
-                    f"}}",
-                ):
-                    if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                        return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                        return_ty_ani_info.from_ani_boxed(
-                            target,
-                            "env",
-                            result_ani,
-                            result_cpp,
-                        )
-                        target.writelns(
-                            f"return {result_cpp};",
-                        )
-                    else:
-                        target.writelns(
-                            f"return {{}};",
-                        )
+                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.from_ani_boxed(
+                        target,
+                        "env",
+                        result_ani,
+                        result_cpp,
+                    )
+                    target.writelns(
+                        f"return {result_cpp};",
+                    )
+                else:
+                    target.writelns(
+                        f"return {{}};",
+                    )
 
     @override
     def into_ani(
@@ -2604,8 +2592,8 @@ class CallbackTypeAniInfo(TypeAniInfo):
         cpp_copy = f"{ani_after}_cpp_copy"
         cpp_scope = f"{ani_after}_cpp_scope"
         invoke_name = "invoke"
-        ani_cast_ptr = f"{ani_after}_ani_cast_ptr"
-        ani_func_ptr = f"{ani_after}_ani_func_ptr"
+        ani_invoke_ptr = f"{ani_after}_ani_invoke_ptr"
+        ani_vtbl_ptr = f"{ani_after}_ani_vtbl_ptr"
         ani_data_ptr = f"{ani_after}_ani_data_ptr"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         target.writelns(
@@ -2634,24 +2622,23 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 self.gen_native_invoke(target, invoke_name)
             target.writelns(
                 f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
-                f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
-                f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
+                f"ani_long {ani_invoke_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{invoke_name});",
+                f"ani_long {ani_vtbl_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.vtbl_ptr);",
                 f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
                 f"{cpp_copy}.m_handle.data_ptr = nullptr;",
-                f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+                f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.callback_factory}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_invoke_ptr}, {ani_vtbl_ptr}, {ani_data_ptr});',
             )
 
     def gen_native_invoke(
         self,
         target: CSourceWriter,
-        cpp_cast_ptr: str,
+        cpp_invoke_ptr: str,
     ):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.t)
-
         params_ani = []
         args_ani = []
         params_ani.append("[[maybe_unused]] ani_env* env")
-        params_ani.append("[[maybe_unused]] ani_long ani_func_ptr")
+        params_ani.append("[[maybe_unused]] ani_long ani_vtbl_ptr")
         params_ani.append("[[maybe_unused]] ani_long ani_data_ptr")
         for i in range(16):
             arg_ani = f"ani_arg_{i}"
@@ -2664,11 +2651,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
             vals_cpp.append(val_cpp)
         return_ty_ani_name = "ani_ref"
         with target.indented(
-            f"static {return_ty_ani_name} {cpp_cast_ptr}({params_ani_str}) {{",
+            f"static {return_ty_ani_name} {cpp_invoke_ptr}({params_ani_str}) {{",
             f"}};",
         ):
             target.writelns(
-                f"{self.cpp_info.as_param}::vtable_type* cpp_vtbl_ptr = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_func_ptr);",
+                f"{self.cpp_info.as_param}::vtable_type* cpp_vtbl_ptr = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_vtbl_ptr);",
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
@@ -2689,16 +2676,20 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
             args_cpp_str = ", ".join(args_cpp)
             lambda_invoke = f"cpp_func({args_cpp_str})"
+            if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                return_ty_cpp_name = return_ty_cpp_info.as_owner
+            else:
+                return_ty_cpp_name = "void"
+            result_cpp = "cpp_result"
+            result_ani = "ani_result"
             if cb_abi_info.is_noexcept:
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    result_cpp = "cpp_result"
-                    result_ani = "ani_result"
                     target.writelns(
-                        f"{return_ty_cpp_info.as_owner} {result_cpp} = {lambda_invoke};",
-                        f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
+                        f"{return_ty_cpp_name} {result_cpp} = {lambda_invoke};",
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.into_ani_boxed(
                         target,
                         "env",
@@ -2711,55 +2702,201 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 else:
                     target.writelns(
                         f"{lambda_invoke};",
-                        f"return ani_ref{{}};",
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
+                        f"return {{}};",
                     )
             else:
-                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_cpp_name = return_ty_cpp_info.as_owner
-                else:
-                    return_ty_cpp_name = "void"
-                return_ty_cpp_name_expected = (
-                    f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-                )
-                result_cpp = "cpp_result"
-                result_ani = "napi_result"
-                result_expected = "expected_result"
-                result_error = "error_result"
+                expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+                expected_ani = "ani_expected"
                 target.writelns(
-                    f"{return_ty_cpp_name_expected} {result_expected} = {lambda_invoke};",
+                    f"{expected_ty_cpp_name} {expected_ani} = {lambda_invoke};",
+                )
+                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                    target.writelns(
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
+                    )
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.into_ani_boxed(
+                        target,
+                        "env",
+                        result_cpp,
+                        result_ani,
+                    )
+                    target.writelns(
+                        f"return {result_ani};",
+                    )
+                else:
+                    target.writelns(
+                        f"if (::taihe::has_error()) {{ return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"return {{}};",
+                    )
+
+
+class CompleterTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_FN_OBJECT
+        self.ets_type = EtsClassType("std.core.Function1")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"_taihe_AsyncCallback<({item_sts_type})>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        cpp_future = f"{cpp_after}_cpp_future"
+        cpp_handler_t = f"{cpp_after}_cpp_handler_t"
+        with target.indented(
+            f"struct {cpp_handler_t} : ::taihe::dref_guard {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
+            )
+            with target.indented(
+                f"void handle_result(::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> cpp_result) const {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"::taihe::env_guard guard;",
+                    f"ani_env *env = guard.get_env();",
+                    f"ani_ref ani_argv[2] = {{}};",
                 )
                 with target.indented(
-                    f"if ({result_expected}) {{",
+                    f"if (cpp_result) {{",
                     f"}}",
                 ):
-                    if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                        return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                        target.writelns(
-                            f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
-                        )
-                        return_ty_ani_info.into_ani_boxed(
-                            target,
-                            "env",
-                            result_cpp,
-                            result_ani,
-                        )
-                        target.writelns(
-                            f"return {result_ani};",
-                        )
-                    else:
-                        target.writelns(
-                            f"return ani_ref{{}};",
-                        )
+                    item_ty_ani_info.into_ani_boxed(
+                        target,
+                        "env",
+                        "cpp_result.value()",
+                        "ani_result",
+                    )
+                    target.writelns(
+                        f"ani_argv[1] = ani_result;",
+                        f"env->GetNull(&ani_argv[0]);",
+                    )
                 with target.indented(
                     f"else {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"::taihe::error {result_error} = {result_expected}.error();",
-                        f"env->ThrowError(into_ani_error({result_error}));",
-                        f"return ani_ref{{}};",
+                        f"ani_argv[0] = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"env->GetUndefined(&ani_argv[1]);",
                     )
+                target.writelns(
+                    f"ani_ref ani_dummy = {{}};",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
+                )
+        target.writelns(
+            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_contract<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
+            f"{cpp_future}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        raise NotImplementedError("CompleterType is not supported in ANI yet.")
+
+
+class FutureTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: FutureType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_OBJECT
+        self.ets_type = EtsClassType("std.core.Promise")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"Promise<{item_sts_type}>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        raise NotImplementedError("FutureType is not supported in ANI yet.")
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        ani_completer = f"{ani_after}_ani_completer"
+        cpp_handler_t = f"{ani_after}_cpp_handler_t"
+        with target.indented(
+            f"struct {cpp_handler_t} : ::taihe::dref_guard {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
+            )
+            with target.indented(
+                f"void handle_result(::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> cpp_result) const {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"::taihe::env_guard guard;",
+                    f"ani_env *env = guard.get_env();",
+                )
+                with target.indented(
+                    f"if (cpp_result) {{",
+                    f"}}",
+                ):
+                    item_ty_ani_info.into_ani_boxed(
+                        target,
+                        "env",
+                        "cpp_result.value()",
+                        "ani_result",
+                    )
+                    target.writelns(
+                        f"env->PromiseResolver_Resolve(reinterpret_cast<ani_resolver>(this->ref), ani_result);",
+                    )
+                with target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"ani_error ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"env->PromiseResolver_Reject(reinterpret_cast<ani_resolver>(this->ref), ani_err);",
+                    )
+        target.writelns(
+            f"ani_object {ani_after} = {{}};",
+            f"ani_resolver {ani_completer} = {{}};",
+            f"{env}->Promise_New(&{ani_completer}, &{ani_after});",
+            f"{cpp_value}.on_complete<{cpp_handler_t}>({env}, reinterpret_cast<ani_ref>({ani_completer}));",
+        )
 
 
 class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
@@ -2839,6 +2976,14 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
     @override
     def visit_vector_type(self, t: VectorType) -> TypeAniInfo:
         return VectorTypeAniInfo(self.am, t)
+
+    @override
+    def visit_completer_type(self, t: CompleterType) -> TypeAniInfo:
+        return CompleterTypeAniInfo(self.am, t)
+
+    @override
+    def visit_future_type(self, t: FutureType) -> TypeAniInfo:
+        return FutureTypeAniInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAniInfo:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,21 +23,12 @@
 
 struct DataBlockHead;
 
-// IdMapItem
-// Represents an ID mapping item containing an ID and a vtable pointer.
-//
-// # Members
-// - `id`: A constant pointer representing the interface ID.
-// - `vtbl_ptr`: A pointer to the virtual table associated with the ID.
-struct IdMapItem {
-    void const *id;
-    void const *vtbl_ptr;
-};
+typedef void const *InterfaceId;
 
 typedef void free_func_t(struct DataBlockHead *);
 typedef size_t hash_func_t(struct DataBlockHead *);
 typedef bool same_func_t(struct DataBlockHead *, struct DataBlockHead *);
-typedef void const *qiid_func_t(void const *id);
+typedef void const *qiid_func_t(InterfaceId id);
 
 // TypeInfo
 // Represents metadata information for a type, including version, length, and
@@ -47,8 +38,7 @@ typedef void const *qiid_func_t(void const *id);
 // - `free_fptr`: Pointer to function that frees the data block.
 // - `hash_fptr`: Pointer to function that computes the hash of a data block.
 // - `same_fptr`: Pointer to function that compares equality of two data blocks.
-// - `qiid_fptr`: Pointer to function that queries the interface id;
-//   mapping.
+// - `qiid_fptr`: Pointer to function that queries the interface id mapping.
 struct TypeInfo {
     free_func_t *free_fptr;
     hash_func_t *hash_fptr;

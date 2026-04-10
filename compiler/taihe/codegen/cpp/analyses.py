@@ -17,9 +17,7 @@ from abc import ABC
 
 from typing_extensions import override
 
-from taihe.codegen.abi.analyses import (
-    CallbackAbiInfo,
-)
+from taihe.codegen.abi.analyses import CallbackAbiInfo
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -32,7 +30,9 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     CallbackType,
+    CompleterType,
     EnumType,
+    FutureType,
     IfaceType,
     MapType,
     NonVoidType,
@@ -320,52 +320,55 @@ class SetTypeCppInfo(TypeCppInfo):
         self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
 
 
+class CompleterTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
+        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+        self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
+        self.as_owner = f"::taihe::completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_param = f"::taihe::completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+
+
+class FutureTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: FutureType) -> None:
+        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+        self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
+        self.as_owner = f"::taihe::future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.as_param = f"::taihe::future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+
+
 class CallbackTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        callback_abi_info = CallbackAbiInfo.get(am, t)
+        self.decl_headers = ["taihe/callback.hpp"]
+        self.defn_headers = ["taihe/callback.hpp"]
+        self.impl_headers = ["taihe/callback.hpp"]
         if isinstance(return_ty := t.ref.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(am, return_ty)
-            return_ty_decl_headers = return_ty_cpp_info.decl_headers
-            return_ty_impl_headers = return_ty_cpp_info.impl_headers
-            return_ty_as_owner = return_ty_cpp_info.as_owner
+            self.decl_headers.extend(return_ty_cpp_info.decl_headers)
+            self.defn_headers.extend(return_ty_cpp_info.decl_headers)
+            self.impl_headers.extend(return_ty_cpp_info.impl_headers)
+            result_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            return_ty_decl_headers = []
-            return_ty_impl_headers = []
-            return_ty_as_owner = "void"
-        params_ty_decl_headers = []
-        params_ty_impl_headers = []
-        params_ty_as_param = []
+            result_ty_cpp_name = "void"
+        if callback_abi_info.is_noexcept:
+            return_ty_cpp_name = result_ty_cpp_name
+        else:
+            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        params_ty_cpp_name = []
         for param in t.ref.params:
             param_ty_cpp_info = TypeCppInfo.get(am, param.ty)
-            params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
-            params_ty_impl_headers.extend(param_ty_cpp_info.impl_headers)
+            self.decl_headers.extend(param_ty_cpp_info.decl_headers)
+            self.defn_headers.extend(param_ty_cpp_info.decl_headers)
+            self.impl_headers.extend(param_ty_cpp_info.impl_headers)
             param_ty_cpp_name = param_ty_cpp_info.as_param
-            param_name = param.name
-            params_ty_as_param.append(f"{param_ty_cpp_name} {param_name}")
-        params_fmt = ", ".join(params_ty_as_param)
-        self.decl_headers = [
-            "taihe/callback.hpp",
-            *return_ty_decl_headers,
-            *params_ty_decl_headers,
-        ]
-        self.defn_headers = [
-            "taihe/callback.hpp",
-            *return_ty_decl_headers,
-            *params_ty_decl_headers,
-        ]
-        self.impl_headers = [
-            "taihe/callback.hpp",
-            *return_ty_impl_headers,
-            *params_ty_impl_headers,
-        ]
-        cb_abi_info = CallbackAbiInfo.get(am, t)
-        if cb_abi_info.is_noexcept:
-            signature = f"{return_ty_as_owner}({params_fmt})"
-        else:
-            signature = (
-                f"::taihe::expected<{return_ty_as_owner}, ::taihe::error>({params_fmt})"
-            )
-        self.as_owner = f"::taihe::callback<{signature}>"
-        self.as_param = f"::taihe::callback_view<{signature}>"
+            params_ty_cpp_name.append(f"{param_ty_cpp_name} {param.name}")
+        params_fmt = ", ".join(params_ty_cpp_name)
+        self.as_owner = f"::taihe::callback<{return_ty_cpp_name}({params_fmt})>"
+        self.as_param = f"::taihe::callback_view<{return_ty_cpp_name}({params_fmt})>"
 
 
 class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
@@ -423,6 +426,14 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeCppInfo:
         return SetTypeCppInfo(self.am, t)
+
+    @override
+    def visit_completer_type(self, t: CompleterType) -> TypeCppInfo:
+        return CompleterTypeCppInfo(self.am, t)
+
+    @override
+    def visit_future_type(self, t: FutureType) -> TypeCppInfo:
+        return FutureTypeCppInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeCppInfo:

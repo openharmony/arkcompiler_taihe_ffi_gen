@@ -20,7 +20,6 @@ from taihe.codegen.abi.analyses import (
     IfaceAbiInfo,
     IfaceMethodAbiInfo,
     StructAbiInfo,
-    TypeAbiInfo,
     UnionAbiInfo,
 )
 from taihe.codegen.abi.writer import CHeaderWriter
@@ -191,16 +190,12 @@ class CppEnumDefnGenerator:
                 f"struct {enum_cpp_info.name} {{",
                 f"}};",
             ):
-                self.target.writelns(
-                    f"public:",
-                )
+                self.target.write_label(f"public:")
                 self.gen_enum_key_type()
                 self.gen_enum_basic_methods()
                 self.gen_enum_key_utils()
                 self.gen_enum_value_utils()
-                self.target.writelns(
-                    f"private:",
-                )
+                self.target.write_label(f"private:")
                 self.gen_enum_properties()
 
     def gen_enum_key_type(self):
@@ -449,17 +444,13 @@ class CppUnionDefnGenerator:
                 f"struct {union_cpp_info.name} {{",
                 f"}};",
             ):
-                self.target.writelns(
-                    f"public:",
-                )
+                self.target.write_label(f"public:")
                 self.gen_union_tag_type()
                 self.gen_union_storage_type()
                 self.gen_union_basic_methods()
                 self.gen_union_utils()
                 self.gen_union_named_utils()
-                self.target.writelns(
-                    f"private:",
-                )
+                self.target.write_label(f"private:")
                 self.gen_union_properties()
 
     def gen_union_tag_type(self):
@@ -510,17 +501,13 @@ class CppUnionDefnGenerator:
             with self.target.indented(
                 f"switch (m_tag) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
-                    with self.target.indented(
-                        f"case tag_t::{field.name}: {{",
-                        f"}}",
-                    ):
-                        self.target.writelns(
-                            f"new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
-                            f"break;",
-                        )
+                    self.target.write_label(f"case tag_t::{field.name}:")
+                    self.target.writelns(
+                        f"new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
+                        f"break;",
+                    )
         # move constructor
         with self.target.indented(
             f"{union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
@@ -529,17 +516,13 @@ class CppUnionDefnGenerator:
             with self.target.indented(
                 f"switch (m_tag) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
-                    with self.target.indented(
-                        f"case tag_t::{field.name}: {{",
-                        f"}}",
-                    ):
-                        self.target.writelns(
-                            f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
-                            f"break;",
-                        )
+                    self.target.write_label(f"case tag_t::{field.name}:")
+                    self.target.writelns(
+                        f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
+                        f"break;",
+                    )
         # destructor
         with self.target.indented(
             f"~{union_cpp_info.name}() {{",
@@ -548,17 +531,13 @@ class CppUnionDefnGenerator:
             with self.target.indented(
                 f"switch (m_tag) {{",
                 f"}}",
-                indent="",
             ):
                 for field in self.union.fields:
-                    with self.target.indented(
-                        f"case tag_t::{field.name}: {{",
-                        f"}}",
-                    ):
-                        self.target.writelns(
-                            f"::std::destroy_at(&m_data.{field.name});",
-                            f"break;",
-                        )
+                    self.target.write_label(f"case tag_t::{field.name}:")
+                    self.target.writelns(
+                        f"::std::destroy_at(&m_data.{field.name});",
+                        f"break;",
+                    )
         # copy assignment
         with self.target.indented(
             f"{union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
@@ -714,16 +693,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
+                        )
             # rvalue reference visitor
             self.target.writelns(
                 f"template<typename ReturnType, typename Visitor>",
@@ -735,16 +710,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, std::move(m_data).{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return visitor(::taihe::static_tag<tag_t::{field.name}>, std::move(m_data).{field.name});",
+                        )
 
     def gen_union_named_utils(self):
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
@@ -821,16 +792,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return matcher.case_{field.name}(m_data.{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return matcher.case_{field.name}(m_data.{field.name});",
+                        )
             # rvalue reference matcher
             self.target.writelns(
                 f"template<typename ReturnType, typename Matcher>",
@@ -842,16 +809,12 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (m_tag) {{",
                     f"}}",
-                    indent="",
                 ):
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"return matcher.case_{field.name}(std::move(m_data).{field.name});",
-                            )
+                        self.target.write_label(f"case tag_t::{field.name}:")
+                        self.target.writelns(
+                            f"return matcher.case_{field.name}(std::move(m_data).{field.name});",
+                        )
 
     def gen_union_same(self):
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
@@ -886,17 +849,16 @@ class CppUnionDefnGenerator:
                 with self.target.indented(
                     f"switch (val.get_tag()) {{",
                     f"}}",
-                    indent="",
                 ):
+                    self.target.writelns(
+                        f"::std::size_t seed;",
+                    )
                     for field in self.union.fields:
-                        with self.target.indented(
-                            f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
-                            f"}}",
-                        ):
-                            self.target.writelns(
-                                f"::std::size_t seed = ::std::hash<{union_abi_info.tag_type}>()(static_cast<{union_abi_info.tag_type}>({union_cpp_info.full_name}::tag_t::{field.name}));",
-                                f"return seed ^ (0x9e3779b9 + (seed << 6) + (seed >> 2) + ::std::hash<{TypeCppInfo.get(self.am, field.ty).as_owner}>()(val.get_{field.name}_ref()));",
-                            )
+                        self.target.write_label(f"case {union_cpp_info.full_name}::tag_t::{field.name}:")  # fmt: skip
+                        self.target.writelns(
+                            f"seed = ::std::hash<{union_abi_info.tag_type}>()(static_cast<{union_abi_info.tag_type}>({union_cpp_info.full_name}::tag_t::{field.name}));",
+                            f"return seed ^ (0x9e3779b9 + (seed << 6) + (seed >> 2) + ::std::hash<{TypeCppInfo.get(self.am, field.ty).as_owner}>()(val.get_{field.name}_ref()));",
+                        )
 
 
 class CppUnionImplGenerator:
@@ -1109,8 +1071,7 @@ class CppIfaceDeclGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
-            self.target.add_include("taihe/object.hpp")
-            self.target.add_include("taihe/expected.hpp")
+            self.target.add_include("taihe/common.hpp")
             self.target.add_include(iface_abi_info.decl_header)
             with self.target.indented(
                 f"namespace {iface_cpp_info.weakspace} {{",
@@ -1181,6 +1142,7 @@ class CppIfaceDefnGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
+            self.target.add_include("taihe/object.hpp")
             self.target.add_include(iface_cpp_info.decl_header)
             self.target.add_include(iface_abi_info.defn_header)
             for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
@@ -1217,10 +1179,9 @@ class CppIfaceDefnGenerator:
                 self.gen_iface_view_dynamic_cast()
                 self.gen_iface_view_static_cast()
                 self.gen_iface_virtual_type_decl()
-                self.gen_iface_methods_impl_decl()
                 self.gen_iface_ftbl_decl()
                 self.gen_iface_vtbl_impl()
-                self.gen_iface_idmap_impl()
+                self.gen_iface_qiid_impl()
                 self.gen_iface_infos()
                 self.gen_iface_utils()
 
@@ -1292,14 +1253,6 @@ class CppIfaceDefnGenerator:
             f"struct virtual_type;",
         )
 
-    def gen_iface_methods_impl_decl(self):
-        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
-        self.target.writelns(
-            f"template<typename Impl>",
-            f"struct methods_impl;",
-        )
-
     def gen_iface_ftbl_decl(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
@@ -1324,21 +1277,28 @@ class CppIfaceDefnGenerator:
                     f".{ancestor_slot.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
                 )
 
-    def gen_iface_idmap_impl(self):
+    def gen_iface_qiid_impl(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target.writelns(
             f"template<typename Impl>",
         )
         with self.target.indented(
-            f"static constexpr struct IdMapItem idmap_impl[{len(iface_abi_info.ancestor_infos)}] = {{",
+            f"static constexpr void const *qiid_impl(InterfaceId id) {{",
             f"}};",
         ):
             for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
-                self.target.writelns(
-                    f"{{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{ancestor_info.slots[0].ftbl_ptr}}},",
-                )
+                with self.target.indented(
+                    f"if (id == {ancestor_abi_info.iid}) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"return &vtbl_impl<Impl>.{ancestor_info.slots[0].ftbl_ptr};",
+                    )
+            self.target.writelns(
+                f"return nullptr;",
+            )
 
     def gen_iface_infos(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1564,9 +1524,9 @@ class CppIfaceImplGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
+            self.target.add_include("taihe/invoke.hpp")
             self.target.add_include(iface_cpp_info.defn_header)
             self.target.add_include(iface_abi_info.impl_header)
-            self.target.add_include("taihe/invoke.hpp")
             for method in self.iface.methods:
                 for param in method.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -1575,7 +1535,6 @@ class CppIfaceImplGenerator:
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_cpp_info.defn_headers)
             self.gen_iface_virtual_type_impl()
-            self.gen_iface_methods_impl_impl()
             self.gen_iface_ftbl_impl()
             for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
                 if ancestor is self.iface:
@@ -1603,17 +1562,19 @@ class CppIfaceImplGenerator:
     def gen_iface_virtual_type_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        params_cpp = []
         args_tmpl = []
+        params_cpp = []
         args_call = []
         args_call.append(f"&{method_abi_info.wrap_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_cpp_name = return_ty_cpp_info.as_owner
+            result_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            return_ty_cpp_name = "void"
-        if not method_abi_info.is_noexcept:
-            args_tmpl.append(method_abi_info.ret_type_name)
+            result_ty_cpp_name = "void"
+        if method_abi_info.is_noexcept:
+            return_ty_cpp_name = result_ty_cpp_name
+        else:
+            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         args_tmpl.append(return_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         iface_ty_cpp_name = iface_cpp_info.as_param
@@ -1622,99 +1583,43 @@ class CppIfaceImplGenerator:
         for param in method.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_cpp_name = param_ty_cpp_info.as_param
-            param_name = param.name
-            params_cpp.append(f"{param_ty_cpp_name} {param_name}")
             args_tmpl.append(param_ty_cpp_name)
-            args_call.append(f"::std::forward<{param_ty_cpp_name}>({param_name})")
+            params_cpp.append(f"{param_ty_cpp_name} {param.name}")
+            args_call.append(f"::std::forward<{param_ty_cpp_name}>({param.name})")
+        args_tmpl_str = ", ".join(args_tmpl)
         params_cpp_str = ", ".join(params_cpp)
-        args_tmpl_str = ", ".join(args_tmpl)
         args_call_str = ", ".join(args_call)
-        return_ty_expected_name = (
-            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-        )
-
-        if method_abi_info.is_noexcept:
-            return_name = return_ty_cpp_name
-            call_abi_func_name = "::taihe::call_abi_func"
-        else:
-            return_name = return_ty_expected_name
-            call_abi_func_name = "::taihe::checked::call_abi_func"
-
         with self.target.indented(
-            f"{return_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return {call_abi_func_name}<{args_tmpl_str}>({args_call_str});",
+                f"return ::taihe::call_abi_func<{args_tmpl_str}>({args_call_str});",
             )
 
-    def gen_iface_methods_impl_impl(self):
-        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
-        self.target.writelns(
-            f"template<typename Impl>",
-        )
-        with self.target.indented(
-            f"struct {iface_cpp_info.full_weak_name}::methods_impl {{",
-            f"}};",
-        ):
-            for method in self.iface.methods:
-                self.gen_iface_methods_impl_method(method)
-
-    def gen_iface_methods_impl_method(self, method: IfaceMethodDecl):
-        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+    def get_iface_ftbl_impl_abi_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-        out_param_name = "_taihe_out"
-        params_abi = []
-        args_tmpl = []
-        args_call = []
-        if not method_abi_info.is_noexcept:
-            args_call.append(out_param_name)
-            params_abi.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
-            args_tmpl.append(method_abi_info.ret_type_name)
-
-        args_call.append(f"&Impl::{method_cpp_info.impl_name}")
+        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        args_tmpl = ["Impl", f"&Impl::{method_cpp_info.impl_name}"]
         if isinstance(return_ty := method.return_ty, NonVoidType):
-            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_abi_name = return_ty_abi_info.as_owner
-            return_ty_cpp_name = return_ty_cpp_info.as_owner
+            result_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            return_ty_abi_name = "void"
-            return_ty_cpp_name = "void"
-        args_tmpl.append(return_ty_cpp_name)
-        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        iface_abi_name = iface_abi_info.as_param
-        iface_name = "tobj"
-        params_abi.append(f"{iface_abi_name} {iface_name}")
-        args_call.append(f"*::taihe::cast_data_ptr<Impl>({iface_name}.data_ptr)")
-        for param in method.params:
-            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-            param_ty_abi_name = param_ty_abi_info.as_param
-            param_ty_cpp_name = param_ty_cpp_info.as_param
-            param_name = param.name
-            params_abi.append(f"{param_ty_abi_name} {param_name}")
-            args_tmpl.append(param_ty_cpp_name)
-            args_call.append(param_name)
-        params_abi_str = ", ".join(params_abi)
-        args_call_str = ", ".join(args_call)
-        args_tmpl_str = ", ".join(args_tmpl)
-
+            result_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_name = return_ty_abi_name
-            call_cpp_method_name = "::taihe::call_cpp_method"
+            return_ty_cpp_name = result_ty_cpp_name
         else:
-            return_name = "int32_t"
-            call_cpp_method_name = "::taihe::checked::call_cpp_method"
-
-        with self.target.indented(
-            f"static {return_name} {method.name}({params_abi_str}) {{",
-            f"}}",
-        ):
-            self.target.writelns(
-                f"return {call_cpp_method_name}<{args_tmpl_str}>({args_call_str});",
-            )
+            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        args_tmpl.append(return_ty_cpp_name)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
+        iface_cpp_name = iface_cpp_info.as_param
+        args_tmpl.append(iface_cpp_name)
+        for param in method.params:
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            param_ty_cpp_name = param_ty_cpp_info.as_param
+            args_tmpl.append(param_ty_cpp_name)
+        args_tmpl_str = ", ".join(args_tmpl)
+        return f"&::taihe::method_calling_convention<{args_tmpl_str}>::abi_func"
 
     def gen_iface_ftbl_impl(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1735,5 +1640,5 @@ class CppIfaceImplGenerator:
             ):
                 for method in self.iface.methods:
                     self.target.writelns(
-                        f".{method.name} = &methods_impl<Impl>::{method.name},",
+                        f".{method.name} = {self.get_iface_ftbl_impl_abi_method(method)},",
                     )

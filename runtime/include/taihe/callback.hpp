@@ -31,143 +31,22 @@ template<typename Signature>
 struct callback;
 
 template<typename Return, typename... Params>
-struct callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> {
-private:
-    template<typename T = Return>
-    union cb_out_impl {
-        as_abi_t<T> data;
-        struct TError error;
-    };
-
-    template<>
-    union cb_out_impl<void> {
-        struct TError error;
-    };
-
-    using cb_out = cb_out_impl<Return>;
-
-public:
-    static constexpr bool is_holder = false;
-
-    using vtable_type = int32_t(cb_out *_taihe_out, TCallback, as_abi_t<Params>...);
-    using view_type = callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>;
-    using holder_type = callback<::taihe::expected<Return, ::taihe::error>(Params...)>;
-
-    struct abi_type {
-        vtable_type *vtbl_ptr;
-        DataBlockHead *data_ptr;
-    } m_handle;
-
-    explicit callback_view(abi_type handle) : m_handle(handle)
-    {
-    }
-
-    operator data_view() const &
-    {
-        return data_view(this->m_handle.data_ptr);
-    }
-
-    operator data_holder() const &
-    {
-        return data_holder(tobj_dup(this->m_handle.data_ptr));
-    }
-
-public:
-    bool is_error() const &
-    {
-        return m_handle.vtbl_ptr == nullptr;
-    }
-
-    ::taihe::expected<Return, ::taihe::error> operator()(Params... params) const &
-    {
-        return ::taihe::checked::call_abi_func<cb_out, Return, callback_view, Params...>(
-            m_handle.vtbl_ptr, *this, ::std::forward<Params>(params)...);
-    }
-
-public:
-    template<typename Impl>
-    static int32_t vtbl_impl(cb_out *_taihe_out, TCallback tobj, as_abi_t<Params>... params)
-    {
-        return ::taihe::checked::call_cpp_method<cb_out, Return, Params...>(
-            _taihe_out, &Impl::operator(), *cast_data_ptr<Impl>(tobj.data_ptr), params...);
-    };
-
-    template<typename Impl>
-    static constexpr struct IdMapItem idmap_impl[0] = {};
-};
-
-template<typename Return, typename... Params>
-struct callback<::taihe::expected<Return, ::taihe::error>(Params...)>
-    : callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> {
-    static constexpr bool is_holder = true;
-
-    using typename callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>::abi_type;
-
-    explicit callback(abi_type handle) : callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>(handle)
-    {
-    }
-
-    ~callback()
-    {
-        tobj_drop(this->m_handle.data_ptr);
-    }
-
-    callback &operator=(callback other)
-    {
-        std::swap(this->m_handle, other.m_handle);
-        return *this;
-    }
-
-    callback(callback<::taihe::expected<Return, ::taihe::error>(Params...)> &&other)
-        : callback({
-              other.m_handle.vtbl_ptr,
-              std::exchange(other.m_handle.data_ptr, nullptr),
-          })
-    {
-    }
-
-    callback(callback<::taihe::expected<Return, ::taihe::error>(Params...)> const &other)
-        : callback({
-              other.m_handle.vtbl_ptr,
-              tobj_dup(other.m_handle.data_ptr),
-          })
-    {
-    }
-
-    callback(callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> const &other)
-        : callback({
-              other.m_handle.vtbl_ptr,
-              tobj_dup(other.m_handle.data_ptr),
-          })
-    {
-    }
-
-    operator data_view() const &
-    {
-        return data_view(this->m_handle.data_ptr);
-    }
-
-    operator data_holder() const &
-    {
-        return data_holder(tobj_dup(this->m_handle.data_ptr));
-    }
-
-    operator data_holder() &&
-    {
-        return data_holder(std::exchange(this->m_handle.data_ptr, nullptr));
-    }
-};
-
-template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
     static constexpr bool is_holder = false;
 
-    using vtable_type = as_abi_t<Return>(TCallback, as_abi_t<Params>...);
+    struct ftable_type {
+        as_abi_func_t<Return, callback_view<Return(Params...)>, Params...> invoke;
+    };
+
+    struct vtable_type {
+        struct ftable_type const *ftbl_ptr_0;
+    };
+
     using view_type = callback_view<Return(Params...)>;
     using holder_type = callback<Return(Params...)>;
 
     struct abi_type {
-        vtable_type *vtbl_ptr;
+        vtable_type const *vtbl_ptr;
         DataBlockHead *data_ptr;
     } m_handle;
 
@@ -193,19 +72,27 @@ public:
 
     Return operator()(Params... params) const &
     {
-        return call_abi_func<Return, callback_view, Params...>(m_handle.vtbl_ptr, *this,
-                                                               ::std::forward<Params>(params)...);
+        return call_abi_func<Return, callback_view<Return(Params...)>, Params...>(
+            m_handle.vtbl_ptr->ftbl_ptr_0->invoke, *this, std::forward<Params>(params)...);
     }
 
 public:
     template<typename Impl>
-    static as_abi_t<Return> vtbl_impl(TCallback tobj, as_abi_t<Params>... params)
-    {
-        return call_cpp_method<Return, Params...>(&Impl::operator(), *cast_data_ptr<Impl>(tobj.data_ptr), params...);
+    static constexpr ftable_type ftbl_impl = {
+        .invoke = &taihe::method_calling_convention<Impl, &Impl::operator(), Return, callback_view<Return(Params...)>,
+                                                    Params...>::abi_func,
     };
 
     template<typename Impl>
-    static constexpr struct IdMapItem idmap_impl[0] = {};
+    static constexpr vtable_type vtbl_impl = {
+        .ftbl_ptr_0 = &ftbl_impl<Impl>,
+    };
+
+    template<typename Impl>
+    static constexpr void const *qiid_impl([[maybe_unused]] InterfaceId id)
+    {
+        return nullptr;
+    }
 };
 
 template<typename Return, typename... Params>
@@ -270,63 +157,33 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
 };
 
 template<typename Return, typename... Params>
-struct as_abi<::taihe::callback_view<Return(Params...)>> {
+struct as_abi<callback_view<Return(Params...)>> {
     using type = TCallback;
 };
 
 template<typename Return, typename... Params>
-struct as_abi<::taihe::callback<Return(Params...)>> {
+struct as_abi<callback<Return(Params...)>> {
     using type = TCallback;
 };
 
 template<typename Return, typename... Params>
-struct as_param<::taihe::callback<Return(Params...)>> {
-    using type = ::taihe::callback_view<Return(Params...)>;
+struct as_param<callback<Return(Params...)>> {
+    using type = callback_view<Return(Params...)>;
 };
 
 template<typename Return, typename... Params>
-inline bool operator==(::taihe::callback_view<Return(Params...)> lhs, ::taihe::callback_view<Return(Params...)> rhs)
-{
-    return data_view(lhs) == data_view(rhs);
-}
-
-template<typename Return, typename... Params>
-struct as_abi<::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>> {
-    using type = TCallback;
-};
-
-template<typename Return, typename... Params>
-struct as_abi<::taihe::callback<::taihe::expected<Return, ::taihe::error>(Params...)>> {
-    using type = TCallback;
-};
-
-template<typename Return, typename... Params>
-struct as_param<::taihe::callback<::taihe::expected<Return, ::taihe::error>(Params...)>> {
-    using type = ::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)>;
-};
-
-template<typename Return, typename... Params>
-inline bool operator==(::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> lhs,
-                       ::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> rhs)
+inline bool operator==(callback_view<Return(Params...)> lhs, callback_view<Return(Params...)> rhs)
 {
     return data_view(lhs) == data_view(rhs);
 }
 }  // namespace taihe
 
 template<typename Return, typename... Params>
-struct std::hash<::taihe::callback<Return(Params...)>> {
+struct std::hash<taihe::callback<Return(Params...)>> {
     std::size_t operator()(taihe::callback_view<Return(Params...)> val) const noexcept
     {
         return std::hash<taihe::data_holder>()(val);
     }
 };
 
-template<typename Return, typename... Params>
-struct std::hash<::taihe::callback<::taihe::expected<Return, ::taihe::error>(Params...)>> {
-    std::size_t operator()(
-        ::taihe::callback_view<::taihe::expected<Return, ::taihe::error>(Params...)> val) const noexcept
-    {
-        return std::hash<::taihe::data_holder>()(val);
-    }
-};
 #endif  // TAIHE_CALLBACK_HPP

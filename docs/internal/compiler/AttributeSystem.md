@@ -118,17 +118,17 @@ AnyAttribute
 
   path: **taihe/semantics/declarations.py**
 
-- `_ConvertAttrPass`：将 `UncheckedAttribute` 转换为 `CheckAttribute`，即调用 `try_construct` 方法，并将其存储到其所在的声明对象上。
+- `_ResolveAttributePass`：将 `UncheckedAttribute` 转换为 `CheckAttribute`，即调用 `try_construct` 方法，并将其存储到其所在的声明对象上。
 
   path: **taihe/semantics/analysis.py**
 
-- `_CheckAttrPass`：调用 `CheckedAttribute` 上的 `check_context` 方法对 `CheckedAttribute` 进行上下文检查。
+- `_CheckAttributePass`：调用 `CheckedAttribute` 上的 `check_context` 方法对 `CheckedAttribute` 进行上下文检查。
 
   path: **taihe/semantics/analysis.py**
 
 - `DiagError`：注解系统中用于报告错误的诊断类继承自 `DiagError`。
 
-  其中，和 `_ConvertAttrPass` 阶段相关的诊断类有：
+  其中，和 `_ResolveAttributePass` 阶段相关的诊断类有：
   - `AttrNotExistError`：该名称的注解不存在或未注册
   - `AttrArgOrderError`：注解参数顺序错误
   - `AttrArgRedefError`：注解参数重复定义
@@ -136,7 +136,7 @@ AnyAttribute
   - `AttrArgUnrequiredError`：注解参数过多
   - `AttrArgTypeError`：注解参数类型错误
 
-  和 `_CheckAttrPass` 阶段相关的诊断类包括：
+  和 `_CheckAttributePass` 阶段相关的诊断类包括：
   - `AttrConflictError`：该注解与其他注解冲突
   - `AttrTargetError`：该注解不支持当前声明类型
 
@@ -147,9 +147,9 @@ AnyAttribute
 1. 在 `CompilerInstance` 的初始化阶段创建 `AttributeRegistry`；
 2. 在根据 `BackendConfig` 以此构造相应语言后端的同时，调用 `AttributeRegistry` 上的 `register` 方法，注册该语言后端支持的全部注解；
 3. 在语法解析阶段，将 AST 上的注解节点转换为 `UncheckedAttribute`, 并记录在相应的父节点上；
-4. 在语义分析阶段：
-   1. `_ConvertAttrPass` 阶段，调用 `AttributeRegistry` 的 `attach` 方法，将 `UncheckedAttribute` 转换为 `CheckedAttribute`，并存储到其所在的声明对象上；
-   2. `_CheckAttrPass` 阶段，调用每个 `CheckedAttribute` 上的 `check_context` 方法对 `CheckedAttribute` 进行上下文检查；
+4. 在语义解析阶段：
+   1. `_ResolveAttributePass` 阶段，调用 `AttributeRegistry` 的 `attach` 方法，将 `UncheckedAttribute` 转换为 `CheckedAttribute`，并存储到其所在的声明对象上；
+   2. `_CheckAttributePass` 阶段，调用每个 `CheckedAttribute` 上的 `check_context` 方法对 `CheckedAttribute` 进行上下文检查；
 5. 在相应语言后端自己的语义分析和代码生成逻辑中，使用对应的具体注解类的 `get` 方法获取注解。
 
 ## 如何为新语言后端添加注解

@@ -92,7 +92,7 @@ class BaseWriter:
     def newline(self, _show_debug: bool = True):
         """Writes a newline character."""
         if _show_debug:
-            self._write_debug(_getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))
 
         self._out.write("\n")
 
@@ -103,15 +103,13 @@ class BaseWriter:
             line: The line to write (must not contain newlines)
         """
         if _show_debug:
-            self._write_debug(_getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))
 
         assert "\n" not in line, "use write_block to write multi-line text block"
-
         # don't write indentation for empty lines
         if line:
             self._out.write("".join(self._current_indent))
             self._out.write(line)
-
         self._out.write("\n")
 
     def writelns(self, *lines: str, _show_debug: bool = True):
@@ -121,7 +119,7 @@ class BaseWriter:
             *lines: One or more lines to write
         """
         if _show_debug:
-            self._write_debug(_getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))
 
         for line in lines:
             self.writeln(line, _show_debug=False)
@@ -133,7 +131,7 @@ class BaseWriter:
             text_block: The block of text to write
         """
         if _show_debug:
-            self._write_debug(_getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))
 
         for line in text_block.splitlines():
             self.writeln(line, _show_debug=False)
@@ -148,7 +146,7 @@ class BaseWriter:
             comment: The comment text to write. Can be multi-line.
         """
         if _show_debug:
-            self._write_debug(_getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))
 
         for line in comment.splitlines():
             self.writeln(self._comment_prefix + line, _show_debug=False)
@@ -161,7 +159,7 @@ class BaseWriter:
         _show_debug: bool = True,
     ) -> Iterator[Self]:
         if _show_debug:
-            self._write_debug(_getframe(2))  # type: ignore
+            self._write_debug(_getframe(2))
 
         self._indent_stack.append(self._current_indent)
         self._current_indent = indent
@@ -178,16 +176,23 @@ class BaseWriter:
         _show_debug: bool = True,
     ) -> Iterator[Self]:
         if _show_debug:
-            self._write_debug(_getframe(2))  # type: ignore
+            self._write_debug(_getframe(2))
 
         if indent is None:
             indent = self._default_indent
-        self._indent_stack.append(self._current_indent)
-        self._current_indent = (*self._current_indent, indent)
-        try:
-            yield self
-        finally:
-            self._current_indent = self._indent_stack.pop()
+        new_indent = (*self._current_indent, indent)
+        with self.set_indent(new_indent, _show_debug=False) as writer:
+            yield writer
+
+    @contextmanager
+    def dec_indent(self, *, _show_debug: bool = True) -> Iterator[Self]:
+        if _show_debug:
+            self._write_debug(_getframe(2))
+
+        assert self._current_indent, "cannot decrease indentation level below 0"
+        new_indent = self._current_indent[:-1]
+        with self.set_indent(new_indent, _show_debug=False) as writer:
+            yield writer
 
     @contextmanager
     def indented(
@@ -209,16 +214,26 @@ class BaseWriter:
             A context manager that yields this BaseWriter
         """
         if _show_debug:
-            self._write_debug(_getframe(2))  # type: ignore
+            self._write_debug(_getframe(2))
 
         if prologue is not None:
             self.writeln(prologue, _show_debug=False)
-
-        with self.inc_indent(indent, _show_debug=False):
-            yield self
-
+        with self.inc_indent(indent, _show_debug=False) as writer:
+            yield writer
         if epilogue is not None:
             self.writeln(epilogue, _show_debug=False)
+
+    def write_label(self, line: str, *, _show_debug: bool = True):
+        """Writes a label line, which reduces indentation by one level.
+
+        Args:
+            line: The label text to write (must not contain newlines)
+        """
+        if _show_debug:
+            self._write_debug(_getframe(1))
+
+        with self.dec_indent(_show_debug=False) as writer:
+            writer.writeln(line, _show_debug=False)
 
     def _write_debug(self, f: FrameType):
         if self._debug_level == DebugLevel.NONE:

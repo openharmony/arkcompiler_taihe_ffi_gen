@@ -1232,7 +1232,7 @@ class NapiCodeGenerator:
                 ):
                     pkg_napi_target.writelns(
                         f"::taihe::error {result_error} = {result_expected}.error();",
-                        f"napi_throw(env, ::taihe::into_napi_error({result_error}));",
+                        f"napi_throw(env, ::taihe::into_napi_error(env, {result_error}));",
                         f"return nullptr;",
                     )
 
@@ -1505,7 +1505,7 @@ class NapiCodeGenerator:
                 ):
                     pkg_napi_target.writelns(
                         f"::taihe::error {result_error} = {result_expected}.error();",
-                        f"napi_throw(env, ::taihe::into_napi_error({result_error}));",
+                        f"napi_throw(env, ::taihe::into_napi_error(env, {result_error}));",
                         f"return nullptr;",
                     )
         else:
@@ -2073,7 +2073,7 @@ class NapiCodeGenerator:
                         iface_napi_impl_target.writelns(
                             f"napi_value exception = nullptr;",
                             f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                            f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(exception));",
+                            f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
                         )
                     with iface_napi_impl_target.indented(
                         f"else {{",
@@ -2175,7 +2175,7 @@ class NapiCodeGenerator:
                                 iface_napi_impl_target.writelns(
                                     f"napi_value exception = nullptr;",
                                     f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                                    f"this->cpp_result = ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(exception));",
+                                    f"this->cpp_result = ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
                                 )
                             with iface_napi_impl_target.indented(
                                 f"else {{",
@@ -2384,7 +2384,7 @@ class NapiCodeGenerator:
                 ):
                     pkg_napi_target.writelns(
                         f"::taihe::error {result_error} = {result_expected}.error();",
-                        f"napi_throw(env, ::taihe::into_napi_error({result_error}));",
+                        f"napi_throw(env, ::taihe::into_napi_error(env, {result_error}));",
                         f"return nullptr;",
                     )
         else:
@@ -2708,11 +2708,12 @@ class NapiCodeGenerator:
             with union_napi_impl_target.indented(
                 f"switch (cpp_value.get_tag()) {{",
                 f"}}",
-                indent="",
             ):
                 for field in union.fields:
+                    tag = f"{union_cpp_info.full_name}::tag_t::{field.name}"
+                    union_napi_impl_target.write_label(f"case {tag}:")
                     with union_napi_impl_target.indented(
-                        f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
+                        f"{{",
                         f"}}",
                     ):
                         type_napi_info = TypeNapiInfo.get(self.am, field.ty)
