@@ -86,7 +86,7 @@ bar->process(data);
 
 1.  **对象创建 (`make_holder`)**：（需结合 `runtime/include/taihe/object.hpp`）
 
-    1. `taihe::make_holder<BarImpl, IBar>()` 会调用 `taihe::impl_holder<BarImpl, IBar>` 的静态工厂方法 `make()`。这会使得在编译期生成一个 `rtti` 编译期常量，其中包含了 `BarImpl` 的类型信息，如版本信息、析构函数、Interface ID Map（从所有实现的接口 ID 到相应虚表指针的映射关系）等。
+    1. `taihe::make_holder<BarImpl, IBar>()` 会调用 `taihe::impl_holder<BarImpl, IBar>` 的静态工厂方法 `make()`。这会使得在编译期生成一个 `rtti` 编译期常量，其中包含了 `BarImpl` 的类型信息，如版本信息、析构函数、接口 ID 查询函数（根据接口 ID 查找对应的虚表指针）等。
     2. 接下来，`make()` 方法会在堆上申请内存，创建一个 `taihe::data_block<BarImpl>` 对象，该对象内部同时包含 `DataBlockHead` 数据和 `BarImpl` 的实例。`BarImpl` 的构造函数会被调用。
     3. 接下来会调用 `tobj_init` 函数来初始化 `DataBlockHead`，这会将对象的引用计数设置为 1，并将 `rtti` 的地址存入 `DataBlockHead` 的 `rtti_ptr` 中。
     4. `taihe::impl_holder<BarImpl, IBar>` 会持有指向该 `taihe::data_block<BarImpl>` 对象的指针（`data_ptr`）。
@@ -95,11 +95,11 @@ bar->process(data);
 2.  **方法调用 (`bar->process`)**：
 
     1. C++ 代码 `bar->process(data)` 会调用 `weak::IBar::virtual_type` 中定义的 `process` 方法。
-    2. 这个 C++ 包装方法通过 `into_abi` 将 C++ 类型的 `data` 转换为 ABI 类型，然后调用 ABI 层的辅助函数 `my_package_IBar_process_f`。
-    3. `my_package_IBar_process_f` 通过 `bar` 的 `vtbl_ptr` 取得 `ftbl_ptr_0`（`IBar` 的函数表），并调用其中的 `process` 函数指针。
-    4. 这个函数指针指向 `weak::IBar::methods_impl<BarImpl>::process` 这个静态模板方法，该模板方法是之前在创建 `taihe::impl_holder<BarImpl, IBar>` 时自动实例化出来，并注册到虚函数表中的。
-    5. `methods_impl<BarImpl>::process` 是连接 ABI 和 C++ 实现的最后一环。它接收 ABI 类型的参数并通过 `taihe::from_abi` 转换回 C++ 类型，使用 `taihe::cast_data_ptr<BarImpl>` 将通用的 `data_ptr` 安全地转回 `BarImpl*` 类型，然后调用用户在 `BarImpl` 类中真正实现的 `process` 方法。
-    6. 返回值沿着相反的路径，从 `BarImpl::process` 返回的 C++ `Result` 对象，通过 `into_abi` 转换回 ABI `my_package_Result_t`，最终通过 `from_abi` 转换回调用方的 C++ `Result` 对象。
+    2. 这个 C++ 包装方法通过 `invoke.hpp` 中提供的 `taihe::call_abi_func` 模板函数来调用 ABI 层的辅助函数 `my_package_IBar_process_m`。`call_abi_func` 内部自动完成 C++ 参数到 ABI 类型的转换（`into_abi`）、ABI 函数调用以及 ABI 返回值到 C++ 类型的转换（`from_abi`）。
+    3. ABI 辅助函数 `my_package_IBar_process_m` 通过 `bar` 的 `vtbl_ptr` 取得 `ftbl_ptr_0`（`IBar` 的函数表），并调用其中的 `process` 函数指针。
+    4. 这个函数指针指向 `taihe::method_calling_convention<BarImpl, &BarImpl::process, ...>::abi_func` 这个模板静态方法，该方法是之前在创建 `taihe::impl_holder<BarImpl, IBar>` 时自动实例化出来，并注册到虚函数表中的。
+    5. `method_calling_convention::abi_func` 是连接 ABI 和 C++ 实现的最后一环。它内部通过 `taihe::from_abi` 将 ABI 类型参数转换回 C++ 类型，使用 `taihe::cast_data_ptr<BarImpl>` 将通用的 `data_ptr` 安全地转回 `BarImpl*` 类型，然后调用用户在 `BarImpl` 类中真正实现的 `process` 方法，并通过 `taihe::into_abi` 将返回值转换回 ABI 类型。
+    6. `call_abi_func` 将 ABI 返回值通过 `from_abi` 转换回调用方的 C++ `Result` 对象。
 
 3.  **析构对象**：
     1. 当 `bar` 的所有引用都被销毁时，其引用计数会减少到 0，然后通过 `DataBlockHead` 类型的 `data_ptr` 拿到其 `rtti_ptr`，从中获取到 `BarImpl` 的析构函数并调用。
@@ -701,16 +701,17 @@ struct IFoo {
     }) {}
     struct virtual_type;
     template<typename Impl>
-    struct methods_impl;
-    template<typename Impl>
     static const my_package_IFoo_ftable ftbl_impl;
     template<typename Impl>
     static constexpr my_package_IFoo_vtable vtbl_impl = {
         .ftbl_ptr_0 = &::my::package::weak::IFoo::template ftbl_impl<Impl>,
     };
     template<typename Impl>
-    static constexpr struct IdMapItem idmap_impl[1] = {
-        {&my_package_IFoo_i, &vtbl_impl<Impl>.ftbl_ptr_0},
+    static constexpr void const *qiid_impl(InterfaceId id) {
+        if (id == my_package_IFoo_i) {
+            return &vtbl_impl<Impl>.ftbl_ptr_0;
+        }
+        return nullptr;
     };
     using vtable_type = my_package_IFoo_vtable;
     using view_type = ::my::package::weak::IFoo;
@@ -778,22 +779,17 @@ template<> struct ::std::hash<::my::package::IFoo> {
 
 // File: example/generated/include/my.package.IFoo.proj.2.hpp
 #pragma once
+#include "taihe/invoke.hpp"
 #include "my.package.IFoo.proj.1.hpp"
 #include "my.package.IFoo.abi.2.h"
 struct ::my::package::weak::IFoo::virtual_type {
     void init() const& {
-        return my_package_IFoo_init_f(*reinterpret_cast<my_package_IFoo_t const*>(this));
-    }
-};
-template<typename Impl>
-struct ::my::package::weak::IFoo::methods_impl {
-    static void init(struct my_package_IFoo_t tobj) {
-        return ::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->init();
+        return ::taihe::call_abi_func<void, ::my::package::weak::IFoo>(&my_package_IFoo_init_f, *reinterpret_cast<::my::package::weak::IFoo const*>(this));
     }
 };
 template<typename Impl>
 constexpr my_package_IFoo_ftable my::package::weak::IFoo::ftbl_impl = {
-    .init = &methods_impl<Impl>::init,
+    .init = &::taihe::method_calling_convention<Impl, &Impl::init, void, ::my::package::weak::IFoo>::abi_func,
 };
 
 // File: example/generated/include/my.package.IBar.proj.0.hpp
@@ -855,8 +851,6 @@ struct IBar {
     }
     struct virtual_type;
     template<typename Impl>
-    struct methods_impl;
-    template<typename Impl>
     static const my_package_IBar_ftable ftbl_impl;
     template<typename Impl>
     static constexpr my_package_IBar_vtable vtbl_impl = {
@@ -864,10 +858,15 @@ struct IBar {
         .ftbl_ptr_1 = &::my::package::weak::IFoo::template ftbl_impl<Impl>,
     };
     template<typename Impl>
-    static constexpr struct IdMapItem idmap_impl[2] = {
-        {&my_package_IBar_i, &vtbl_impl<Impl>.ftbl_ptr_0},
-        {&my_package_IFoo_i, &vtbl_impl<Impl>.ftbl_ptr_1},
-    };
+    static constexpr void const *qiid_impl(InterfaceId id) {
+        if (id == my_package_IBar_i) {
+            return &vtbl_impl<Impl>.ftbl_ptr_0;
+        }
+        if (id == my_package_IFoo_i) {
+            return &vtbl_impl<Impl>.ftbl_ptr_1;
+        }
+        return nullptr;
+    }
     using vtable_type = my_package_IBar_vtable;
     using view_type = ::my::package::weak::IBar;
     using holder_type = ::my::package::IBar;
@@ -952,6 +951,7 @@ template<> struct ::std::hash<::my::package::IBar> {
 
 // File: example/generated/include/my.package.IBar.proj.2.hpp
 #pragma once
+#include "taihe/invoke.hpp"
 #include "my.package.IBar.proj.1.hpp"
 #include "my.package.IBar.abi.2.h"
 #include "my.package.Data.proj.1.hpp"
@@ -961,18 +961,12 @@ template<> struct ::std::hash<::my::package::IBar> {
 #include "my.package.Result.proj.2.hpp"
 struct ::my::package::weak::IBar::virtual_type {
     ::my::package::Result process(::my::package::Data const& data) const& {
-        return ::taihe::from_abi<::my::package::Result>(my_package_IBar_process_f(*reinterpret_cast<my_package_IBar_t const*>(this), ::taihe::into_abi<::my::package::Data const&>(data)));
-    }
-};
-template<typename Impl>
-struct ::my::package::weak::IBar::methods_impl {
-    static struct my_package_Result_t process(struct my_package_IBar_t tobj, struct my_package_Data_t const* data) {
-        return ::taihe::into_abi<::my::package::Result>(::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->process(::taihe::from_abi<::my::package::Data const&>(data)));
+        return ::taihe::call_abi_func<::my::package::Result, ::my::package::weak::IBar, ::my::package::Data const&>(&my_package_IBar_process_f, *reinterpret_cast<::my::package::weak::IBar const*>(this), ::std::forward<::my::package::Data const&>(data));
     }
 };
 template<typename Impl>
 constexpr my_package_IBar_ftable my::package::weak::IBar::ftbl_impl = {
-    .process = &methods_impl<Impl>::process,
+    .process = &::taihe::method_calling_convention<Impl, &Impl::process, ::my::package::Result, ::my::package::weak::IBar, ::my::package::Data const&>::abi_func,
 };
 
 // File: example/generated/include/my.package.proj.hpp
@@ -989,13 +983,14 @@ constexpr my_package_IBar_ftable my::package::weak::IBar::ftbl_impl = {
 #pragma once
 #include "my.package.proj.hpp"
 #include "taihe/common.hpp"
+#include "taihe/invoke.hpp"
 #include "my.package.abi.h"
 #include "my.package.IBar.proj.2.hpp"
 #include "my.package.Data.proj.2.hpp"
 #include "my.package.Result.proj.2.hpp"
 namespace my::package {
 inline ::my::package::Result processWithBar(::my::package::weak::IBar bar, ::my::package::Data const& data) {
-    return ::taihe::from_abi<::my::package::Result>(my_package_processWithBar_f(::taihe::into_abi<::my::package::weak::IBar>(bar), ::taihe::into_abi<::my::package::Data const&>(data)));
+    return ::taihe::call_abi_func<::my::package::Result, ::my::package::weak::IBar, ::my::package::Data const&>(&my_package_processWithBar_f, ::std::forward<::my::package::weak::IBar>(bar), ::std::forward<::my::package::Data const&>(data));
 }
 }
 ```
@@ -1006,13 +1001,14 @@ inline ::my::package::Result processWithBar(::my::package::weak::IBar bar, ::my:
 // File: example/generated/include/my.package.impl.hpp
 #pragma once
 #include "taihe/common.hpp"
+#include "taihe/invoke.hpp"
 #include "my.package.abi.h"
 #include "my.package.IBar.proj.2.hpp"
 #include "my.package.Data.proj.2.hpp"
 #include "my.package.Result.proj.2.hpp"
 #define TH_EXPORT_CPP_API_processWithBar(CPP_FUNC_IMPL) \
     struct my_package_Result_t my_package_processWithBar_f(struct my_package_IBar_t bar, struct my_package_Data_t const* data) { \
-        return ::taihe::into_abi<::my::package::Result>(CPP_FUNC_IMPL(::taihe::from_abi<::my::package::weak::IBar>(bar), ::taihe::from_abi<::my::package::Data const&>(data))); \
+        return ::taihe::function_calling_convention<&CPP_FUNC_IMPL, ::my::package::Result, ::my::package::weak::IBar, ::my::package::Data const&>::abi_func(bar, data); \
     }
 ```
 

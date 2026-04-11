@@ -26,10 +26,12 @@
 
 ## 类型注解
 
-- `@fixedarray`：将 Taihe `Array<T>` 在用户侧中投影为 `fixedarray<T>`。
+- `@fixedarray`：将 Taihe `Array<T>` 在用户侧中投影为 `FixedArray<T>`。
 
 - `@sts_type("MyType")`：将一个 `Opaque` 类型在 ArkTS 侧投影为 `MyType` 类型。如果 `MyType` 不在当前编译单元中定义，用户需要通过通过 `@!sts_inject_into_module` 注入相应的导入语句来引入 `MyType` 的定义。
 
-## 函数/方法注解
+## 函数/
 
 - `@constructor("ClassName")`：将一个全局函数在用户侧绑定设置为某个类的**命名**构造器。该注解**可以**与 `@rename` 一起使用。
+
+- `@ctor("ClassName")`：加在全局函数上，表示其在用户侧绑定的函数为某个类的构造器。该注解**不能**与 `@rename` 一起使用。
