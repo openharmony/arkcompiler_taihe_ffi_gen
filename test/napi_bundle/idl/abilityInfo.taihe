@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+interface AbilityInfo {
+    @get("bundleName") GetBundleName(): String;
+    @get("name") GetName(): String;
+    @get("label") GetLabel(): String;
+    @get("description") GetDescription(): String;
+    @get("icon") GetIcon(): String;
+    @get("labelId") GetLabelId(): i32;
+    @get("descriptionId") GetDescriptionId(): i32;
+    @get("iconId") GetIconId(): i32;
+    @get("moduleName") GetModuleName(): String;
+    @get("process") GetProcess(): String; 
+    @get("targetAbility") GetTargetAbility(): String;   
+    @get("backgroundModes") GetBackgroundModes(): i32;   
+    @get("isVisible") GetIsVisible(): bool;  
+    @get("formEnabled") GetFormEnabled(): bool; 
+    @get("permissions") GetPermissions(): Array<String>;
+    @get("deviceTypes") GetDeviceTypes(): Array<String>;
+    @get("deviceCapabilities") GetDeviceCapabilities(): Array<String>;
+    @get("readPermission") GetReadPermission(): String;  
+    @get("writePermission") GetWritePermission(): String;  
+    @get("uri") GetUri(): String;  
+    @get("enabled") GetEnabled(): bool;
+}
+function GetAbilityInfo(): AbilityInfo;
