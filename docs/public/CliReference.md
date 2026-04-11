@@ -37,7 +37,7 @@ taihec [taihe_files ...] [options ...]
 
 ### 代码生成后端
 
-代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的其他后端，生成完整的代码。
+代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的其它后端，生成完整的代码。
 
 #### 通用后端
 
@@ -110,31 +110,46 @@ taihe-tryit [mode] [test_dir] [options ...]
 
 ### 支持的用户侧语言
 
-| 语言类型 | `--user` 参数 | 说明 |
-|----------|---------------|------|
-| ArkTS    | `sts`         | 通过 ANI 桥接调用 C++ 实现 |
-| C++      | `cpp`         | C++ 消费者直接调用 C++ 实现 |
+| 语言类型  | `--user` 参数 | 说明 |
+|-----------|---------------|------|
+| C++       | `cpp`         | C++ 消费者直接调用 C++ 实现 |
+| ArkTS-STA | `sts`         | 通过 ANI 桥接调用 C++ 实现 |
+| ArkTS-DYN | `ts`          | 通过 NAPI 桥接调用 C++ 实现 |
 
 > 更多语言支持（如 Kotlin 等）将在后续版本中添加。
 
 ### 使用示例
 
-**创建新项目：**
+使用 `taihe-tryit` 进行完整的测试项目创建、代码生成、编译和运行流程如下（以 C++ 用户侧为例）：
+
+假如要在 `test/my_new_project` 目录下创建一个新的测试项目，首先运行以下命令：
 
 ```sh
-taihe-tryit create --user sts path/to/demo
+taihe-tryit create --user cpp test/my_new_project
 ```
 
-**生成代码：**
+执行上述命令后，`test/my_new_project` 目录下将会生成包括 `idl/`、`author/`、`user/` 等子目录的项目结构。用户可以在 `idl/` 目录下编写 `.taihe` 文件描述想要定义的接口。
+
+接下来，运行以下命令生成桥接代码：
 
 ```sh
-taihe-tryit generate --user sts path/to/demo
+taihe-tryit generate --user cpp test/my_new_project
 ```
 
-**编译并运行：**
+生成完成后，`test/my_new_project/generated/` 目录下将会包含根据 IDL 文件生成的 C++ 头文件和源文件，其中 `temp/` 子目录下的文件是实现模板，供开发者参考。开发者可以根据具体需要，将模板文件复制到 `author/src/` 目录下进行修改和组织。
+
+> 注意：`temp/` 目录下的文件为接口实现的**模板框架**，之所以设计为此形式而非直接生成到 `author/`，是为了让开发者完全掌控业务代码的实现，例如用户可能希望按照自己的项目结构来组织这些文件的命名、结构与位置；此外，当在 `idl/` 中修改或新增接口定义时，用户可以根据实际需要选择性地将模板文件中的新增或修改部分复制到 `author/`，而不必每次都覆盖整个 `author/` 目录，从而更好地实现增量适配和接口演进。
+
+最后，运行以下命令编译并运行测试：
 
 ```sh
-taihe-tryit test --user sts path/to/demo
+taihe-tryit test --user cpp test/my_new_project
+```
+
+需要注意的是，以上命令会先重新执行代码生成步骤（相当于先重新执行一遍 `generate` 模式）以确保生成的代码与 IDL 中的接口定义保持同步。如果用户希望手动修改生成的代码（例如添加打印日志等调试信息）且不被自动覆盖，可以运行 `build` 模式来仅编译和运行而不重新生成：
+
+```sh
+taihe-tryit build --user cpp test/my_new_project
 ```
 
 ---
@@ -142,5 +157,6 @@ taihe-tryit test --user sts path/to/demo
 ## 相关文档
 
 - [Taihe IDL 语言规范](spec/IdlReference.md)
+- [Taihe C++ 使用指南](backend-cpp/CppUsageGuide.md)
 - [ANI/ArkTS 快速入门](backend-ani/AniQuickStart.md)
-- [C++ 使用指南](backend-cpp/CppUsageGuide.md)
+- [NAPI/ArkTS 快速入门](backend-napi/NapiQuickStart.md)
