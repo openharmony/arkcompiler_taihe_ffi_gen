@@ -517,7 +517,7 @@ class AttributeRegistry:
         for attr_type in attr_types:
             attr_type.register_to(self)
 
-    def attach(
+    def try_resolve(
         self,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,

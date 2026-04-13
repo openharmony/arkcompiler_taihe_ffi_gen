@@ -36,7 +36,7 @@ class BackendConfig(ABC):
     "List of backends that the current backend depends on."
 
     @classmethod
-    def register(cls, option_registry: "OptionRegistry"):
+    def register_options_to(cls, option_registry: "OptionRegistry"):
         """Registers the backend configuration to the registry.
 
         By default, this method does nothing. Subclass may override this method
@@ -46,7 +46,11 @@ class BackendConfig(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager") -> Self | None:
+    def from_options(
+        cls,
+        options: "OptionStore",
+        dm: "DiagnosticsManager",
+    ) -> Self | None:
         """Creates a backend configuration from the given options.
 
         This method is called after all options are parsed, and the returned
@@ -54,7 +58,7 @@ class BackendConfig(ABC):
         """
 
     @abstractmethod
-    def construct(self, instance: "CompilerInstance") -> "Backend":
+    def build(self, instance: "CompilerInstance") -> "Backend":
         """Constructs the backend instance from the configuration.
 
         This method is called by the CompilerInstance to construct the backend
@@ -63,14 +67,14 @@ class BackendConfig(ABC):
 
 
 class Backend(ABC):  # noqa: B024
-    def register(self):
+    def setup(self):
         """Register backend-specific analyses, attributes, etc.
 
         This method is called just after the backend is constructed.
         """
         return
 
-    def inject(self):
+    def add_sources(self):
         """Add backend-specific sources after the collection phase.
 
         For example, the standard library sources can be added in this stage.
@@ -147,7 +151,7 @@ class BackendRegistry:
     def clear(self):
         self._name_to_config_type.clear()
 
-    def collect_required_backends(
+    def resolve(
         self,
         names: Iterable[str],
         dm: "DiagnosticsManager",
@@ -178,7 +182,7 @@ class BackendRegistry:
 
         return config_types
 
-    def register_all(self):
+    def register_builtins(self):
         from taihe.codegen.abi import (
             AbiHeaderBackendConfig,
             AbiSourcesBackendConfig,

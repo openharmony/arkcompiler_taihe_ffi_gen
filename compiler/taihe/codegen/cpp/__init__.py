@@ -30,10 +30,10 @@ class CppCommonHeadersBackendConfig(BackendConfig):
     DEPS: ClassVar = ["abi-header"]
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CppCommonHeadersBackendConfig()
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.cpp.gen_common import CppHeadersGenerator
 
         class CppCommonHeadersBackendImpl(Backend):
@@ -55,10 +55,10 @@ class CppAuthorBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-common", "abi-source"]
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CppAuthorBackendConfig()
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.cpp.gen_impl import (
             CppImplHeadersGenerator,
             CppImplSourcesGenerator,
@@ -85,10 +85,10 @@ class CppUserHeadersBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-common"]
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CppUserHeadersBackendConfig()
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.cpp.gen_user import CppUserHeadersGenerator
 
         class CppUserHeadersBackendImpl(Backend):
