@@ -57,7 +57,7 @@ class ArkTsOutDir:
 
 ### 方案 1. BackendConfig 消费后冗余存储
 
-`BackendConfig.create()` 消费选项后，再把 `OptionStore` 冗余地存进 `CompilerInvocation`。Analysis 通过 `CompilerInstance` → `CompilerInvocation` → `OptionStore` 访问。
+`BackendConfig.from_options()` 消费选项后，再把 `OptionStore` 冗余地存进 `CompilerInvocation`。Analysis 通过 `CompilerInstance` → `CompilerInvocation` → `OptionStore` 访问。
 
 问题是 `CompilerInvocation` 的定位是**命令行意图的结构化表示**，它不应该携带已经被消费过的 raw options。当未来支持配置文件（比如 `taihe.toml`）时，如果遇到 `OptionStore` 和 `BackendConfig` 中同一选项的值不一致的情况，会产生「who is the source of truth」的问题。
 
@@ -87,7 +87,7 @@ class ArkTsOutDir:
 
 | 组件 | 职责 |
 |---|---|
-| `AbstractConfigOption` | 选项的类型定义。每个子类通过 `NAME` 声明命令行名称，通过 `parse(value, diag_mgr)` 实现类型安全的解析逻辑。 |
+| `AbstractConfigOption` | 选项的类型定义。每个子类通过 `NAME` 声明命令行名称，通过 `try_parse(value, diag_mgr)` 实现类型安全的解析逻辑。 |
 | `OptionRegistry` | 解析期的编译选项注册表。由后端自己注册支持的编译选项类型。将 option name 映射到 option type，支持 fuzzy matching 错误提示。 |
 | `OptionStore` | 解析结果的存储。multimap 结构 `dict[type, list[option]]`，支持 `get`（单值）和 `get_all`（多值）。 |
 
@@ -98,19 +98,19 @@ class ArkTsOutDir:
 ```
 opt_reg = OptionRegistry()                                  # 创建 OptionRegistry 实例
   ↓
-BackendConfig.register(opt_reg)                             # 后端声明「自己需要哪些选项」
+BackendConfig.register_options_to(opt_reg)                  # 后端声明「自己需要哪些选项」
   ↓
-opts: OptionStore = opt_reg.parse_args(args, diag_mgr)      # 统一解析，未知选项报错 + fuzzy suggest
+opts: OptionStore = opt_reg.parse_options(args, diag_mgr)   # 统一解析，未知选项报错 + fuzzy suggest
   ↓
-conf: BackendConfig = BackendConfig.create(opts, diag_mgr)  # OptionStore 被 BackendConfig 工厂方法消费用于构造实例
+conf: BackendConfig = BackendConfig.from_options(opts, dm)  # OptionStore 被 BackendConfig 工厂方法消费用于构造实例
   ↓
 comp_inv = CompilerInvocation(backend_configs=[conf, ...])  # BackendConfig 作为 CompilerInvocation 的一部分
   ↓
 comp_ins = CompilerInstance(comp_inv, diag_mgr)             # 根据 CompilerInvocation 构造 CompilerInstance
   ↓
-backend: Backend = conf.construct(comp_ins)                 # 在 CompilerInstance 中，根据 BackendConfig 构造 Backend 实例
+backend: Backend = conf.build(comp_ins)                     # 在 CompilerInstance 中，根据 BackendConfig 构造 Backend 实例
   ↓
-Backend.register()                                          # 在此阶段注册属性类型等组件
+Backend.setup()                                             # 在此阶段注册属性类型等组件
   └─ attribute_registry.register(...)                       # 注册后端特有的属性类型
   ↓
 Backend.post_process()                                      # 在此阶段将选项物化为 IR 注解或注入分析结果
@@ -120,10 +120,10 @@ Backend.post_process()                                      # 在此阶段将选
 
 命令行参数可能存在输入错误的情况，在以上流程中，有两个阶段允许通过诊断器报告错误：
 
-1. `AbstractConfigOption.parse()`：针对单个选项值的解析错误（如类型错误、格式错误），可以在这里直接报告。错误应该通过 `DiagnosticsManager` 发出，并且 `parse()` 返回 `None`。不应该抛出异常。
-2. `BackendConfig.create()`：针对选项间的组合逻辑错误可以在这里报告（如互斥选项同时出现、必需选项缺失等）。报告方式同上。
+1. `AbstractConfigOption.try_parse()`：针对单个选项值的解析错误（如类型错误、格式错误），可以在这里直接报告。错误应该通过 `DiagnosticsManager` 发出，并且 `try_parse()` 返回 `None`。不应该抛出异常。
+2. `BackendConfig.from_options()`：针对选项间的组合逻辑错误可以在这里报告（如互斥选项同时出现、必需选项缺失等）。报告方式同上。
 
-除此之外，不应该在后续阶段，尤其是通过 `BackendConfig` 构造 `Backend` 实例时再报告选项相关的错误。换句话说，`BackendConfig` 的合法性应该在 `create()` 阶段被完全验证，`construct()` 阶段不应再担心选项错误的情况。
+除此之外，不应该在后续阶段，尤其是通过 `BackendConfig` 构造 `Backend` 实例时再报告选项相关的错误。换句话说，`BackendConfig` 的合法性应该在 `from_options()` 阶段被完全验证，`build()` 阶段不应再担心选项错误的情况。
 
 #### Options 系统的简单应用示例
 
@@ -143,7 +143,7 @@ class DebugOutputTargetOption(AbstractConfigOption):
     target_desc: Literal["stderr", "stdout"] | Path | None
 
     @classmethod
-    def parse(cls, value: str | None, dm: DiagnosticsManager) -> Self | None:
+    def try_parse(cls, value: str | None, dm: DiagnosticsManager) -> Self | None:
         if value is None:
             dm.emit(AdhocError("debug:output-target requires a value"))
             return None
@@ -161,7 +161,7 @@ class DebugOutputTargetOption(AbstractConfigOption):
         return None
 ```
 
-在后端的 `create()` 方法中消费这个选项，并利用构造出的 `BackendConfig` 进一步构造 `Backend` 实例：
+在后端的 `from_options()` 方法中消费这个选项，并利用构造出的 `BackendConfig` 进一步构造 `Backend` 实例：
 
 ```python
 class PrettyPrintBackendConfig(BackendConfig):
@@ -172,7 +172,7 @@ class PrettyPrintBackendConfig(BackendConfig):
     show_internal: bool = False
 
     @classmethod
-    def create(cls, opts: OptionStore, dm: DiagnosticsManager) -> Self | None:
+    def from_options(cls, opts: OptionStore, dm: DiagnosticsManager) -> Self | None:
         opt = opts.get(DebugOutputTargetOption)
         if opt is None:
             dm.emit(AdhocError("pretty-print backend requires debug:output-target option"))
@@ -185,8 +185,7 @@ class PrettyPrintBackendConfig(BackendConfig):
             target_desc=opt.target_desc,
         )
 
-    @classmethod
-    def construct(cls, ci: CompilerInstance) -> Backend:
+    def build(self, ci: CompilerInstance) -> Backend:
         if self.target_desc is None:
             om = ci.output_manager
         else:
@@ -219,14 +218,14 @@ class AnalysisManager:
 对于被 `provide` 注入的 Analysis，其 `_create()` 方法实现为 `raise NotImplementedError`。这是一个有意的设计：如果后端忘记调用 `provide`，任何试图通过 `Analysis.get()` 获取该 Analysis 的代码都会立即得到一个明确的错误，而不是悄悄地使用某个默认值。
 
 `provide` 的语义约束：
-1. `provide` 应当在 `register()` 或 `post_process()` 阶段调用——对于不依赖 IR 内容的配置型 Analysis，可在 `register()` 中调用；对于需要访问已解析 IR 的 Analysis，应在 `post_process()` 中调用。
-2. 在 `register()` 阶段调用时，`provide` 注入的 Analysis 只能是 `PackageGroup` 粒度的（因为 `PackageDecl` 还不存在）。在 `post_process()` 阶段调用时，则可以使用任意粒度。如果需要更细粒度的注入（如 per-package 的 `keep-name`），应当考虑在 `post_process()` 阶段通过添加属性的方式实现。
+1. `provide` 应当在 `setup()` 或 `post_process()` 阶段调用——对于不依赖 IR 内容的配置型 Analysis，可在 `setup()` 中调用；对于需要访问已解析 IR 的 Analysis，应在 `post_process()` 中调用。
+2. 在 `setup()` 阶段调用时，`provide` 注入的 Analysis 只能是 `PackageGroup` 粒度的（因为 `PackageDecl` 还不存在）。在 `post_process()` 阶段调用时，则可以使用任意粒度。如果需要更细粒度的注入（如 per-package 的 `keep-name`），应当考虑在 `post_process()` 阶段通过添加属性的方式实现。
 
 ### `keep-name` 的演化：从 Analysis 到 Attribute
 
 `keep-name` 选项经历了两次设计变更，反映了对配置信息归属的逐步认识。
 
-**第一版：** `keep-name` 和 `module-prefix`/`path-prefix` 一样，被包装成 `ArkTsNamingConfig` Analysis，在 `register()` 阶段通过 `provide` 注入。`PackageAniInfo` 构造时从 `ArkTsNamingConfig.get(am, pg)` 获取命名策略。
+**第一版：** `keep-name` 和 `module-prefix`/`path-prefix` 一样，被包装成 `ArkTsNamingConfig` Analysis，在 `setup()` 阶段通过 `provide` 注入。`PackageAniInfo` 构造时从 `ArkTsNamingConfig.get(am, pg)` 获取命名策略。
 
 这个方案可以工作，但存在粒度问题：`ArkTsNamingConfig` 是绑定到整个 `PackageGroup` 的，意味着所有 package 共享同一个命名策略。如果未来需要某个 package 保留原名、其它 package 使用 camelCase，使用这个设计支持起来会很麻烦。
 
@@ -262,12 +261,12 @@ if (attr := StsKeepNameAttr.get(p)) and attr.option:
 `CompilerInstance.run()` 驱动以下阶段：
 
 ```
-construct → register → collect/inject → parse → resolve → post_process → validate → generate
+build → setup → collect/add_sources → parse → resolve → post_process → validate → generate
 ```
 
 每个阶段对后端开放了特定的钩子。以下分析各阶段的目的、约束及其设计理由。
 
-### `register()`
+### `setup()`
 
 **时机**：Backend 实例构造之后、IR 解析之前。
 
@@ -277,9 +276,9 @@ construct → register → collect/inject → parse → resolve → post_process
 
 **约束**：
 - **不应影响其它后端的 Analysis 结果。** 如果在此阶段通过 `provide` 注入 Analysis，应当使用后端特有的 Analysis 类型，而非覆盖已有的公共 Analysis。
-  - **理由**：register 发生在所有 Backend 构造完成之后（`CompilerInstance.__init__` 先构造所有 Backend，再逐一调用 `register()`），但各 Backend 的 register 顺序依赖于 `collect_required_backends` 的 DFS 遍历顺序。如果一个 Backend 的 register 能影响另一个 Backend 的 Analysis，就会引入对注册顺序的隐式依赖。
+  - **理由**：setup 发生在所有 Backend 构造完成之后（`CompilerInstance.__init__` 先构造所有 Backend，再逐一调用 `setup()`），但各 Backend 的 setup 顺序依赖于 `resolve` 的 DFS 遍历顺序。如果一个 Backend 的 setup 能影响另一个 Backend 的 Analysis，就会引入对注册顺序的隐式依赖。
 
-### `inject()`
+### `add_sources()`
 
 **时机**：`collect()` 阶段的末尾，源文件扫描完成之后，AST 构建之前。
 

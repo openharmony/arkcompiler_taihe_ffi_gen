@@ -183,12 +183,12 @@ Taihe 的语言后端由以下几个组件组成：
 - `BackendConfig`：描述了一个特定语言后端的配置信息。
   - `NAME`（类变量）：语言后端的名字，例如 `cpp-user`。
   - `DEPS`（类变量）：语言后端所依赖的其它语言后端。例如，`cpp-user` 依赖于 `cpp-common`。该变量中只需要列出直接依赖，由 `BackendRegistry` 负责递归地启用所有依赖。
-  - `register(registry: OptionRegistry)`（类方法）：注册语言后端自有的命令行参数（`ConfigOption`）。
-  - `create(options: OptionStore)`（类方法）：根据具体的命令行参数构造出结构化的语言配置实例。
-  - `construct()`（实例方法）：根据语言配置构造出语言后端实例。
+  - `register_options_to(registry: OptionRegistry)`（类方法）：注册语言后端自有的命令行参数（`ConfigOption`）。
+  - `from_options(options: OptionStore)`（类方法）：根据具体的命令行参数构造出结构化的语言配置实例。
+  - `build()`（实例方法）：根据语言配置构造出语言后端实例。
 - `Backend`：语言后端实例，在编译流水线的不同阶段被回调。
-  - `register()`：在编译器启动时被调用，此时可注册后端相关注解、分析等组件。
-  - `inject()`：在完成源码收集（`collect`）后被调用，此时可注入新的文件到编译器中。
+  - `setup()`：在编译器启动时被调用，此时可注册后端相关注解、分析等组件。
+  - `add_sources()`：在完成源码收集（`collect`）后被调用，此时可注入新的文件到编译器中。
   - `post_process()`：在完成 IR 解析（`resolve`）后被调用，此时语义 IR 已完整（类型已解析、属性已转换），可在 IR 上添加后端特有的元数据。
   - `validate()`：在完成语义验证（`validate`）后被调用，此时不可修改 IR，但可报告错误。
   - `generate()`：在通过全部语义检查、进入代码生成（`generate`）时调用，用于生成目标代码，此时不可修改 IR。
@@ -197,10 +197,10 @@ Taihe 的语言后端由以下几个组件组成：
 
 语言后端的生命周期与编译流程紧密相关：
 
-1. 编译器启动时，`BackendRegistry` 根据命令行参数收集所有需要启用的语言后端，并调用它们的 `register()` 方法来将这些语言后端自有的命令行参数注册到 `OptionRegistry` 中。
+1. 编译器启动时，`BackendRegistry` 根据命令行参数收集所有需要启用的语言后端，并调用它们的 `register_options_to()` 方法来将这些语言后端自有的命令行参数注册到 `OptionRegistry` 中。
 2. `OptionRegistry` 根据扩展的命令行参数解析出结构化配置信息，输出到 `OptionStore` 中。
 3. 启用的语言后端消费 `OptionStore` 中的配置信息，构造出语言后端配置对象，并储存在 `CompilerInvocation` 中。
-4. 通过 `CompilerInvocation` 构造出 `CompilerInstance`，并在构造过程中调用语言后端配置对象上的 `construct()` 方法来构造出语言后端实例。
+4. 通过 `CompilerInvocation` 构造出 `CompilerInstance`，并在构造过程中调用语言后端配置对象上的 `build()` 方法来构造出语言后端实例。
 5. 编译器在不同阶段调用语言后端实例的回调函数，来完成注解注册、源文件注入、IR 修改、语义检查、代码生成等功能。
 
 ### 语言后端的典型目录结构
