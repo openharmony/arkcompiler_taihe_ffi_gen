@@ -19,7 +19,7 @@
 - CompilerInvocation: constructs the invocation from cmdline
     - Parses the general command line arguments
     - Enables user specified backends
-    - Backend-specific options are consumed by BackendConfig.create()
+    - Backend-specific options are consumed by BackendConfig.from_options()
 - CompilerInstance: runs the compilation
     - CompilerInstance: scans and parses sources files
     - Backends: post-process the IR

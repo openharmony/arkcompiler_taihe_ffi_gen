@@ -330,7 +330,7 @@ class OutputConfig(ABC):
 
     @abstractmethod
     def build(self) -> "OutputManager":
-        """Constructs an OutputManager based on this configuration."""
+        """Builds an OutputManager based on this configuration."""
 
 
 class OutputManager(ABC):
