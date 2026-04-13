@@ -148,7 +148,7 @@ AnyAttribute
 2. 在根据 `BackendConfig` 以此构造相应语言后端的同时，调用 `AttributeRegistry` 上的 `register` 方法，注册该语言后端支持的全部注解；
 3. 在语法解析阶段，将 AST 上的注解节点转换为 `UncheckedAttribute`, 并记录在相应的父节点上；
 4. 在语义解析阶段：
-   1. `_ResolveAttributePass` 阶段，调用 `AttributeRegistry` 的 `attach` 方法，将 `UncheckedAttribute` 转换为 `CheckedAttribute`，并存储到其所在的声明对象上；
+   1. `_ResolveAttributePass` 阶段，调用 `AttributeRegistry` 的 `try_resolve` 方法，将 `UncheckedAttribute` 转换为 `CheckedAttribute`，并存储到其所在的声明对象上；
    2. `_CheckAttributePass` 阶段，调用每个 `CheckedAttribute` 上的 `check_context` 方法对 `CheckedAttribute` 进行上下文检查；
 5. 在相应语言后端自己的语义分析和代码生成逻辑中，使用对应的具体注解类的 `get` 方法获取注解。
 
