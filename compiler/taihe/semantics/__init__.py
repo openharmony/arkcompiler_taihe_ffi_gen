@@ -36,7 +36,7 @@ class DebugOutputTargetOption(AbstractConfigOption):
     target_desc: Literal["stderr", "stdout"]
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         if value is None:
             dm.emit(AdhocError("debug:output-target requires a value"))
             return None
@@ -53,7 +53,7 @@ class DebugShowInternalOption(AbstractConfigOption):
     NAME = "debug:show-internal"
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
@@ -64,7 +64,7 @@ class DebugShowResolvedOption(AbstractConfigOption):
     NAME = "debug:show-resolved"
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
@@ -77,13 +77,13 @@ class PrettyPrintBackendConfig(BackendConfig):
     target_desc: Literal["stderr", "stdout"] | None = field(kw_only=True, default=None)
 
     @classmethod
-    def register(cls, option_registry: OptionRegistry):
+    def register_options_to(cls, option_registry: OptionRegistry):
         option_registry.register(DebugOutputTargetOption)
         option_registry.register(DebugShowResolvedOption)
         option_registry.register(DebugShowInternalOption)
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         output_target_opt = options.get(DebugOutputTargetOption)
         show_resolved_opt = options.get(DebugShowResolvedOption)
         show_internal_opt = options.get(DebugShowInternalOption)
@@ -93,7 +93,7 @@ class PrettyPrintBackendConfig(BackendConfig):
             show_internal=show_internal_opt is not None,
         )
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.semantics.format import TaiheGenerator
 
         class PrettyPrintBackendImpl(Backend):
@@ -104,7 +104,7 @@ class PrettyPrintBackendConfig(BackendConfig):
                 if config.target_desc is None:
                     self._om = ci.output_manager
                 else:
-                    self._om = DebugOutputConfig(config.target_desc).construct()
+                    self._om = DebugOutputConfig(config.target_desc).build()
 
             def generate(self):
                 generator = TaiheGenerator(

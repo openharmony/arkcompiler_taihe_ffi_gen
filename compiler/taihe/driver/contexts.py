@@ -110,14 +110,13 @@ class CompilerInstance:
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
 
-        self.output_manager = invocation.output_config.construct()
+        self.output_manager = invocation.output_config.build()
         self.backends = [
-            backend_config.construct(self)
-            for backend_config in invocation.backend_configs
+            backend_config.build(self) for backend_config in invocation.backend_configs
         ]
 
         for b in self.backends:
-            b.register()
+            b.setup()
 
     ##########################
     # The compilation phases #
@@ -140,7 +139,7 @@ class CompilerInstance:
             self.diagnostics_manager.emit(AdhocWarn("no input files found"))
 
         for b in self.backends:
-            b.inject()
+            b.add_sources()
 
     def parse(self):
         """Parses the source files and constructs the IR."""

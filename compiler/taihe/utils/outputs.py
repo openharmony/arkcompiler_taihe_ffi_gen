@@ -248,6 +248,14 @@ class BaseWriter:
 
 
 @dataclass(frozen=True)
+class VariableGroup:
+    var_name: str
+
+    def __str__(self):
+        return self.var_name
+
+
+@dataclass(frozen=True)
 class GeneratedFileGroup:
     var_name: str
 
@@ -257,14 +265,6 @@ class GeneratedFileGroup:
 
 @dataclass(frozen=True)
 class RuntimeSourceGroup:
-    var_name: str
-
-    def __str__(self):
-        return self.var_name
-
-
-@dataclass(frozen=True)
-class VariableRecordGroup:
     var_name: str
 
     def __str__(self):
@@ -329,7 +329,7 @@ class OutputConfig(ABC):
     debug_level: DebugLevel = field(default=DebugLevel.NONE, kw_only=True)
 
     @abstractmethod
-    def construct(self) -> "OutputManager":
+    def build(self) -> "OutputManager":
         """Constructs an OutputManager based on this configuration."""
 
 
@@ -345,29 +345,29 @@ class OutputManager(ABC):
         """Hook called after all files have been generated."""
         return
 
-    def register_variable_record(self, group: VariableRecordGroup, value: str):
-        """Registers a variable for later use in code generation."""
+    def record_variable(self, group: VariableGroup, value: str):
+        """Records a variable for later use in code generation."""
         return
 
-    def register_runtime_src(self, group: RuntimeSourceGroup, relative_path: str):
-        """Registers a runtime source file path."""
+    def record_runtime_src(self, group: RuntimeSourceGroup, relative_path: str):
+        """Records a runtime source file path."""
         return
 
-    def register_generated_file(self, group: GeneratedFileGroup, relative_path: str):
-        """Registers a generated file path."""
+    def record_generated_file(self, group: GeneratedFileGroup, relative_path: str):
+        """Records a generated file path."""
         return
 
-    def register_runtime_c_src(self, relative_path: str):
-        self.register_runtime_src(RUNTIME_C_SRC_GROUP, relative_path)
+    def record_runtime_c_src(self, relative_path: str):
+        self.record_runtime_src(RUNTIME_C_SRC_GROUP, relative_path)
 
-    def register_runtime_cxx_src(self, relative_path: str):
-        self.register_runtime_src(RUNTIME_CXX_SRC_GROUP, relative_path)
+    def record_runtime_cxx_src(self, relative_path: str):
+        self.record_runtime_src(RUNTIME_CXX_SRC_GROUP, relative_path)
 
     @contextmanager
     def open(self, relative_path: str, group: GeneratedFileGroup | None = None):
         """Opens a file for writing."""
         if group is not None:
-            self.register_generated_file(group, relative_path)
+            self.record_generated_file(group, relative_path)
 
         with self._open_impl(relative_path) as f:
             yield f
@@ -379,7 +379,7 @@ class OutputManager(ABC):
 
 @dataclass
 class NullOutputConfig(OutputConfig):
-    def construct(self) -> OutputManager:
+    def build(self) -> OutputManager:
         class NullOutputManager(OutputManager):
             def __init__(self, *, debug_level: DebugLevel):
                 super().__init__(debug_level=debug_level)
@@ -394,7 +394,7 @@ class NullOutputConfig(OutputConfig):
 class DebugOutputConfig(OutputConfig):
     target_desc: Literal["stderr", "stdout"]
 
-    def construct(self) -> OutputManager:
+    def build(self) -> OutputManager:
         class DebugOutputManager(OutputManager):
             def __init__(
                 self,
@@ -422,7 +422,7 @@ class DebugOutputConfig(OutputConfig):
 class BasicOutputConfig(OutputConfig):
     dst_dir: Path
 
-    def construct(self) -> OutputManager:
+    def build(self) -> OutputManager:
         return BasicOutputManager(
             self.dst_dir,
             debug_level=self.debug_level,
@@ -475,7 +475,7 @@ class CMakeOutputConfig(BasicOutputConfig):
     runtime_include_dir: Path = field(kw_only=True)
     runtime_src_dir: Path = field(kw_only=True)
 
-    def construct(self) -> OutputManager:
+    def build(self) -> OutputManager:
         return CMakeOutputManager(
             self.dst_dir,
             debug_level=self.debug_level,
@@ -510,22 +510,22 @@ class CMakeOutputManager(BasicOutputManager):
         self.runtime_include_dir = runtime_include_dir
         self.runtime_src_dir = runtime_src_dir
 
-        self.variables: dict[VariableRecordGroup, list[str]] = {}
+        self.variables: dict[VariableGroup, list[str]] = {}
         self.runtime_src_files: dict[RuntimeSourceGroup, list[str]] = {}
         self.gen_src_files: dict[GeneratedFileGroup, list[str]] = {}
 
         self.target = CMakeWriter(self, "TaiheGenerated.cmake")
 
     @override
-    def register_variable_record(self, group: VariableRecordGroup, value: str):
+    def record_variable(self, group: VariableGroup, value: str):
         self.variables.setdefault(group, []).append(value)
 
     @override
-    def register_runtime_src(self, group: RuntimeSourceGroup, relative_path: str):
+    def record_runtime_src(self, group: RuntimeSourceGroup, relative_path: str):
         self.runtime_src_files.setdefault(group, []).append(relative_path)
 
     @override
-    def register_generated_file(self, group: GeneratedFileGroup, relative_path: str):
+    def record_generated_file(self, group: GeneratedFileGroup, relative_path: str):
         self.gen_src_files.setdefault(group, []).append(relative_path)
 
     @override

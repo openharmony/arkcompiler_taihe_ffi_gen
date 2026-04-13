@@ -35,7 +35,7 @@ class NoexceptAllOption(AbstractConfigOption):
     NAME = "noexcept-all"
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
