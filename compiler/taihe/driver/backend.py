@@ -37,7 +37,7 @@ class BackendConfig(ABC):
 
     @classmethod
     def register_options_to(cls, option_registry: "OptionRegistry"):
-        """Registers the backend configuration to the registry.
+        """Registers the backend's configuration options to the option registry.
 
         By default, this method does nothing. Subclass may override this method
         to register backend-specific configuration options.
@@ -54,23 +54,23 @@ class BackendConfig(ABC):
         """Creates a backend configuration from the given options.
 
         This method is called after all options are parsed, and the returned
-        configuration will be used to construct the backend instance.
+        configuration will be used to build the backend instance.
         """
 
     @abstractmethod
     def build(self, instance: "CompilerInstance") -> "Backend":
-        """Constructs the backend instance from the configuration.
+        """Builds the backend instance from the configuration.
 
-        This method is called by the CompilerInstance to construct the backend
+        This method is called by the CompilerInstance to build the backend
         after all backends are collected and their configurations are created.
         """
 
 
 class Backend(ABC):  # noqa: B024
     def setup(self):
-        """Register backend-specific analyses, attributes, etc.
+        """Set up backend-specific analyses, attributes, etc.
 
-        This method is called just after the backend is constructed.
+        This method is called just after the backend is built.
         """
         return
 
