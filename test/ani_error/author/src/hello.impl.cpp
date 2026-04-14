@@ -22,13 +22,56 @@
 #include "hello.proj.hpp"
 
 namespace {
+// Error codes
+constexpr int32_t ERROR_CODE_BAR = 12;
+constexpr int32_t ERROR_CODE_PROCESS_CALLBACK = 100;
+constexpr int32_t ERROR_CODE_OUT_OF_RANGE = 10;
+
+// Callback parameters
+constexpr int32_t CALLBACK_PARAM_PROCESS = 10;
+constexpr int32_t CALLBACK_PARAM_NOEXCEPT = 20;
+constexpr int32_t CALLBACK_PARAM_VOID = 100;
+constexpr int32_t CALLBACK_PARAM_NOEXCEPT_VOID = 200;
+constexpr int32_t CALLBACK_PARAM_TEST_IV = 100;
+constexpr int32_t CALLBACK_PARAM_TEST_II = 100;
+constexpr int32_t CALLBACK_PARAM_GLOBAL_NOEXCEPT = 1;
+constexpr int32_t CALLBACK_PARAM_CALLCB_II = 1;
+constexpr int32_t CALLBACK_PARAM_GLOBAL_PARAM_NOEXCEPT = 400;
+
+// Return values
+constexpr int32_t RETURN_VALUE_PROCESS_VOID = 999;
+constexpr int32_t RETURN_VALUE_BAR_RETURN = 555;
+constexpr int32_t RETURN_VALUE_RETURN_NOEXCEPT = 666;
+constexpr int32_t RETURN_VALUE_RETURN_VOID_CALLBACK = 888;
+constexpr int32_t RETURN_VALUE_RETURN_VOID_NOEXCEPT_CALLBACK = 777;
+constexpr int32_t RETURN_VALUE_BAR_VI = 123;
+constexpr int32_t RETURN_VALUE_TEST_BAR_II_MULTIPLIER = 2;
+constexpr int32_t RETURN_VALUE_TEST_BAR_VI = 456;
+constexpr int32_t RETURN_VALUE_CALLCB = 100;
+constexpr int32_t RETURN_VALUE_CALLCB_IV = 200;
+constexpr int32_t RETURN_VALUE_TEST_CB_V = 0;
+constexpr int32_t RETURN_VALUE_TEST_CB_VI = 1;
+constexpr int32_t RETURN_VALUE_TEST_CB_IV = 2;
+constexpr int32_t RETURN_VALUE_SAY_HELLO = 123;
+constexpr int32_t RETURN_VALUE_GLOBAL_NOEXCEPT_CALLBACK = 111;
+constexpr int32_t RETURN_VALUE_GETFOOVALUE = 42;
+
+// Range limits
+constexpr int32_t INDEX_RANGE_LIMIT = 10;
+
+// Error messages
+::taihe::string const ERROR_MESSAGE_BAR = "A Error in bar";
+::taihe::string const ERROR_MESSAGE_OUT_OF_RANGE = "Index out of range";
+::taihe::string const ERROR_MESSAGE_PROCESS_CALLBACK = "Error in processCallback";
+::taihe::string const ERROR_MESSAGE_SYSTEM_INIT_FAILED = "System initialization failed";
+::taihe::string const ERROR_MESSAGE_CANT_CATCH_BAR = "can't catch error in cpp bar";
+::taihe::string const ERROR_MESSAGE_TRY_GET_VALUE = "try get value error";
+
 class FooImpl {
 public:
     ::taihe::expected<void, taihe::error> bar()
     {
-        ::taihe::string ERROR_MESSAGE = "A Error in bar";
-        constexpr int ERROR_CODE = 12;
-        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE, ERROR_CODE);
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE_BAR, ERROR_CODE_BAR);
     }
 
     ::taihe::expected<int32_t, ::taihe::error> bar_ii(int32_t a)
@@ -44,23 +87,24 @@ public:
 
     int32_t getFooValue()
     {
-        return 42;
+        return RETURN_VALUE_GETFOOVALUE;
     }
 
     ::taihe::expected<int32_t, ::taihe::error> processCallback(
         ::taihe::callback_view<::taihe::expected<int32_t, ::taihe::error>(int32_t a)> f)
     {
-        ::taihe::expected<int32_t, ::taihe::error> res = f(10);
+        ::taihe::expected<int32_t, ::taihe::error> res = f(CALLBACK_PARAM_PROCESS);
         if (res.has_value()) {
             return res.value();
         } else {
-            return ::taihe::unexpected<::taihe::error>(::taihe::error("Error in processCallback", 100));
+            return ::taihe::unexpected<::taihe::error>(
+                ::taihe::error(ERROR_MESSAGE_PROCESS_CALLBACK, ERROR_CODE_PROCESS_CALLBACK));
         }
     }
 
     int32_t processNoexceptCallback(::taihe::callback_view<int32_t(int32_t a)> f)
     {
-        return f(20);
+        return f(CALLBACK_PARAM_NOEXCEPT);
     }
 
     ::taihe::expected<void, ::taihe::error> processVoidCallback(
@@ -95,7 +139,7 @@ public:
 
     ::taihe::expected<int32_t, ::taihe::error> processVoidReturn()
     {
-        return 999;
+        return RETURN_VALUE_PROCESS_VOID;
     }
 
     ::taihe::expected<void, ::taihe::error> barParam(int32_t a)
@@ -106,7 +150,7 @@ public:
 
     ::taihe::expected<int32_t, ::taihe::error> barReturn()
     {
-        return 555;
+        return RETURN_VALUE_BAR_RETURN;
     }
 
     void processParamNoexcept(int32_t a)
@@ -116,29 +160,29 @@ public:
 
     int32_t processReturnNoexcept()
     {
-        return 666;
+        return RETURN_VALUE_RETURN_NOEXCEPT;
     }
 
     ::taihe::expected<void, ::taihe::error> processParamVoidCallback(
         ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
     {
-        f(100);
+        f(CALLBACK_PARAM_VOID);
         return {};
     }
 
     ::taihe::expected<int32_t, ::taihe::error> processReturnVoidCallback()
     {
-        return 888;
+        return RETURN_VALUE_RETURN_VOID_CALLBACK;
     }
 
     void processParamVoidNoexceptCallback(::taihe::callback_view<void(int32_t)> f)
     {
-        f(200);
+        f(CALLBACK_PARAM_NOEXCEPT_VOID);
     }
 
     int32_t processReturnVoidNoexceptCallback()
     {
-        return 777;
+        return RETURN_VALUE_RETURN_VOID_NOEXCEPT_CALLBACK;
     }
 
     // Foo interface methods
@@ -150,7 +194,7 @@ public:
 
     ::taihe::expected<int32_t, ::taihe::error> bar_vi()
     {
-        return 123;
+        return RETURN_VALUE_BAR_VI;
     }
 
     void test_bar()
@@ -160,7 +204,7 @@ public:
 
     int32_t test_bar_ii(int32_t a)
     {
-        return a * 2;
+        return a * RETURN_VALUE_TEST_BAR_II_MULTIPLIER;
     }
 
     void test_bar_iv(int32_t a)
@@ -170,7 +214,7 @@ public:
 
     int32_t test_bar_vi()
     {
-        return 456;
+        return RETURN_VALUE_TEST_BAR_VI;
     }
 
     ::taihe::expected<int32_t, ::taihe::error> callcb(
@@ -180,7 +224,7 @@ public:
         if (!res.has_value()) {
             std::cout << "catch error in callcb: " << res.error().message() << std::endl;
         }
-        return 100;
+        return RETURN_VALUE_CALLCB;
     }
 
     ::taihe::expected<int32_t, ::taihe::error> callcb_vi(
@@ -198,14 +242,14 @@ public:
     ::taihe::expected<int32_t, ::taihe::error> callcb_iv(
         ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
     {
-        f(10);
-        return 200;
+        f(CALLBACK_PARAM_PROCESS);
+        return RETURN_VALUE_CALLCB_IV;
     }
 
     ::taihe::expected<int32_t, ::taihe::error> callcb_ii(
         ::taihe::callback_view<::taihe::expected<int32_t, ::taihe::error>(int32_t)> f)
     {
-        ::taihe::expected<int32_t, ::taihe::error> res = f(1);
+        ::taihe::expected<int32_t, ::taihe::error> res = f(CALLBACK_PARAM_CALLCB_II);
         if (res.has_value()) {
             std::cout << "success from callcb_ii: " << res.value() << std::endl;
         } else {
@@ -218,24 +262,24 @@ public:
     {
         std::cout << "test_cb_v called" << std::endl;
         f();
-        return 0;
+        return RETURN_VALUE_TEST_CB_V;
     }
 
     int32_t test_cb_vi(::taihe::callback_view<void()> f)
     {
         f();
-        return 1;
+        return RETURN_VALUE_TEST_CB_VI;
     }
 
     int32_t test_cb_iv(::taihe::callback_view<void(int32_t)> f)
     {
-        f(100);
-        return 2;
+        f(CALLBACK_PARAM_TEST_IV);
+        return RETURN_VALUE_TEST_CB_IV;
     }
 
     int32_t test_cb_ii(::taihe::callback_view<int32_t(int32_t)> f)
     {
-        return f(100);
+        return f(CALLBACK_PARAM_TEST_II);
     }
 };
 
@@ -246,17 +290,14 @@ public:
     if (success) {
         return {};
     } else {
-        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "System initialization failed");
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE_SYSTEM_INIT_FAILED);
     }
 }
 
 ::taihe::expected<int32_t, taihe::error> sayHello_ii(int32_t a)
 {
-    int32_t range = 10;
-    ::taihe::string ERROR_MESSAGE = "Index out of range";
-    constexpr int32_t ERROR_CODE = 10;
-    if (a >= range) {
-        return ::taihe::unexpected<::taihe::error>(::taihe::error(ERROR_MESSAGE, ERROR_CODE));
+    if (a >= INDEX_RANGE_LIMIT) {
+        return ::taihe::unexpected<::taihe::error>(::taihe::error(ERROR_MESSAGE_OUT_OF_RANGE, ERROR_CODE_OUT_OF_RANGE));
     }
     return a;
 }
@@ -269,7 +310,7 @@ public:
 
 ::taihe::expected<int32_t, ::taihe::error> sayHelloReturn()
 {
-    return 123;
+    return RETURN_VALUE_SAY_HELLO;
 }
 
 ::taihe::expected<::hello::Foo, ::taihe::error> createFoo()
@@ -285,9 +326,9 @@ public:
         return res.error().message();
     } else {
         std::cout << "can't catch error code in cpp bar " << std::endl;
-        return ::taihe::expected<::taihe::string, ::taihe::error>(::taihe::unexpect, "can't catch error in cpp bar");
+        return ::taihe::expected<::taihe::string, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE_CANT_CATCH_BAR);
     }
-    return ::taihe::expected<::taihe::string, ::taihe::error>(::taihe::unexpect, "try get value error");
+    return ::taihe::expected<::taihe::string, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE_TRY_GET_VALUE);
 }
 
 ::taihe::expected<int32_t, ::taihe::error> callcb(::taihe::callback_view<::taihe::expected<void, ::taihe::error>()> f)
@@ -296,7 +337,7 @@ public:
     if (!res.has_value()) {
         std::cout << "catch error in callcb: " << res.error().message() << std::endl;
     }
-    return 100;
+    return RETURN_VALUE_CALLCB;
 }
 
 ::taihe::expected<int32_t, ::taihe::error> callcb_vi(
@@ -314,14 +355,14 @@ public:
 ::taihe::expected<int32_t, ::taihe::error> callcb_iv(
     ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
 {
-    f(10);
-    return 200;
+    f(CALLBACK_PARAM_PROCESS);
+    return RETURN_VALUE_CALLCB_IV;
 }
 
 ::taihe::expected<int32_t, ::taihe::error> callcb_ii(
     ::taihe::callback_view<::taihe::expected<int32_t, ::taihe::error>(int32_t)> f)
 {
-    ::taihe::expected<int32_t, ::taihe::error> res = f(1);
+    ::taihe::expected<int32_t, ::taihe::error> res = f(CALLBACK_PARAM_CALLCB_II);
     if (res.has_value()) {
         std::cout << "success from callcb_ii: " << res.value() << std::endl;
     } else {
@@ -334,52 +375,52 @@ int32_t test_cb_v(::taihe::callback_view<void()> f)
 {
     std::cout << "test_cb_v called" << std::endl;
     f();
-    return 0;
+    return RETURN_VALUE_TEST_CB_V;
 }
 
 int32_t test_cb_vi(::taihe::callback_view<void()> f)
 {
     f();
-    return 1;
+    return RETURN_VALUE_TEST_CB_VI;
 }
 
 int32_t test_cb_iv(::taihe::callback_view<void(int32_t)> f)
 {
-    f(100);
-    return 2;
+    f(CALLBACK_PARAM_TEST_IV);
+    return RETURN_VALUE_TEST_CB_IV;
 }
 
 int32_t test_cb_ii(::taihe::callback_view<int32_t(int32_t)> f)
 {
-    return f(100);
+    return f(CALLBACK_PARAM_TEST_II);
 }
 
 int32_t processGlobalVoidCallback(::taihe::callback_view<void()> f)
 {
     f();
-    return 0;
+    return RETURN_VALUE_TEST_CB_V;
 }
 
 int32_t processGlobalNoexceptCallback(::taihe::callback_view<int32_t(int32_t)> f)
 {
-    return f(1);
+    return f(CALLBACK_PARAM_GLOBAL_NOEXCEPT);
 }
 
 int32_t processGlobalVoidNoexceptCallback(::taihe::callback_view<void()> f)
 {
     f();
-    return 0;
+    return RETURN_VALUE_TEST_CB_V;
 }
 
 int32_t processGlobalParamNoexceptCallback(::taihe::callback_view<void(int32_t)> f)
 {
-    f(400);
-    return 0;
+    f(CALLBACK_PARAM_GLOBAL_PARAM_NOEXCEPT);
+    return RETURN_VALUE_TEST_CB_V;
 }
 
 int32_t processGlobalReturnNoexceptCallback()
 {
-    return 111;
+    return RETURN_VALUE_GLOBAL_NOEXCEPT_CALLBACK;
 }
 
 void processGlobalNoexceptNoParamNoReturn()
@@ -394,7 +435,7 @@ void processGlobalNoexceptParamNoReturn(int32_t a)
 
 int32_t processGlobalNoexceptParamReturn(int32_t a)
 {
-    return a * 2;
+    return a * RETURN_VALUE_TEST_BAR_II_MULTIPLIER;
 }
 }  // namespace
 
