@@ -1908,7 +1908,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         self.t = t
         self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.ets_desc = f"std.core.{self.typedarray_attr.sts_type}"
+        self.ets_desc = f"escompat.{self.typedarray_attr.sts_type}"
         self.ets_type = EtsClassType(self.ets_desc)
 
     @override
