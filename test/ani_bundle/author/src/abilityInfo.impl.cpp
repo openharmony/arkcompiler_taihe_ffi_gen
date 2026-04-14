@@ -34,116 +34,116 @@ public:
     {
     }
 
-    std::string GetBundleName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetBundleName()
     {
         return "AbilityInfo::getBundleName";
     }
 
-    std::string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         return "AbilityInfo::getName";
     }
 
-    std::string GetLabel()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetLabel()
     {
         return "AbilityInfo::getLabel";
     }
 
-    std::string GetDescription()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetDescription()
     {
         return "AbilityInfo::getDescription";
     }
 
-    std::string GetIcon()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetIcon()
     {
         return "AbilityInfo::getIcon";
     }
 
-    int32_t GetLabelId()
+    ::taihe::expected<int32_t, ::taihe::error> GetLabelId()
     {
         return abilityInfoImpl;
     }
 
-    int32_t GetDescriptionId()
+    ::taihe::expected<int32_t, ::taihe::error> GetDescriptionId()
     {
         return abilityInfoImpl;
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return abilityInfoImpl;
     }
 
-    std::string GetModuleName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetModuleName()
     {
         return "AbilityInfo::getModuleName";
     }
 
-    std::string GetProcess()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetProcess()
     {
         return "AbilityInfo::getProcess";
     }
 
-    std::string GetTargetAbility()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetTargetAbility()
     {
         return "AbilityInfo::getTargetAbility";
     }
 
-    int32_t GetBackgroundModes()
+    ::taihe::expected<int32_t, ::taihe::error> GetBackgroundModes()
     {
         return abilityInfoImpl;
     }
 
-    bool GetIsVisible()
+    ::taihe::expected<bool, ::taihe::error> GetIsVisible()
     {
         return true;
     }
 
-    bool GetFormEnabled()
+    ::taihe::expected<bool, ::taihe::error> GetFormEnabled()
     {
         return true;
     }
 
-    array<string> GetPermissions()
+    ::taihe::expected<array<string>, ::taihe::error> GetPermissions()
     {
         array<string> str = {"AbilityInfo::getTargetAbility"};
         return str;
     }
 
-    array<string> GetDeviceTypes()
+    ::taihe::expected<array<string>, ::taihe::error> GetDeviceTypes()
     {
         array<string> str = {"AbilityInfo::getDeviceTypes"};
         return str;
     }
 
-    array<string> GetDeviceCapabilities()
+    ::taihe::expected<array<string>, ::taihe::error> GetDeviceCapabilities()
     {
         array<string> str = {"AbilityInfo::getDeviceCapabilities"};
         return str;
     }
 
-    std::string GetReadPermission()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetReadPermission()
     {
         return "AbilityInfo::getReadPermission";
     }
 
-    std::string GetWritePermission()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetWritePermission()
     {
         return "AbilityInfo::getWritePermission";
     }
 
-    std::string GetUri()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetUri()
     {
         return "AbilityInfo::getUri";
     }
 
-    bool GetEnabled()
+    ::taihe::expected<bool, ::taihe::error> GetEnabled()
     {
         return true;
     }
 };
 
-AbilityInfo GetAbilityInfo()
+::taihe::expected<AbilityInfo, ::taihe::error> GetAbilityInfo()
 {
     return make_holder<AbilityInfoImpl, AbilityInfo>();
 }

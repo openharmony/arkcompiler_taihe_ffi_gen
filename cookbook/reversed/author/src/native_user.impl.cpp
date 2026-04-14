@@ -24,11 +24,20 @@
 namespace {
 // To be implemented.
 
-::taihe::string UseIfaceA(::impl::weak::IfaceA_taihe obj)
+::taihe::expected<::taihe::string, ::taihe::error> UseIfaceA(::impl::weak::IfaceA_taihe obj)
 {
-    std::cout << "native call Foo(): " << obj->Foo() << std::endl;
-    std::cout << "native call Bar(): " << obj->Bar() << std::endl;
-    return obj->Foo();
+    auto foo_res = obj->Foo();
+    auto bar_res = obj->Bar();
+    if (foo_res.has_value()) {
+        std::cout << "native call Foo(): " << foo_res.value() << std::endl;
+    }
+    if (bar_res.has_value()) {
+        std::cout << "native call Bar(): " << bar_res.value() << std::endl;
+    }
+    if (foo_res.has_value()) {
+        return foo_res.value();
+    }
+    return ::taihe::unexpected<::taihe::error>(::taihe::error {"No value in Foo"});
 }
 }  // namespace
 

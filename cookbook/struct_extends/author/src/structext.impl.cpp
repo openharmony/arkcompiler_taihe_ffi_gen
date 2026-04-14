@@ -24,9 +24,9 @@ using namespace taihe;
 using namespace structext;
 
 namespace {
-Player addNewPlayer(string_view name)
+::taihe::expected<Player, ::taihe::error> addNewPlayer(string_view name)
 {
-    return {{0, 0, 0}, name};
+    return Player {{0, 0, 0}, name};
 }
 }  // namespace
 

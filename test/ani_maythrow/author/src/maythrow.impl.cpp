@@ -21,7 +21,7 @@
 #include "taihe/runtime.hpp"
 
 namespace {
-int32_t maythrow_impl(int32_t a)
+::taihe::expected<int32_t, ::taihe::error> maythrow_impl(int32_t a)
 {
     if (a == 0) {
         taihe::set_error("some error happen");
@@ -32,25 +32,27 @@ int32_t maythrow_impl(int32_t a)
     }
 }
 
-maythrow::Data getDataMaythrow()
+::taihe::expected<maythrow::Data, ::taihe::error> getDataMaythrow()
 {
     taihe::set_error("error in getDataMaythrow");
-    return {
+    return maythrow::Data {
         taihe::string("C++ Object"),
         (float)1.0,
         {"data.obj", "file.txt"},
     };
 }
 
-void noReturnMaythrow()
+::taihe::expected<void, ::taihe::error> noReturnMaythrow()
 {
     taihe::set_error("error in noReturnMaythrow");
+    return {};
 }
 
-void noReturnBusinessError()
+::taihe::expected<void, ::taihe::error> noReturnBusinessError()
 {
     int errorcode = 5;
     taihe::set_business_error(errorcode, "error in noReturnBusinessError");
+    return {};
 }
 }  // namespace
 

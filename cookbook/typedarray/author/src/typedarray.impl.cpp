@@ -24,17 +24,18 @@
 using namespace taihe;
 
 namespace {
-array<uint16_t> createUint16Array()
+::taihe::expected<array<uint16_t>, ::taihe::error> createUint16Array()
 {
-    return {1, 3, 5, 6, 9};
+    return array<uint16_t> {1, 3, 5, 6, 9};
 }
 
-void printUint16Array(array_view<uint16_t> arr)
+::taihe::expected<void, ::taihe::error> printUint16Array(array_view<uint16_t> arr)
 {
     size_t i = 0;
     for (uint16_t val : arr) {
         std::cout << "Index: " << i++ << " Value: " << val << std::endl;
     }
+    return {};
 }
 }  // namespace
 

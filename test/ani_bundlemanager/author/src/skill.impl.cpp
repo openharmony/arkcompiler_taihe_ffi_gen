@@ -36,63 +36,63 @@ public:
     {
     }
 
-    string GetScheme()
+    ::taihe::expected<string, ::taihe::error> GetScheme()
     {
         return "SkillUriImpl::getScheme";
     }
 
-    string GetHost()
+    ::taihe::expected<string, ::taihe::error> GetHost()
     {
         return "SkillUriImpl::getHost";
     }
 
-    int32_t GetPort()
+    ::taihe::expected<int32_t, ::taihe::error> GetPort()
     {
         return skillUriImpl;
     }
 
-    string GetPath()
+    ::taihe::expected<string, ::taihe::error> GetPath()
     {
         return "SkillUriImpl::getPath";
     }
 
-    string GetPathStartWith()
+    ::taihe::expected<string, ::taihe::error> GetPathStartWith()
     {
         return "SkillUriImpl::getPathStartWith";
     }
 
-    string GetPathRegex()
+    ::taihe::expected<string, ::taihe::error> GetPathRegex()
     {
         return "SkillUriImpl::getPathRegex";
     }
 
-    string GetType()
+    ::taihe::expected<string, ::taihe::error> GetType()
     {
         return "SkillUriImpl::getType";
     }
 
-    string GetUtd()
+    ::taihe::expected<string, ::taihe::error> GetUtd()
     {
         return "SkillUriImpl::getUtd";
     }
 
-    int32_t GetMaxFileSupported()
+    ::taihe::expected<int32_t, ::taihe::error> GetMaxFileSupported()
     {
         return skillUriImpl;
     }
 
-    string GetLinkFeature()
+    ::taihe::expected<string, ::taihe::error> GetLinkFeature()
     {
         return "SkillUriImpl::getLinkFeature";
     }
 };
 
-Skill GetSkill()
+::taihe::expected<Skill, ::taihe::error> GetSkill()
 {
     return make_holder<SkillImpl, Skill>();
 }
 
-SkillUri GetSkillUri()
+::taihe::expected<SkillUri, ::taihe::error> GetSkillUri()
 {
     return make_holder<SkillUriImpl, SkillUri>();
 }
