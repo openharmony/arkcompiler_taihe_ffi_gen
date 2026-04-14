@@ -63,7 +63,8 @@ auto converte_iterator(Iterator it, Converter converter)
     return ConvertedIterator {it, converter};
 }
 
-::taihe::map<::taihe::string, ::taihe::string> deserializeMap(::taihe::array_view<::test::Pair> serialized)
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::string>, ::taihe::error> deserializeMap(
+    ::taihe::array_view<::test::Pair> serialized)
 {
     taihe::map<::taihe::string, ::taihe::string> m;
     for (auto const &[k, v] : serialized) {
@@ -72,7 +73,8 @@ auto converte_iterator(Iterator it, Converter converter)
     return m;
 }
 
-::taihe::array<::test::Pair> serializeMap(::taihe::map_view<::taihe::string, ::taihe::string> m)
+::taihe::expected<::taihe::array<::test::Pair>, ::taihe::error> serializeMap(
+    ::taihe::map_view<::taihe::string, ::taihe::string> m)
 {
     auto arr = taihe::array<::test::Pair>(taihe::copy_data,
                                           converte_iterator(m.begin(),
@@ -84,7 +86,8 @@ auto converte_iterator(Iterator it, Converter converter)
     return arr;
 }
 
-::taihe::set<::taihe::string> deserializeSet(::taihe::array_view<::taihe::string> serialized)
+::taihe::expected<::taihe::set<::taihe::string>, ::taihe::error> deserializeSet(
+    ::taihe::array_view<::taihe::string> serialized)
 {
     taihe::set<::taihe::string> s;
     for (auto const &v : serialized) {
@@ -93,7 +96,7 @@ auto converte_iterator(Iterator it, Converter converter)
     return s;
 }
 
-::taihe::array<::taihe::string> serializeSet(::taihe::set_view<::taihe::string> s)
+::taihe::expected<::taihe::array<::taihe::string>, ::taihe::error> serializeSet(::taihe::set_view<::taihe::string> s)
 {
     return taihe::array<::taihe::string>(taihe::copy_data,
                                          converte_iterator(s.begin(),
@@ -103,7 +106,8 @@ auto converte_iterator(Iterator it, Converter converter)
                                          s.size());
 }
 
-::taihe::vector<::taihe::string> deserializeVector(::taihe::array_view<::taihe::string> serialized)
+::taihe::expected<::taihe::vector<::taihe::string>, ::taihe::error> deserializeVector(
+    ::taihe::array_view<::taihe::string> serialized)
 {
     taihe::vector<::taihe::string> v;
     for (auto const &item : serialized) {
@@ -112,7 +116,8 @@ auto converte_iterator(Iterator it, Converter converter)
     return v;
 }
 
-::taihe::array<::taihe::string> serializeVector(::taihe::vector_view<::taihe::string> v)
+::taihe::expected<::taihe::array<::taihe::string>, ::taihe::error> serializeVector(
+    ::taihe::vector_view<::taihe::string> v)
 {
     return taihe::array<::taihe::string>(taihe::copy_data,
                                          converte_iterator(v.begin(),

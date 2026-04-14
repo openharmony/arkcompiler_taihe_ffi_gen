@@ -29,36 +29,36 @@ namespace {
 
 // ===== 基础 struct =====
 
-Color makeColor(int32_t r, int32_t g, int32_t b)
+::taihe::expected<Color, ::taihe::error> makeColor(int32_t r, int32_t g, int32_t b)
 {
-    return {r, g, b};
+    return Color {r, g, b};
 }
 
-Color mixColors(Color const &a, Color const &b)
+::taihe::expected<Color, ::taihe::error> mixColors(Color const &a, Color const &b)
 {
-    return {(a.r + b.r) / 2, (a.g + b.g) / 2, (a.b + b.b) / 2};
+    return Color {(a.r + b.r) / 2, (a.g + b.g) / 2, (a.b + b.b) / 2};
 }
 
 // ===== @tuple struct =====
 
-Point makePoint(double x, double y)
+::taihe::expected<Point, ::taihe::error> makePoint(double x, double y)
 {
-    return {x, y};
+    return Point {x, y};
 }
 
-double distance(Point const &a, Point const &b)
+::taihe::expected<double, ::taihe::error> distance(Point const &a, Point const &b)
 {
     double dx = a.x - b.x;
     double dy = a.y - b.y;
     return std::sqrt(dx * dx + dy * dy);
 }
 
-NamedPoint makeNamedPoint(string_view name, double x, double y)
+::taihe::expected<NamedPoint, ::taihe::error> makeNamedPoint(string_view name, double x, double y)
 {
-    return {name, x, y};
+    return NamedPoint {name, x, y};
 }
 
-taihe::string describePoint(NamedPoint const &p)
+::taihe::expected<taihe::string, ::taihe::error> describePoint(NamedPoint const &p)
 {
     std::ostringstream oss;
     oss << std::string(p.name.data(), p.name.size()) << "(" << p.x << ", " << p.y << ")";
@@ -67,19 +67,19 @@ taihe::string describePoint(NamedPoint const &p)
 
 // ===== @tuple 嵌套与数组 =====
 
-Segment makeSegment(double x1, double y1, double x2, double y2)
+::taihe::expected<Segment, ::taihe::error> makeSegment(double x1, double y1, double x2, double y2)
 {
-    return {{x1, y1}, {x2, y2}};
+    return Segment {{x1, y1}, {x2, y2}};
 }
 
-double segmentLength(Segment const &seg)
+::taihe::expected<double, ::taihe::error> segmentLength(Segment const &seg)
 {
     double dx = seg.end.x - seg.start.x;
     double dy = seg.end.y - seg.start.y;
     return std::sqrt(dx * dx + dy * dy);
 }
 
-taihe::array<Point> makePointArray(int32_t n)
+::taihe::expected<taihe::array<Point>, ::taihe::error> makePointArray(int32_t n)
 {
     taihe::array<Point> arr(n);
     for (int32_t i = 0; i < n; i++) {

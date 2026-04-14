@@ -27,24 +27,25 @@ namespace {
 // 已经实现的类
 class InnerFoo {
 public:
-    std::string func1() const
+    ::taihe::expected<string, ::taihe::error> func1() const
     {
         return "Hello from func1";
     }
 
-    std::string func2() const
+    ::taihe::expected<string, ::taihe::error> func2() const
     {
         return "Hello from func2";
     }
 
-    void setName(std::string str)
+    ::taihe::expected<void, ::taihe::error> setName(string str)
     {
         this->name = str;
         std::cout << "Inner Class's name is " << str << std::endl;
+        return {};
     }
 
 private:
-    std::string name;
+    ::taihe::string name = "";
 };
 
 // Taihe interface 实现类
@@ -55,38 +56,42 @@ public:
         m_data = new InnerFoo();
     }
 
-    int64_t getInner()
+    ::taihe::expected<int64_t, ::taihe::error> getInner()
     {
         return reinterpret_cast<int64_t>(this);
     }
 
-    string func1()
+    ::taihe::expected<string, ::taihe::error> func1()
     {
         return this->m_data->func1();
     }
 
-    string func2()
+    ::taihe::expected<string, ::taihe::error> func2()
     {
         return this->m_data->func2();
     }
 
 private:
-    friend void useFoo(weak::Foo);
+    friend ::taihe::expected<void, ::taihe::error> useFoo(weak::Foo);
     InnerFoo *m_data;
 };
 
-Foo makeFoo()
+::taihe::expected<Foo, ::taihe::error> makeFoo()
 {
     return make_holder<FooImpl, Foo>();
 }
 
-void useFoo(weak::Foo obj)
+::taihe::expected<void, ::taihe::error> useFoo(weak::Foo obj)
 {
-    std::cout << obj->func1() << std::endl;
-    std::cout << obj->func2() << std::endl;
+    auto result1 = obj->func1();
+    auto result2 = obj->func2();
+    if (result1.has_value() && result2.has_value()) {
+        std::cout << result1.value() << std::endl;
+        std::cout << result2.value() << std::endl;
+    }
     // 使用 getInner() 然后类型转换为 taihe 实现类指针
-    reinterpret_cast<FooImpl *>(obj->getInner())->m_data->setName("Tom");
-    return;
+    reinterpret_cast<FooImpl *>(obj->getInner().value())->m_data->setName("Tom");
+    return {};
 }
 }  // namespace
 

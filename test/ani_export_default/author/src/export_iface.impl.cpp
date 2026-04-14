@@ -32,18 +32,20 @@ public:
     {
     }
 
-    void Foo()
+    ::taihe::expected<void, ::taihe::error> Foo()
     {
         std::cout << "Export IfaceA Foo()" << std::endl;
+        return {};
     }
 
-    void Bar()
+    ::taihe::expected<void, ::taihe::error> Bar()
     {
         std::cout << "Export IfaceA Bar()" << std::endl;
+        return {};
     }
 };
 
-::export_iface::IfaceA CreateIfaceA()
+::taihe::expected<::export_iface::IfaceA, ::taihe::error> CreateIfaceA()
 {
     return taihe::make_holder<IfaceAImpl, ::export_iface::IfaceA>();
 }

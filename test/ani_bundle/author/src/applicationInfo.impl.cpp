@@ -35,105 +35,105 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "ApplicationInfo::getName";
     }
 
-    string GetDescription()
+    ::taihe::expected<string, ::taihe::error> GetDescription()
     {
         return "ApplicationInfo::getDescription";
     }
 
-    int32_t GetDescriptionId()
+    ::taihe::expected<int32_t, ::taihe::error> GetDescriptionId()
     {
         return applicationInfoImpl;
     }
 
-    bool GetSystemApp()
+    ::taihe::expected<bool, ::taihe::error> GetSystemApp()
     {
         return true;
     }
 
-    bool GetEnabled()
+    ::taihe::expected<bool, ::taihe::error> GetEnabled()
     {
         return true;
     }
 
-    string GetLabel()
+    ::taihe::expected<string, ::taihe::error> GetLabel()
     {
         return "ApplicationInfo::getLabel";
     }
 
-    string GetLabelId()
+    ::taihe::expected<string, ::taihe::error> GetLabelId()
     {
         return "ApplicationInfo::getLabelId";
     }
 
-    string GetIcon()
+    ::taihe::expected<string, ::taihe::error> GetIcon()
     {
         return "ApplicationInfo::getIcon";
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return applicationInfoImpl;
     }
 
-    string GetProcess()
+    ::taihe::expected<string, ::taihe::error> GetProcess()
     {
         return "ApplicationInfo::getProcess";
     }
 
-    int32_t GetSupportedModes()
+    ::taihe::expected<int32_t, ::taihe::error> GetSupportedModes()
     {
         return applicationInfoImpl;
     }
 
-    array<string> GetModuleSourceDirs()
+    ::taihe::expected<array<string>, ::taihe::error> GetModuleSourceDirs()
     {
         array<string> str = {"ApplicationInfo::getProcess"};
         return str;
     }
 
-    array<string> GetPermissions()
+    ::taihe::expected<array<string>, ::taihe::error> GetPermissions()
     {
         array<string> str = {"ApplicationInfo::getPermissions"};
         return str;
     }
 
-    string GetEntryDir()
+    ::taihe::expected<string, ::taihe::error> GetEntryDir()
     {
         return "ApplicationInfo::getEntryDir";
     }
 
-    string GetCodePath()
+    ::taihe::expected<string, ::taihe::error> GetCodePath()
     {
         return "ApplicationInfo::getCodePath";
     }
 
-    bool GetRemovable()
+    ::taihe::expected<bool, ::taihe::error> GetRemovable()
     {
         return true;
     }
 
-    int32_t GetAccessTokenId()
+    ::taihe::expected<int32_t, ::taihe::error> GetAccessTokenId()
     {
         return applicationInfoImpl;
     }
 
-    int32_t GetUid()
+    ::taihe::expected<int32_t, ::taihe::error> GetUid()
     {
         return applicationInfoImpl;
     }
 
-    string GetEntityType()
+    ::taihe::expected<string, ::taihe::error> GetEntityType()
     {
         return "ApplicationInfo::getEntityType";
     }
 };
 
-ApplicationInfo GetApplicationInfo()
+::taihe::expected<ApplicationInfo, ::taihe::error> GetApplicationInfo()
 {
     return make_holder<ApplicationInfoImpl, ApplicationInfo>();
 }
