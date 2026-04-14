@@ -30,16 +30,16 @@ uint8_t SumArrayU8(array_view<uint8_t> nums)
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<uint8_t> GetArrayBuffer(uint8_t nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> GetArrayBuffer(uint8_t nums)
 {
-    array<uint8_t> result = array<uint8_t>::make(nums);
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<uint8_t> DoubleArrayBuffer(array_view<uint8_t> nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> DoubleArrayBuffer(array_view<uint8_t> nums)
 {
-    array<uint8_t> result = array<uint8_t>::make(nums.size());
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -52,16 +52,16 @@ int8_t SumArrayI8(array_view<int8_t> nums)
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<int8_t> GetArrayI8(int8_t nums)
+::taihe::expected<::taihe::array<int8_t>, ::taihe::error> GetArrayI8(int8_t nums)
 {
-    array<int8_t> result = array<int8_t>::make(nums);
+    ::taihe::array<int8_t> result = ::taihe::array<int8_t>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<int8_t> DoubleI8(array_view<int8_t> nums)
+::taihe::expected<::taihe::array<int8_t>, ::taihe::error> DoubleI8(array_view<int8_t> nums)
 {
-    array<int8_t> result = array<int8_t>::make(nums.size());
+    ::taihe::array<int8_t> result = ::taihe::array<int8_t>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -69,21 +69,21 @@ array<int8_t> DoubleI8(array_view<int8_t> nums)
     return result;
 }
 
-int16_t SumArrayI16(array_view<int16_t> nums)
+::taihe::expected<int16_t, ::taihe::error> SumArrayI16(array_view<int16_t> nums)
 {
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<int16_t> GetArrayI16(int16_t nums)
+::taihe::expected<::taihe::array<int16_t>, ::taihe::error> GetArrayI16(int16_t nums)
 {
-    array<int16_t> result = array<int16_t>::make(nums);
+    ::taihe::array<int16_t> result = ::taihe::array<int16_t>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<int16_t> DoubleI16(array_view<int16_t> nums)
+::taihe::expected<::taihe::array<int16_t>, ::taihe::error> DoubleI16(array_view<int16_t> nums)
 {
-    array<int16_t> result = array<int16_t>::make(nums.size());
+    ::taihe::array<int16_t> result = ::taihe::array<int16_t>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -91,21 +91,21 @@ array<int16_t> DoubleI16(array_view<int16_t> nums)
     return result;
 }
 
-int32_t SumArrayI32(array_view<int32_t> nums)
+::taihe::expected<int32_t, ::taihe::error> SumArrayI32(array_view<int32_t> nums)
 {
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<int32_t> GetArrayI32(int32_t nums)
+::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetArrayI32(int32_t nums)
 {
-    array<int32_t> result = array<int32_t>::make(nums);
+    ::taihe::array<int32_t> result = ::taihe::array<int32_t>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<int32_t> DoubleI32(array_view<int32_t> nums)
+::taihe::expected<::taihe::array<int32_t>, ::taihe::error> DoubleI32(array_view<int32_t> nums)
 {
-    array<int32_t> result = array<int32_t>::make(nums.size());
+    ::taihe::array<int32_t> result = ::taihe::array<int32_t>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -113,21 +113,21 @@ array<int32_t> DoubleI32(array_view<int32_t> nums)
     return result;
 }
 
-int64_t SumArrayI64(array_view<int64_t> nums)
+::taihe::expected<int64_t, ::taihe::error> SumArrayI64(array_view<int64_t> nums)
 {
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<int64_t> GetArrayI64(int64_t nums)
+::taihe::expected<::taihe::array<int64_t>, ::taihe::error> GetArrayI64(int64_t nums)
 {
-    array<int64_t> result = array<int64_t>::make(nums);
+    ::taihe::array<int64_t> result = ::taihe::array<int64_t>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<int64_t> DoubleI64(array_view<int64_t> nums)
+::taihe::expected<::taihe::array<int64_t>, ::taihe::error> DoubleI64(array_view<int64_t> nums)
 {
-    array<int64_t> result = array<int64_t>::make(nums.size());
+    ::taihe::array<int64_t> result = ::taihe::array<int64_t>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -135,21 +135,21 @@ array<int64_t> DoubleI64(array_view<int64_t> nums)
     return result;
 }
 
-float SumArrayF32(array_view<float> nums)
+::taihe::expected<float, ::taihe::error> SumArrayF32(array_view<float> nums)
 {
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<float> GetArrayF32(float nums)
+::taihe::expected<::taihe::array<float>, ::taihe::error> GetArrayF32(float nums)
 {
-    array<float> result = array<float>::make(nums);
+    ::taihe::array<float> result = ::taihe::array<float>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<float> DoubleF32(array_view<float> nums)
+::taihe::expected<::taihe::array<float>, ::taihe::error> DoubleF32(array_view<float> nums)
 {
-    array<float> result = array<float>::make(nums.size());
+    ::taihe::array<float> result = ::taihe::array<float>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -157,21 +157,21 @@ array<float> DoubleF32(array_view<float> nums)
     return result;
 }
 
-double SumArrayF64(array_view<double> nums)
+::taihe::expected<double, ::taihe::error> SumArrayF64(array_view<double> nums)
 {
     return std::accumulate(nums.begin(), nums.end(), 0);
 }
 
-array<double> GetArrayF64(double nums)
+::taihe::expected<::taihe::array<double>, ::taihe::error> GetArrayF64(double nums)
 {
-    array<double> result = array<double>::make(nums);
+    ::taihe::array<double> result = ::taihe::array<double>::make(nums);
     std::fill(result.begin(), result.end(), nums);
     return result;
 }
 
-array<double> DoubleF64(array_view<double> nums)
+::taihe::expected<::taihe::array<double>, ::taihe::error> DoubleF64(array_view<double> nums)
 {
-    array<double> result = array<double>::make(nums.size());
+    ::taihe::array<double> result = ::taihe::array<double>::make(nums.size());
     constexpr int32_t const mulTwo = 2;
     for (int i = 0; i < nums.size(); i++) {
         result[i] = nums[i] * mulTwo;
@@ -179,12 +179,12 @@ array<double> DoubleF64(array_view<double> nums)
     return result;
 }
 
-array<uint8_t> DoubleBufferToInt8Array(array_view<uint8_t> nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> DoubleBufferToInt8Array(array_view<uint8_t> nums)
 {
     if (nums.size() % sizeof(int8_t) != 0) {
         throw std::runtime_error("Invalid buffer size for Int32Array");
     }
-    array<uint8_t> result = array<uint8_t>::make(nums.size());
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums.size());
     int8_t *src = reinterpret_cast<int8_t *>(nums.data());
     int8_t *dst = reinterpret_cast<int8_t *>(result.data());
     size_t count = nums.size() / sizeof(int8_t);
@@ -196,12 +196,12 @@ array<uint8_t> DoubleBufferToInt8Array(array_view<uint8_t> nums)
     return result;
 }
 
-array<uint8_t> DoubleBufferToInt16Array(array_view<uint8_t> nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> DoubleBufferToInt16Array(array_view<uint8_t> nums)
 {
     if (nums.size() % sizeof(int16_t) != 0) {
         throw std::runtime_error("Invalid buffer size for Int32Array");
     }
-    array<uint8_t> result = array<uint8_t>::make(nums.size());
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums.size());
     int16_t *src = reinterpret_cast<int16_t *>(nums.data());
     int16_t *dst = reinterpret_cast<int16_t *>(result.data());
     size_t count = nums.size() / sizeof(int16_t);
@@ -213,12 +213,12 @@ array<uint8_t> DoubleBufferToInt16Array(array_view<uint8_t> nums)
     return result;
 }
 
-array<uint8_t> DoubleBufferToInt32Array(array_view<uint8_t> nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> DoubleBufferToInt32Array(array_view<uint8_t> nums)
 {
     if (nums.size() % sizeof(int32_t) != 0) {
         throw std::runtime_error("Invalid buffer size for Int32Array");
     }
-    array<uint8_t> result = array<uint8_t>::make(nums.size());
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums.size());
     int32_t *src = reinterpret_cast<int32_t *>(nums.data());
     int32_t *dst = reinterpret_cast<int32_t *>(result.data());
     size_t count = nums.size() / sizeof(int32_t);
@@ -230,12 +230,12 @@ array<uint8_t> DoubleBufferToInt32Array(array_view<uint8_t> nums)
     return result;
 }
 
-array<uint8_t> DoubleBufferToUint16Array(array_view<uint8_t> nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> DoubleBufferToUint16Array(array_view<uint8_t> nums)
 {
     if (nums.size() % sizeof(uint16_t) != 0) {
         throw std::runtime_error("Invalid buffer size for Int32Array");
     }
-    array<uint8_t> result = array<uint8_t>::make(nums.size());
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums.size());
     uint16_t *src = reinterpret_cast<uint16_t *>(nums.data());
     uint16_t *dst = reinterpret_cast<uint16_t *>(result.data());
     size_t count = nums.size() / sizeof(uint16_t);
@@ -247,12 +247,12 @@ array<uint8_t> DoubleBufferToUint16Array(array_view<uint8_t> nums)
     return result;
 }
 
-array<uint8_t> DoubleBufferToUint32Array(array_view<uint8_t> nums)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> DoubleBufferToUint32Array(array_view<uint8_t> nums)
 {
     if (nums.size() % sizeof(uint32_t) != 0) {
         throw std::runtime_error("Invalid buffer size for Int32Array");
     }
-    array<uint8_t> result = array<uint8_t>::make(nums.size());
+    ::taihe::array<uint8_t> result = ::taihe::array<uint8_t>::make(nums.size());
     uint32_t *src = reinterpret_cast<uint32_t *>(nums.data());
     uint32_t *dst = reinterpret_cast<uint32_t *>(result.data());
     size_t count = nums.size() / sizeof(uint32_t);

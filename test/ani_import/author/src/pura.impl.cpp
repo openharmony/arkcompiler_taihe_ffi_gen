@@ -26,24 +26,28 @@ using namespace pura;
 namespace {
 // To be implemented.
 
-void testBar(::mate::bar::BarType const &bar)
+::taihe::expected<void, ::taihe::error> testBar(::mate::bar::BarType const &bar)
 {
     TH_THROW(std::runtime_error, "testBar not implemented");
+    return {};
 }
 
-void testNova(::nova::weak::NovaType nove)
+::taihe::expected<void, ::taihe::error> testNova(::nova::weak::NovaType nove)
 {
     TH_THROW(std::runtime_error, "testNova not implemented");
+    return {};
 }
 
-void testMyStruct(::test::inner::MyStruct const &s)
+::taihe::expected<void, ::taihe::error> testMyStruct(::test::inner::MyStruct const &s)
 {
     TH_THROW(std::runtime_error, "testMyStruct not implemented");
+    return {};
 }
 
-void testPuraClass(::pura::PuraClass const &c)
+::taihe::expected<void, ::taihe::error> testPuraClass(::pura::PuraClass const &c)
 {
     TH_THROW(std::runtime_error, "testPuraClass not implemented");
+    return {};
 }
 }  // namespace
 

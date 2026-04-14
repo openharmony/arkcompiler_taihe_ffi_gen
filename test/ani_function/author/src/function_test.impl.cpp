@@ -28,22 +28,25 @@ using namespace taihe;
 namespace {
 class Foo {
 public:
-    void bar()
+    ::taihe::expected<void, ::taihe::error> bar()
     {
         std::cout << "call bar" << std::endl;
+        return {};
     }
 
-    void bar_int(int32_t a)
+    ::taihe::expected<void, ::taihe::error> bar_int(int32_t a)
     {
         std::cout << "call bar_int a is :" << a << std::endl;
+        return {};
     }
 
-    void bar_str(string_view a)
+    ::taihe::expected<void, ::taihe::error> bar_str(string_view a)
     {
         std::cout << "call bar_str a is :" << std::string(a) << std::endl;
+        return {};
     }
 
-    void bar_union(string_view a, ::function_test::MyUnion const &b)
+    ::taihe::expected<void, ::taihe::error> bar_union(string_view a, ::function_test::MyUnion const &b)
     {
         std::cout << "call bar_union a is :" << std::string(a) << std::endl;
         switch (b.get_tag()) {
@@ -57,35 +60,45 @@ public:
                 std::cout << "f: " << b.get_fValue_ref() << std::endl;
                 break;
         }
+        return {};
     }
 
-    void bar_union_opt(string_view a, optional_view<string> name)
+    ::taihe::expected<void, ::taihe::error> bar_union_opt(string_view a, optional_view<string> name)
     {
         std::cout << "call bar_union a is :" << std::string(a) << *name << std::endl;
+        return {};
     }
 
-    void test_cb_v(callback_view<void()> f)
+    ::taihe::expected<void, ::taihe::error> test_cb_v(callback_view<::taihe::expected<void, ::taihe::error>()> f)
     {
         f();
+        return {};
     }
 
-    void test_cb_i(callback_view<void(int32_t)> f)
+    ::taihe::expected<void, ::taihe::error> test_cb_i(callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
     {
         f(1);
+        return {};
     }
 
-    void test_cb_s(callback_view<void(string_view, bool)> f)
+    ::taihe::expected<void, ::taihe::error> test_cb_s(
+        callback_view<::taihe::expected<void, ::taihe::error>(string_view, bool)> f)
     {
         f("hello", true);
+        return {};
     }
 
-    string test_cb_rs(callback_view<int64_t(int64_t)> f)
+    ::taihe::expected<::taihe::string, ::taihe::error> test_cb_rs(
+        callback_view<::taihe::expected<int64_t, ::taihe::error>(int64_t)> f)
     {
-        int64_t out = f(444);
-        return std::to_string(out);
+        auto result = f(444);
+        if (result.has_value()) {
+            return std::to_string(result.value());
+        }
+        return "";
     }
 
-    int32_t addSync(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> addSync(int32_t a, int32_t b)
     {
         std::cout << "call addSync a and b is" << std::to_string(a) << std::to_string(b) << std::endl;
         return a + b;
@@ -94,47 +107,48 @@ public:
 
 class FooCls {
 public:
-    string get()
+    ::taihe::expected<::taihe::string, ::taihe::error> get()
     {
         return "zhangsan";
     }
 };
 
-int32_t static_func_add(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> static_func_add(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-int32_t static_func_sub(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> static_func_sub(int32_t a, int32_t b)
 {
     return a - b;
 }
 
-::function_test::FooCls getFooCls1(string_view name)
+::taihe::expected<::function_test::FooCls, ::taihe::error> getFooCls1(string_view name)
 {
     return make_holder<FooCls, ::function_test::FooCls>();
 }
 
-::function_test::FooCls getFooCls2(string_view name, string_view test)
+::taihe::expected<::function_test::FooCls, ::taihe::error> getFooCls2(string_view name, string_view test)
 {
     return make_holder<FooCls, ::function_test::FooCls>();
 }
 
-::function_test::Foo makeFoo()
+::taihe::expected<::function_test::Foo, ::taihe::error> makeFoo()
 {
     return make_holder<Foo, ::function_test::Foo>();
 }
 
 static int32_t static_property = 0;
 
-int32_t getStaticProperty()
+::taihe::expected<int32_t, ::taihe::error> getStaticProperty()
 {
     return static_property;
 }
 
-void setStaticProperty(int32_t a)
+::taihe::expected<void, ::taihe::error> setStaticProperty(int32_t a)
 {
     static_property = a;
+    return {};
 }
 }  // namespace
 

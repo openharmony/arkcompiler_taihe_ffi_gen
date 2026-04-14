@@ -32,21 +32,22 @@ public:
     {
     }
 
-    string getEmail()
+    ::taihe::expected<string, ::taihe::error> getEmail()
     {
         return this->m_email;
     }
 
-    void setEmail(string_view path)
+    ::taihe::expected<void, ::taihe::error> setEmail(string_view path)
     {
         this->m_email = path;
+        return {};
     }
 
 private:
     string m_email;
 };
 
-IUser makeUser(string_view path)
+::taihe::expected<::user::IUser, ::taihe::error> makeUser(string_view path)
 {
     return make_holder<IUserImpl, IUser>(path);
 }

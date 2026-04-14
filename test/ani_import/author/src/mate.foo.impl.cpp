@@ -26,19 +26,22 @@ using namespace mate::foo;
 namespace {
 // To be implemented.
 
-void testMate(::mate::MateType const &mate)
+::taihe::expected<void, ::taihe::error> testMate(::mate::MateType const &mate)
 {
     TH_THROW(std::runtime_error, "testMate not implemented");
+    return {};
 }
 
-void testNova(::nova::weak::NovaType nova)
+::taihe::expected<void, ::taihe::error> testNova(::nova::weak::NovaType nova)
 {
     TH_THROW(std::runtime_error, "testNova not implemented");
+    return {};
 }
 
-void testPura(::pura::PuraType pura)
+::taihe::expected<void, ::taihe::error> testPura(::pura::PuraType pura)
 {
     TH_THROW(std::runtime_error, "testPura not implemented");
+    return {};
 }
 }  // namespace
 

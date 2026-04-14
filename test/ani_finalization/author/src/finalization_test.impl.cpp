@@ -30,7 +30,7 @@ namespace {
 // To be implemented.
 
 class FooImpl {
-    vector<callback<void()>> callbacks;
+    vector<callback<::taihe::expected<void, ::taihe::error>()>> callbacks;
 
 public:
     FooImpl()
@@ -38,22 +38,24 @@ public:
         std::cout << __PRETTY_FUNCTION__ << std::endl;
     }
 
-    void addCallback(callback_view<void()> callback)
+    ::taihe::expected<void, ::taihe::error> addCallback(
+        callback_view<::taihe::expected<void, ::taihe::error>()> callback)
     {
         std::cout << __PRETTY_FUNCTION__ << std::endl;
         callbacks.emplace_back(callback);
+        return {};
     }
 
     ~FooImpl()
     {
         std::cout << __PRETTY_FUNCTION__ << std::endl;
-        for (callback_view<void()> callback : callbacks) {
+        for (callback_view<::taihe::expected<void, ::taihe::error>()> callback : callbacks) {
             callback();
         }
     }
 };
 
-Foo makeFoo()
+::taihe::expected<Foo, ::taihe::error> makeFoo()
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.

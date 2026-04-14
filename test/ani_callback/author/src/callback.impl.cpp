@@ -34,54 +34,63 @@ public:
     {
     }
 
-    ::taihe::string TestCbIntString(::taihe::callback_view<void(int8_t, int32_t)> f)
+    ::taihe::expected<::taihe::string, ::taihe::error> TestCbIntString(
+        ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int8_t, int32_t)> f)
     {
         f(ten, hundred);
         return "testCbIntString";
     }
 
-    bool TestCbIntBool(::taihe::callback_view<void(int16_t, int64_t)> f)
+    ::taihe::expected<bool, ::taihe::error> TestCbIntBool(
+        ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int16_t, int64_t)> f)
     {
         f(hundred, tenBillion);
         return true;
     }
 
-    ::callbackTest::EnumData TestCbEnum(::taihe::callback_view<void(int32_t)> f)
+    ::taihe::expected<::callbackTest::EnumData, ::taihe::error> TestCbEnum(
+        ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
     {
         f(ten);
         return ::callbackTest::EnumData(::callbackTest::EnumData::key_t::F32_A);
     }
 };
 
-void TestCbV(callback_view<void()> f)
+::taihe::expected<void, ::taihe::error> TestCbV(callback_view<::taihe::expected<void, ::taihe::error>()> f)
 {
     f();
+    return {};
 }
 
-void TestCbI(callback_view<void(int32_t)> f)
+::taihe::expected<void, ::taihe::error> TestCbI(callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
 {
     static int const one = 1;
     f(one);
+    return {};
 }
 
-void TestCbS(callback_view<void(string_view, bool)> f)
+::taihe::expected<void, ::taihe::error> TestCbS(
+    callback_view<::taihe::expected<void, ::taihe::error>(string_view, bool)> f)
 {
     f("hello", true);
+    return {};
 }
 
-string TestCbRs(callback_view<string(string_view)> f)
+::taihe::expected<string, ::taihe::error> TestCbRs(
+    callback_view<::taihe::expected<string, ::taihe::error>(string_view)> f)
 {
-    taihe::string out = f("hello");
+    ::taihe::expected<string, ::taihe::error> out = f("hello");
     return out;
 }
 
-void TestCbStruct(callback_view<::callbackTest::Data(::callbackTest::Data const &)> f)
+::taihe::expected<void, ::taihe::error> TestCbStruct(
+    callback_view<::taihe::expected<::callbackTest::Data, ::taihe::error>(::callbackTest::Data const &)> f)
 {
-    ::callbackTest::Data result = f(::callbackTest::Data {"a", "b", 1});
-    return;
+    ::taihe::expected<::callbackTest::Data, ::taihe::error> result = f(::callbackTest::Data {"a", "b", 1});
+    return {};
 }
 
-::callbackTest::MyInterface GetInterface()
+::taihe::expected<::callbackTest::MyInterface, ::taihe::error> GetInterface()
 {
     return taihe::make_holder<MyInterfaceImpl, ::callbackTest::MyInterface>();
 }

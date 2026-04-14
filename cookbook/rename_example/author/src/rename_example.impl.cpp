@@ -25,14 +25,14 @@ using namespace rename_example;
 namespace {
 
 // C++ side always uses original names
-int32_t OldFoo(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> OldFoo(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-OldPoint CreatePoint(int32_t x, int32_t y)
+::taihe::expected<OldPoint, ::taihe::error> CreatePoint(int32_t x, int32_t y)
 {
-    return {x, y};
+    return OldPoint {x, y};
 }
 
 class OldGreeterImpl {
@@ -43,36 +43,36 @@ public:
     {
     }
 
-    string Greet()
+    ::taihe::expected<string, ::taihe::error> Greet()
     {
         return "Hello from " + name_;
     }
 };
 
-OldGreeter CreateGreeter(string_view name)
+::taihe::expected<OldGreeter, ::taihe::error> CreateGreeter(string_view name)
 {
     return make_holder<OldGreeterImpl, OldGreeter>(name);
 }
 
-::taihe::string TestParamRename(::taihe::string_view msg)
+::taihe::expected<::taihe::string, ::taihe::error> TestParamRename(::taihe::string_view msg)
 {
     return "Received message: " + msg;
 }
 
-string MyStructStaticFunc()
+::taihe::expected<string, ::taihe::error> MyStructStaticFunc()
 {
     return "Hello from MyStructStaticFunc";
 }
 
 class OldMyInterfaceImpl {
 public:
-    std::string doSomething(string_view s)
+    ::taihe::expected<::taihe::string, ::taihe::error> doSomething(string_view s)
     {
         return "Hello, " + std::string(s);
     }
 };
 
-OldMyInterface MyInterfaceCtor()
+::taihe::expected<OldMyInterface, ::taihe::error> MyInterfaceCtor()
 {
     return taihe::make_holder<OldMyInterfaceImpl, OldMyInterface>();
 }

@@ -74,7 +74,7 @@ private:
     ColorOrRGBOrName myColor;
 
 public:
-    auto getId()
+    ::taihe::expected<string, ::taihe::error> getId()
     {
         return concat({"UserType", "(", id, ")"});
     }
@@ -96,13 +96,19 @@ public:
 
     UserType(string_view id, ColorOrRGBOrName const &color) : id(id), myColor(color)
     {
-        std::cout << getId() << " made" << std::endl;
+        auto id_res = getId();
+        if (id_res.has_value()) {
+            std::cout << id_res.value() << " made" << std::endl;
+        }
         registry.insert(this);
     }
 
     ~UserType()
     {
-        std::cout << getId() << " deleted" << std::endl;
+        auto id_res = getId();
+        if (id_res.has_value()) {
+            std::cout << id_res.value() << " deleted" << std::endl;
+        }
         registry.erase(this);
     }
 
@@ -163,30 +169,34 @@ void testUnion()
 
 void testInterfaceCall()
 {
-    IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
+    IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5).value();
 
-    Tester::assert(weak::IColorable(colored_rect)->getColor() == color_yellow,
+    auto color_res = weak::IColorable(colored_rect)->getColor();
+    Tester::assert(color_res.has_value() && color_res.value() == color_yellow,
                    "Colored Rectangle should have color %s, got %s", toString(color_yellow).c_str(),
-                   toString(weak::IColorable(colored_rect)->getColor()).c_str());
+                   color_res.has_value() ? toString(color_res.value()).c_str() : "error");
 
     copyColor(colored_rect, make_holder<UserType, IColorable>("Circ", color_114514));
 
-    Tester::assert(weak::IColorable(colored_rect)->getColor() == color_114514,
+    auto color_res2 = weak::IColorable(colored_rect)->getColor();
+    Tester::assert(color_res2.has_value() && color_res2.value() == color_114514,
                    "Colored Rectangle should have color %s, got %s", toString(color_114514).c_str(),
-                   toString(weak::IColorable(colored_rect)->getColor()).c_str());
+                   color_res2.has_value() ? toString(color_res2.value()).c_str() : "error");
 }
 
 void testInterfaceCast()
 {
-    IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
+    IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2).value();
 
+    auto id_a = ibase_a->getId();
     Tester::assert(!weak::IColorable(ibase_a).is_error(), "Dynamic cast from %s to IColorable should succeed",
-                   ibase_a->getId().c_str());
+                   id_a.has_value() ? id_a.value().c_str() : "error");
 
-    IBase ibase_b = makeRectangle("B", 3, 4);
+    IBase ibase_b = makeRectangle("B", 3, 4).value();
 
+    auto id_b = ibase_b->getId();
     Tester::assert(weak::IColorable(ibase_b).is_error(), "Dynamic cast from %s to IColorable should fail",
-                   ibase_b->getId().c_str());
+                   id_b.has_value() ? id_b.value().c_str() : "error");
 }
 
 void testArray()
@@ -200,32 +210,48 @@ void testArray()
     auto dst = array<IBase>::make(m, x);
     auto src = array<IBase>::make(n, y);
 
-    auto res = exchangeArr(dst, src);
+    auto res = exchangeArr(dst, src).value();
 
     Tester::assert(dst.size() == m, "dst size should be %zu, got %zu", m, dst.size());
     Tester::assert(src.size() == n, "src size should be %zu, got %zu", n, src.size());
     Tester::assert(res.size() == n, "res size should be %zu, got %zu", n, res.size());
 
     for (size_t i = 0; i < n; i++) {
-        Tester::assert(src[i] == y, "src[%zu] should be %s, got %s", i, y->getId().c_str(), src[i]->getId().c_str());
-        Tester::assert(dst[i] == y, "dst[%zu] should be %s, got %s", i, y->getId().c_str(), dst[i]->getId().c_str());
-        Tester::assert(res[i] == x, "res[%zu] should be %s, got %s", i, x->getId().c_str(), res[i]->getId().c_str());
+        auto src_id = src[i]->getId();
+        auto dst_id = dst[i]->getId();
+        auto res_id = res[i]->getId();
+        auto x_id = x->getId();
+        auto y_id = y->getId();
+        Tester::assert(src_id.has_value() && y_id.has_value() && src_id.value() == y_id.value(),
+                       "src[%zu] should be %s, got %s", i, y_id.has_value() ? y_id.value().c_str() : "error",
+                       src_id.has_value() ? src_id.value().c_str() : "error");
+        Tester::assert(dst_id.has_value() && y_id.has_value() && dst_id.value() == y_id.value(),
+                       "dst[%zu] should be %s, got %s", i, y_id.has_value() ? y_id.value().c_str() : "error",
+                       dst_id.has_value() ? dst_id.value().c_str() : "error");
+        Tester::assert(res_id.has_value() && x_id.has_value() && res_id.value() == x_id.value(),
+                       "res[%zu] should be %s, got %s", i, x_id.has_value() ? x_id.value().c_str() : "error",
+                       res_id.has_value() ? res_id.value().c_str() : "error");
     }
     for (size_t i = n; i < m; i++) {
-        Tester::assert(dst[i] == x, "dst[%zu] should be %s, got %s", i, x->getId().c_str(), dst[i]->getId().c_str());
+        auto dst_id = dst[i]->getId();
+        auto x_id = x->getId();
+        Tester::assert(dst_id.has_value() && x_id.has_value() && dst_id.value() == x_id.value(),
+                       "dst[%zu] should be %s, got %s", i, x_id.has_value() ? x_id.value().c_str() : "error",
+                       dst_id.has_value() ? dst_id.value().c_str() : "error");
     }
 }
 
 void testOptional()
 {
     auto some = optional<IBase>(std::in_place, make_holder<UserType, IBase>("some"));
-    auto some_str = getIdFromOptional(some);
+    auto some_str = getIdFromOptional(some).value();
+    auto some_id = some.value()->getId();
     Tester::assert(some_str.has_value(), "some_str should have value");
-    Tester::assert(some_str.value() == some.value()->getId(), "some_str should be %s, got %s",
-                   some.value()->getId().c_str(), some_str.value().c_str());
+    Tester::assert(some_id.has_value() && some_str.value() == some_id.value(), "some_str should be %s, got %s",
+                   some_id.has_value() ? some_id.value().c_str() : "error", some_str.value().c_str());
 
     auto none = optional<IBase>(std::nullopt);
-    auto none_str = getIdFromOptional(none);
+    auto none_str = getIdFromOptional(none).value();
     Tester::assert(!none_str.has_value(), "none_str should not have value");
 }
 
@@ -237,19 +263,25 @@ void testVector()
         make_holder<UserType, IBase>("c"),
     };
 
-    vector<IBase> res = makeVec(src);
+    vector<IBase> res = makeVec(src).value();
     Tester::assert(res.size() == src.size(), "Vector result size should be %zu, got %zu", src.size(), res.size());
     for (size_t i = 0; i < src.size(); i++) {
-        Tester::assert(res[i]->getId() == src[i]->getId(), "res[%zu] should be %s, got %s", i, src[i]->getId().c_str(),
-                       res[i]->getId().c_str());
+        auto res_id = res[i]->getId();
+        auto src_id = src[i]->getId();
+        Tester::assert(res_id.has_value() && src_id.has_value() && res_id.value() == src_id.value(),
+                       "res[%zu] should be %s, got %s", i, src_id.has_value() ? src_id.value().c_str() : "error",
+                       res_id.has_value() ? res_id.value().c_str() : "error");
     }
 
     vector<IBase> buf;
     fillVec(src, buf);
     Tester::assert(buf.size() == src.size(), "Vector buffer size should be %zu, got %zu", src.size(), buf.size());
     for (size_t i = 0; i < src.size(); i++) {
-        Tester::assert(buf[i]->getId() == src[i]->getId(), "buf[%zu] should be %s, got %s", i, src[i]->getId().c_str(),
-                       buf[i]->getId().c_str());
+        auto buf_id = buf[i]->getId();
+        auto src_id = src[i]->getId();
+        Tester::assert(buf_id.has_value() && src_id.has_value() && buf_id.value() == src_id.value(),
+                       "buf[%zu] should be %s, got %s", i, src_id.has_value() ? src_id.value().c_str() : "error",
+                       buf_id.has_value() ? buf_id.value().c_str() : "error");
     }
 }
 
@@ -269,14 +301,18 @@ void testMap()
         expected.emplace(std::string(keys[i]), src[i]);
     }
 
-    map<string, IBase> res = makeMap(keys, src);
+    map<string, IBase> res = makeMap(keys, src).value();
     Tester::assert(res.size() == expected.size(), "Map result size should be %zu, got %zu", expected.size(),
                    res.size());
     for (auto const &[key, value] : expected) {
         auto it = res.find_item(key);
         Tester::assert(it, "Map should contain key %s", key.c_str());
-        Tester::assert(it->second->getId() == value->getId(), "Map[%s] should be %s, got %s", key.c_str(),
-                       value->getId().c_str(), it->second->getId().c_str());
+        auto it_id = it->second->getId();
+        auto val_id = value->getId();
+        Tester::assert(it_id.has_value() && val_id.has_value() && it_id.value() == val_id.value(),
+                       "Map[%s] should be %s, got %s", key.c_str(),
+                       val_id.has_value() ? val_id.value().c_str() : "error",
+                       it_id.has_value() ? it_id.value().c_str() : "error");
     }
 
     map<string, IBase> buf;
@@ -286,8 +322,12 @@ void testMap()
     for (auto const &[key, value] : expected) {
         auto it = buf.find_item(key);
         Tester::assert(it, "buffer should contain key %s", key.c_str());
-        Tester::assert(it->second->getId() == value->getId(), "buffer[%s] should be %s, got %s", key.c_str(),
-                       value->getId().c_str(), it->second->getId().c_str());
+        auto it_id = it->second->getId();
+        auto val_id = value->getId();
+        Tester::assert(it_id.has_value() && val_id.has_value() && it_id.value() == val_id.value(),
+                       "buffer[%s] should be %s, got %s", key.c_str(),
+                       val_id.has_value() ? val_id.value().c_str() : "error",
+                       it_id.has_value() ? it_id.value().c_str() : "error");
     }
 }
 
@@ -300,7 +340,7 @@ void testSet()
         expected.emplace(std::string(src[i]));
     }
 
-    set<string> res = makeSet(src);
+    set<string> res = makeSet(src).value();
     Tester::assert(res.size() == expected.size(), "Set result size should be %zu, got %zu", expected.size(),
                    res.size());
     for (auto const &key : expected) {
@@ -331,7 +371,7 @@ struct MyCallback {
         std::cout << "Callback " << f << " deleted" << std::endl;
     }
 
-    string operator()(string_view a, string_view b)
+    ::taihe::expected<string, ::taihe::error> operator()(string_view a, string_view b)
     {
         std::cout << "Callback " << f << " called" << std::endl;
         return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
@@ -340,15 +380,18 @@ struct MyCallback {
 
 void testCallback()
 {
-    auto curried = currying(make_holder<MyCallback, callback<string(string_view, string_view)>>("f"));
-    auto f = curried("abc");
-    auto x = f("123");
-    auto y = f("456");
+    auto curried =
+        currying(
+            make_holder<MyCallback, callback<::taihe::expected<string, ::taihe::error>(string_view, string_view)>>("f"))
+            .value();
+    auto f = curried("abc").value();
+    auto x = f("123").value();
+    auto y = f("456").value();
 
-    auto expected_x = MyCallback("f")("abc", "123");
+    auto expected_x = MyCallback("f")("abc", "123").value();
     Tester::assert(x == expected_x, "x should be %s, got %s", expected_x.c_str(), x.c_str());
 
-    auto expected_y = MyCallback("f")("abc", "456");
+    auto expected_y = MyCallback("f")("abc", "456").value();
     Tester::assert(y == expected_y, "y should be %s, got %s", expected_y.c_str(), y.c_str());
 }
 
@@ -360,7 +403,7 @@ struct AutoCompareType {
         std::cout << "AutoCompareType " << id << " made" << std::endl;
     }
 
-    string getId() const
+    ::taihe::expected<string, ::taihe::error> getId() const
     {
         return id;
     }
@@ -374,7 +417,7 @@ struct UserCompareType {
         std::cout << "UserCompareType " << id << " made" << std::endl;
     }
 
-    string getId() const
+    ::taihe::expected<string, ::taihe::error> getId() const
     {
         return id;
     }
@@ -389,7 +432,12 @@ struct taihe::same_impl_t<UserCompareType> {
         if (lhs_with_id.is_error() || rhs_with_id.is_error()) {
             return same_impl<void>(lhs, rhs);
         }
-        return lhs_with_id->getId() == rhs_with_id->getId();
+        auto lhs_id = lhs_with_id->getId();
+        auto rhs_id = rhs_with_id->getId();
+        if (lhs_id.has_value() && rhs_id.has_value()) {
+            return lhs_id.value() == rhs_id.value();
+        }
+        return same_impl<void>(lhs, rhs);
     }
 };
 
@@ -401,7 +449,11 @@ struct taihe::hash_impl_t<UserCompareType> {
         if (val_with_id.is_error()) {
             return hash_impl<void>(val);
         }
-        return std::hash<std::string_view> {}(val_with_id->getId());
+        auto id = val_with_id->getId();
+        if (id.has_value()) {
+            return std::hash<std::string_view> {}(id.value());
+        }
+        return hash_impl<void>(val);
     }
 };
 
@@ -414,7 +466,9 @@ void testCompare()
     auto_compare_map.emplace(make_holder<AutoCompareType, IBase>("a"), "c");
     std::cout << "AutoCompareMap size: " << auto_compare_map.size() << std::endl;
     for (auto const &[key, value] : auto_compare_map) {
-        std::cout << "AutoCompareMap: " << key->getId() << " -> " << value << std::endl;
+        auto key_id = key->getId();
+        std::cout << "AutoCompareMap: " << (key_id.has_value() ? key_id.value() : "error") << " -> " << value
+                  << std::endl;
     }
 
     // UserCompareType uses custom comparison
@@ -424,7 +478,9 @@ void testCompare()
     user_compare_map.emplace(make_holder<UserCompareType, IBase>("a"), "c");
     std::cout << "UserCompareMap size: " << user_compare_map.size() << std::endl;
     for (auto const &[key, value] : user_compare_map) {
-        std::cout << "UserCompareMap: " << key->getId() << " -> " << value << std::endl;
+        auto key_id = key->getId();
+        std::cout << "UserCompareMap: " << (key_id.has_value() ? key_id.value() : "error") << " -> " << value
+                  << std::endl;
     }
 
     Tester::assert(auto_compare_map.size() == 3, "AutoCompareMap should have 3 items, got %zu",
@@ -462,9 +518,11 @@ void testHashAndSame()
     std::cout << "Hash of map with a: " << std::hash<map<IBase, IBase>>()(m) << std::endl;
     std::cout << "Comparing map with a with itself: " << std::boolalpha << (m == m) << std::endl;
 
-    taihe::callback<string(string_view, string_view)> cb(
-        make_holder<MyCallback, callback<string(string_view, string_view)>>("cb"));
-    std::cout << "Hash of callback: " << std::hash<callback<string(string_view, string_view)>>()(cb) << std::endl;
+    taihe::callback<::taihe::expected<string, ::taihe::error>(string_view, string_view)> cb(
+        make_holder<MyCallback, callback<::taihe::expected<string, ::taihe::error>(string_view, string_view)>>("cb"));
+    std::cout << "Hash of callback: "
+              << std::hash<callback<::taihe::expected<string, ::taihe::error>(string_view, string_view)>>()(cb)
+              << std::endl;
     std::cout << "Comparing callback with itself: " << std::boolalpha << (cb == cb) << std::endl;
 }
 
@@ -473,7 +531,10 @@ void testMemoryLeak()
     size_t remaining = 0;
 
     for (auto *user : UserType::registry) {
-        std::cout << user->getId() << " is still alive" << std::endl;
+        auto id_res = user->getId();
+        if (id_res.has_value()) {
+            std::cout << id_res.value() << " is still alive" << std::endl;
+        }
         remaining++;
     }
 

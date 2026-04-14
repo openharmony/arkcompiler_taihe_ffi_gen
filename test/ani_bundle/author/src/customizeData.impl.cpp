@@ -36,38 +36,41 @@ public:
     {
     }
 
-    void SetName(string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(string_view name)
     {
         name_ = name;
+        return {};
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return name_;
     }
 
-    void SetValue(string_view value)
+    ::taihe::expected<void, ::taihe::error> SetValue(string_view value)
     {
         value_ = value;
+        return {};
     }
 
-    string GetValue()
+    ::taihe::expected<string, ::taihe::error> GetValue()
     {
         return value_;
     }
 
-    void SetExtra(string_view extra)
+    ::taihe::expected<void, ::taihe::error> SetExtra(string_view extra)
     {
         extra_ = extra;
+        return {};
     }
 
-    string GetExtra()
+    ::taihe::expected<string, ::taihe::error> GetExtra()
     {
         return extra_;
     }
 };
 
-CustomizeData GetCustomizeData()
+::taihe::expected<CustomizeData, ::taihe::error> GetCustomizeData()
 {
     return make_holder<CustomizeDataImpl, CustomizeData>();
 }
