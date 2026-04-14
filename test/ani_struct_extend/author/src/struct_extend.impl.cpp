@@ -40,116 +40,122 @@ public:
         this->e_.param5 = e.param5;
     }
 
-    ::struct_extend::E getE()
+    ::taihe::expected<::struct_extend::E, ::taihe::error> getE()
     {
         return e_;
     }
 
-    void setE(::struct_extend::E const &e)
+    ::taihe::expected<void, ::taihe::error> setE(::struct_extend::E const &e)
     {
         this->e_.d.param4 = e.d.param4;
         this->e_.param5 = e.param5;
+        return {};
     }
 
 private:
     ::struct_extend::E e_;
 };
 
-void check_A(::struct_extend::A const &i)
+::taihe::expected<void, ::taihe::error> check_A(::struct_extend::A const &i)
 {
     std::cout << i.param1 << std::endl;
+    return {};
 }
 
-::struct_extend::A create_A()
+::taihe::expected<::struct_extend::A, ::taihe::error> create_A()
 {
-    return {1};
+    return ::struct_extend::A {1};
 }
 
-void check_B(::struct_extend::B const &i)
+::taihe::expected<void, ::taihe::error> check_B(::struct_extend::B const &i)
 {
     std::cout << i.a.param1 << std::endl;
     std::cout << i.param2 << std::endl;
+    return {};
 }
 
-::struct_extend::B create_B()
+::taihe::expected<::struct_extend::B, ::taihe::error> create_B()
 {
-    return {{1}, 2};
+    return ::struct_extend::B {{1}, 2};
 }
 
-void check_C(::struct_extend::C const &i)
+::taihe::expected<void, ::taihe::error> check_C(::struct_extend::C const &i)
 {
     std::cout << i.b.a.param1 << std::endl;
     std::cout << i.b.param2 << std::endl;
     std::cout << i.param3 << std::endl;
+    return {};
 }
 
-::struct_extend::C create_C()
+::taihe::expected<::struct_extend::C, ::taihe::error> create_C()
 {
-    return {{{1}, 2}, 3};
+    return ::struct_extend::C {{{1}, 2}, 3};
 }
 
-void check_D(::struct_extend::D const &i)
+::taihe::expected<void, ::taihe::error> check_D(::struct_extend::D const &i)
 {
     std::cout << i.param4 << std::endl;
+    return {};
 }
 
-::struct_extend::D create_D()
+::taihe::expected<::struct_extend::D, ::taihe::error> create_D()
 {
-    return {4};
+    return ::struct_extend::D {4};
 }
 
-void check_E(::struct_extend::E const &i)
+::taihe::expected<void, ::taihe::error> check_E(::struct_extend::E const &i)
 {
     std::cout << i.d.param4 << std::endl;
     std::cout << i.param5 << std::endl;
+    return {};
 }
 
-::struct_extend::E create_E()
+::taihe::expected<::struct_extend::E, ::taihe::error> create_E()
 {
-    return {{4}, 5};
+    return ::struct_extend::E {{4}, 5};
 }
 
-::struct_extend::Bar getBar(::struct_extend::E const &e)
-{
-    return make_holder<Bar, ::struct_extend::Bar>(e);
-}
-
-bool check_Bar(::struct_extend::weak::Bar bar)
-{
-    return true;
-}
-
-bool check_F(::struct_extend::F const &f)
-{
-    return true;
-}
-
-bool check_G(::struct_extend::G const &g)
-{
-    return true;
-}
-
-bool check_H(::struct_extend::H const &h)
-{
-    return true;
-}
-
-bool check_I(::struct_extend::I const &i)
-{
-    return true;
-}
-
-bool check_J(::struct_extend::J const &j)
-{
-    return true;
-}
-
-::struct_extend::Bar create_Bar(::struct_extend::E const &e)
+::taihe::expected<::struct_extend::Bar, ::taihe::error> getBar(::struct_extend::E const &e)
 {
     return make_holder<Bar, ::struct_extend::Bar>(e);
 }
 
-::struct_extend::F create_F(::struct_extend::E const &e)
+::taihe::expected<bool, ::taihe::error> check_Bar(::struct_extend::weak::Bar bar)
+{
+    return true;
+}
+
+::taihe::expected<bool, ::taihe::error> check_F(::struct_extend::F const &f)
+{
+    return true;
+}
+
+::taihe::expected<bool, ::taihe::error> check_G(::struct_extend::G const &g)
+{
+    return true;
+}
+
+::taihe::expected<bool, ::taihe::error> check_H(::struct_extend::H const &h)
+{
+    return true;
+}
+
+::taihe::expected<bool, ::taihe::error> check_I(::struct_extend::I const &i)
+{
+    return true;
+}
+
+::taihe::expected<bool, ::taihe::error> check_J(::struct_extend::J const &j)
+{
+    return true;
+}
+
+::taihe::expected<::struct_extend::Bar, ::taihe::error> create_Bar(::struct_extend::E const &e)
+{
+    return make_holder<Bar, ::struct_extend::Bar>(e);
+}
+
+::taihe::expected<::struct_extend::F, ::taihe::error> create_F(::struct_extend::E const &e)
 {
     ::struct_extend::F f {
         .barF = make_holder<Bar, ::struct_extend::Bar>(e),
@@ -157,37 +163,37 @@ bool check_J(::struct_extend::J const &j)
     return f;
 }
 
-::struct_extend::G create_G(::struct_extend::E const &e)
+::taihe::expected<::struct_extend::G, ::taihe::error> create_G(::struct_extend::E const &e)
 {
     ::struct_extend::G g {
-        .f = create_F(e),
+        .f = create_F(e).value(),
         .barG = make_holder<Bar, ::struct_extend::Bar>(e),
     };
     return g;
 }
 
-::struct_extend::H create_H(::struct_extend::E const &e)
+::taihe::expected<::struct_extend::H, ::taihe::error> create_H(::struct_extend::E const &e)
 {
     ::struct_extend::H h {
-        .g = create_G(e),
+        .g = create_G(e).value(),
         .barH = make_holder<Bar, ::struct_extend::Bar>(e),
     };
     return h;
 }
 
-::struct_extend::I create_I(::struct_extend::E const &e)
+::taihe::expected<::struct_extend::I, ::taihe::error> create_I(::struct_extend::E const &e)
 {
     ::struct_extend::I i {
-        .h = create_H(e),
+        .h = create_H(e).value(),
         .barI = make_holder<Bar, ::struct_extend::Bar>(e),
     };
     return i;
 }
 
-::struct_extend::J create_J(::struct_extend::E const &e)
+::taihe::expected<::struct_extend::J, ::taihe::error> create_J(::struct_extend::E const &e)
 {
     ::struct_extend::J j {
-        .i = create_I(e),
+        .i = create_I(e).value(),
         .barJ = make_holder<Bar, ::struct_extend::Bar>(e),
     };
     return j;

@@ -22,108 +22,112 @@
 #include "taihe/runtime.hpp"
 
 namespace {
-int32_t AddImpl(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> AddImpl(int32_t a, int32_t b)
 {
     if (a == 0) {
-        taihe::set_business_error(1, "some error happen in add impl");
-        return b;
+        return ::taihe::unexpected<::taihe::error>(::taihe::error("some error happen in add impl", 1));
     } else {
         std::cout << "add impl " << a + b << std::endl;
         return a + b;
     }
 }
 
-::async_test::IBase GetIBaseImpl()
+struct AuthorIBase {
+    taihe::string name;
+
+    AuthorIBase() : name("My IBase")
+    {
+    }
+
+    ~AuthorIBase()
+    {
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> Get()
+    {
+        return name;
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> GetWithCallback()
+    {
+        return name;
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> GetReturnsPromise()
+    {
+        return name;
+    }
+
+    ::taihe::expected<void, ::taihe::error> Set(taihe::string_view a)
+    {
+        this->name = a;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> SetWithCallback(taihe::string_view a)
+    {
+        this->name = a;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> SetReturnsPromise(taihe::string_view a)
+    {
+        this->name = a;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> MakeSync()
+    {
+        TH_THROW(std::runtime_error, "makeSync not implemented");
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> MakeWithCallback()
+    {
+        TH_THROW(std::runtime_error, "makeSync not implemented");
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> MakeReturnsPromise()
+    {
+        TH_THROW(std::runtime_error, "makeSync not implemented");
+        return {};
+    }
+};
+
+::taihe::expected<::async_test::IBase, ::taihe::error> GetIBaseImpl()
 {
-    struct AuthorIBase {
-        taihe::string name;
-
-        AuthorIBase() : name("My IBase")
-        {
-        }
-
-        ~AuthorIBase()
-        {
-        }
-
-        taihe::string Get()
-        {
-            return name;
-        }
-
-        taihe::string GetWithCallback()
-        {
-            return name;
-        }
-
-        taihe::string GetReturnsPromise()
-        {
-            return name;
-        }
-
-        void Set(taihe::string_view a)
-        {
-            this->name = a;
-            return;
-        }
-
-        void SetWithCallback(taihe::string_view a)
-        {
-            this->name = a;
-            return;
-        }
-
-        void SetReturnsPromise(taihe::string_view a)
-        {
-            this->name = a;
-            return;
-        }
-
-        void MakeSync()
-        {
-            TH_THROW(std::runtime_error, "makeSync not implemented");
-        }
-
-        void MakeWithCallback()
-        {
-            TH_THROW(std::runtime_error, "makeSync not implemented");
-        }
-
-        void MakeReturnsPromise()
-        {
-            TH_THROW(std::runtime_error, "makeSync not implemented");
-        }
-    };
-
     return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 
-void FromStructSyncImpl(::async_test::Data const &data)
+::taihe::expected<void, ::taihe::error> FromStructSyncImpl(::async_test::Data const &data)
 {
     std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
     if (data.c == 0) {
-        taihe::set_business_error(1, "some error happen in fromStructSyncImpl");
+        return ::taihe::unexpected<::taihe::error>(::taihe::error("some error happen in fromStructSyncImpl", 1));
     }
-    return;
+    return {};
 }
 
-::async_test::Data ToStructSyncImpl(taihe::string_view a, taihe::string_view b, int32_t c)
+::taihe::expected<::async_test::Data, ::taihe::error> ToStructSyncImpl(taihe::string_view a, taihe::string_view b,
+                                                                       int32_t c)
 {
     if (c == 0) {
-        taihe::set_business_error(1, "some error happen in toStructSyncImpl");
-        return {a, b, c};
+        return ::taihe::unexpected<::taihe::error>(::taihe::error("some error happen in toStructSyncImpl", 1));
     }
-    return {a, b, c};
+    return ::async_test::Data {a, b, c};
 }
 
-void PrintSync()
+::taihe::expected<void, ::taihe::error> PrintSync()
 {
     std::cout << "print Sync" << std::endl;
+    return {};
 }
 
-void MakeGlobalSync()
+::taihe::expected<void, ::taihe::error> MakeGlobalSync()
 {
     std::cout << "makeGlobal" << std::endl;
+    return {};
 }
 }  // namespace
 

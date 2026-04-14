@@ -23,7 +23,7 @@
 using namespace taihe;
 
 namespace {
-optional<string> getUserSetting(map_view<string, string> settings, string_view key)
+::taihe::expected<optional<string>, ::taihe::error> getUserSetting(map_view<string, string> settings, string_view key)
 {
     auto iter = settings.find_item(key);
     if (iter == nullptr) {

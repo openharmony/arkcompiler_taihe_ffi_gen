@@ -30,40 +30,42 @@ public:
     {
     }
 
-    int32_t add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b)
     {
         lastResult = a + b;
         return lastResult;
     }
 
-    int32_t sub(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> sub(int32_t a, int32_t b)
     {
         lastResult = a - b;
         return lastResult;
     }
 
-    int32_t getLastResult()
+    ::taihe::expected<int32_t, ::taihe::error> getLastResult()
     {
         return lastResult;
     }
 
-    void reset()
+    ::taihe::expected<void, ::taihe::error> reset()
     {
         lastResult = 0;
+        return {};
     }
 
 private:
     int32_t lastResult = 0;
 };
 
-::interface::ICalculator makeCalculator()
+::taihe::expected<::interface::ICalculator, ::taihe::error> makeCalculator()
 {
     return make_holder<MyCalculator, ::interface::ICalculator>(0);
 }
 
-void restartCalculator(::interface::weak::ICalculator a)
+::taihe::expected<void, ::taihe::error> restartCalculator(::interface::weak::ICalculator a)
 {
     a->reset();
+    return {};
 }
 
 }  // namespace

@@ -28,6 +28,9 @@ using namespace rgb::base;
 using namespace rgb::show;
 using namespace taihe;
 
+using expected_string = ::taihe::expected<string, ::taihe::error>;
+using expected_callback = callback<expected_string(string_view)>;
+
 class Rectangle {
 protected:
     float h;
@@ -35,22 +38,28 @@ protected:
     std::string name;
 
 public:
-    string getId()
+    ::taihe::expected<string, ::taihe::error> getId()
     {
         return name;
     }
 
     Rectangle(string_view id, float h, float w) : h(h), w(w), name(id)
     {
-        std::cout << getId() << " made" << std::endl;
+        auto id_res = getId();
+        if (id_res.has_value()) {
+            std::cout << id_res.value() << " made" << std::endl;
+        }
     }
 
     ~Rectangle()
     {
-        std::cout << getId() << " deleted" << std::endl;
+        auto id_res = getId();
+        if (id_res.has_value()) {
+            std::cout << id_res.value() << " deleted" << std::endl;
+        }
     }
 
-    float calculateArea()
+    ::taihe::expected<float, ::taihe::error> calculateArea()
     {
         return h * w;
     }
@@ -65,17 +74,18 @@ public:
     {
     }
 
-    ColorOrRGBOrName getColor()
+    ::taihe::expected<ColorOrRGBOrName, ::taihe::error> getColor()
     {
         return myColor;
     }
 
-    void setColor(ColorOrRGBOrName const &color)
+    ::taihe::expected<void, ::taihe::error> setColor(ColorOrRGBOrName const &color)
     {
         myColor = color;
+        return {};
     }
 
-    void show()
+    ::taihe::expected<void, ::taihe::error> show()
     {
         std::string content = "rectangle " + name + ": h = " + std::to_string(h) + ", w = " + std::to_string(w);
         if (auto color_ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::color>()) {
@@ -88,27 +98,36 @@ public:
         } else {
             std::cout << content << std::endl;
         }
+        return {};
     }
 };
 
-void copyColor(weak::IColorable dst, weak::IColorable src)
+::taihe::expected<void, ::taihe::error> copyColor(weak::IColorable dst, weak::IColorable src)
 {
-    std::cout << "copying color from " << weak::IBase(src)->getId() << " to " << weak::IBase(dst)->getId() << "."
-              << std::endl;
-    dst->setColor(src->getColor());
+    auto src_id = weak::IBase(src)->getId();
+    auto dst_id = weak::IBase(dst)->getId();
+    if (src_id.has_value() && dst_id.has_value()) {
+        std::cout << "copying color from " << src_id.value() << " to " << dst_id.value() << "." << std::endl;
+    }
+    auto color = src->getColor();
+    if (color.has_value()) {
+        dst->setColor(color.value());
+    }
+    return {};
 }
 
-IShape makeRectangle(string_view id, float h, float w)
+::taihe::expected<IShape, ::taihe::error> makeRectangle(string_view id, float h, float w)
 {
     return taihe::make_holder<Rectangle, IShape>(id, h, w);
 }
 
-IShowable makeColoredRectangle(string_view id, ColorOrRGBOrName const &c, float h, float w)
+::taihe::expected<IShowable, ::taihe::error> makeColoredRectangle(string_view id, ColorOrRGBOrName const &c, float h,
+                                                                  float w)
 {
     return taihe::make_holder<ColoredRectangle, IShowable>(id, h, w, c);
 }
 
-array<IBase> exchangeArr(array_view<IBase> dst, array_view<IBase> src)
+::taihe::expected<array<IBase>, ::taihe::error> exchangeArr(array_view<IBase> dst, array_view<IBase> src)
 {
     auto n = std::min(dst.size(), src.size());
     auto res = array<IBase>(copy_data, dst.data(), n);
@@ -118,16 +137,21 @@ array<IBase> exchangeArr(array_view<IBase> dst, array_view<IBase> src)
     return res;
 }
 
-optional<string> getIdFromOptional(optional_view<IBase> box)
+::taihe::expected<optional<string>, ::taihe::error> getIdFromOptional(optional_view<IBase> box)
 {
     if (box) {
-        return optional<string>(std::in_place, (*box)->getId());
+        auto id = (*box)->getId();
+        if (id.has_value()) {
+            return optional<string>(std::in_place, id.value());
+        } else {
+            return optional<string>(std::nullopt);
+        }
     } else {
         return optional<string>(std::nullopt);
     }
 }
 
-vector<IBase> makeVec(array_view<IBase> src)
+::taihe::expected<vector<IBase>, ::taihe::error> makeVec(array_view<IBase> src)
 {
     size_t n = src.size();
     vector<IBase> res;
@@ -137,15 +161,16 @@ vector<IBase> makeVec(array_view<IBase> src)
     return res;
 }
 
-void fillVec(array_view<IBase> src, vector_view<IBase> dst)
+::taihe::expected<void, ::taihe::error> fillVec(array_view<IBase> src, vector_view<IBase> dst)
 {
     size_t n = src.size();
     for (std::size_t i = 0; i < n; i++) {
         dst.emplace_back(src[i]);
     }
+    return {};
 }
 
-map<string, IBase> makeMap(array_view<string> keys, array_view<IBase> src)
+::taihe::expected<map<string, IBase>, ::taihe::error> makeMap(array_view<string> keys, array_view<IBase> src)
 {
     size_t n = std::min(keys.size(), src.size());
     map<string, IBase> res;
@@ -155,15 +180,17 @@ map<string, IBase> makeMap(array_view<string> keys, array_view<IBase> src)
     return res;
 }
 
-void fillMap(array_view<string> keys, array_view<IBase> src, map_view<string, IBase> dst)
+::taihe::expected<void, ::taihe::error> fillMap(array_view<string> keys, array_view<IBase> src,
+                                                map_view<string, IBase> dst)
 {
     size_t n = std::min(keys.size(), src.size());
     for (std::size_t i = 0; i < n; i++) {
         dst.emplace(keys[i], src[i]);
     }
+    return {};
 }
 
-set<string> makeSet(array_view<string> src)
+::taihe::expected<set<string>, ::taihe::error> makeSet(array_view<string> src)
 {
     size_t n = src.size();
     set<string> res;
@@ -173,44 +200,50 @@ set<string> makeSet(array_view<string> src)
     return res;
 }
 
-void fillSet(array_view<string> src, set_view<string> dst)
+::taihe::expected<void, ::taihe::error> fillSet(array_view<string> src, set_view<string> dst)
 {
     size_t n = src.size();
     for (std::size_t i = 0; i < n; i++) {
         dst.emplace(src[i]);
     }
+    return {};
 }
 
 struct CallbackImplInner {
-    callback<string(string_view, string_view)> f;
+    callback<::taihe::expected<string, ::taihe::error>(string_view, string_view)> f;
     string s;
 
-    CallbackImplInner(callback_view<string(string_view, string_view)> f, string_view s) : f(f), s(s)
+    CallbackImplInner(callback_view<::taihe::expected<string, ::taihe::error>(string_view, string_view)> f,
+                      string_view s)
+        : f(f), s(s)
     {
     }
 
-    string operator()(string_view x)
+    ::taihe::expected<string, ::taihe::error> operator()(string_view x)
     {
         return f(s, x);
     }
 };
 
 struct CallbackImplOuter {
-    callback<string(string_view, string_view)> f;
+    callback<::taihe::expected<string, ::taihe::error>(string_view, string_view)> f;
 
-    CallbackImplOuter(callback_view<string(string_view, string_view)> f) : f(f)
+    CallbackImplOuter(callback_view<::taihe::expected<string, ::taihe::error>(string_view, string_view)> f) : f(f)
     {
     }
 
-    callback<string(string_view)> operator()(string_view s)
+    ::taihe::expected<callback<::taihe::expected<string, ::taihe::error>(string_view)>, ::taihe::error> operator()(
+        string_view s)
     {
-        return make_holder<CallbackImplInner, callback<string(string_view)>>(f, s);
+        return make_holder<CallbackImplInner, callback<::taihe::expected<string, ::taihe::error>(string_view)>>(f, s);
     }
 };
 
-callback<callback<string(string_view)>(string_view)> currying(callback_view<string(string_view, string_view)> f)
+::taihe::expected<callback<::taihe::expected<expected_callback, ::taihe::error>(string_view)>, ::taihe::error> currying(
+    callback_view<::taihe::expected<string, ::taihe::error>(string_view, string_view)> f)
 {
-    return make_holder<CallbackImplOuter, callback<callback<string(string_view)>(string_view)>>(f);
+    return make_holder<CallbackImplOuter, callback<::taihe::expected<expected_callback, ::taihe::error>(string_view)>>(
+        f);
 }
 
 // Since these macros are auto-generate, lint will cause false positive.

@@ -28,14 +28,15 @@ namespace {
 // To be implemented.
 
 class CallbackManagerImpl {
-    std::vector<::taihe::callback<taihe::string()>> callbacks_;
+    std::vector<::taihe::callback<::taihe::expected<::taihe::string, ::taihe::error>()>> callbacks_;
 
 public:
     CallbackManagerImpl()
     {
     }
 
-    bool addCallback(::taihe::callback_view<taihe::string()> new_cb)
+    ::taihe::expected<bool, ::taihe::error> addCallback(
+        ::taihe::callback_view<::taihe::expected<::taihe::string, ::taihe::error>()> new_cb)
     {
         for (auto const &old_cb : callbacks_) {
             if (old_cb == new_cb) {
@@ -47,7 +48,8 @@ public:
         return true;
     }
 
-    bool removeCallback(::taihe::callback_view<taihe::string()> cb)
+    ::taihe::expected<bool, ::taihe::error> removeCallback(
+        ::taihe::callback_view<::taihe::expected<::taihe::string, ::taihe::error>()> cb)
     {
         for (auto it = callbacks_.begin(); it != callbacks_.end(); ++it) {
             if (*it == cb) {
@@ -59,17 +61,20 @@ public:
         return false;
     }
 
-    taihe::array<taihe::string> invokeCallbacks()
+    ::taihe::expected<::taihe::array<::taihe::string>, ::taihe::error> invokeCallbacks()
     {
-        std::vector<taihe::string> results;
+        std::vector<::taihe::string> results;
         for (auto const &cb : callbacks_) {
-            results.push_back(cb());
+            auto result = cb();
+            if (result.has_value()) {
+                results.push_back(result.value());
+            }
         }
-        return taihe::array<taihe::string>(taihe::copy_data, results.data(), results.size());
+        return ::taihe::array<::taihe::string>(::taihe::copy_data, results.data(), results.size());
     }
 };
 
-::test::CallbackManager getCallbackManager()
+::taihe::expected<::test::CallbackManager, ::taihe::error> getCallbackManager()
 {
     return taihe::make_holder<CallbackManagerImpl, ::test::CallbackManager>();
 }

@@ -27,29 +27,34 @@ public:
     {
     }
 
-    ::taihe::string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         return this->name;
     }
 
-    void SetName(::taihe::string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(::taihe::string_view name)
     {
         this->name = name;
+        return {};
     }
 
-    ::taihe::optional<::taihe::map<::taihe::string, ::taihe::string>> GetTraceParams()
+    ::taihe::expected<::taihe::optional<::taihe::map<::taihe::string, ::taihe::string>>, ::taihe::error>
+    GetTraceParams()
     {
         return this->traceParams;
     }
 
-    void SetTraceParams(::taihe::optional_view<::taihe::map<::taihe::string, ::taihe::string>> traceParams)
+    ::taihe::expected<void, ::taihe::error> SetTraceParams(
+        ::taihe::optional_view<::taihe::map<::taihe::string, ::taihe::string>> traceParams)
     {
         this->traceParams = traceParams;
+        return {};
     }
 
-    void action()
+    ::taihe::expected<void, ::taihe::error> action()
     {
         std::cout << "ActionA Callback" << std::endl;
+        return {};
     }
 
 private:
@@ -64,29 +69,34 @@ public:
     {
     }
 
-    ::taihe::string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         return this->name;
     }
 
-    void SetName(::taihe::string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(::taihe::string_view name)
     {
         this->name = name;
+        return {};
     }
 
-    ::taihe::optional<::taihe::map<::taihe::string, ::taihe::string>> GetTraceParams()
+    ::taihe::expected<::taihe::optional<::taihe::map<::taihe::string, ::taihe::string>>, ::taihe::error>
+    GetTraceParams()
     {
         return this->traceParams;
     }
 
-    void SetTraceParams(::taihe::optional_view<::taihe::map<::taihe::string, ::taihe::string>> traceParams)
+    ::taihe::expected<void, ::taihe::error> SetTraceParams(
+        ::taihe::optional_view<::taihe::map<::taihe::string, ::taihe::string>> traceParams)
     {
         this->traceParams = traceParams;
+        return {};
     }
 
-    void action()
+    ::taihe::expected<void, ::taihe::error> action()
     {
         std::cout << "ActionB Callback" << std::endl;
+        return {};
     }
 
 private:
@@ -101,29 +111,34 @@ public:
     {
     }
 
-    ::taihe::string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         return this->name;
     }
 
-    void SetName(::taihe::string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(::taihe::string_view name)
     {
         this->name = name;
+        return {};
     }
 
-    ::taihe::optional<::taihe::map<::taihe::string, ::taihe::string>> GetTraceParams()
+    ::taihe::expected<::taihe::optional<::taihe::map<::taihe::string, ::taihe::string>>, ::taihe::error>
+    GetTraceParams()
     {
         return this->traceParams;
     }
 
-    void SetTraceParams(::taihe::optional_view<::taihe::map<::taihe::string, ::taihe::string>> traceParams)
+    ::taihe::expected<void, ::taihe::error> SetTraceParams(
+        ::taihe::optional_view<::taihe::map<::taihe::string, ::taihe::string>> traceParams)
     {
         this->traceParams = traceParams;
+        return {};
     }
 
-    void action()
+    ::taihe::expected<void, ::taihe::error> action()
     {
         std::cout << "ActionC Callback" << std::endl;
+        return {};
     }
 
 private:
@@ -133,14 +148,18 @@ private:
 };
 
 namespace {
-void RunNativeBusiness(::ui::weak::AntUserUIProvider ui, ::ui::AntUserDialogBody const &body)
+::taihe::expected<void, ::taihe::error> RunNativeBusiness(::ui::weak::AntUserUIProvider ui,
+                                                          ::ui::AntUserDialogBody const &body)
 {
     ::ui::AntUserDialogAction actionA = ::taihe::make_holder<AntUserDialogActionA, ::ui::AntUserDialogAction>();
     ::ui::AntUserDialogAction actionB = ::taihe::make_holder<AntUserDialogActionB, ::ui::AntUserDialogAction>();
     ::ui::AntUserDialogAction actionC = ::taihe::make_holder<AntUserDialogActionC, ::ui::AntUserDialogAction>();
     ::taihe::array<::ui::AntUserDialogAction> actions = {actionA, actionB, actionC};
-    ::ui::AntUserModalController controller = ui->ShowDialog(body, actions);
-    controller->Dismiss();
+    ::taihe::expected<::ui::AntUserModalController, ::taihe::error> controller = ui->ShowDialog(body, actions);
+    if (controller.has_value()) {
+        controller.value()->Dismiss();
+    }
+    return {};
 }
 }  // namespace
 

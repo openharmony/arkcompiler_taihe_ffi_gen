@@ -25,13 +25,14 @@
 namespace {
 // To be implemented.
 
-void setData(::hello::Data const &data)
+::taihe::expected<void, ::taihe::error> setData(::hello::Data const &data)
 {
+    return {};
 }
 
-::hello::Data getData()
+::taihe::expected<::hello::Data, ::taihe::error> getData()
 {
-    return {
+    return ::hello::Data {
         .a = taihe::optional<taihe::string> {std::in_place, "name"},
         .b = taihe::optional<double> {std::in_place, 2.5},
         .c = taihe::optional<int> {std::in_place, 3},
@@ -42,8 +43,9 @@ void setData(::hello::Data const &data)
     };
 }
 
-void setRecord(::taihe::map_view<::taihe::string, ::taihe::string> rec)
+::taihe::expected<void, ::taihe::error> setRecord(::taihe::map_view<::taihe::string, ::taihe::string> rec)
 {
+    return {};
 }
 
 static ::taihe::map<::taihe::string, ::taihe::string> global_rec = [] {
@@ -59,7 +61,7 @@ static ::taihe::map<::taihe::string, ::taihe::string> global_rec = [] {
     return rec;
 }();
 
-::taihe::map<::taihe::string, ::taihe::string> getRecord()
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::string>, ::taihe::error> getRecord()
 {
     return global_rec;
 }
