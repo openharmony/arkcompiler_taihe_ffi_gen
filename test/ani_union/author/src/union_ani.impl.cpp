@@ -25,7 +25,7 @@
 using namespace taihe;
 
 namespace {
-string printInnerUnion(::union_ani::InnerUnion const &data)
+::taihe::expected<string, ::taihe::error> printInnerUnion(::union_ani::InnerUnion const &data)
 {
     switch (data.get_tag()) {
         case ::union_ani::InnerUnion::tag_t::stringValue:
@@ -40,7 +40,7 @@ string printInnerUnion(::union_ani::InnerUnion const &data)
     }
 }
 
-string PrintMyUnion(::union_ani::MyUnion const &data)
+::taihe::expected<string, ::taihe::error> PrintMyUnion(::union_ani::MyUnion const &data)
 {
     switch (data.get_tag()) {
         case ::union_ani::MyUnion::tag_t::innerValue:
@@ -51,7 +51,7 @@ string PrintMyUnion(::union_ani::MyUnion const &data)
     }
 }
 
-::union_ani::MyUnion MakeMyUnion(string_view kind)
+::taihe::expected<::union_ani::MyUnion, ::taihe::error> MakeMyUnion(string_view kind)
 {
     float const testFloat = 123.0f;
     if (kind == "s") {
@@ -67,7 +67,7 @@ string PrintMyUnion(::union_ani::MyUnion const &data)
     return ::union_ani::MyUnion::make_innerValue(::union_ani::InnerUnion::make_undefinedValue());
 }
 
-::union_ani::BasicUnion MakeAndShowBasicUnion(::union_ani::BasicUnion const &data)
+::taihe::expected<::union_ani::BasicUnion, ::taihe::error> MakeAndShowBasicUnion(::union_ani::BasicUnion const &data)
 {
     switch (data.get_tag()) {
         case ::union_ani::BasicUnion::tag_t::int8Value: {
@@ -116,7 +116,8 @@ string PrintMyUnion(::union_ani::MyUnion const &data)
     }
 }
 
-::union_ani::TypedArrayUnion MakeAndShowTypedArrayUnion(::union_ani::TypedArrayUnion const &data)
+::taihe::expected<::union_ani::TypedArrayUnion, ::taihe::error> MakeAndShowTypedArrayUnion(
+    ::union_ani::TypedArrayUnion const &data)
 {
     switch (data.get_tag()) {
         case ::union_ani::TypedArrayUnion::tag_t::u8Value: {
@@ -174,7 +175,7 @@ string PrintMyUnion(::union_ani::MyUnion const &data)
     }
 }
 
-::union_ani::ArrayUnion MakeAndShowArrayUnion(::union_ani::ArrayUnion const &data)
+::taihe::expected<::union_ani::ArrayUnion, ::taihe::error> MakeAndShowArrayUnion(::union_ani::ArrayUnion const &data)
 {
     switch (data.get_tag()) {
         case ::union_ani::ArrayUnion::tag_t::floatValue: {
@@ -188,7 +189,7 @@ string PrintMyUnion(::union_ani::MyUnion const &data)
     }
 }
 
-::union_ani::StructUnion MakeAndShowStructUnion(::union_ani::StructUnion const &data)
+::taihe::expected<::union_ani::StructUnion, ::taihe::error> MakeAndShowStructUnion(::union_ani::StructUnion const &data)
 {
     switch (data.get_tag()) {
         case ::union_ani::StructUnion::tag_t::strValue: {

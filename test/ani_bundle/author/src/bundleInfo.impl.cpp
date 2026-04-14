@@ -36,22 +36,24 @@ public:
     {
     }
 
-    array<string> GetAbilities()
+    ::taihe::expected<array<string>, ::taihe::error> GetAbilities()
     {
         return abilities_;
     }
 
-    void SetAbilities(array_view<string> abilities)
+    ::taihe::expected<void, ::taihe::error> SetAbilities(array_view<string> abilities)
     {
         abilities_ = abilities;
+        return {};
     }
 
-    void SetWhen(string_view when)
+    ::taihe::expected<void, ::taihe::error> SetWhen(string_view when)
     {
         when_ = when;
+        return {};
     }
 
-    string GetWhen()
+    ::taihe::expected<string, ::taihe::error> GetWhen()
     {
         return when_;
     }
@@ -67,35 +69,38 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return name_;
     }
 
-    void SetName(string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(string_view name)
     {
         name_ = name;
+        return {};
     }
 
-    string GetReason()
+    ::taihe::expected<string, ::taihe::error> GetReason()
     {
         return reason_;
     }
 
-    void SetReason(string_view reason)
+    ::taihe::expected<void, ::taihe::error> SetReason(string_view reason)
     {
         reason_ = reason;
+        return {};
     }
 
-    UsedSceneImpl GetUsedScene()
+    ::taihe::expected<UsedSceneImpl, ::taihe::error> GetUsedScene()
     {
         return GetUsedScene();
     }
 
-    void SetUsedScene(UsedSceneImpl usedScene)
+    ::taihe::expected<void, ::taihe::error> SetUsedScene(UsedSceneImpl usedScene)
     {
         usedSceneImpl_.when_ = usedScene.when_;
         usedSceneImpl_.abilities_ = usedScene.abilities_;
+        return {};
     }
 };
 
@@ -107,115 +112,115 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "bundleInfo::getName";
     }
 
-    string GetType()
+    ::taihe::expected<string, ::taihe::error> GetType()
     {
         return "bundleInfo::getType";
     }
 
-    string GetAppId()
+    ::taihe::expected<string, ::taihe::error> GetAppId()
     {
         return "bundleInfo::getAppId";
     }
 
-    int32_t GetUid()
+    ::taihe::expected<int32_t, ::taihe::error> GetUid()
     {
         return bundleInfoImpl;
     }
 
-    int32_t GetInstallTime()
+    ::taihe::expected<int32_t, ::taihe::error> GetInstallTime()
     {
         return bundleInfoImpl;
     }
 
-    int32_t GetUpdateTime()
+    ::taihe::expected<int32_t, ::taihe::error> GetUpdateTime()
     {
         return bundleInfoImpl;
     }
 
-    array<string> GetReqPermissions()
+    ::taihe::expected<array<string>, ::taihe::error> GetReqPermissions()
     {
         array<string> str = {"bundleInfo::getReqPermissions"};
         return str;
     }
 
-    string GetVendor()
+    ::taihe::expected<string, ::taihe::error> GetVendor()
     {
         return "bundleInfo::getVendor";
     }
 
-    int32_t GetVersionCode()
+    ::taihe::expected<int32_t, ::taihe::error> GetVersionCode()
     {
         return bundleInfoImpl;
     }
 
-    string GetVersionName()
+    ::taihe::expected<string, ::taihe::error> GetVersionName()
     {
         return "bundleInfo::getVersionName";
     }
 
-    int32_t GetCompatibleVersion()
+    ::taihe::expected<int32_t, ::taihe::error> GetCompatibleVersion()
     {
         return bundleInfoImpl;
     }
 
-    int32_t GetTargetVersion()
+    ::taihe::expected<int32_t, ::taihe::error> GetTargetVersion()
     {
         return bundleInfoImpl;
     }
 
-    bool GetIsCompressNativeLibs()
+    ::taihe::expected<bool, ::taihe::error> GetIsCompressNativeLibs()
     {
         return true;
     }
 
-    string GetEntryModuleName()
+    ::taihe::expected<string, ::taihe::error> GetEntryModuleName()
     {
         return "bundleInfo::getEntryModuleName";
     }
 
-    string GetCpuAbi()
+    ::taihe::expected<string, ::taihe::error> GetCpuAbi()
     {
         return "bundleInfo::getCpuAbi";
     }
 
-    string GetIsSilentInstallation()
+    ::taihe::expected<string, ::taihe::error> GetIsSilentInstallation()
     {
         return "bundleInfo::getIsSilentInstallation";
     }
 
-    int32_t GetMinCompatibleVersionCode()
+    ::taihe::expected<int32_t, ::taihe::error> GetMinCompatibleVersionCode()
     {
         return bundleInfoImpl;
     }
 
-    bool GetEntryInstallationFree()
+    ::taihe::expected<bool, ::taihe::error> GetEntryInstallationFree()
     {
         return true;
     }
 
-    array<int32_t> GetReqPermissionStates()
+    ::taihe::expected<array<int32_t>, ::taihe::error> GetReqPermissionStates()
     {
         array<int32_t> arr = {bundleInfoImpl};
         return arr;
     }
 };
 
-UsedScene GetUsedScene()
+::taihe::expected<UsedScene, ::taihe::error> GetUsedScene()
 {
     return make_holder<UsedSceneImpl, UsedScene>();
 }
 
-ReqPermissionDetail GetReqPermissionDetail()
+::taihe::expected<ReqPermissionDetail, ::taihe::error> GetReqPermissionDetail()
 {
     return make_holder<ReqPermissionDetailImpl, ReqPermissionDetail>();
 }
 
-BundleInfo GetBundleInfo()
+::taihe::expected<BundleInfo, ::taihe::error> GetBundleInfo()
 {
     return make_holder<BundleInfoImpl, BundleInfo>();
 }

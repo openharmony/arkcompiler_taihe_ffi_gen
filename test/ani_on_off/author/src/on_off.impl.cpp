@@ -37,24 +37,27 @@ public:
     {
     }
 
-    void onSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> onSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IBase::onSet" << std::endl;
+        return {};
     }
 
-    void offSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> offSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IBase::offSet" << std::endl;
+        return {};
     }
 
-    void mytestNew()
+    ::taihe::expected<void, ::taihe::error> mytestNew()
     {
         TH_THROW(std::runtime_error, "mytestNew not implemented");
+        return {};
     }
 
-    int32_t onTest()
+    ::taihe::expected<int32_t, ::taihe::error> onTest()
     {
         TH_THROW(std::runtime_error, "onTest not implemented");
     }
@@ -71,7 +74,7 @@ public:
         // Don't forget to implement the constructor.
     }
 
-    int32_t add(int32_t a)
+    ::taihe::expected<int32_t, ::taihe::error> add(int32_t a)
     {
         TH_THROW(std::runtime_error, "add not implemented");
     }
@@ -84,95 +87,106 @@ public:
     }
 };
 
-::on_off::IBase getIBase(string_view a, string_view b)
+::taihe::expected<::on_off::IBase, ::taihe::error> getIBase(string_view a, string_view b)
 {
     return make_holder<IBase, ::on_off::IBase>(a, b);
 }
 
-int32_t mytestGlobalnew()
+::taihe::expected<int32_t, ::taihe::error> mytestGlobalnew()
 {
     TH_THROW(std::runtime_error, "mytestGlobalnew not implemented");
 }
 
-int32_t onGlobalnew()
+::taihe::expected<int32_t, ::taihe::error> onGlobalnew()
 {
     TH_THROW(std::runtime_error, "onGlobalnew not implemented");
 }
 
-void onFoo(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> onFoo(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "onFoo" << std::endl;
+    return {};
 }
 
-void onBar(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> onBar(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "onBar" << std::endl;
+    return {};
 }
 
-void onBaz(int32_t a, callback_view<void()> cb)
+::taihe::expected<void, ::taihe::error> onBaz(int32_t a, callback_view<::taihe::expected<void, ::taihe::error>()> cb)
 {
     cb();
     std::cout << "a =" << a << ", onBaz" << std::endl;
+    return {};
 }
 
-void offFoo(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> offFoo(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "offFoo" << std::endl;
+    return {};
 }
 
-void offBar(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> offBar(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "offBar" << std::endl;
+    return {};
 }
 
-void offBaz(int32_t a, callback_view<void()> cb)
+::taihe::expected<void, ::taihe::error> offBaz(int32_t a, callback_view<::taihe::expected<void, ::taihe::error>()> cb)
 {
     cb();
     std::cout << "offBaz" << std::endl;
+    return {};
 }
 
-void onFooStatic(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> onFooStatic(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "onFooStatic" << std::endl;
+    return {};
 }
 
-void offFooStatic(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> offFooStatic(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "offFooStatic" << std::endl;
+    return {};
 }
 
-void onFuncI(callback_view<void(int32_t)> a)
+::taihe::expected<void, ::taihe::error> onFuncI(callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> a)
 {
     int const i = 1;
     a(i);
     std::cout << "onFunI" << std::endl;
+    return {};
 }
 
-void onFuncB(callback_view<void(bool)> a)
+::taihe::expected<void, ::taihe::error> onFuncB(callback_view<::taihe::expected<void, ::taihe::error>(bool)> a)
 {
     a(true);
     std::cout << "onFunB" << std::endl;
+    return {};
 }
 
-void offFuncI(callback_view<void(int32_t)> a)
+::taihe::expected<void, ::taihe::error> offFuncI(callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> a)
 {
     int const i = 1;
     a(i);
     std::cout << "offFunI" << std::endl;
+    return {};
 }
 
-void offFuncB(callback_view<void(bool)> a)
+::taihe::expected<void, ::taihe::error> offFuncB(callback_view<::taihe::expected<void, ::taihe::error>(bool)> a)
 {
     a(true);
     std::cout << "offFunB" << std::endl;
+    return {};
 }
-
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.

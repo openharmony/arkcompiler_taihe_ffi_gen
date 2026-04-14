@@ -21,7 +21,7 @@ using namespace taihe;
 using namespace ani_test;
 
 namespace {
-Data makeData()
+::taihe::expected<Data, ::taihe::error> makeData()
 {
     return Data {
         string("C++ Object"),
@@ -30,16 +30,17 @@ Data makeData()
     };
 }
 
-void showData(Data const &s)
+::taihe::expected<void, ::taihe::error> showData(Data const &s)
 {
     std::cout << "src: " << s.src << std::endl;
     std::cout << "dest: " << s.dest << std::endl;
     for (auto const &s : s.files) {
         std::cout << "file: " << s.c_str() << std::endl;
     }
+    return {};
 }
 
-Union makeUnion(int32_t v)
+::taihe::expected<Union, ::taihe::error> makeUnion(int32_t v)
 {
     int32_t const case1Key = 1;
     int32_t const case2Key = 2;
@@ -60,7 +61,7 @@ Union makeUnion(int32_t v)
     }
 }
 
-void showUnion(Union const &u)
+::taihe::expected<void, ::taihe::error> showUnion(Union const &u)
 {
     if (auto iPtr = u.get_iValue_ptr()) {
         std::cout << "I " << *iPtr << std::endl;
@@ -71,18 +72,20 @@ void showUnion(Union const &u)
     } else {
         std::cout << "E" << std::endl;
     }
+    return {};
 }
 
-void showOptionalInt(optional_view<int32_t> x)
+::taihe::expected<void, ::taihe::error> showOptionalInt(optional_view<int32_t> x)
 {
     if (x) {
         std::cout << *x << std::endl;
     } else {
         std::cout << "Null" << std::endl;
     }
+    return {};
 }
 
-optional<int32_t> makeOptionalInt(bool b)
+::taihe::expected<optional<int32_t>, ::taihe::error> makeOptionalInt(bool b)
 {
     if (b) {
         int32_t const optionalIntValue = 10;
@@ -92,20 +95,21 @@ optional<int32_t> makeOptionalInt(bool b)
     }
 }
 
-void showArrayInt(array_view<int32_t> x)
+::taihe::expected<void, ::taihe::error> showArrayInt(array_view<int32_t> x)
 {
     for (auto i : x) {
         std::cout << i << ", ";
     }
     std::cout << std::endl;
+    return {};
 }
 
-array<int32_t> makeArrayInt(int32_t n, int32_t v)
+::taihe::expected<array<int32_t>, ::taihe::error> makeArrayInt(int32_t n, int32_t v)
 {
     return array<int32_t>::make(n, v);
 }
 
-array<Foo> makeFoo(array_view<string> list)
+::taihe::expected<array<Foo>, ::taihe::error> makeFoo(array_view<string> list)
 {
     struct AuthorFoo {
         string name;
@@ -133,11 +137,12 @@ array<Foo> makeFoo(array_view<string> list)
     return array<Foo>(copy_data, vec.data(), vec.size());
 }
 
-void callBar(array_view<Foo> arr)
+::taihe::expected<void, ::taihe::error> callBar(array_view<Foo> arr)
 {
     for (weak::Foo foo : arr) {
         foo->bar();
     }
+    return {};
 }
 }  // namespace
 
