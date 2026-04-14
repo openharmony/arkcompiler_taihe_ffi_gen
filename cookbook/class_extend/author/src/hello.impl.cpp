@@ -28,9 +28,10 @@ public:
     {
     }
 
-    void getType()
+    ::taihe::expected<void, ::taihe::error> getType()
     {
         std::cout << "function GetType in UnifiedRecord_thImpl" << std::endl;
+        return {};
     }
 };
 
@@ -40,20 +41,22 @@ public:
     {
     }
 
-    int32_t getDetails()
+    ::taihe::expected<int32_t, ::taihe::error> getDetails()
     {
         std::cout << "function GetDetails in Text_thImpl" << std::endl;
         return 1;
     }
 
-    void setDetails(int32_t a)
+    ::taihe::expected<void, ::taihe::error> setDetails(int32_t a)
     {
         std::cout << "function SetDetails in Text_thImpl" << std::endl;
+        return {};
     }
 
-    void getType()
+    ::taihe::expected<void, ::taihe::error> getType()
     {
         std::cout << "function GetType in Text_thImpl" << std::endl;
+        return {};
     }
 };
 
@@ -63,31 +66,34 @@ public:
     {
     }
 
-    ::taihe::string getTextContent()
+    ::taihe::expected<::taihe::string, ::taihe::error> getTextContent()
     {
         std::cout << "function GetTextContent in PlainText_thImpl" << std::endl;
         return "GetTextContent";
     }
 
-    void setTextContent(::taihe::string_view a)
+    ::taihe::expected<void, ::taihe::error> setTextContent(::taihe::string_view a)
     {
         std::cout << "function SetTextContent in PlainText_thImpl" << std::endl;
+        return {};
     }
 
-    int32_t getDetails()
+    ::taihe::expected<int32_t, ::taihe::error> getDetails()
     {
         std::cout << "function GetDetails in PlainText_thImpl" << std::endl;
         return 1;
     }
 
-    void setDetails(int32_t a)
+    ::taihe::expected<void, ::taihe::error> setDetails(int32_t a)
     {
         std::cout << "function SetDetails in PlainText_thImpl" << std::endl;
+        return {};
     }
 
-    void getType()
+    ::taihe::expected<void, ::taihe::error> getType()
     {
         std::cout << "function GetType in PlainText_thImpl" << std::endl;
+        return {};
     }
 };
 
@@ -97,44 +103,47 @@ public:
     {
     }
 
-    bool hasType(::taihe::string_view type)
+    ::taihe::expected<bool, ::taihe::error> hasType(::taihe::string_view type)
     {
         std::cout << "function HasType in UnifiedData_thImpl" << std::endl;
+        return true;
     }
 
-    void addRecord(::hello::weak::UnifiedRecord_th a)
+    ::taihe::expected<void, ::taihe::error> addRecord(::hello::weak::UnifiedRecord_th a)
     {
         std::cout << "function AddRecord in UnifiedData_thImpl" << std::endl;
+        return {};
     }
 
-    ::taihe::array<::hello::UnifiedRecord_th> getRecords()
+    ::taihe::expected<::taihe::array<::hello::UnifiedRecord_th>, ::taihe::error> getRecords()
     {
         return ::taihe::array<::hello::UnifiedRecord_th> {
             taihe::make_holder<UnifiedRecord_thImpl, ::hello::UnifiedRecord_th>()};
     }
 };
 
-::hello::UnifiedRecord_th createUnifiedRecord_noparam_th()
+::taihe::expected<::hello::UnifiedRecord_th, ::taihe::error> createUnifiedRecord_noparam_th()
 {
     return taihe::make_holder<UnifiedRecord_thImpl, ::hello::UnifiedRecord_th>();
 }
 
-::hello::Text_th createText_noparam_th()
+::taihe::expected<::hello::Text_th, ::taihe::error> createText_noparam_th()
 {
     return taihe::make_holder<Text_thImpl, ::hello::Text_th>();
 }
 
-::hello::PlainText_th createPlainText_noparam_th()
+::taihe::expected<::hello::PlainText_th, ::taihe::error> createPlainText_noparam_th()
 {
     return taihe::make_holder<PlainText_thImpl, ::hello::PlainText_th>();
 }
 
-::hello::UnifiedData_th createUnifiedData_noparam_th()
+::taihe::expected<::hello::UnifiedData_th, ::taihe::error> createUnifiedData_noparam_th()
 {
     return taihe::make_holder<UnifiedData_thImpl, ::hello::UnifiedData_th>();
 }
 
-::hello::UnifiedData_th createUnifiedData_parama_th(::hello::weak::UnifiedRecord_th a)
+::taihe::expected<::hello::UnifiedData_th, ::taihe::error> createUnifiedData_parama_th(
+    ::hello::weak::UnifiedRecord_th a)
 {
     return taihe::make_holder<UnifiedData_thImpl, ::hello::UnifiedData_th>();
 }

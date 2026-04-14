@@ -38,58 +38,63 @@ public:
     {
     }
 
-    void SetDevicedId(optional<string> deviceId)
+    ::taihe::expected<void, ::taihe::error> SetDevicedId(optional<string> deviceId)
     {
         this->deviceId = deviceId;
+        return {};
     }
 
-    optional<string> GetDevicedId()
+    ::taihe::expected<optional<string>, ::taihe::error> GetDevicedId()
     {
         return deviceId;
     }
 
-    void SetBundleName(string_view bundleName)
+    ::taihe::expected<void, ::taihe::error> SetBundleName(string_view bundleName)
     {
         bundleName_ = bundleName;
+        return {};
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return bundleName_;
     }
 
-    void SetAbilityName(string_view abilityName)
+    ::taihe::expected<void, ::taihe::error> SetAbilityName(string_view abilityName)
     {
         abilityName_ = abilityName;
+        return {};
     }
 
-    string GetAbilityName()
+    ::taihe::expected<string, ::taihe::error> GetAbilityName()
     {
         return abilityName_;
     }
 
-    void SetUri(optional<string> uri)
+    ::taihe::expected<void, ::taihe::error> SetUri(optional<string> uri)
     {
         this->uri = uri;
+        return {};
     }
 
-    optional<string> GetUri()
+    ::taihe::expected<optional<string>, ::taihe::error> GetUri()
     {
         return uri;
     }
 
-    void SetShortName(optional<string> shortName)
+    ::taihe::expected<void, ::taihe::error> SetShortName(optional<string> shortName)
     {
         this->shortName = shortName;
+        return {};
     }
 
-    optional<string> GetShortName()
+    ::taihe::expected<optional<string>, ::taihe::error> GetShortName()
     {
         return shortName;
     }
 };
 
-ElementName GetElementName()
+::taihe::expected<ElementName, ::taihe::error> GetElementName()
 {
     return make_holder<ElementNameImpl, ElementName>();
 }

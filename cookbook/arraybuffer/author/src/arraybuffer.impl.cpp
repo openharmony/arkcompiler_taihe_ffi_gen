@@ -24,13 +24,13 @@
 using namespace taihe;
 
 namespace {
-int32_t convert2Int(array_view<uint8_t> a)
+::taihe::expected<int32_t, ::taihe::error> convert2Int(array_view<uint8_t> a)
 {
     int32_t num = 0;
     if (a.size() >= 4) {
         num = *(int32_t *)a.begin();
     } else {
-        set_business_error(1, "ArrayBuffer len < 4");
+        return ::taihe::unexpected<::taihe::error>(::taihe::error("ArrayBuffer len < 4", 1));
     }
     return num;
 }

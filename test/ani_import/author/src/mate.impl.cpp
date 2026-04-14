@@ -26,9 +26,10 @@ using namespace mate;
 namespace {
 // To be implemented.
 
-void testBar(bar::BarType const &bar)
+::taihe::expected<void, ::taihe::error> testBar(bar::BarType const &bar)
 {
     TH_THROW(std::runtime_error, "testBar not implemented");
+    return {};
 }
 }  // namespace
 

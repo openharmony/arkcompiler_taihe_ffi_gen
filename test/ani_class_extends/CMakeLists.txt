@@ -34,4 +34,4 @@ set(AUTHOR_INCLUDE_DIRS
 
 file(GLOB AUTHOR_CPP_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/author/src/*.cpp")
 
-add_ani_demo(ani_class_extends "${IDL_FILES}" "-Cnoexcept-all" "${GEN_ETS_FILES}" "${USER_ETS_FILES}" "${AUTHOR_INCLUDE_DIRS}" "${AUTHOR_CPP_FILES}")
+add_ani_demo(ani_class_extends "${IDL_FILES}" "" "${GEN_ETS_FILES}" "${USER_ETS_FILES}" "${AUTHOR_INCLUDE_DIRS}" "${AUTHOR_CPP_FILES}")

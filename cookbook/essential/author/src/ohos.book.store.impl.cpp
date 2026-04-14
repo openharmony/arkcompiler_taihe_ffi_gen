@@ -32,22 +32,23 @@ using namespace taihe;
 using namespace ::ohos::book::store;
 
 namespace {
-Book ConstructBook(string_view title, int32_t year, Category kind)
+::taihe::expected<Book, ::taihe::error> ConstructBook(string_view title, int32_t year, Category kind)
 {
     // 使用 Modern C++ 初始化结构体。
     return Book {title, year, kind};
 }
 
-void PrintBook(Book const &b)
+::taihe::expected<void, ::taihe::error> PrintBook(Book const &b)
 {
     printf("PrintBook: %s, year %d, kind = %s\n",
            b.title.c_str(),  // 使用 taihe::string::c_str() 获取字符串。
            b.year,
            b.category.get_value()  // 使用 enum 类型的 get_value() 获取绑定的值。
     );
+    return {};
 }
 
-map<string, int32_t> MapBookToYear(MapOption const &opt)
+::taihe::expected<map<string, int32_t>, ::taihe::error> MapBookToYear(MapOption const &opt)
 {
     map<string, int32_t> ret;
     // 通过 get_tag() 判断类型，通过 get_xxx_ref() 获得对应的值。
@@ -63,19 +64,24 @@ map<string, int32_t> MapBookToYear(MapOption const &opt)
     return ret;
 }
 
-void PrintBooksWithFilter(array_view<Book> books, optional_view<callback<bool(Book const &)>> filter)
+::taihe::expected<void, ::taihe::error> PrintBooksWithFilter(
+    array_view<Book> books, optional_view<callback<::taihe::expected<bool, ::taihe::error>(Book const &)>> filter)
 {
     for (auto &book : books) {
         bool should_print = true;
         // 判断 Optional 是否有值。
         if (filter) {
             // 使用 (*filter) 获取 filter 背后的 callback，并调用 callback。
-            should_print = (*filter)(book);
+            auto filter_res = (*filter)(book);
+            if (filter_res.has_value()) {
+                should_print = filter_res.value();
+            }
         }
 
         // Taihe 导出的函数和普通函数没什么差别，可以随意调用。
         if (should_print) PrintBook(book);
     }
+    return {};
 }
 
 class BookstoreImpl {
@@ -84,57 +90,59 @@ class BookstoreImpl {
     std::unordered_map<std::string, std::pair<double, int32_t>> m_books = {};
 
 public:
-    void addBook(Book const &book, double price, int32_t count)
+    ::taihe::expected<void, ::taihe::error> addBook(Book const &book, double price, int32_t count)
     {
         m_books.emplace(std::string {book.title}, std::make_pair(price, count));
         PrintBook(book);
         printf("addBook: price = %lf, count = %d\n", price, count);
+        return {};
     }
 
-    void saleBook(Book const &book)
+    ::taihe::expected<void, ::taihe::error> saleBook(Book const &book)
     {
         auto iter = m_books.find(std::string {book.title});
         auto price = iter->second.first;
         auto &count = iter->second.second;
         if (count == 0) {
-            // 使用 taihe::set_business_error 抛异常。
-            taihe::set_business_error(1, book.title + " has been sold out");
-            return;
+            return ::taihe::unexpected<::taihe::error>(::taihe::error(book.title + " has been sold out", 1));
         }
 
         count -= 1;
         m_total_sales += price * (1 - m_discount_percent / 100);
 
         printf("saleBook: price = %lf, count = %d, title = %s\n", price, count, book.title.c_str());
+        return {};
     }
 
-    double getDiscount()
+    ::taihe::expected<double, ::taihe::error> getDiscount()
     {
         return m_discount_percent;
     }
 
-    void setDiscount(double percent)
+    ::taihe::expected<void, ::taihe::error> setDiscount(double percent)
     {
         m_discount_percent = percent;
+        return {};
     }
 
-    double getTotalSales()
+    ::taihe::expected<double, ::taihe::error> getTotalSales()
     {
         return m_total_sales;
     }
 };
 
-Bookstore CreateBookstore()
+::taihe::expected<Bookstore, ::taihe::error> CreateBookstore()
 {
     return make_holder<BookstoreImpl, Bookstore>();
 }
 
-void SayHello()
+::taihe::expected<void, ::taihe::error> SayHello()
 {
     printf("Welcome to my book store!\n");
+    return {};
 }
 
-void PrintBookAdvanced(CppOrRustBook const &book)
+::taihe::expected<void, ::taihe::error> PrintBookAdvanced(CppOrRustBook const &book)
 {
     if (book.holds_rust()) {
         RustBook the_book = book.get_rust_ref();
@@ -146,28 +154,29 @@ void PrintBookAdvanced(CppOrRustBook const &book)
         PrintBook(the_book.base);
         printf("Hint: use %s to compile.\n", the_book.compiler.c_str());
     }
+    return {};
 }
 
-FancyBook MakeFancyBook()
+::taihe::expected<FancyBook, ::taihe::error> MakeFancyBook()
 {
     // 内部临时写一个类吧！只要函数都具备，就可以转换到 Taihe 对象。
     struct FancyRustBook {
-        string getPublisher()
+        ::taihe::expected<string, ::taihe::error> getPublisher()
         {
             return "No Starch Press";
         }
 
-        string getTitle()
+        ::taihe::expected<string, ::taihe::error> getTitle()
         {
             return "The Rust Programming Language";
         }
 
-        double getDiscount()
+        ::taihe::expected<double, ::taihe::error> getDiscount()
         {
             return 0.0 /* No discount, sorry.*/;
         }
 
-        double getPrice()
+        ::taihe::expected<double, ::taihe::error> getPrice()
         {
             return 50.0;
         }
@@ -178,7 +187,7 @@ FancyBook MakeFancyBook()
     return make_holder<FancyRustBook, FancyBook>();
 }
 
-bool IsString(uintptr_t s)
+::taihe::expected<bool, ::taihe::error> IsString(uintptr_t s)
 {
     ani_boolean res;
     ani_class cls;
@@ -189,7 +198,7 @@ bool IsString(uintptr_t s)
     return res;
 }
 
-array<uintptr_t> GetStringArray()
+::taihe::expected<array<uintptr_t>, ::taihe::error> GetStringArray()
 {
     env_guard guard;
     ani_env *env = guard.get_env();
@@ -200,6 +209,31 @@ array<uintptr_t> GetStringArray()
     ani_ref ani_arr_1;
     env->GetUndefined(&ani_arr_1);
     return array<uintptr_t>({(uintptr_t)ani_arr_0, (uintptr_t)ani_arr_1});
+}
+
+::taihe::expected<void, ::taihe::error> SaveBookToInternet(string_view url)
+{
+    TH_THROW(std::runtime_error, "SaveBookToInternet not implemented");
+}
+
+::taihe::expected<void, ::taihe::error> SaveBookToFile(weak::Path p)
+{
+    TH_THROW(std::runtime_error, "SaveBookToFile not implemented");
+}
+
+::taihe::expected<string, ::taihe::error> uploadBook(Book const &b)
+{
+    TH_THROW(std::runtime_error, "uploadBook not implemented");
+}
+
+::taihe::expected<void, ::taihe::error> onBookSold()
+{
+    TH_THROW(std::runtime_error, "onBookSold not implemented");
+}
+
+::taihe::expected<void, ::taihe::error> onNewBook()
+{
+    TH_THROW(std::runtime_error, "onNewBook not implemented");
 }
 }  // namespace
 
@@ -213,4 +247,9 @@ TH_EXPORT_CPP_API_PrintBookAdvanced(PrintBookAdvanced);
 TH_EXPORT_CPP_API_MakeFancyBook(MakeFancyBook);
 TH_EXPORT_CPP_API_IsString(IsString);
 TH_EXPORT_CPP_API_GetStringArray(GetStringArray);
+TH_EXPORT_CPP_API_SaveBookToInternet(SaveBookToInternet);
+TH_EXPORT_CPP_API_SaveBookToFile(SaveBookToFile);
+TH_EXPORT_CPP_API_uploadBook(uploadBook);
+TH_EXPORT_CPP_API_onBookSold(onBookSold);
+TH_EXPORT_CPP_API_onNewBook(onNewBook);
 // NOLINTEND

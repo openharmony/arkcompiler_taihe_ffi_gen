@@ -20,16 +20,16 @@
 #include "stdexcept"
 
 namespace {
-::foo::DerivedMethodClass makeDerivedMethodClass()
+::taihe::expected<::foo::DerivedMethodClass, ::taihe::error> makeDerivedMethodClass()
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<DerivedMethodClassImpl, ::foo::DerivedMethodClass>();
 }
 
-::foo::DerivedDataClass makeDerivedDataClass()
+::taihe::expected<::foo::DerivedDataClass, ::taihe::error> makeDerivedDataClass()
 {
-    return {
+    return ::foo::DerivedDataClass {
         .base = {"base"},
         .foo = {"foo"},
         .bar = {"bar"},

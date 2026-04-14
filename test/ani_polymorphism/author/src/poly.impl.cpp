@@ -28,14 +28,16 @@ public:
     {
     }
 
-    void Speak()
+    ::taihe::expected<void, ::taihe::error> Speak()
     {
         std::cout << "Animal Speak" << std::endl;
+        return {};
     }
 
-    void Move()
+    ::taihe::expected<void, ::taihe::error> Move()
     {
         std::cout << "Animal Move" << std::endl;
+        return {};
     }
 };
 
@@ -45,19 +47,22 @@ public:
     {
     }
 
-    void Fetch()
+    ::taihe::expected<void, ::taihe::error> Fetch()
     {
         std::cout << "Dog Fetch" << std::endl;
+        return {};
     }
 
-    void Speak()
+    ::taihe::expected<void, ::taihe::error> Speak()
     {
         std::cout << "Dog Speak" << std::endl;
+        return {};
     }
 
-    void Move()
+    ::taihe::expected<void, ::taihe::error> Move()
     {
         std::cout << "Dog Move" << std::endl;
+        return {};
     }
 };
 
@@ -67,38 +72,41 @@ public:
     {
     }
 
-    void Fetch()
+    ::taihe::expected<void, ::taihe::error> Fetch()
     {
         std::cout << "Cat Fetch" << std::endl;
+        return {};
     }
 
-    void Speak()
+    ::taihe::expected<void, ::taihe::error> Speak()
     {
         std::cout << "Cat Speak" << std::endl;
+        return {};
     }
 
-    void Move()
+    ::taihe::expected<void, ::taihe::error> Move()
     {
         std::cout << "Cat Move" << std::endl;
+        return {};
     }
 };
 
-::poly::Animal MakeAnimal()
+::taihe::expected<::poly::Animal, ::taihe::error> MakeAnimal()
 {
     return taihe::make_holder<AnimalImpl, ::poly::Animal>();
 }
 
-::poly::Dog MakeDog()
+::taihe::expected<::poly::Dog, ::taihe::error> MakeDog()
 {
     return taihe::make_holder<DogImpl, ::poly::Dog>();
 }
 
-::poly::Cat MakeCat()
+::taihe::expected<::poly::Cat, ::taihe::error> MakeCat()
 {
     return taihe::make_holder<CatImpl, ::poly::Cat>();
 }
 
-::poly::AnimalType GetAnimal(::poly::AnimalTag tag)
+::taihe::expected<::poly::AnimalType, ::taihe::error> GetAnimal(::poly::AnimalTag tag)
 {
     switch (tag.get_key()) {
         case ::poly::AnimalTag::key_t::ANIMAL:
@@ -110,7 +118,7 @@ public:
     }
 }
 
-::taihe::string InteractAnimal(::poly::AnimalType const &a)
+::taihe::expected<::taihe::string, ::taihe::error> InteractAnimal(::poly::AnimalType const &a)
 {
     switch (a.get_tag()) {
         case ::poly::AnimalType::tag_t::animal:
@@ -130,7 +138,8 @@ public:
     }
 }
 
-::poly::PersonType GetPerson(::poly::PersonTag tag, ::taihe::string_view name, int32_t age)
+::taihe::expected<::poly::PersonType, ::taihe::error> GetPerson(::poly::PersonTag tag, ::taihe::string_view name,
+                                                                int32_t age)
 {
     switch (tag.get_key()) {
         case ::poly::PersonTag::key_t::PERSON: {
@@ -148,7 +157,7 @@ public:
     }
 }
 
-::taihe::string IntroduceYourself(::poly::PersonType const &p)
+::taihe::expected<::taihe::string, ::taihe::error> IntroduceYourself(::poly::PersonType const &p)
 {
     switch (p.get_tag()) {
         case ::poly::PersonType::tag_t::person:

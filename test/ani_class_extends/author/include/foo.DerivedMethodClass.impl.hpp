@@ -19,13 +19,14 @@
 #define FOO_DERIVEDMETHODCLASS_IMPL_HPP
 
 #include "taihe/string.hpp"
+#include <taihe/expected.hpp>
 
 class DerivedMethodClassImpl {
 public:
-    taihe::string derived();
-    taihe::string base();
-    taihe::string foo();
-    taihe::string bar();
+    ::taihe::expected<::taihe::string, ::taihe::error> derived();
+    ::taihe::expected<::taihe::string, ::taihe::error> base();
+    ::taihe::expected<::taihe::string, ::taihe::error> foo();
+    ::taihe::expected<::taihe::string, ::taihe::error> bar();
 };
 
 #endif  // FOO_DERIVEDMETHODCLASS_IMPL_HPP
