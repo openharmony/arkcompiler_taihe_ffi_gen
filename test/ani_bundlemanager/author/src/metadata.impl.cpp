@@ -26,7 +26,7 @@ using namespace metadata;
 
 namespace {
 
-Metadata GetMetadata()
+::taihe::expected<Metadata, ::taihe::error> GetMetadata()
 {
     return make_holder<MetadataImpl, Metadata>();
 }

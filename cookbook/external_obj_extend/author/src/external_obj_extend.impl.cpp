@@ -26,18 +26,18 @@ public:
     {
     }
 
-    ::taihe::string start()
+    ::taihe::expected<::taihe::string, ::taihe::error> start()
     {
         return "MyContext start";
     }
 
-    ::taihe::string stop()
+    ::taihe::expected<::taihe::string, ::taihe::error> stop()
     {
         return "MyContext stop";
     }
 };
 
-::external_obj_extend::MyContext_inner createMyContext_inner()
+::taihe::expected<::external_obj_extend::MyContext_inner, ::taihe::error> createMyContext_inner()
 {
     return taihe::make_holder<MyContext_innerImpl, ::external_obj_extend::MyContext_inner>();
 }

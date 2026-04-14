@@ -23,43 +23,48 @@ using namespace taihe;
 
 namespace {
 class Noo {
-    string name_ {"noo"};
+    ::taihe::string name_ {"noo"};
     ::taihe::optional<int32_t> age_ {::taihe::optional<int32_t>(std::in_place, 1)};
 
 public:
-    void Bar()
+    ::taihe::expected<void, ::taihe::error> Bar()
     {
         std::cout << "Nooimpl: " << __func__ << std::endl;
+        return {};
     }
 
-    string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         std::cout << "Nooimpl: " << __func__ << " " << name_ << std::endl;
         return name_;
     }
 
-    ::taihe::optional<int32_t> GetAge()
+    ::taihe::expected<::taihe::optional<int32_t>, ::taihe::error> GetAge()
     {
         return age_;
     }
 
-    void SetAge(::taihe::optional_view<int32_t> a)
+    ::taihe::expected<void, ::taihe::error> SetAge(::taihe::optional_view<int32_t> a)
     {
         this->age_ = a;
-        return;
+        return {};
     }
 };
 
-::iface_readonly_test::Noo GetNooIface()
+::taihe::expected<::iface_readonly_test::Noo, ::taihe::error> GetNooIface()
 {
     return make_holder<Noo, ::iface_readonly_test::Noo>();
 }
 
-string PrintNooName(::iface_readonly_test::weak::Noo noo)
+::taihe::expected<::taihe::string, ::taihe::error> PrintNooName(::iface_readonly_test::weak::Noo noo)
 {
-    auto name = noo->GetName();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = noo->GetName();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return "";
 }
 }  // namespace
 

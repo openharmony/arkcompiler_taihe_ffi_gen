@@ -31,14 +31,15 @@ public:
     {
     }
 
-    void sendMessage(::user::weak::IUser a)
+    ::taihe::expected<void, ::taihe::error> sendMessage(::user::weak::IUser a)
     {
-        string_view user_email = a->getEmail();
-        std::cout << "Welcome " << a->getEmail() << std::endl;
+        ::taihe::expected<::taihe::string, ::taihe::error> user_email = a->getEmail();
+        std::cout << "Welcome " << user_email.value() << std::endl;
+        return {};
     }
 };
 
-INotificationService makeNotificationService()
+::taihe::expected<INotificationService, ::taihe::error> makeNotificationService()
 {
     return make_holder<INotificationServiceImpl, INotificationService>();
 }
