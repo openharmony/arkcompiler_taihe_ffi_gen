@@ -35,22 +35,25 @@ public:
     {
     }
 
-    void SetMemberStr(::taihe::optional_view<::taihe::string> a)
+    ::taihe::expected<void, ::taihe::error> SetMemberStr(::taihe::optional_view<::taihe::string> a)
     {
         this->a_ = a;
+        return {};
     }
 
-    ::taihe::optional<::taihe::string> GetMemberStr()
+    ::taihe::expected<::taihe::optional<::taihe::string>, ::taihe::error> GetMemberStr()
     {
         return a_;
     }
 
-    void SetIntData(::taihe::string_view a)
+    ::taihe::expected<void, ::taihe::error> SetIntData(::taihe::string_view a)
     {
         this->str = a;
+        return {};
     }
 
-    ::taihe::optional<::taihe::string> ShowOptionalString(::taihe::optional_view<::taihe::string> a)
+    ::taihe::expected<::taihe::optional<::taihe::string>, ::taihe::error> ShowOptionalString(
+        ::taihe::optional_view<::taihe::string> a)
     {
         if (a) {
             return a;
@@ -59,7 +62,7 @@ public:
         }
     }
 
-    ::taihe::optional<int32_t> ShowOptionalInt32(::taihe::optional_view<int32_t> a)
+    ::taihe::expected<::taihe::optional<int32_t>, ::taihe::error> ShowOptionalInt32(::taihe::optional_view<int32_t> a)
     {
         if (a) {
             return a;
@@ -68,7 +71,7 @@ public:
         }
     }
 
-    ::taihe::optional<bool> ShowOptionalBool(::taihe::optional_view<bool> a)
+    ::taihe::expected<::taihe::optional<bool>, ::taihe::error> ShowOptionalBool(::taihe::optional_view<bool> a)
     {
         if (a) {
             return a;
@@ -77,7 +80,7 @@ public:
         }
     }
 
-    ::taihe::optional<::taihe::map<::taihe::string, bool>> ShowOptionalRecord(
+    ::taihe::expected<::taihe::optional<::taihe::map<::taihe::string, bool>>, ::taihe::error> ShowOptionalRecord(
         ::taihe::optional_view<::taihe::map<::taihe::string, bool>> a)
     {
         if (a) {
@@ -87,7 +90,8 @@ public:
         }
     }
 
-    ::taihe::optional<::opt::MyStruct> ShowOptionalStruct(::taihe::optional_view<::opt::MyStruct> a)
+    ::taihe::expected<::taihe::optional<::opt::MyStruct>, ::taihe::error> ShowOptionalStruct(
+        ::taihe::optional_view<::opt::MyStruct> a)
     {
         if (a) {
             return a;
@@ -97,16 +101,17 @@ public:
     }
 };
 
-void ShowOptionalInt(optional_view<int32_t> x)
+::taihe::expected<void, ::taihe::error> ShowOptionalInt(optional_view<int32_t> x)
 {
     if (x) {
         std::cout << *x << std::endl;
     } else {
         std::cout << "Null" << std::endl;
     }
+    return {};
 }
 
-optional<int32_t> MakeOptionalInt(bool b)
+::taihe::expected<::taihe::optional<int32_t>, ::taihe::error> MakeOptionalInt(bool b)
 {
     if (b) {
         int const optionalMakeValue = 10;
@@ -116,7 +121,7 @@ optional<int32_t> MakeOptionalInt(bool b)
     }
 }
 
-optional<array<int32_t>> MakeOptionalArray(bool b, int32_t val, int32_t num)
+::taihe::expected<::taihe::optional<array<int32_t>>, ::taihe::error> MakeOptionalArray(bool b, int32_t val, int32_t num)
 {
     if (b) {
         return optional<array<int32_t>>::make(array<int32_t>::make(num, val));
@@ -125,7 +130,7 @@ optional<array<int32_t>> MakeOptionalArray(bool b, int32_t val, int32_t num)
     }
 }
 
-optional<string> SendReturnResult(::opt::ReturnResult const &result)
+::taihe::expected<::taihe::optional<string>, ::taihe::error> SendReturnResult(::opt::ReturnResult const &result)
 {
     if (result.results) {
         string ret = "";
@@ -138,19 +143,23 @@ optional<string> SendReturnResult(::opt::ReturnResult const &result)
     }
 }
 
-::opt::Test GetTest()
+::taihe::expected<::opt::Test, ::taihe::error> GetTest()
 {
     return taihe::make_holder<TestImpl, ::opt::Test>();
 }
 
-void CallCallback(bool second,
-                  ::taihe::callback_view<void(::taihe::string_view a, ::taihe::optional_view<::taihe::string> b)> cb)
+::taihe::expected<void, ::taihe::error> CallCallback(
+    bool second,
+    ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(::taihe::string_view a,
+                                                                   ::taihe::optional_view<::taihe::string> b)>
+        cb)
 {
     if (second) {
         cb("Hello", optional<string> {std::in_place, "World"});
     } else {
         cb("Hello", optional<string> {std::nullopt});
     }
+    return {};
 }
 }  // namespace
 

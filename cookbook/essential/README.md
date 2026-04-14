@@ -294,7 +294,6 @@ export class Bookstore {
 
 - 接下来实现 C++ 部分。
   - Taihe 标准库提供了 `make_holder<ImplT, IfaceT...>` 来将 C++ 类绑定到 Taihe 接口
-  - Taihe 标准库提供了 `set_error`, `set_business_error` 来抛异常。
   - 全部的状态都保存在 C++ 中。
 
 **File: `author/src/ohos.book.store.impl.cpp`**

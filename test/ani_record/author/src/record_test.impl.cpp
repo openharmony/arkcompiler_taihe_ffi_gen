@@ -35,12 +35,12 @@ using namespace taihe;
 namespace {
 class ICpu {
 public:
-    int32_t Add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> Add(int32_t a, int32_t b)
     {
         return a + b;
     }
 
-    int32_t Sub(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> Sub(int32_t a, int32_t b)
     {
         return a - b;
     }
@@ -48,12 +48,12 @@ public:
 
 class ICpuZero {
 public:
-    int32_t Add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> Add(int32_t a, int32_t b)
     {
         return a + b;
     }
 
-    int32_t Sub(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> Sub(int32_t a, int32_t b)
     {
         return a - b;
     }
@@ -61,38 +61,38 @@ public:
 
 class ICpuInfo {
 public:
-    int32_t Add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> Add(int32_t a, int32_t b)
     {
         return a + b;
     }
 
-    int32_t Sub(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> Sub(int32_t a, int32_t b)
     {
         return a - b;
     }
 };
 
-::record_test::ICpu MakeCpu()
+::taihe::expected<::record_test::ICpu, ::taihe::error> MakeCpu()
 {
     return make_holder<ICpu, ::record_test::ICpu>();
 }
 
-int32_t GetCpuSize(map_view<string, ::record_test::ICpu> r)
+::taihe::expected<int32_t, ::taihe::error> GetCpuSize(map_view<string, ::record_test::ICpu> r)
 {
     return r.size();
 }
 
-int32_t GetASize(map_view<int32_t, uintptr_t> r)
+::taihe::expected<int32_t, ::taihe::error> GetASize(map_view<int32_t, uintptr_t> r)
 {
     return r.size();
 }
 
-int32_t GetStringIntSize(map_view<string, int32_t> r)
+::taihe::expected<int32_t, ::taihe::error> GetStringIntSize(map_view<string, int32_t> r)
 {
     return r.size();
 }
 
-map<string, string> CreateStringString(int32_t a)
+::taihe::expected<map<string, string>, ::taihe::error> CreateStringString(int32_t a)
 {
     map<string, string> m;
     while (a--) {
@@ -101,7 +101,7 @@ map<string, string> CreateStringString(int32_t a)
     return m;
 }
 
-map<string, int32_t> GetMapfromArray(array_view<::record_test::Data> d)
+::taihe::expected<map<string, int32_t>, ::taihe::error> GetMapfromArray(array_view<::record_test::Data> d)
 {
     map<string, int32_t> m;
     for (std::size_t i = 0; i < d.size(); ++i) {
@@ -110,16 +110,17 @@ map<string, int32_t> GetMapfromArray(array_view<::record_test::Data> d)
     return m;
 }
 
-::record_test::Data GetDatafromMap(map_view<string, ::record_test::Data> m, string_view k)
+::taihe::expected<::record_test::Data, ::taihe::error> GetDatafromMap(map_view<string, ::record_test::Data> m,
+                                                                      string_view k)
 {
     auto iter = m.find_item(k);
     if (iter == nullptr) {
-        return {"su", 7};
+        return ::record_test::Data {"su", 7};
     }
-    return {iter->second.a, iter->second.b};
+    return ::record_test::Data {iter->second.a, iter->second.b};
 }
 
-void ForeachMap(map_view<string, string> my_map)
+::taihe::expected<void, ::taihe::error> ForeachMap(map_view<string, string> my_map)
 {
     std::cout << "Using begin() and end() for traversal:" << std::endl;
     for (auto it = my_map.begin(); it != my_map.end(); ++it) {
@@ -144,25 +145,15 @@ void ForeachMap(map_view<string, string> my_map)
         auto const &[key, value] = *it;
         std::cout << "Key: " << key << ", Value: " << value << std::endl;
     };
+    return {};
 }
 
-bool Mapfunc01(map_view<string, bool> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc01(map_view<string, bool> m)
 {
     return true;
 }
 
-bool Mapfunc02(map_view<string, int8_t> m)
-{
-    int const threshold = 0;
-    for (auto const &pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool Mapfunc03(map_view<string, int16_t> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc02(map_view<string, int8_t> m)
 {
     int const threshold = 0;
     for (auto const &pair : m) {
@@ -173,7 +164,7 @@ bool Mapfunc03(map_view<string, int16_t> m)
     return true;
 }
 
-bool Mapfunc04(map_view<string, int32_t> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc03(map_view<string, int16_t> m)
 {
     int const threshold = 0;
     for (auto const &pair : m) {
@@ -184,7 +175,7 @@ bool Mapfunc04(map_view<string, int32_t> m)
     return true;
 }
 
-bool Mapfunc05(map_view<string, int64_t> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc04(map_view<string, int32_t> m)
 {
     int const threshold = 0;
     for (auto const &pair : m) {
@@ -195,7 +186,18 @@ bool Mapfunc05(map_view<string, int64_t> m)
     return true;
 }
 
-bool Mapfunc06(map_view<string, float> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc05(map_view<string, int64_t> m)
+{
+    int const threshold = 0;
+    for (auto const &pair : m) {
+        if (pair.second <= threshold) {
+            return false;
+        }
+    }
+    return true;
+}
+
+::taihe::expected<bool, ::taihe::error> Mapfunc06(map_view<string, float> m)
 {
     float const threshold = 0.0f;
     for (auto const &pair : m) {
@@ -206,7 +208,7 @@ bool Mapfunc06(map_view<string, float> m)
     return true;
 }
 
-bool Mapfunc07(map_view<string, double> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc07(map_view<string, double> m)
 {
     double const threshold = 0.0;
     for (auto const &pair : m) {
@@ -217,7 +219,7 @@ bool Mapfunc07(map_view<string, double> m)
     return true;
 }
 
-bool Mapfunc08(map_view<string, string> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc08(map_view<string, string> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -227,7 +229,7 @@ bool Mapfunc08(map_view<string, string> m)
     return true;
 }
 
-bool Mapfunc09(map_view<string, array<int8_t>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc09(map_view<string, array<int8_t>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -237,7 +239,7 @@ bool Mapfunc09(map_view<string, array<int8_t>> m)
     return true;
 }
 
-bool Mapfunc10(map_view<string, array<int16_t>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc10(map_view<string, array<int16_t>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -247,7 +249,7 @@ bool Mapfunc10(map_view<string, array<int16_t>> m)
     return true;
 }
 
-bool Mapfunc11(map_view<string, array<int32_t>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc11(map_view<string, array<int32_t>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -257,7 +259,7 @@ bool Mapfunc11(map_view<string, array<int32_t>> m)
     return true;
 }
 
-bool Mapfunc12(map_view<string, array<int64_t>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc12(map_view<string, array<int64_t>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -267,7 +269,7 @@ bool Mapfunc12(map_view<string, array<int64_t>> m)
     return true;
 }
 
-bool Mapfunc13(map_view<string, array<array<uint8_t>>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc13(map_view<string, array<array<uint8_t>>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -277,7 +279,7 @@ bool Mapfunc13(map_view<string, array<array<uint8_t>>> m)
     return true;
 }
 
-bool Mapfunc14(map_view<string, array<bool>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc14(map_view<string, array<bool>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -287,7 +289,7 @@ bool Mapfunc14(map_view<string, array<bool>> m)
     return true;
 }
 
-bool Mapfunc15(map_view<string, array<string>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc15(map_view<string, array<string>> m)
 {
     for (auto const &pair : m) {
         if (pair.second.empty()) {
@@ -297,42 +299,42 @@ bool Mapfunc15(map_view<string, array<string>> m)
     return true;
 }
 
-bool Mapfunc16(map_view<string, record_test::TypeUnion> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc16(map_view<string, record_test::TypeUnion> m)
 {
     return true;
 }
 
-bool Mapfunc17(map_view<string, record_test::Color> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc17(map_view<string, record_test::Color> m)
 {
     return true;
 }
 
-bool Mapfunc18(map_view<string, record_test::Pair> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc18(map_view<string, record_test::Pair> m)
 {
     return true;
 }
 
-::record_test::ICpuZero MakeICpuZero()
+::taihe::expected<::record_test::ICpuZero, ::taihe::error> MakeICpuZero()
 {
     return make_holder<ICpuZero, ::record_test::ICpuZero>();
 }
 
-bool Mapfunc19(map_view<string, record_test::ICpuZero> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc19(map_view<string, record_test::ICpuZero> m)
 {
     return true;
 }
 
-::record_test::ICpuInfo MakeICpuInfo()
+::taihe::expected<::record_test::ICpuInfo, ::taihe::error> MakeICpuInfo()
 {
     return make_holder<ICpuInfo, ::record_test::ICpuInfo>();
 }
 
-bool Mapfunc20(map_view<string, record_test::ICpuInfo> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc20(map_view<string, record_test::ICpuInfo> m)
 {
     return true;
 }
 
-bool Mapfunc21(map_view<string, uintptr_t> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc21(map_view<string, uintptr_t> m)
 {
     uintptr_t const zero = 0;
     for (auto const &pair : m) {
@@ -343,7 +345,7 @@ bool Mapfunc21(map_view<string, uintptr_t> m)
     return true;
 }
 
-bool Mapfunc22(map_view<string, map<string, bool>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc22(map_view<string, map<string, bool>> m)
 {
     size_t const emptySize = 0;
     for (auto const &pair : m) {
@@ -354,7 +356,7 @@ bool Mapfunc22(map_view<string, map<string, bool>> m)
     return true;
 }
 
-bool Mapfunc23(map_view<string, map<string, int32_t>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc23(map_view<string, map<string, int32_t>> m)
 {
     size_t const emptySize = 0;
     for (auto const &pair : m) {
@@ -365,7 +367,7 @@ bool Mapfunc23(map_view<string, map<string, int32_t>> m)
     return true;
 }
 
-bool Mapfunc24(map_view<string, map<string, array<int32_t>>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc24(map_view<string, map<string, array<int32_t>>> m)
 {
     size_t const emptySize = 0;
     for (auto const &pair : m) {
@@ -376,7 +378,7 @@ bool Mapfunc24(map_view<string, map<string, array<int32_t>>> m)
     return true;
 }
 
-bool Mapfunc25(map_view<string, map<string, string>> m)
+::taihe::expected<bool, ::taihe::error> Mapfunc25(map_view<string, map<string, string>> m)
 {
     size_t const emptySize = 0;
     for (auto const &pair : m) {
@@ -387,7 +389,7 @@ bool Mapfunc25(map_view<string, map<string, string>> m)
     return true;
 }
 
-map<string, bool> Mapfunc26()
+::taihe::expected<map<string, bool>, ::taihe::error> Mapfunc26()
 {
     map<string, bool> result;
     bool const value1 = true;
@@ -397,7 +399,7 @@ map<string, bool> Mapfunc26()
     return result;
 }
 
-map<string, int8_t> Mapfunc27()
+::taihe::expected<map<string, int8_t>, ::taihe::error> Mapfunc27()
 {
     map<string, int8_t> result;
     int8_t const value1 = 123;
@@ -407,7 +409,7 @@ map<string, int8_t> Mapfunc27()
     return result;
 }
 
-map<string, int16_t> Mapfunc28()
+::taihe::expected<map<string, int16_t>, ::taihe::error> Mapfunc28()
 {
     map<string, int16_t> result;
     int16_t const value1 = 1234;
@@ -417,7 +419,7 @@ map<string, int16_t> Mapfunc28()
     return result;
 }
 
-map<string, int32_t> Mapfunc29()
+::taihe::expected<map<string, int32_t>, ::taihe::error> Mapfunc29()
 {
     map<string, int32_t> result;
     int32_t const value1 = 12345;
@@ -427,7 +429,7 @@ map<string, int32_t> Mapfunc29()
     return result;
 }
 
-map<string, int64_t> Mapfunc30()
+::taihe::expected<map<string, int64_t>, ::taihe::error> Mapfunc30()
 {
     map<string, int64_t> result;
     int64_t const value1 = 123456;
@@ -437,7 +439,7 @@ map<string, int64_t> Mapfunc30()
     return result;
 }
 
-map<string, float> Mapfunc31()
+::taihe::expected<map<string, float>, ::taihe::error> Mapfunc31()
 {
     map<string, float> result;
     float const value1 = 123.45f;
@@ -447,7 +449,7 @@ map<string, float> Mapfunc31()
     return result;
 }
 
-map<string, double> Mapfunc32()
+::taihe::expected<map<string, double>, ::taihe::error> Mapfunc32()
 {
     map<string, double> result;
     double const value1 = 123.456;
@@ -457,7 +459,7 @@ map<string, double> Mapfunc32()
     return result;
 }
 
-map<string, string> Mapfunc33()
+::taihe::expected<map<string, string>, ::taihe::error> Mapfunc33()
 {
     map<string, string> result;
     string const value1 = "value1";
@@ -467,7 +469,7 @@ map<string, string> Mapfunc33()
     return result;
 }
 
-map<string, array<int8_t>> Mapfunc34()
+::taihe::expected<map<string, array<int8_t>>, ::taihe::error> Mapfunc34()
 {
     map<string, array<int8_t>> result;
     array<int8_t> const a = {1, 2, 3};
@@ -477,7 +479,7 @@ map<string, array<int8_t>> Mapfunc34()
     return result;
 }
 
-map<string, array<int16_t>> Mapfunc35()
+::taihe::expected<map<string, array<int16_t>>, ::taihe::error> Mapfunc35()
 {
     map<string, array<int16_t>> result;
     array<int16_t> const a = {123, 456};
@@ -487,7 +489,7 @@ map<string, array<int16_t>> Mapfunc35()
     return result;
 }
 
-map<string, array<int32_t>> Mapfunc36()
+::taihe::expected<map<string, array<int32_t>>, ::taihe::error> Mapfunc36()
 {
     map<string, array<int32_t>> result;
     array<int32_t> const a = {1234, 5678};
@@ -497,7 +499,7 @@ map<string, array<int32_t>> Mapfunc36()
     return result;
 }
 
-map<string, array<int64_t>> Mapfunc37()
+::taihe::expected<map<string, array<int64_t>>, ::taihe::error> Mapfunc37()
 {
     map<string, array<int64_t>> result;
     array<int64_t> const a = {12345, 67890};
@@ -507,7 +509,7 @@ map<string, array<int64_t>> Mapfunc37()
     return result;
 }
 
-map<string, array<uint8_t>> Mapfunc38()
+::taihe::expected<map<string, array<uint8_t>>, ::taihe::error> Mapfunc38()
 {
     map<string, array<uint8_t>> result;
     array<uint8_t> const a = {1, 2, 3};
@@ -517,7 +519,7 @@ map<string, array<uint8_t>> Mapfunc38()
     return result;
 }
 
-map<string, array<bool>> Mapfunc39()
+::taihe::expected<map<string, array<bool>>, ::taihe::error> Mapfunc39()
 {
     map<string, array<bool>> result;
     array<bool> const a = {true, false};
@@ -527,7 +529,7 @@ map<string, array<bool>> Mapfunc39()
     return result;
 }
 
-map<string, array<string>> Mapfunc40()
+::taihe::expected<map<string, array<string>>, ::taihe::error> Mapfunc40()
 {
     map<string, array<string>> result;
     array<string> const a = {"value1", "value2"};
@@ -537,7 +539,7 @@ map<string, array<string>> Mapfunc40()
     return result;
 }
 
-map<string, record_test::TypeUnion> Mapfunc41()
+::taihe::expected<map<string, record_test::TypeUnion>, ::taihe::error> Mapfunc41()
 {
     int32_t const value = 123;
     map<string, record_test::TypeUnion> result;
@@ -547,7 +549,7 @@ map<string, record_test::TypeUnion> Mapfunc41()
     return result;
 }
 
-map<string, record_test::Color> Mapfunc42()
+::taihe::expected<map<string, record_test::Color>, ::taihe::error> Mapfunc42()
 {
     map<string, record_test::Color> result;
     result.emplace("key1", record_test::Color::key_t::RED);
@@ -555,7 +557,7 @@ map<string, record_test::Color> Mapfunc42()
     return result;
 }
 
-map<string, record_test::Pair> Mapfunc43()
+::taihe::expected<map<string, record_test::Pair>, ::taihe::error> Mapfunc43()
 {
     map<string, record_test::Pair> result;
     record_test::Pair p1 {
@@ -571,7 +573,7 @@ map<string, record_test::Pair> Mapfunc43()
     return result;
 }
 
-map<string, record_test::ICpuZero> Mapfunc44()
+::taihe::expected<map<string, record_test::ICpuZero>, ::taihe::error> Mapfunc44()
 {
     map<string, record_test::ICpuZero> result;
     result.emplace("key1", make_holder<ICpuZero, ::record_test::ICpuZero>());
@@ -579,7 +581,7 @@ map<string, record_test::ICpuZero> Mapfunc44()
     return result;
 }
 
-map<string, record_test::ICpuInfo> Mapfunc45()
+::taihe::expected<map<string, record_test::ICpuInfo>, ::taihe::error> Mapfunc45()
 {
     map<string, record_test::ICpuInfo> result;
     result.emplace("key1", make_holder<ICpuInfo, ::record_test::ICpuInfo>());
@@ -587,7 +589,7 @@ map<string, record_test::ICpuInfo> Mapfunc45()
     return result;
 }
 
-map<string, uintptr_t> Mapfunc46()
+::taihe::expected<map<string, uintptr_t>, ::taihe::error> Mapfunc46()
 {
     map<string, uintptr_t> result;
     result.emplace("key1", reinterpret_cast<uintptr_t>(nullptr));
@@ -595,7 +597,7 @@ map<string, uintptr_t> Mapfunc46()
     return result;
 }
 
-map<string, map<string, bool>> Mapfunc47()
+::taihe::expected<map<string, map<string, bool>>, ::taihe::error> Mapfunc47()
 {
     map<string, map<string, bool>> result;
     map<string, bool> m1;
@@ -613,7 +615,7 @@ map<string, map<string, bool>> Mapfunc47()
     return result;
 }
 
-map<string, map<string, int32_t>> Mapfunc48()
+::taihe::expected<map<string, map<string, int32_t>>, ::taihe::error> Mapfunc48()
 {
     map<string, map<string, int32_t>> result;
     map<string, int32_t> m1;
@@ -631,7 +633,7 @@ map<string, map<string, int32_t>> Mapfunc48()
     return result;
 }
 
-map<string, map<string, array<int32_t>>> Mapfunc49()
+::taihe::expected<map<string, map<string, array<int32_t>>>, ::taihe::error> Mapfunc49()
 {
     map<string, map<string, array<int32_t>>> result;
     map<string, array<int32_t>> m1;
@@ -649,7 +651,7 @@ map<string, map<string, array<int32_t>>> Mapfunc49()
     return result;
 }
 
-map<string, map<string, string>> Mapfunc50()
+::taihe::expected<map<string, map<string, string>>, ::taihe::error> Mapfunc50()
 {
     map<string, map<string, string>> result;
     map<string, string> m1;
@@ -667,7 +669,7 @@ map<string, map<string, string>> Mapfunc50()
     return result;
 }
 
-map<string, map<string, string>> Mapfunc51(optional_view<map<string, string>> op)
+::taihe::expected<map<string, map<string, string>>, ::taihe::error> Mapfunc51(optional_view<map<string, string>> op)
 {
     map<string, map<string, string>> result;
     map<string, string> m1;

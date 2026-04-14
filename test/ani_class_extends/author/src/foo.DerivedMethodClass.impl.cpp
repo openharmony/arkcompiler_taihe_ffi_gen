@@ -17,22 +17,22 @@
 // NOLINTBEGIN
 #include "foo.DerivedMethodClass.impl.hpp"
 
-taihe::string DerivedMethodClassImpl::derived()
+::taihe::expected<::taihe::string, ::taihe::error> DerivedMethodClassImpl::derived()
 {
     return "derived";
 }
 
-taihe::string DerivedMethodClassImpl::base()
+::taihe::expected<::taihe::string, ::taihe::error> DerivedMethodClassImpl::base()
 {
     return "base";
 }
 
-taihe::string DerivedMethodClassImpl::foo()
+::taihe::expected<::taihe::string, ::taihe::error> DerivedMethodClassImpl::foo()
 {
     return "foo";
 }
 
-taihe::string DerivedMethodClassImpl::bar()
+::taihe::expected<::taihe::string, ::taihe::error> DerivedMethodClassImpl::bar()
 {
     return "bar";
 }

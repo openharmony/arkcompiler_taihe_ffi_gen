@@ -24,7 +24,7 @@
 namespace {
 // To be implemented.
 
-::sceneNodeParameters::SceneNodeParameters GetSceneNodeParameters()
+::taihe::expected<::sceneNodeParameters::SceneNodeParameters, ::taihe::error> GetSceneNodeParameters()
 {
     return taihe::make_holder<SceneNodeParametersImpl, ::sceneNodeParameters::SceneNodeParameters>();
 }

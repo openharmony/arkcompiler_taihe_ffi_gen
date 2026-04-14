@@ -23,19 +23,21 @@
 using namespace taihe;
 
 namespace {
-string input()
+::taihe::expected<string, ::taihe::error> input()
 {
     return "input";
 }
 
-void print(string_view a)
+::taihe::expected<void, ::taihe::error> print(string_view a)
 {
     std::cout << a << std::flush;
+    return {};
 }
 
-void println(string_view a)
+::taihe::expected<void, ::taihe::error> println(string_view a)
 {
     std::cout << a << std::endl;
+    return {};
 }
 }  // namespace
 

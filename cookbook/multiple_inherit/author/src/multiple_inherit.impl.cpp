@@ -28,9 +28,10 @@ public:
     {
     }
 
-    void baseFunc()
+    ::taihe::expected<void, ::taihe::error> baseFunc()
     {
         std::cout << "IBase" << std::endl;
+        return {};
     }
 };
 
@@ -44,14 +45,15 @@ public:
     {
     }
 
-    ::taihe::string getColor()
+    ::taihe::expected<::taihe::string, ::taihe::error> getColor()
     {
         return this->m_color;
     }
 
-    void baseFunc()
+    ::taihe::expected<void, ::taihe::error> baseFunc()
     {
         std::cout << "IColor" << std::endl;
+        return {};
     }
 
 private:
@@ -68,14 +70,15 @@ public:
     {
     }
 
-    ::taihe::string getShape()
+    ::taihe::expected<::taihe::string, ::taihe::error> getShape()
     {
         return this->m_shape;
     }
 
-    void baseFunc()
+    ::taihe::expected<void, ::taihe::error> baseFunc()
     {
         std::cout << "IShape" << std::endl;
+        return {};
     }
 
 private:
@@ -92,22 +95,23 @@ public:
     {
     }
 
-    ::taihe::string getMessage()
+    ::taihe::expected<::taihe::string, ::taihe::error> getMessage()
     {
         return "It's Rect";
     }
 
-    ::taihe::string getColor()
+    ::taihe::expected<::taihe::string, ::taihe::error> getColor()
     {
         return this->m_color;
     }
 
-    void baseFunc()
+    ::taihe::expected<void, ::taihe::error> baseFunc()
     {
         std::cout << "IRect" << std::endl;
+        return {};
     }
 
-    ::taihe::string getShape()
+    ::taihe::expected<::taihe::string, ::taihe::error> getShape()
     {
         return this->m_shape;
     }
@@ -117,17 +121,18 @@ private:
     ::taihe::string m_shape;
 };
 
-::multiple_inherit::IColorable createIColorable(::taihe::string_view color)
+::taihe::expected<::multiple_inherit::IColorable, ::taihe::error> createIColorable(::taihe::string_view color)
 {
     return taihe::make_holder<IColorableImpl, ::multiple_inherit::IColorable>(color);
 }
 
-::multiple_inherit::IShape createIShape(::taihe::string_view shape)
+::taihe::expected<::multiple_inherit::IShape, ::taihe::error> createIShape(::taihe::string_view shape)
 {
     return taihe::make_holder<IShapeImpl, ::multiple_inherit::IShape>(shape);
 }
 
-::multiple_inherit::IRect createIRect(::taihe::string_view color, ::taihe::string_view shape)
+::taihe::expected<::multiple_inherit::IRect, ::taihe::error> createIRect(::taihe::string_view color,
+                                                                         ::taihe::string_view shape)
 {
     return taihe::make_holder<IRectImpl, ::multiple_inherit::IRect>(color, shape);
 }

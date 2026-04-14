@@ -25,27 +25,34 @@
 using namespace taihe;
 
 namespace {
-void cb_void_void(callback_view<void()> f)
+
+::taihe::expected<void, ::taihe::error> cb_void_void(
+    ::taihe::callback_view<::taihe::expected<void, ::taihe::error>()> f)
 {
     f();
+    return {};
 }
 
-void cb_i_void(callback_view<void(int32_t)> f)
+::taihe::expected<void, ::taihe::error> cb_i_void(
+    ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> f)
 {
     f(1);
+    return {};
 }
 
-string cb_str_str(callback_view<string(string_view)> f)
+::taihe::expected<::taihe::string, ::taihe::error> cb_str_str(
+    ::taihe::callback_view<::taihe::expected<::taihe::string, ::taihe::error>(::taihe::string_view)> f)
 {
-    taihe::string out = f("hello");
+    auto out = f("hello");
     return "hello";
 }
 
-void cb_struct(callback_view<::callback::Person(::callback::Person const &)> f)
+::taihe::expected<void, ::taihe::error> cb_struct(
+    ::taihe::callback_view<::taihe::expected<::callback::Person, ::taihe::error>(::callback::Person const &)> f)
 {
-    ::callback::Person result = f(::callback::Person {"Tom", 18});
-    std::cout << result.name << " " << result.age << std::endl;
-    return;
+    ::taihe::expected<::callback::Person, ::taihe::error> result = f(::callback::Person {"Tom", 18});
+    std::cout << result.value().name << " " << result.value().age << std::endl;
+    return {};
 }
 }  // namespace
 
