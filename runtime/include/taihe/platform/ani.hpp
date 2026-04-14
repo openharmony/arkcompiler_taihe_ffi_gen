@@ -16,7 +16,6 @@
 #ifndef TAIHE_PLATFORM_ANI_HPP
 #define TAIHE_PLATFORM_ANI_HPP
 
-#include <taihe/expected.hpp>
 #include <taihe/object.hpp>
 #include <taihe/runtime_ani.hpp>
 
@@ -93,8 +92,8 @@ template<typename AniRefGuard>
 struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<dref_guard, AniRefGuard>>> {
     bool operator()(data_view lhs, data_view rhs) const
     {
-        auto lhs_as_ani = ::taihe::platform::ani::weak::AniObject(lhs);
-        auto rhs_as_ani = ::taihe::platform::ani::weak::AniObject(rhs);
+        auto lhs_as_ani = taihe::platform::ani::weak::AniObject(lhs);
+        auto rhs_as_ani = taihe::platform::ani::weak::AniObject(rhs);
         if (lhs_as_ani.is_error() || rhs_as_ani.is_error()) {
             return same_impl<void>(lhs, rhs);
         }
@@ -111,7 +110,7 @@ template<typename AniRefGuard>
 struct hash_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<dref_guard, AniRefGuard>>> {
     std::size_t operator()(data_view val) const
     {
-        auto val_as_ani = ::taihe::platform::ani::weak::AniObject(val);
+        auto val_as_ani = taihe::platform::ani::weak::AniObject(val);
         if (val_as_ani.is_error()) {
             return hash_impl<void>(val);
         }
@@ -274,229 +273,123 @@ inline __attribute__((noinline)) ani_static_field ani_find_class_static_field(an
 }
 }  // namespace taihe
 
-#if __cplusplus >= 202002L
 namespace taihe {
-template<std::size_t N = 0>
-struct nullable_fixed_string {
-    bool is_null;
-    char value[N];
-
-    constexpr nullable_fixed_string(std::nullptr_t) : is_null {true}, value {}
-    {
-    }
-
-    constexpr nullable_fixed_string(char const (&sv)[N]) : is_null {false}
-    {
-        for (std::size_t i = 0; i < N; ++i) {
-            value[i] = sv[i];
-        }
-    }
-
-    constexpr char const *c_str() const
-    {
-        return is_null ? nullptr : value;
-    }
-};
-
-template<nullable_fixed_string descriptor_t>
+template<typename Descriptor>
 inline ani_module ani_cache_module(ani_env *env)
 {
-    static sref_guard guard(env, ani_find_module(env, descriptor_t.c_str()));
+    static sref_guard guard(env, ani_find_module(env, TH_AS_C_STR(Descriptor)));
     return static_cast<ani_module>(guard.get_ref());
 }
 
-template<nullable_fixed_string descriptor_t>
+template<typename Descriptor>
 inline ani_namespace ani_cache_namespace(ani_env *env)
 {
-    static sref_guard guard(env, ani_find_namespace(env, descriptor_t.c_str()));
+    static sref_guard guard(env, ani_find_namespace(env, TH_AS_C_STR(Descriptor)));
     return static_cast<ani_namespace>(guard.get_ref());
 }
 
-template<nullable_fixed_string descriptor_t>
+template<typename Descriptor>
 inline ani_class ani_cache_class(ani_env *env)
 {
-    static sref_guard guard(env, ani_find_class(env, descriptor_t.c_str()));
+    static sref_guard guard(env, ani_find_class(env, TH_AS_C_STR(Descriptor)));
     return static_cast<ani_class>(guard.get_ref());
 }
 
-template<nullable_fixed_string descriptor_t>
+template<typename Descriptor>
 inline ani_enum ani_cache_enum(ani_env *env)
 {
-    static sref_guard guard(env, ani_find_enum(env, descriptor_t.c_str()));
+    static sref_guard guard(env, ani_find_enum(env, TH_AS_C_STR(Descriptor)));
     return static_cast<ani_enum>(guard.get_ref());
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t, nullable_fixed_string signature_t>
+template<typename Descriptor, typename Name, typename Signature>
 inline ani_function ani_cache_module_function(ani_env *env)
 {
     static ani_function function =
-        ani_find_module_function(env, ani_cache_module<descriptor_t>(env), name_t.c_str(), signature_t.c_str());
+        ani_find_module_function(env, ani_cache_module<Descriptor>(env), TH_AS_C_STR(Name), TH_AS_C_STR(Signature));
     return function;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t, nullable_fixed_string signature_t>
+template<typename Descriptor, typename Name, typename Signature>
 inline ani_function ani_cache_namespace_function(ani_env *env)
 {
-    static ani_function function =
-        ani_find_namespace_function(env, ani_cache_namespace<descriptor_t>(env), name_t.c_str(), signature_t.c_str());
+    static ani_function function = ani_find_namespace_function(env, ani_cache_namespace<Descriptor>(env),
+                                                               TH_AS_C_STR(Name), TH_AS_C_STR(Signature));
     return function;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t, nullable_fixed_string signature_t>
+template<typename Descriptor, typename Name, typename Signature>
 inline ani_method ani_cache_class_method(ani_env *env)
 {
     static ani_method method =
-        ani_find_class_method(env, ani_cache_class<descriptor_t>(env), name_t.c_str(), signature_t.c_str());
+        ani_find_class_method(env, ani_cache_class<Descriptor>(env), TH_AS_C_STR(Name), TH_AS_C_STR(Signature));
     return method;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t, nullable_fixed_string signature_t>
+template<typename Descriptor, typename Name, typename Signature>
 inline ani_static_method ani_cache_class_static_method(ani_env *env)
 {
     static ani_static_method method =
-        ani_find_class_static_method(env, ani_cache_class<descriptor_t>(env), name_t.c_str(), signature_t.c_str());
+        ani_find_class_static_method(env, ani_cache_class<Descriptor>(env), TH_AS_C_STR(Name), TH_AS_C_STR(Signature));
     return method;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t>
+template<typename Descriptor, typename Name>
 inline ani_variable ani_cache_module_variable(ani_env *env)
 {
-    static ani_variable variable = ani_find_module_variable(env, ani_cache_module<descriptor_t>(env), name_t.c_str());
+    static ani_variable variable = ani_find_module_variable(env, ani_cache_module<Descriptor>(env), TH_AS_C_STR(Name));
     return variable;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t>
+template<typename Descriptor, typename Name>
 inline ani_variable ani_cache_namespace_variable(ani_env *env)
 {
     static ani_variable variable =
-        ani_find_namespace_variable(env, ani_cache_namespace<descriptor_t>(env), name_t.c_str());
+        ani_find_namespace_variable(env, ani_cache_namespace<Descriptor>(env), TH_AS_C_STR(Name));
     return variable;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t>
+template<typename Descriptor, typename Name>
 inline ani_field ani_cache_class_field(ani_env *env)
 {
-    static ani_field field = ani_find_class_field(env, ani_cache_class<descriptor_t>(env), name_t.c_str());
+    static ani_field field = ani_find_class_field(env, ani_cache_class<Descriptor>(env), TH_AS_C_STR(Name));
     return field;
 }
 
-template<nullable_fixed_string descriptor_t, nullable_fixed_string name_t>
+template<typename Descriptor, typename Name>
 inline ani_static_field ani_cache_class_static_field(ani_env *env)
 {
     static ani_static_field field =
-        ani_find_class_static_field(env, ani_cache_class<descriptor_t>(env), name_t.c_str());
+        ani_find_class_static_field(env, ani_cache_class<Descriptor>(env), TH_AS_C_STR(Name));
     return field;
 }
 }  // namespace taihe
 
-#define TH_ANI_FIND_MODULE(env, descriptor) ::taihe::ani_cache_module<descriptor>(env)
-#define TH_ANI_FIND_NAMESPACE(env, descriptor) ::taihe::ani_cache_namespace<descriptor>(env)
-#define TH_ANI_FIND_CLASS(env, descriptor) ::taihe::ani_cache_class<descriptor>(env)
-#define TH_ANI_FIND_ENUM(env, descriptor) ::taihe::ani_cache_enum<descriptor>(env)
+#define TH_ANI_FIND_MODULE(env, descriptor) taihe::ani_cache_module<TH_AS_CT_STRING_T(descriptor)>(env)
+#define TH_ANI_FIND_NAMESPACE(env, descriptor) taihe::ani_cache_namespace<TH_AS_CT_STRING_T(descriptor)>(env)
+#define TH_ANI_FIND_CLASS(env, descriptor) taihe::ani_cache_class<TH_AS_CT_STRING_T(descriptor)>(env)
+#define TH_ANI_FIND_ENUM(env, descriptor) taihe::ani_cache_enum<TH_AS_CT_STRING_T(descriptor)>(env)
 
-#define TH_ANI_FIND_MODULE_FUNCTION(env, descriptor, name, signature) \
-    ::taihe::ani_cache_module_function<descriptor, name, signature>(env)
-#define TH_ANI_FIND_NAMESPACE_FUNCTION(env, descriptor, name, signature) \
-    ::taihe::ani_cache_namespace_function<descriptor, name, signature>(env)
-#define TH_ANI_FIND_CLASS_METHOD(env, descriptor, name, signature) \
-    ::taihe::ani_cache_class_method<descriptor, name, signature>(env)
-#define TH_ANI_FIND_CLASS_STATIC_METHOD(env, descriptor, name, signature) \
-    ::taihe::ani_cache_class_static_method<descriptor, name, signature>(env)
+#define TH_ANI_FIND_MODULE_FUNCTION(env, descriptor, name, signature)                        \
+    taihe::ani_cache_module_function<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name), \
+                                     TH_AS_CT_STRING_T(signature)>(env)
+#define TH_ANI_FIND_NAMESPACE_FUNCTION(env, descriptor, name, signature)                        \
+    taihe::ani_cache_namespace_function<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name), \
+                                        TH_AS_CT_STRING_T(signature)>(env)
+#define TH_ANI_FIND_CLASS_METHOD(env, descriptor, name, signature)                        \
+    taihe::ani_cache_class_method<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name), \
+                                  TH_AS_CT_STRING_T(signature)>(env)
+#define TH_ANI_FIND_CLASS_STATIC_METHOD(env, descriptor, name, signature)                        \
+    taihe::ani_cache_class_static_method<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name), \
+                                         TH_AS_CT_STRING_T(signature)>(env)
 
-#define TH_ANI_FIND_MODULE_VARIABLE(env, descriptor, name) ::taihe::ani_cache_module_variable<descriptor, name>(env)
+#define TH_ANI_FIND_MODULE_VARIABLE(env, descriptor, name) \
+    taihe::ani_cache_module_variable<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name)>(env)
 #define TH_ANI_FIND_NAMESPACE_VARIABLE(env, descriptor, name) \
-    ::taihe::ani_cache_namespace_variable<descriptor, name>(env)
-#define TH_ANI_FIND_CLASS_FIELD(env, descriptor, name) ::taihe::ani_cache_class_field<descriptor, name>(env)
+    taihe::ani_cache_namespace_variable<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name)>(env)
+#define TH_ANI_FIND_CLASS_FIELD(env, descriptor, name) \
+    taihe::ani_cache_class_field<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name)>(env)
 #define TH_ANI_FIND_CLASS_STATIC_FIELD(env, descriptor, name) \
-    ::taihe::ani_cache_class_static_field<descriptor, name>(env)
-#else  // __cplusplus >= 202002L
-#define TH_ANI_FIND_MODULE(penv, descriptor)                                                \
-    ([env = (penv)] {                                                                       \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_module(env, descriptor)); \
-        return static_cast<ani_module>(__guard.get_ref());                                  \
-    }())
-
-#define TH_ANI_FIND_NAMESPACE(penv, descriptor)                                                \
-    ([env = (penv)] {                                                                          \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_namespace(env, descriptor)); \
-        return static_cast<ani_namespace>(__guard.get_ref());                                  \
-    }())
-
-#define TH_ANI_FIND_CLASS(penv, descriptor)                                                \
-    ([env = (penv)] {                                                                      \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_class(env, descriptor)); \
-        return static_cast<ani_class>(__guard.get_ref());                                  \
-    }())
-
-#define TH_ANI_FIND_ENUM(penv, descriptor)                                                \
-    ([env = (penv)] {                                                                     \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_enum(env, descriptor)); \
-        return static_cast<ani_enum>(__guard.get_ref());                                  \
-    }())
-
-#define TH_ANI_FIND_MODULE_FUNCTION(penv, descriptor, name, signature)                                           \
-    ([env = (penv)] {                                                                                            \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_module(env, descriptor));                      \
-        static ani_function __function =                                                                         \
-            ::taihe::ani_find_module_function(env, static_cast<ani_module>(__guard.get_ref()), name, signature); \
-        return __function;                                                                                       \
-    }())
-
-#define TH_ANI_FIND_NAMESPACE_FUNCTION(penv, descriptor, name, signature)                                              \
-    ([env = (penv)] {                                                                                                  \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_namespace(env, descriptor));                         \
-        static ani_function __function =                                                                               \
-            ::taihe::ani_find_namespace_function(env, static_cast<ani_namespace>(__guard.get_ref()), name, signature); \
-        return __function;                                                                                             \
-    }())
-
-#define TH_ANI_FIND_CLASS_METHOD(penv, descriptor, name, signature)                                          \
-    ([env = (penv)] {                                                                                        \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_class(env, descriptor));                   \
-        static ani_method __method =                                                                         \
-            ::taihe::ani_find_class_method(env, static_cast<ani_class>(__guard.get_ref()), name, signature); \
-        return __method;                                                                                     \
-    }())
-
-#define TH_ANI_FIND_CLASS_STATIC_METHOD(penv, descriptor, name, signature)                                          \
-    ([env = (penv)] {                                                                                               \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_class(env, descriptor));                          \
-        static ani_static_method __method =                                                                         \
-            ::taihe::ani_find_class_static_method(env, static_cast<ani_class>(__guard.get_ref()), name, signature); \
-        return __method;                                                                                            \
-    }())
-
-#define TH_ANI_FIND_MODULE_VARIABLE(penv, descriptor, name)                                           \
-    ([env = (penv)] {                                                                                 \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_module(env, descriptor));           \
-        static ani_variable __variable =                                                              \
-            ::taihe::ani_find_module_variable(env, static_cast<ani_module>(__guard.get_ref()), name); \
-        return __variable;                                                                            \
-    }())
-
-#define TH_ANI_FIND_NAMESPACE_VARIABLE(penv, descriptor, name)                                              \
-    ([env = (penv)] {                                                                                       \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_namespace(env, descriptor));              \
-        static ani_variable __variable =                                                                    \
-            ::taihe::ani_find_namespace_variable(env, static_cast<ani_namespace>(__guard.get_ref()), name); \
-        return __variable;                                                                                  \
-    }())
-
-#define TH_ANI_FIND_CLASS_FIELD(penv, descriptor, name)                                          \
-    ([env = (penv)] {                                                                            \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_class(env, descriptor));       \
-        static ani_field __field =                                                               \
-            ::taihe::ani_find_class_field(env, static_cast<ani_class>(__guard.get_ref()), name); \
-        return __field;                                                                          \
-    }())
-
-#define TH_ANI_FIND_CLASS_STATIC_FIELD(penv, descriptor, name)                                          \
-    ([env = (penv)] {                                                                                   \
-        static ::taihe::sref_guard __guard(env, ::taihe::ani_find_class(env, descriptor));              \
-        static ani_static_field __field =                                                               \
-            ::taihe::ani_find_class_static_field(env, static_cast<ani_class>(__guard.get_ref()), name); \
-        return __field;                                                                                 \
-    }())
-#endif  // __cplusplus >= 202002L
+    taihe::ani_cache_class_static_field<TH_AS_CT_STRING_T(descriptor), TH_AS_CT_STRING_T(name)>(env)
 
 #endif  // TAIHE_PLATFORM_ANI_HPP
