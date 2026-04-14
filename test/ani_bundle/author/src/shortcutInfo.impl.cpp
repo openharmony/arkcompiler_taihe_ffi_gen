@@ -34,63 +34,63 @@ public:
     {
     }
 
-    string GetId()
+    ::taihe::expected<string, ::taihe::error> GetId()
     {
         return "ShortcutInfo::GetId";
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return "ShortcutInfo::GetBundleName";
     }
 
-    string GetHostAbility()
+    ::taihe::expected<string, ::taihe::error> GetHostAbility()
     {
         return "ShortcutInfo::GetHostAbility";
     }
 
-    string GetIcon()
+    ::taihe::expected<string, ::taihe::error> GetIcon()
     {
         return "ShortcutInfo::GetIcon";
     }
 
-    string GetLabel()
+    ::taihe::expected<string, ::taihe::error> GetLabel()
     {
         return "ShortcutInfo::GetLabel";
     }
 
-    int32_t GetLabelId()
+    ::taihe::expected<int32_t, ::taihe::error> GetLabelId()
     {
         return shortcutInfoImpl;
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return shortcutInfoImpl;
     }
 
-    string GetDisableMessage()
+    ::taihe::expected<string, ::taihe::error> GetDisableMessage()
     {
         return "ShortcutInfo::GetDisableMessage";
     }
 
-    optional<bool> GetIsStatic()
+    ::taihe::expected<optional<bool>, ::taihe::error> GetIsStatic()
     {
         return optional<bool>::make(true);
     }
 
-    optional<bool> GetIsHomeShortcut()
+    ::taihe::expected<optional<bool>, ::taihe::error> GetIsHomeShortcut()
     {
         return optional<bool>::make(true);
     }
 
-    optional<bool> GetIsEnabled()
+    ::taihe::expected<optional<bool>, ::taihe::error> GetIsEnabled()
     {
         return optional<bool>::make(true);
     }
 };
 
-ShortcutInfo GetShortcutInfo()
+::taihe::expected<ShortcutInfo, ::taihe::error> GetShortcutInfo()
 {
     return make_holder<ShortcutInfoImpl, ShortcutInfo>();
 }

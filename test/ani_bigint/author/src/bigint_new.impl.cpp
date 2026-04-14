@@ -32,13 +32,13 @@ namespace {
 
 class WantImpl {
 public:
-    array<uint64_t> a_ = {1, 2, 3};
+    ::taihe::array<uint64_t> a_ = {1, 2, 3};
 
     WantImpl()
     {
     }
 
-    void SetBigInt(::taihe::array_view<uint64_t> a)
+    ::taihe::expected<void, ::taihe::error> SetBigInt(::taihe::array_view<uint64_t> a)
     {
         a_ = a;
         std::cout << "Received array (size = " << a.size() << "): ";
@@ -46,17 +46,18 @@ public:
             std::cout << a[i] << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint64_t> GetBigInt()
+    ::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> GetBigInt()
     {
         return a_;
     }
 };
 
-array<uint64_t> ProcessBigInt(array_view<uint64_t> a)
+::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> ProcessBigInt(::taihe::array_view<uint64_t> a)
 {
-    array<uint64_t> res(a.size() + 1);
+    ::taihe::array<uint64_t> res(a.size() + 1);
     res[0] = 0;
     for (int i = 0; i < a.size(); i++) {
         res[i + 1] = a[i];
@@ -65,16 +66,17 @@ array<uint64_t> ProcessBigInt(array_view<uint64_t> a)
     return res;
 }
 
-void PrintBigInt(::taihe::array_view<uint64_t> a)
+::taihe::expected<void, ::taihe::error> PrintBigInt(::taihe::array_view<uint64_t> a)
 {
     for (int i = 0; i < a.size(); i++) {
         std::cerr << "arr[" << i << "] = " << a[i] << std::endl;
     }
+    return {};
 }
 
-::taihe::array<uint64_t> CreateBigInt(::taihe::array_view<uint64_t> a)
+::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> CreateBigInt(::taihe::array_view<uint64_t> a)
 {
-    array<uint64_t> res(a.size());
+    ::taihe::array<uint64_t> res(a.size());
     for (int i = 0; i < a.size(); i++) {
         res[i] = a[i];
         std::cerr << "arr[" << i << "] = " << a[i] << std::endl;
@@ -82,49 +84,52 @@ void PrintBigInt(::taihe::array_view<uint64_t> a)
     return res;
 }
 
-::bigint_new::Want GetWant()
+::taihe::expected<::bigint_new::Want, ::taihe::error> GetWant()
 {
     return taihe::make_holder<WantImpl, ::bigint_new::Want>();
 }
 
-void SetupStructAndPrint(::bigint_new::BigInt1 const &v)
+::taihe::expected<void, ::taihe::error> SetupStructAndPrint(::bigint_new::BigInt1 const &v)
 {
     for (auto const &value : v.a) {
         std::cout << "a bigint array<u64>: " << value << " ";
     }
     std::cout << std::endl;
+    return {};
 }
 
-::taihe::array<uint64_t> GetBigIntOptional(::taihe::optional_view<::taihe::array<uint64_t>> a)
+::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> GetBigIntOptional(
+    ::taihe::optional_view<::taihe::array<uint64_t>> a)
 {
     if (!a.has_value()) {
-        return {0, 0};
+        ::taihe::array<uint64_t> result = {0, 0};
+        return result;
     }
     auto const &value = a.value();
-    array<uint64_t> result(value.size());
-    for (int i = 0; i < value.size(); i++) {
+    ::taihe::array<uint64_t> result(value.size());
+    for (int i = 0; i < static_cast<int>(value.size()); i++) {
         result[i] = value[i];
     }
     return result;
 }
 
-::taihe::map<::taihe::string, ::taihe::array<uint64_t>> MapBigInt(
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<uint64_t>>, ::taihe::error> MapBigInt(
     ::taihe::map_view<::taihe::string, ::taihe::array<uint64_t>> a)
 {
-    map<string, array<uint64_t>> result;
+    ::taihe::map<string, array<uint64_t>> result;
     for (auto const &val : a) {
         result.emplace(val.first, val.second);
     }
     return result;
 }
 
-::bigint_new::MyUnion MakeMyUnion(int32_t n)
+::taihe::expected<::bigint_new::MyUnion, ::taihe::error> MakeMyUnion(int32_t n)
 {
     int32_t const case1Key = 1;
     int32_t const case2Key = 2;
 
-    array<uint64_t> bigIntData = {1, 2, 3};
-    string str = "this is string data";
+    ::taihe::array<uint64_t> bigIntData = {1, 2, 3};
+    ::taihe::string str = "this is string data";
 
     switch (n) {
         case case1Key:
@@ -136,7 +141,7 @@ void SetupStructAndPrint(::bigint_new::BigInt1 const &v)
     }
 }
 
-void ShowMyUnion(::bigint_new::MyUnion const &u)
+::taihe::expected<void, ::taihe::error> ShowMyUnion(::bigint_new::MyUnion const &u)
 {
     if (auto ptr = u.get_bigIntValue_ptr()) {
         std::cout << "bigIntValue: [";
@@ -149,6 +154,7 @@ void ShowMyUnion(::bigint_new::MyUnion const &u)
     } else {
         std::cout << "empty\n";
     }
+    return {};
 }
 
 }  // namespace

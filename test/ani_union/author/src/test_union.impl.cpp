@@ -60,7 +60,8 @@ using namespace taihe;
 namespace {
 class MyInterface {
 public:
-    string FuncUnionPrimitive(::test_union::union_primitive const &data, ::test_union::union_primitive const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionPrimitive(::test_union::union_primitive const &data,
+                                                                 ::test_union::union_primitive const &data2)
     {
         switch (data.get_tag()) {
             case ::test_union::union_primitive::tag_t::sValue:
@@ -87,134 +88,148 @@ public:
         }
     }
 
-    string FuncUnionPrimitive5Param(::test_union::union_primitive const &data1,
-                                    ::test_union::union_primitive const &data2,
-                                    ::test_union::union_primitive const &data3,
-                                    ::test_union::union_primitive const &data4,
-                                    ::test_union::union_primitive const &data5)
+    ::taihe::expected<string, ::taihe::error> FuncUnionPrimitive5Param(::test_union::union_primitive const &data1,
+                                                                       ::test_union::union_primitive const &data2,
+                                                                       ::test_union::union_primitive const &data3,
+                                                                       ::test_union::union_primitive const &data4,
+                                                                       ::test_union::union_primitive const &data5)
     {
         return "func_union_primitive_5param";
     }
 
-    string FuncColorMapValue1(::test_union::color_map_value1 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue1(::test_union::color_map_value1 const &data1)
     {
         return "func_color_map_value1";
     }
 
-    string FuncColorMapValue2(::test_union::color_map_value2 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue2(::test_union::color_map_value2 const &data1)
     {
         return "func_color_map_value2";
     }
 
-    string FuncColorMapValue3(::test_union::color_map_value3 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue3(::test_union::color_map_value3 const &data1)
     {
         return "func_color_map_value3";
     }
 
-    string FuncColorMapValue4(::test_union::color_map_value4 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue4(::test_union::color_map_value4 const &data1)
     {
         return "func_color_map_value4";
     }
 
-    string FuncColorMapValue5(::test_union::color_map_value5 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue5(::test_union::color_map_value5 const &data1)
     {
         return "func_color_map_value5";
     }
 
-    string FuncColorMapValue6(::test_union::color_map_value6 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue6(::test_union::color_map_value6 const &data1)
     {
         return "func_color_map_value6";
     }
 
-    string FuncColorMapValue7(::test_union::color_map_value7 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue7(::test_union::color_map_value7 const &data1)
     {
         return "func_color_map_value7";
     }
 
-    string FuncColorMapValue8(::test_union::color_map_value8 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue8(::test_union::color_map_value8 const &data1)
     {
         return "func_color_map_value8";
     }
 
-    string FuncColorMapValue9(::test_union::color_map_value9 const &data1)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue9(::test_union::color_map_value9 const &data1)
     {
         return "func_color_map_value9";
     }
 
-    string FuncColorMapValue10(::test_union::color_map_value9 const &data1, ::test_union::color_map_value9 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncColorMapValue10(::test_union::color_map_value9 const &data1,
+                                                                  ::test_union::color_map_value9 const &data2)
     {
         return "func_color_map_value10";
     }
 
-    string FuncUnionArrayMap1(::test_union::UnionArrayMap1 const &data1, ::test_union::UnionArrayMap1 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap1(::test_union::UnionArrayMap1 const &data1,
+                                                                 ::test_union::UnionArrayMap1 const &data2)
     {
         return "func_union_array_map1";
     }
 
-    string FuncUnionArrayMap2(::test_union::UnionArrayMap2 const &data1, ::test_union::UnionArrayMap2 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap2(::test_union::UnionArrayMap2 const &data1,
+                                                                 ::test_union::UnionArrayMap2 const &data2)
     {
         return "func_union_array_map2";
     }
 
-    string FuncUnionArrayMap3(::test_union::UnionArrayMap3 const &data1, ::test_union::UnionArrayMap3 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap3(::test_union::UnionArrayMap3 const &data1,
+                                                                 ::test_union::UnionArrayMap3 const &data2)
     {
         return "func_union_array_map3";
     }
 
-    string FuncUnionArrayMap4(::test_union::UnionArrayMap4 const &data1, ::test_union::UnionArrayMap4 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap4(::test_union::UnionArrayMap4 const &data1,
+                                                                 ::test_union::UnionArrayMap4 const &data2)
     {
         return "func_union_array_map4";
     }
 
-    string FuncUnionArrayMap5(::test_union::UnionArrayMap5 const &data1, ::test_union::UnionArrayMap5 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap5(::test_union::UnionArrayMap5 const &data1,
+                                                                 ::test_union::UnionArrayMap5 const &data2)
     {
         return "func_union_array_map5";
     }
 
-    string FuncUnionArrayMap6(::test_union::UnionArrayMap6 const &data1, ::test_union::UnionArrayMap6 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap6(::test_union::UnionArrayMap6 const &data1,
+                                                                 ::test_union::UnionArrayMap6 const &data2)
     {
         return "func_union_array_map6";
     }
 
-    string FuncUnionArrayMap7(::test_union::UnionArrayMap7 const &data1, ::test_union::UnionArrayMap7 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap7(::test_union::UnionArrayMap7 const &data1,
+                                                                 ::test_union::UnionArrayMap7 const &data2)
     {
         return "func_union_array_map7";
     }
 
-    string FuncUnionArrayMap8(::test_union::UnionArrayMap8 const &data1, ::test_union::UnionArrayMap8 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap8(::test_union::UnionArrayMap8 const &data1,
+                                                                 ::test_union::UnionArrayMap8 const &data2)
     {
         return "func_union_array_map8";
     }
 
-    string FuncUnionArrayMap9(::test_union::UnionArrayMap9 const &data1, ::test_union::UnionArrayMap9 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap9(::test_union::UnionArrayMap9 const &data1,
+                                                                 ::test_union::UnionArrayMap9 const &data2)
     {
         return "func_union_array_map9";
     }
 
-    string FuncUnionArrayMap10(::test_union::UnionArrayMap1 const &data1, ::test_union::UnionArrayMap2 const &data2)
+    ::taihe::expected<string, ::taihe::error> FuncUnionArrayMap10(::test_union::UnionArrayMap1 const &data1,
+                                                                  ::test_union::UnionArrayMap2 const &data2)
     {
         return "func_union_array_map10";
     }
 
-    string FuncUnionMix(::test_union::union_mix const &data1, ::test_union::union_mix const &data2,
-                        ::test_union::union_mix const &data3, ::test_union::union_mix const &data4,
-                        ::test_union::union_mix const &data5)
+    ::taihe::expected<string, ::taihe::error> FuncUnionMix(::test_union::union_mix const &data1,
+                                                           ::test_union::union_mix const &data2,
+                                                           ::test_union::union_mix const &data3,
+                                                           ::test_union::union_mix const &data4,
+                                                           ::test_union::union_mix const &data5)
     {
         return "func_union_mix";
     }
 
     // This is corn case for function parameters, so skip lint error
     // NOLINTNEXTLINE(readability-function-size)
-    string FuncUnionMix10Param(::test_union::union_mix const &data1, ::test_union::union_mix const &data2,
-                               ::test_union::union_mix const &data3, ::test_union::union_mix const &data4,
-                               ::test_union::union_mix const &data5, ::test_union::union_mix const &data6,
-                               ::test_union::union_mix const &data7, ::test_union::union_mix const &data8,
-                               ::test_union::union_mix const &data9, ::test_union::union_mix const &data10)
+    ::taihe::expected<string, ::taihe::error> FuncUnionMix10Param(
+        ::test_union::union_mix const &data1, ::test_union::union_mix const &data2,
+        ::test_union::union_mix const &data3, ::test_union::union_mix const &data4,
+        ::test_union::union_mix const &data5, ::test_union::union_mix const &data6,
+        ::test_union::union_mix const &data7, ::test_union::union_mix const &data8,
+        ::test_union::union_mix const &data9, ::test_union::union_mix const &data10)
     {
         return "func_union_mix_10param";
     }
 
-    ::test_union::union_primitive_2 FuncUnionPrimitiveReturn(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2, ::taihe::error> FuncUnionPrimitiveReturn(string_view kind)
     {
         static std::string const sValue = "string";
         static int8_t const i8Value = 1;
@@ -225,7 +240,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_1 FuncUnionPrimitiveReturn1(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_1, ::taihe::error> FuncUnionPrimitiveReturn1(string_view kind)
     {
         static int8_t const i8Value = 1;
         static int16_t const i16Value = 12;
@@ -236,7 +251,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_2 FuncUnionPrimitiveReturn2(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_2, ::taihe::error> FuncUnionPrimitiveReturn2(string_view kind)
     {
         static int8_t const i8Value = 1;
         static int const i8Value2 = 2;
@@ -247,7 +262,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_3 FuncUnionPrimitiveReturn3(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_3, ::taihe::error> FuncUnionPrimitiveReturn3(string_view kind)
     {
         static int16_t const i16Value = 12;
         static int const i32Value = 123;
@@ -258,7 +273,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_4 FuncUnionPrimitiveReturn4(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_4, ::taihe::error> FuncUnionPrimitiveReturn4(string_view kind)
     {
         static int const i32Value = 123;
         static float const f32Value = 1.1f;
@@ -269,7 +284,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_5 FuncUnionPrimitiveReturn5(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_5, ::taihe::error> FuncUnionPrimitiveReturn5(string_view kind)
     {
         static float const f32Value = 1.1f;
         static double const f64Value = 1.234;
@@ -280,7 +295,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_6 FuncUnionPrimitiveReturn6(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_6, ::taihe::error> FuncUnionPrimitiveReturn6(string_view kind)
     {
         if (kind == "s") {
             return ::test_union::union_primitive_2_6::make_sValue("hello");
@@ -289,7 +304,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_7 FuncUnionPrimitiveReturn7(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_7, ::taihe::error> FuncUnionPrimitiveReturn7(string_view kind)
     {
         if (kind == "b") {
             return ::test_union::union_primitive_2_7::make_bValue(true);
@@ -299,7 +314,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_8 FuncUnionPrimitiveReturn8(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_8, ::taihe::error> FuncUnionPrimitiveReturn8(string_view kind)
     {
         if (kind == "b") {
             return ::test_union::union_primitive_2_8::make_bValue(true);
@@ -308,7 +323,7 @@ public:
         }
     }
 
-    ::test_union::union_primitive_2_9 FuncUnionPrimitiveReturn9(string_view kind)
+    ::taihe::expected<::test_union::union_primitive_2_9, ::taihe::error> FuncUnionPrimitiveReturn9(string_view kind)
     {
         if (kind == "s") {
             return ::test_union::union_primitive_2_9::make_sValue("hello");
@@ -317,7 +332,7 @@ public:
         }
     }
 
-    ::test_union::union_mix_5 FuncUnionMix5Return(string_view kind)
+    ::taihe::expected<::test_union::union_mix_5, ::taihe::error> FuncUnionMix5Return(string_view kind)
     {
         if (kind == "s") {
             return ::test_union::union_mix_5::make_sValue("hello");
@@ -340,13 +355,13 @@ public:
         }
     }
 
-    ::test_union::union_mix FuncUnionMix10Return(string_view kind)
+    ::taihe::expected<::test_union::union_mix, ::taihe::error> FuncUnionMix10Return(string_view kind)
     {
         return ::test_union::union_mix::make_bValue(true);
     }
 };
 
-string PrintUnion(::test_union::union_primitive const &data)
+::taihe::expected<string, ::taihe::error> PrintUnion(::test_union::union_primitive const &data)
 {
     switch (data.get_tag()) {
         case ::test_union::union_primitive::tag_t::sValue:
@@ -373,7 +388,7 @@ string PrintUnion(::test_union::union_primitive const &data)
     }
 }
 
-::test_union::union_primitive MakeUnion(std::string_view kind)
+::taihe::expected<::test_union::union_primitive, ::taihe::error> MakeUnion(std::string_view kind)
 {
     constexpr std::string_view sValue = "string";
     constexpr int8_t i8Value = 1;
@@ -409,7 +424,7 @@ string PrintUnion(::test_union::union_primitive const &data)
     // ...
 }
 
-::test_union::MyInterface GetInterface()
+::taihe::expected<::test_union::MyInterface, ::taihe::error> GetInterface()
 {
     return make_holder<MyInterface, ::test_union::MyInterface>();
 }

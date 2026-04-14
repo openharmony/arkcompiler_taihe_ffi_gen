@@ -32,12 +32,13 @@ public:
     {
     }
 
-    void SetFov(float fov)
+    ::taihe::expected<void, ::taihe::error> SetFov(float fov)
     {
         this->fov_ = fov;
+        return {};
     }
 
-    float GetFov()
+    ::taihe::expected<float, ::taihe::error> GetFov()
     {
         return fov_;
     }
@@ -51,12 +52,13 @@ public:
     {
     }
 
-    void SetIntensity(float intens)
+    ::taihe::expected<void, ::taihe::error> SetIntensity(float intens)
     {
         this->intens_ = intens;
+        return {};
     }
 
-    float GetIntensity()
+    ::taihe::expected<float, ::taihe::error> GetIntensity()
     {
         return intens_;
     }
@@ -71,17 +73,18 @@ public:
     {
     }
 
-    void SetVisible(bool visible)
+    ::taihe::expected<void, ::taihe::error> SetVisible(bool visible)
     {
         this->visible_ = visible;
+        return {};
     }
 
-    bool GetVisible()
+    ::taihe::expected<bool, ::taihe::error> GetVisible()
     {
         return visible_;
     }
 
-    ::taihe::string GetPath()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetPath()
     {
         return path;
     }
@@ -95,12 +98,13 @@ public:
     {
     }
 
-    void SetName(::taihe::string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(::taihe::string_view name)
     {
         this->name_ = name;
+        return {};
     }
 
-    ::taihe::string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         return name_;
     }
@@ -114,7 +118,7 @@ public:
     {
     }
 
-    int8_t GetMaterialType()
+    ::taihe::expected<int8_t, ::taihe::error> GetMaterialType()
     {
         return materialType;
     }
@@ -126,7 +130,7 @@ public:
     {
     }
 
-    ::taihe::map<::taihe::string, int32_t> GetInputs()
+    ::taihe::expected<::taihe::map<::taihe::string, int32_t>, ::taihe::error> GetInputs()
     {
         ::taihe::map<::taihe::string, int32_t> res;
         static int32_t const input = 2025;
@@ -144,12 +148,12 @@ public:
     {
     }
 
-    float GetWidth()
+    ::taihe::expected<float, ::taihe::error> GetWidth()
     {
         return width;
     }
 
-    float GetHeight()
+    ::taihe::expected<float, ::taihe::error> GetHeight()
     {
         return height;
     }
@@ -161,7 +165,7 @@ public:
     {
     }
 
-    int32_t GetBackgroundType()
+    ::taihe::expected<int32_t, ::taihe::error> GetBackgroundType()
     {
         int32_t bkType = 0;
         return bkType;
@@ -174,84 +178,88 @@ public:
     {
     }
 
-    ::scene::Camera createCameraPro(::sceneNodeParameters::weak::SceneNodeParameters params)
+    ::taihe::expected<::scene::Camera, ::taihe::error> createCameraPro(
+        ::sceneNodeParameters::weak::SceneNodeParameters params)
     {
         return taihe::make_holder<CameraImpl, ::scene::Camera>();
     }
 
-    ::scene::Light createLightPro(::sceneNodeParameters::weak::SceneNodeParameters params, ::scene::LightType lightType)
+    ::taihe::expected<::scene::Light, ::taihe::error> createLightPro(
+        ::sceneNodeParameters::weak::SceneNodeParameters params, ::scene::LightType lightType)
     {
         return taihe::make_holder<LightImpl, ::scene::Light>();
     }
 
-    ::scene::Node createNodePro(::sceneNodeParameters::weak::SceneNodeParameters params)
+    ::taihe::expected<::scene::Node, ::taihe::error> createNodePro(
+        ::sceneNodeParameters::weak::SceneNodeParameters params)
     {
         return taihe::make_holder<NodeImpl, ::scene::Node>();
     }
 
-    ::scene::Material createMaterialPro(::scene::weak::SceneResourceParameters params,
-                                        ::scene::MaterialType materialType)
+    ::taihe::expected<::scene::Material, ::taihe::error> createMaterialPro(
+        ::scene::weak::SceneResourceParameters params, ::scene::MaterialType materialType)
     {
         return taihe::make_holder<MaterialImpl, ::scene::Material>();
     }
 
-    ::scene::Shader createShaderPro(::scene::weak::SceneResourceParameters params)
+    ::taihe::expected<::scene::Shader, ::taihe::error> createShaderPro(::scene::weak::SceneResourceParameters params)
     {
         return taihe::make_holder<ShaderImpl, ::scene::Shader>();
     }
 
-    ::scene::Image createImagePro(::scene::weak::SceneResourceParameters params)
+    ::taihe::expected<::scene::Image, ::taihe::error> createImagePro(::scene::weak::SceneResourceParameters params)
     {
         return taihe::make_holder<ImageImpl, ::scene::Image>();
     }
 
-    ::scene::Environment createEnvironmentPro(::scene::weak::SceneResourceParameters params)
+    ::taihe::expected<::scene::Environment, ::taihe::error> createEnvironmentPro(
+        ::scene::weak::SceneResourceParameters params)
     {
         return taihe::make_holder<EnvironmentImpl, ::scene::Environment>();
     }
 };
 
-::scene::SceneResourceFactory GetSceneResourceFactory()
+::taihe::expected<::scene::SceneResourceFactory, ::taihe::error> GetSceneResourceFactory()
 {
     return taihe::make_holder<SceneResourceFactoryImpl, ::scene::SceneResourceFactory>();
 }
 
-::scene::Camera GetCamera()
+::taihe::expected<::scene::Camera, ::taihe::error> GetCamera()
 {
     return taihe::make_holder<CameraImpl, ::scene::Camera>();
 }
 
-::scene::Light GetLight()
+::taihe::expected<::scene::Light, ::taihe::error> GetLight()
 {
     return taihe::make_holder<LightImpl, ::scene::Light>();
 }
 
-::scene::Node GetNode()
+::taihe::expected<::scene::Node, ::taihe::error> GetNode()
 {
     return taihe::make_holder<NodeImpl, ::scene::Node>();
 }
 
-::scene::SceneResourceParameters GetSceneResourceParameters()
+::taihe::expected<::scene::SceneResourceParameters, ::taihe::error> GetSceneResourceParameters()
 {
     return taihe::make_holder<SceneResourceParametersImpl, ::scene::SceneResourceParameters>();
 }
 
-::scene::Material GetMaterial()
+::taihe::expected<::scene::Material, ::taihe::error> GetMaterial()
 {
     return taihe::make_holder<MaterialImpl, ::scene::Material>();
 }
 
-::scene::Shader GetShader()
+::taihe::expected<::scene::Shader, ::taihe::error> GetShader()
 {
     return taihe::make_holder<ShaderImpl, ::scene::Shader>();
 }
 
-::scene::Image GetImage()
+::taihe::expected<::scene::Image, ::taihe::error> GetImage()
 {
     return taihe::make_holder<ImageImpl, ::scene::Image>();
 }
 
-::scene::Environment GetEnvironment()
+::taihe::expected<::scene::Environment, ::taihe::error> GetEnvironment()
 {
     return taihe::make_holder<EnvironmentImpl, ::scene::Environment>();
 }

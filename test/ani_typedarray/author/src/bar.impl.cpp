@@ -51,7 +51,7 @@ public:
     {
     }
 
-    void CreateUint8Array(::taihe::array_view<uint8_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateUint8Array(::taihe::array_view<uint8_t> a)
     {
         this->uint8Arr = a;
         std::cout << "createUint8Array uint8Arr length: " << this->uint8Arr.size() << std::endl;
@@ -60,15 +60,16 @@ public:
             std::cout << static_cast<int>(val) << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint8_t> PrintUint8Array(::taihe::array_view<uint8_t> a)
+    ::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> PrintUint8Array(::taihe::array_view<uint8_t> a)
     {
         this->uint8Arr = a;
         return this->uint8Arr;
     }
 
-    void SetUint8Array(::taihe::array_view<uint8_t> a)
+    ::taihe::expected<void, ::taihe::error> SetUint8Array(::taihe::array_view<uint8_t> a)
     {
         this->uint8Arr = a;
         std::cout << "setUint8Array uint8Arr length: " << this->uint8Arr.size() << std::endl;
@@ -77,14 +78,15 @@ public:
             std::cout << static_cast<int>(val) << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint8_t> GetUint8Array()
+    ::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> GetUint8Array()
     {
         return this->uint8Arr;
     }
 
-    void CreateInt8Array(::taihe::array_view<int8_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateInt8Array(::taihe::array_view<int8_t> a)
     {
         this->int8Arr = a;
         std::cout << "createInt8Array int8Arr length: " << this->int8Arr.size() << std::endl;
@@ -93,15 +95,16 @@ public:
             std::cout << static_cast<int>(val) << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int8_t> PrintInt8Array(::taihe::array_view<int8_t> a)
+    ::taihe::expected<::taihe::array<int8_t>, ::taihe::error> PrintInt8Array(::taihe::array_view<int8_t> a)
     {
         this->int8Arr = a;
         return this->int8Arr;
     }
 
-    void SetInt8Array(::taihe::array_view<int8_t> a)
+    ::taihe::expected<void, ::taihe::error> SetInt8Array(::taihe::array_view<int8_t> a)
     {
         this->int8Arr = a;
         std::cout << "setInt8Array int8Arr length: " << this->int8Arr.size() << std::endl;
@@ -110,14 +113,15 @@ public:
             std::cout << static_cast<int>(val) << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int8_t> GetInt8Array()
+    ::taihe::expected<::taihe::array<int8_t>, ::taihe::error> GetInt8Array()
     {
         return this->int8Arr;
     }
 
-    void CreateUint16Array(::taihe::array_view<uint16_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateUint16Array(::taihe::array_view<uint16_t> a)
     {
         this->uint16Arr = a;
         std::cout << "createUint16Array uint16Arr length: " << this->uint16Arr.size() << std::endl;
@@ -126,15 +130,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint16_t> PrintUint16Array(::taihe::array_view<uint16_t> a)
+    ::taihe::expected<::taihe::array<uint16_t>, ::taihe::error> PrintUint16Array(::taihe::array_view<uint16_t> a)
     {
         this->uint16Arr = a;
         return this->uint16Arr;
     }
 
-    void SetUint16Array(::taihe::array_view<uint16_t> a)
+    ::taihe::expected<void, ::taihe::error> SetUint16Array(::taihe::array_view<uint16_t> a)
     {
         this->uint16Arr = a;
         std::cout << "setUint16Array uint16Arr length: " << this->uint16Arr.size() << std::endl;
@@ -143,14 +148,15 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint16_t> GetUint16Array()
+    ::taihe::expected<::taihe::array<uint16_t>, ::taihe::error> GetUint16Array()
     {
         return this->uint16Arr;
     }
 
-    void CreateInt16Array(::taihe::array_view<int16_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateInt16Array(::taihe::array_view<int16_t> a)
     {
         this->int16Arr = a;
         std::cout << "createInt16Array int16Arr length: " << this->int16Arr.size() << std::endl;
@@ -159,15 +165,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int16_t> PrintInt16Array(::taihe::array_view<int16_t> a)
+    ::taihe::expected<::taihe::array<int16_t>, ::taihe::error> PrintInt16Array(::taihe::array_view<int16_t> a)
     {
         this->int16Arr = a;
         return this->int16Arr;
     }
 
-    void SetInt16Array(::taihe::array_view<int16_t> a)
+    ::taihe::expected<void, ::taihe::error> SetInt16Array(::taihe::array_view<int16_t> a)
     {
         this->int16Arr = a;
         std::cout << "setInt16Array int16Arr length: " << this->int16Arr.size() << std::endl;
@@ -176,14 +183,15 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int16_t> GetInt16Array()
+    ::taihe::expected<::taihe::array<int16_t>, ::taihe::error> GetInt16Array()
     {
         return this->int16Arr;
     }
 
-    void CreateUint32Array(::taihe::array_view<uint32_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateUint32Array(::taihe::array_view<uint32_t> a)
     {
         this->uint32Arr = a;
         std::cout << "createUint32Array uint32Arr length: " << this->uint32Arr.size() << std::endl;
@@ -192,15 +200,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint32_t> PrintUint32Array(::taihe::array_view<uint32_t> a)
+    ::taihe::expected<::taihe::array<uint32_t>, ::taihe::error> PrintUint32Array(::taihe::array_view<uint32_t> a)
     {
         this->uint32Arr = a;
         return this->uint32Arr;
     }
 
-    void SetUint32Array(::taihe::array_view<uint32_t> a)
+    ::taihe::expected<void, ::taihe::error> SetUint32Array(::taihe::array_view<uint32_t> a)
     {
         this->uint32Arr = a;
         std::cout << "setUint32Array uint32Arr length: " << this->uint32Arr.size() << std::endl;
@@ -209,14 +218,15 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint32_t> GetUint32Array()
+    ::taihe::expected<::taihe::array<uint32_t>, ::taihe::error> GetUint32Array()
     {
         return this->uint32Arr;
     }
 
-    void CreateInt32Array(::taihe::array_view<int32_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateInt32Array(::taihe::array_view<int32_t> a)
     {
         this->int32Arr = a;
         std::cout << "createInt32Array int32Arr length: " << this->int32Arr.size() << std::endl;
@@ -225,15 +235,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int32_t> PrintInt32Array(::taihe::array_view<int32_t> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> PrintInt32Array(::taihe::array_view<int32_t> a)
     {
         this->int32Arr = a;
         return this->int32Arr;
     }
 
-    void SetInt32Array(::taihe::array_view<int32_t> a)
+    ::taihe::expected<void, ::taihe::error> SetInt32Array(::taihe::array_view<int32_t> a)
     {
         this->int32Arr = a;
         std::cout << "setInt32Array int32Arr length: " << this->int32Arr.size() << std::endl;
@@ -242,14 +253,15 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int32_t> GetInt32Array()
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetInt32Array()
     {
         return this->int32Arr;
     }
 
-    void CreateUint64Array(::taihe::array_view<uint64_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateUint64Array(::taihe::array_view<uint64_t> a)
     {
         this->uint64Arr = a;
         std::cout << "createUint64Array uint64Arr length: " << this->uint64Arr.size() << std::endl;
@@ -258,15 +270,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint64_t> PrintUint64Array(::taihe::array_view<uint64_t> a)
+    ::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> PrintUint64Array(::taihe::array_view<uint64_t> a)
     {
         this->uint64Arr = a;
         return this->uint64Arr;
     }
 
-    void SetUint64Array(::taihe::array_view<uint64_t> a)
+    ::taihe::expected<void, ::taihe::error> SetUint64Array(::taihe::array_view<uint64_t> a)
     {
         this->uint64Arr = a;
         std::cout << "setUint64Array uint64Arr length: " << this->uint64Arr.size() << std::endl;
@@ -275,14 +288,15 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<uint64_t> GetUint64Array()
+    ::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> GetUint64Array()
     {
         return this->uint64Arr;
     }
 
-    void CreateInt64Array(::taihe::array_view<int64_t> a)
+    ::taihe::expected<void, ::taihe::error> CreateInt64Array(::taihe::array_view<int64_t> a)
     {
         this->int64Arr = a;
         std::cout << "createInt64Array int64Arr length: " << this->int64Arr.size() << std::endl;
@@ -291,15 +305,16 @@ public:
             std::cout << static_cast<long long>(val) << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int64_t> PrintInt64Array(::taihe::array_view<int64_t> a)
+    ::taihe::expected<::taihe::array<int64_t>, ::taihe::error> PrintInt64Array(::taihe::array_view<int64_t> a)
     {
         this->int64Arr = a;
         return this->int64Arr;
     }
 
-    void SetInt64Array(::taihe::array_view<int64_t> a)
+    ::taihe::expected<void, ::taihe::error> SetInt64Array(::taihe::array_view<int64_t> a)
     {
         this->int64Arr = a;
         std::cout << "setInt64Array int64Arr length: " << this->int64Arr.size() << std::endl;
@@ -308,14 +323,15 @@ public:
             std::cout << static_cast<long long>(val) << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<int64_t> GetInt64Array()
+    ::taihe::expected<::taihe::array<int64_t>, ::taihe::error> GetInt64Array()
     {
         return this->int64Arr;
     }
 
-    void CreateFloat32Array(::taihe::array_view<float> a)
+    ::taihe::expected<void, ::taihe::error> CreateFloat32Array(::taihe::array_view<float> a)
     {
         this->float32Arr = a;
         std::cout << "createFloat32Array float32Arr length: " << this->float32Arr.size() << std::endl;
@@ -324,15 +340,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<float> PrintFloat32Array(::taihe::array_view<float> a)
+    ::taihe::expected<::taihe::array<float>, ::taihe::error> PrintFloat32Array(::taihe::array_view<float> a)
     {
         this->float32Arr = a;
         return this->float32Arr;
     }
 
-    void SetFloat32Array(::taihe::array_view<float> a)
+    ::taihe::expected<void, ::taihe::error> SetFloat32Array(::taihe::array_view<float> a)
     {
         this->float32Arr = a;
         std::cout << "setFloat32Array float32Arr length: " << this->float32Arr.size() << std::endl;
@@ -341,14 +358,15 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<float> GetFloat32Array()
+    ::taihe::expected<::taihe::array<float>, ::taihe::error> GetFloat32Array()
     {
         return this->float32Arr;
     }
 
-    void CreateFloat64Array(::taihe::array_view<double> a)
+    ::taihe::expected<void, ::taihe::error> CreateFloat64Array(::taihe::array_view<double> a)
     {
         this->float64Arr = a;
         std::cout << "createFloat64Array float64Arr length: " << this->float64Arr.size() << std::endl;
@@ -357,15 +375,16 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<double> PrintFloat64Array(::taihe::array_view<double> a)
+    ::taihe::expected<::taihe::array<double>, ::taihe::error> PrintFloat64Array(::taihe::array_view<double> a)
     {
         this->float64Arr = a;
         return this->float64Arr;
     }
 
-    void SetFloat64Array(::taihe::array_view<double> a)
+    ::taihe::expected<void, ::taihe::error> SetFloat64Array(::taihe::array_view<double> a)
     {
         this->float64Arr = a;
         std::cout << "setFloat64Array float64Arr length: " << this->float64Arr.size() << std::endl;
@@ -374,19 +393,22 @@ public:
             std::cout << val << " ";
         }
         std::cout << std::endl;
+        return {};
     }
 
-    ::taihe::array<double> GetFloat64Array()
+    ::taihe::expected<::taihe::array<double>, ::taihe::error> GetFloat64Array()
     {
         return this->float64Arr;
     }
 
-    ::taihe::array<int64_t> ConvertToInt64Array(::taihe::array_view<uint8_t> a, ::taihe::array_view<uint16_t> b,
-                                                ::taihe::array_view<uint32_t> c, ::taihe::array_view<uint64_t> d,
-                                                ::taihe::array_view<int8_t> e)
+    ::taihe::expected<::taihe::array<int64_t>, ::taihe::error> ConvertToInt64Array(::taihe::array_view<uint8_t> a,
+                                                                                   ::taihe::array_view<uint16_t> b,
+                                                                                   ::taihe::array_view<uint32_t> c,
+                                                                                   ::taihe::array_view<uint64_t> d,
+                                                                                   ::taihe::array_view<int8_t> e)
     {
         if (a.size() != b.size() || a.size() != c.size() || a.size() != d.size() || a.size() != e.size()) {
-            taihe::set_error("Input arrays must have the same length!");
+            return ::taihe::unexpected<::taihe::error>(::taihe::error("Input arrays must have the same length!"));
         }
         this->uint8Arr = a;
         this->uint16Arr = b;
@@ -402,12 +424,14 @@ public:
         return result;
     }
 
-    ::taihe::array<double> ConvertToFloat64Array(::taihe::array_view<int16_t> a, ::taihe::array_view<int32_t> b,
-                                                 ::taihe::array_view<int64_t> c, ::taihe::array_view<float> d,
-                                                 ::taihe::array_view<double> e)
+    ::taihe::expected<::taihe::array<double>, ::taihe::error> ConvertToFloat64Array(::taihe::array_view<int16_t> a,
+                                                                                    ::taihe::array_view<int32_t> b,
+                                                                                    ::taihe::array_view<int64_t> c,
+                                                                                    ::taihe::array_view<float> d,
+                                                                                    ::taihe::array_view<double> e)
     {
         if (a.size() != b.size() || a.size() != c.size() || a.size() != d.size() || a.size() != e.size()) {
-            taihe::set_error("Input arrays must have the same length!");
+            return ::taihe::unexpected<::taihe::error>(::taihe::error("Input arrays must have the same length!"));
         }
         this->int16Arr = a;
         this->int32Arr = b;
@@ -423,7 +447,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetUint8ArrayOptional(::taihe::optional_view<::taihe::array<uint8_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetUint8ArrayOptional(
+        ::taihe::optional_view<::taihe::array<uint8_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -436,7 +461,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetInt8ArrayOptional(::taihe::optional_view<::taihe::array<int8_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetInt8ArrayOptional(
+        ::taihe::optional_view<::taihe::array<int8_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -449,7 +475,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetUint16ArrayOptional(::taihe::optional_view<::taihe::array<uint16_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetUint16ArrayOptional(
+        ::taihe::optional_view<::taihe::array<uint16_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -462,7 +489,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetInt16ArrayOptional(::taihe::optional_view<::taihe::array<int16_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetInt16ArrayOptional(
+        ::taihe::optional_view<::taihe::array<int16_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -475,7 +503,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetUint32ArrayOptional(::taihe::optional_view<::taihe::array<uint32_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetUint32ArrayOptional(
+        ::taihe::optional_view<::taihe::array<uint32_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -492,7 +521,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetInt32ArrayOptional(::taihe::optional_view<::taihe::array<int32_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetInt32ArrayOptional(
+        ::taihe::optional_view<::taihe::array<int32_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -500,7 +530,8 @@ public:
         return a.value();
     }
 
-    ::taihe::array<int32_t> GetUint64ArrayOptional(::taihe::optional_view<::taihe::array<uint64_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetUint64ArrayOptional(
+        ::taihe::optional_view<::taihe::array<uint64_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -518,7 +549,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetInt64ArrayOptional(::taihe::optional_view<::taihe::array<int64_t>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetInt64ArrayOptional(
+        ::taihe::optional_view<::taihe::array<int64_t>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -538,7 +570,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetFloat32ArrayOptional(::taihe::optional_view<::taihe::array<float>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetFloat32ArrayOptional(
+        ::taihe::optional_view<::taihe::array<float>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -550,7 +583,7 @@ public:
             if (std::isnan(val)) {
                 // 处理非数字
                 std::cout << "NaN" << std::endl;
-                taihe::set_error("NaN value is not allowed!");
+                return ::taihe::unexpected<::taihe::error>(::taihe::error("NaN value is not allowed!"));
             }
             // 处理数据溢出
             if (val < static_cast<float>(std::numeric_limits<int32_t>::min())) {
@@ -564,7 +597,8 @@ public:
         return result;
     }
 
-    ::taihe::array<int32_t> GetFloat64ArrayOptional(::taihe::optional_view<::taihe::array<double>> a)
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> GetFloat64ArrayOptional(
+        ::taihe::optional_view<::taihe::array<double>> a)
     {
         if (!a.has_value()) {
             return ::taihe::array<int32_t>(0);
@@ -575,7 +609,7 @@ public:
             double const val = src[i];
             if (std::isnan(val)) {
                 std::cout << "NaN" << std::endl;
-                taihe::set_error("NaN value is not allowed!");
+                return ::taihe::unexpected<::taihe::error>(::taihe::error("NaN value is not allowed!"));
             }
             if (val < static_cast<double>(std::numeric_limits<int32_t>::min())) {
                 result[i] = std::numeric_limits<int32_t>::min();
@@ -588,7 +622,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<uint8_t>> MapUint8Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<uint8_t>>, ::taihe::error> MapUint8Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<uint8_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<uint8_t>> result;
@@ -598,7 +632,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<int8_t>> MapInt8Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<int8_t>>, ::taihe::error> MapInt8Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<int8_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<int8_t>> result;
@@ -608,7 +642,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<uint16_t>> MapUint16Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<uint16_t>>, ::taihe::error> MapUint16Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<uint16_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<uint16_t>> result;
@@ -618,7 +652,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<int16_t>> MapInt16Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<int16_t>>, ::taihe::error> MapInt16Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<int16_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<int16_t>> result;
@@ -628,7 +662,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<uint32_t>> MapUint32Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<uint32_t>>, ::taihe::error> MapUint32Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<uint32_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<uint32_t>> result;
@@ -638,7 +672,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<int32_t>> MapInt32Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<int32_t>>, ::taihe::error> MapInt32Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<int32_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<int32_t>> result;
@@ -648,7 +682,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<uint64_t>> MapUint64Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<uint64_t>>, ::taihe::error> MapUint64Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<uint64_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<uint64_t>> result;
@@ -658,7 +692,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<int64_t>> MapInt64Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<int64_t>>, ::taihe::error> MapInt64Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<int64_t>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<int64_t>> result;
@@ -668,7 +702,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<float>> MapFloat32Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<float>>, ::taihe::error> MapFloat32Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<float>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<float>> result;
@@ -678,7 +712,7 @@ public:
         return result;
     }
 
-    ::taihe::map<::taihe::string, ::taihe::array<double>> MapFloat64Arrays(
+    ::taihe::expected<::taihe::map<::taihe::string, ::taihe::array<double>>, ::taihe::error> MapFloat64Arrays(
         ::taihe::map_view<::taihe::string, ::taihe::array<double>> m)
     {
         ::taihe::map<::taihe::string, ::taihe::array<double>> result;
@@ -689,127 +723,127 @@ public:
     }
 };
 
-int8_t SumUint8Array(array_view<uint8_t> v)
+::taihe::expected<int8_t, ::taihe::error> SumUint8Array(array_view<uint8_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<uint8_t> NewUint8Array(int64_t n, int8_t v)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> NewUint8Array(int64_t n, int8_t v)
 {
     array<uint8_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int16_t SumUint16Array(array_view<uint16_t> v)
+::taihe::expected<int16_t, ::taihe::error> SumUint16Array(array_view<uint16_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<uint16_t> NewUint16Array(int64_t n, int16_t v)
+::taihe::expected<::taihe::array<uint16_t>, ::taihe::error> NewUint16Array(int64_t n, int16_t v)
 {
     array<uint16_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int32_t SumUint32Array(array_view<uint32_t> v)
+::taihe::expected<int32_t, ::taihe::error> SumUint32Array(array_view<uint32_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<uint32_t> NewUint32Array(int64_t n, int32_t v)
+::taihe::expected<::taihe::array<uint32_t>, ::taihe::error> NewUint32Array(int64_t n, int32_t v)
 {
     array<uint32_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int64_t SumBigUint64Array(array_view<uint64_t> v)
+::taihe::expected<int64_t, ::taihe::error> SumBigUint64Array(array_view<uint64_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<uint64_t> NewBigUint64Array(int64_t n, int64_t v)
+::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> NewBigUint64Array(int64_t n, int64_t v)
 {
     array<uint64_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int8_t SumInt8Array(array_view<int8_t> v)
+::taihe::expected<int8_t, ::taihe::error> SumInt8Array(array_view<int8_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<int8_t> NewInt8Array(int64_t n, int8_t v)
+::taihe::expected<::taihe::array<int8_t>, ::taihe::error> NewInt8Array(int64_t n, int8_t v)
 {
     array<int8_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int16_t SumInt16Array(array_view<int16_t> v)
+::taihe::expected<int16_t, ::taihe::error> SumInt16Array(array_view<int16_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<int16_t> NewInt16Array(int64_t n, int16_t v)
+::taihe::expected<::taihe::array<int16_t>, ::taihe::error> NewInt16Array(int64_t n, int16_t v)
 {
     array<int16_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int32_t SumInt32Array(array_view<int32_t> v)
+::taihe::expected<int32_t, ::taihe::error> SumInt32Array(array_view<int32_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<int32_t> NewInt32Array(int64_t n, int32_t v)
+::taihe::expected<::taihe::array<int32_t>, ::taihe::error> NewInt32Array(int64_t n, int32_t v)
 {
     array<int32_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-int64_t SumBigInt64Array(array_view<int64_t> v)
+::taihe::expected<int64_t, ::taihe::error> SumBigInt64Array(array_view<int64_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-array<int64_t> NewBigInt64Array(int64_t n, int64_t v)
+::taihe::expected<::taihe::array<int64_t>, ::taihe::error> NewBigInt64Array(int64_t n, int64_t v)
 {
     array<int64_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-float SumFloat32Array(array_view<float> v)
+::taihe::expected<float, ::taihe::error> SumFloat32Array(array_view<float> v)
 {
     return std::accumulate(v.begin(), v.end(), 0.0f);
 }
 
-array<float> NewFloat32Array(int64_t n, float v)
+::taihe::expected<::taihe::array<float>, ::taihe::error> NewFloat32Array(int64_t n, float v)
 {
     array<float> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-double SumFloat64Array(array_view<double> v)
+::taihe::expected<double, ::taihe::error> SumFloat64Array(array_view<double> v)
 {
     return std::accumulate(v.begin(), v.end(), 0.0);
 }
 
-array<double> NewFloat64Array(int64_t n, double v)
+::taihe::expected<::taihe::array<double>, ::taihe::error> NewFloat64Array(int64_t n, double v)
 {
     array<double> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-TypedArrInfo GetTypedArrInfo()
+::taihe::expected<TypedArrInfo, ::taihe::error> GetTypedArrInfo()
 {
     return make_holder<TypedArrInfoImpl, TypedArrInfo>();
 }
@@ -841,7 +875,7 @@ void PrintArray(std::string const &name, Iterator begin, Iterator end)
     std::cout << std::endl;
 }
 
-void SetupStructAndPrint(::bar::TypedArray1 const &v)
+::taihe::expected<void, ::taihe::error> SetupStructAndPrint(::bar::TypedArray1 const &v)
 {
     PrintArray("a (Uint8Array)", v.a.begin(), v.a.end());
     PrintArray("b (Int8Array)", v.b.begin(), v.b.end());
@@ -853,9 +887,10 @@ void SetupStructAndPrint(::bar::TypedArray1 const &v)
     PrintArray("h (Int64Array)", v.h.begin(), v.h.end());
     PrintArray("i (Float32Array)", v.i.begin(), v.i.end());
     PrintArray("j (Float64Array)", v.j.begin(), v.j.end());
+    return {};
 }
 
-::bar::MyUnion MakeMyUnion(int32_t n)
+::taihe::expected<::bar::MyUnion, ::taihe::error> MakeMyUnion(int32_t n)
 {
     int32_t const case1Key = 1;
     int32_t const case2Key = 2;
@@ -905,7 +940,7 @@ void SetupStructAndPrint(::bar::TypedArray1 const &v)
     }
 }
 
-void ShowMyUnion(::bar::MyUnion const &u)
+::taihe::expected<void, ::taihe::error> ShowMyUnion(::bar::MyUnion const &u)
 {
     auto printArray = [](auto const &ptr, char const *typeName) {
         std::cout << typeName << ": [";
@@ -947,6 +982,7 @@ void ShowMyUnion(::bar::MyUnion const &u)
     } else {
         std::cout << "empty\n";
     }
+    return {};
 }
 
 }  // namespace
