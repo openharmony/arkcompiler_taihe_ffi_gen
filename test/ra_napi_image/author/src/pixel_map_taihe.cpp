@@ -19,12 +19,10 @@
 #include "image_taihe_utils.h"
 #include "media_errors.h"
 #include "pixel_map_taihe.h"
-#if !defined(IOS_PLATFORM) && !defined(ANDROID_PLATFORM)
 #include <regex>
 #include "pixel_map_from_surface.h"
 #include "sync_fence.h"
 #include "transaction/rs_interfaces.h"
-#endif
 
 namespace ANI::Image {
 PixelMapImpl::PixelMapImpl()
