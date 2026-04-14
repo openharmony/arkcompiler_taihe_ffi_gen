@@ -23,9 +23,10 @@
 namespace {
 // To be implemented.
 
-void testImport(::export_example::Inner const &obj)
+::taihe::expected<void, ::taihe::error> testImport(::export_example::Inner const &obj)
 {
     std::cout << "obj.str= " << obj.s << ", obj.int= " << obj.i << std::endl;
+    return {};
 }
 }  // namespace
 

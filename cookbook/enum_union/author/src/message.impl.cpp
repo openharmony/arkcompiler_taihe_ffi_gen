@@ -26,17 +26,17 @@ using namespace message;
 
 namespace {
 
-Message createTextMessage(string_view str)
+::taihe::expected<Message, ::taihe::error> createTextMessage(string_view str)
 {
-    return {MessageType::key_t::Text, MessageData::make_textVal(str)};
+    return Message {MessageType::key_t::Text, MessageData::make_textVal(str)};
 }
 
-Message createNumberMessage(int64_t num)
+::taihe::expected<Message, ::taihe::error> createNumberMessage(int64_t num)
 {
-    return {MessageType::key_t::Num, MessageData::make_numVal(num)};
+    return Message {MessageType::key_t::Num, MessageData::make_numVal(num)};
 }
 
-void processMessage(Message const &msg)
+::taihe::expected<void, ::taihe::error> processMessage(Message const &msg)
 {
     switch (msg.type.get_key()) {
         case MessageType::key_t::Text:
@@ -46,6 +46,7 @@ void processMessage(Message const &msg)
             std::cout << "num: " << msg.data.get_numVal_ref() << std::endl;
             break;
     }
+    return {};
 }
 }  // namespace
 

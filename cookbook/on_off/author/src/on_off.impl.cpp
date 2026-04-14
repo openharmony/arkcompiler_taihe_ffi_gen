@@ -30,58 +30,68 @@ public:
     {
     }
 
-    void onSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> onSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IBase::onSet" << std::endl;
+        return {};
     }
 
-    void offSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> offSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IBase::offSet" << std::endl;
+        return {};
     }
 };
 
-ISetterObserver getISetterObserver()
+::taihe::expected<ISetterObserver, ::taihe::error> getISetterObserver()
 {
     return make_holder<ISetterObserverImpl, ISetterObserver>();
 }
 
-void onFoo(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> onFoo(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "onFoo" << std::endl;
+    return {};
 }
 
-void onBar(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> onBar(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "onBar" << std::endl;
+    return {};
 }
 
-void onBaz(int32_t a, callback_view<void(int32_t)> cb)
+::taihe::expected<void, ::taihe::error> onBaz(int32_t a,
+                                              callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> cb)
 {
     cb(a);
     std::cout << "onNewBaz" << std::endl;
+    return {};
 }
 
-void offFoo(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> offFoo(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "offFoo" << std::endl;
+    return {};
 }
 
-void offBar(callback_view<void()> a)
+::taihe::expected<void, ::taihe::error> offBar(callback_view<::taihe::expected<void, ::taihe::error>()> a)
 {
     a();
     std::cout << "offBar" << std::endl;
+    return {};
 }
 
-void offBaz(int32_t a, callback_view<void(int32_t)> cb)
+::taihe::expected<void, ::taihe::error> offBaz(int32_t a,
+                                               callback_view<::taihe::expected<void, ::taihe::error>(int32_t)> cb)
 {
     cb(a);
     std::cout << "offNewBaz" << std::endl;
+    return {};
 }
 }  // namespace
 

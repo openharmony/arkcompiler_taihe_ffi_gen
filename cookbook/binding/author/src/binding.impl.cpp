@@ -24,7 +24,7 @@ using namespace taihe;
 
 namespace {
 
-::binding::Color convert_color(::binding::Color const &a)
+::taihe::expected<::binding::Color, ::taihe::error> convert_color(::binding::Color const &a)
 {
     return ::binding::Color {a.G, a.B, a.R};
 }

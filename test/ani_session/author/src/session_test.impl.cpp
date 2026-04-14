@@ -33,35 +33,40 @@ using namespace taihe;
 namespace {
 class IfaceA {
 public:
-    void func_a()
+    ::taihe::expected<void, ::taihe::error> func_a()
     {
         throw std::runtime_error("Function IfaceA::func_a Not implemented");
+        return {};
     }
 };
 
 class IfaceB {
 public:
-    void func_b()
+    ::taihe::expected<void, ::taihe::error> func_b()
     {
         throw std::runtime_error("Function IfaceB::func_b Not implemented");
+        return {};
     }
 
-    void func_a()
+    ::taihe::expected<void, ::taihe::error> func_a()
     {
         throw std::runtime_error("Function IfaceB::func_a Not implemented");
+        return {};
     }
 };
 
 class IfaceC {
 public:
-    void func_c()
+    ::taihe::expected<void, ::taihe::error> func_c()
     {
         throw std::runtime_error("Function IfaceC::func_c Not implemented");
+        return {};
     }
 
-    void func_a()
+    ::taihe::expected<void, ::taihe::error> func_a()
     {
         throw std::runtime_error("Function IfaceC::func_a Not implemented");
+        return {};
     }
 };
 
@@ -69,109 +74,114 @@ class IfaceD {
     string name_ {"IfaceD"};
 
 public:
-    string func_d()
+    ::taihe::expected<string, ::taihe::error> func_d()
     {
         return "d";
     }
 
-    string func_b()
+    ::taihe::expected<string, ::taihe::error> func_b()
     {
         return "b";
     }
 
-    string func_a()
+    ::taihe::expected<string, ::taihe::error> func_a()
     {
         return "a";
     }
 
-    string func_c()
+    ::taihe::expected<string, ::taihe::error> func_c()
     {
         return "c";
     }
 
-    string getName()
+    ::taihe::expected<string, ::taihe::error> getName()
     {
         return name_;
     }
 
-    void setName(string_view name)
+    ::taihe::expected<void, ::taihe::error> setName(string_view name)
     {
         name_ = name;
+        return {};
     }
 
-    void onSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> onSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IfaceD::onSet" << std::endl;
+        return {};
     }
 
-    void offSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> offSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IfaceD::offSet" << std::endl;
+        return {};
     }
 };
 
-::session_test::IfaceD getIfaceD()
+::taihe::expected<::session_test::IfaceD, ::taihe::error> getIfaceD()
 {
     return make_holder<IfaceD, ::session_test::IfaceD>();
 }
 
 class IfaceE {
 public:
-    string func_e()
+    ::taihe::expected<string, ::taihe::error> func_e()
     {
         return "ee";
     }
 
-    string func_b()
+    ::taihe::expected<string, ::taihe::error> func_b()
     {
         return "bb";
     }
 
-    string func_a()
+    ::taihe::expected<string, ::taihe::error> func_a()
     {
         return "aa";
     }
 
-    string func_c()
+    ::taihe::expected<string, ::taihe::error> func_c()
     {
         return "cc";
     }
 };
 
-::session_test::IfaceE getIfaceE()
+::taihe::expected<::session_test::IfaceE, ::taihe::error> getIfaceE()
 {
     return make_holder<IfaceE, ::session_test::IfaceE>();
 }
 
 class Session {
 public:
-    void beginConfig()
+    ::taihe::expected<void, ::taihe::error> beginConfig()
     {
         throw std::runtime_error("Function Session::beginConfig Not implemented");
+        return {};
     }
 };
 
 class PhotoSession {
 public:
-    bool canPreconfig()
+    ::taihe::expected<bool, ::taihe::error> canPreconfig()
     {
         return true;
     }
 
-    void beginConfig()
+    ::taihe::expected<void, ::taihe::error> beginConfig()
     {
         std::cout << "PhotoSession" << std::endl;
+        return {};
     }
 
-    string func_a()
+    ::taihe::expected<string, ::taihe::error> func_a()
     {
         std::cout << "func_a in PhotoSession" << std::endl;
         return "psa";
     }
 
-    string func_c()
+    ::taihe::expected<string, ::taihe::error> func_c()
     {
         std::cout << "func_c in PhotoSession" << std::endl;
         return "psc";
@@ -180,30 +190,31 @@ public:
 
 class VideoSession {
 public:
-    bool canPreconfig()
+    ::taihe::expected<bool, ::taihe::error> canPreconfig()
     {
         return true;
     }
 
-    void beginConfig()
+    ::taihe::expected<void, ::taihe::error> beginConfig()
     {
         std::cout << "VideoSession" << std::endl;
+        return {};
     }
 
-    string func_a()
+    ::taihe::expected<string, ::taihe::error> func_a()
     {
         std::cout << "func_a in VideoSession" << std::endl;
         return "vsa";
     }
 
-    string func_c()
+    ::taihe::expected<string, ::taihe::error> func_c()
     {
         std::cout << "func_c in VideoSession" << std::endl;
         return "vsc";
     }
 };
 
-::session_test::session_type getSession(int32_t ty)
+::taihe::expected<::session_test::session_type, ::taihe::error> getSession(int32_t ty)
 {
     if (ty == 1) {
         return ::session_test::session_type::make_ps(make_holder<PhotoSession, ::session_test::PhotoSession>());

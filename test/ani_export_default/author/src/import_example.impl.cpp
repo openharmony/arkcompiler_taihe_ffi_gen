@@ -38,38 +38,40 @@ public:
     {
     }
 
-    void Foo()
+    ::taihe::expected<void, ::taihe::error> Foo()
     {
         std::cout << "Export IfaceA Foo()" << std::endl;
+        return {};
     }
 
-    void Bar()
+    ::taihe::expected<void, ::taihe::error> Bar()
     {
         std::cout << "Export IfaceA Bar()" << std::endl;
+        return {};
     }
 };
 
-::export_enum::ExportEnum ImportEnumFunc()
+::taihe::expected<::export_enum::ExportEnum, ::taihe::error> ImportEnumFunc()
 {
     return ::export_enum::ExportEnum::key_t::Foo;
 }
 
-::export_iface::IfaceA ImportIfaceFunc()
+::taihe::expected<::export_iface::IfaceA, ::taihe::error> ImportIfaceFunc()
 {
     return taihe::make_holder<IfaceAImpl, ::export_iface::IfaceA>();
 }
 
-::export_namespace::NsStructA ImportNsFunc()
+::taihe::expected<::export_namespace::NsStructA, ::taihe::error> ImportNsFunc()
 {
-    return {K_DEFAULT_X, K_DEFAULT_Y};
+    return ::export_namespace::NsStructA {K_DEFAULT_X, K_DEFAULT_Y};
 }
 
-::export_struct::StructA ImportStructFunc()
+::taihe::expected<::export_struct::StructA, ::taihe::error> ImportStructFunc()
 {
-    return {K_ID, K_NAME};
+    return ::export_struct::StructA {K_ID, K_NAME};
 }
 
-::export_union::ExportUnion ImportUnionFunc()
+::taihe::expected<::export_union::ExportUnion, ::taihe::error> ImportUnionFunc()
 {
     return ::export_union::ExportUnion::make_Foo(K_NAME);
 }
