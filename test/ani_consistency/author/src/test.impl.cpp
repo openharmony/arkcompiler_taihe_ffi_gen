@@ -25,41 +25,47 @@ class MyObjectContainerImpl {
 
 public:
     // You can add member variables and constructor here.
-    void Save(::test::weak::MyObject obj)
+    ::taihe::expected<void, ::taihe::error> Save(::test::weak::MyObject obj)
     {
         this->obj_.emplace(obj);
+        return {};
     }
 
-    ::taihe::optional<::test::MyObject> Take()
+    ::taihe::expected<::taihe::optional<::test::MyObject>, ::taihe::error> Take()
     {
         return std::exchange(this->obj_, std::nullopt);
     }
 };
 
 class MyCallbackContainerImpl {
-    taihe::optional<taihe::callback<void(::taihe::string_view s)>> callback_;
+    taihe::optional<taihe::callback<::taihe::expected<void, ::taihe::error>(::taihe::string_view s)>> callback_;
 
 public:
     // You can add member variables and constructor here.
-    void Save(::taihe::callback_view<void(::taihe::string_view s)> callback)
+    ::taihe::expected<void, ::taihe::error> Save(
+        ::taihe::callback_view<::taihe::expected<void, ::taihe::error>(::taihe::string_view s)> callback)
     {
         this->callback_.emplace(callback);
+        return {};
     }
 
-    ::taihe::optional<::taihe::callback<void(::taihe::string_view s)>> Take()
+    ::taihe::expected<
+        ::taihe::optional<::taihe::callback<::taihe::expected<void, ::taihe::error>(::taihe::string_view s)>>,
+        ::taihe::error>
+    Take()
     {
         return std::exchange(this->callback_, std::nullopt);
     }
 };
 
-::test::MyObjectContainer CreateObjectContainer()
+::taihe::expected<::test::MyObjectContainer, ::taihe::error> CreateObjectContainer()
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<MyObjectContainerImpl, ::test::MyObjectContainer>();
 }
 
-::test::MyCallbackContainer CreateCallbackContainer()
+::taihe::expected<::test::MyCallbackContainer, ::taihe::error> CreateCallbackContainer()
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.

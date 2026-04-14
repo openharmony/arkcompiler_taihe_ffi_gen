@@ -29,50 +29,51 @@ namespace {
 
 // --- IntPair tests ---
 
-IntPair MakeIntPair(int32_t a, int32_t b)
+::taihe::expected<IntPair, ::taihe::error> MakeIntPair(int32_t a, int32_t b)
 {
-    return {a, b};
+    return IntPair {a, b};
 }
 
-int32_t SumIntPair(IntPair const &p)
+::taihe::expected<int32_t, ::taihe::error> SumIntPair(IntPair const &p)
 {
     return p.first + p.second;
 }
 
-IntPair SwapIntPair(IntPair const &p)
+::taihe::expected<IntPair, ::taihe::error> SwapIntPair(IntPair const &p)
 {
-    return {p.second, p.first};
+    return IntPair {p.second, p.first};
 }
 
 // --- MixedTuple tests ---
 
-MixedTuple ProcessMixed(MixedTuple const &m)
+::taihe::expected<MixedTuple, ::taihe::error> ProcessMixed(MixedTuple const &m)
 {
-    return {
+    return MixedTuple {
         static_cast<int8_t>(m.a + 1), static_cast<int16_t>(m.b + 2), m.c + 3, m.d + 4, m.e + 5.0f, m.f + 6.0, !m.g,
     };
 }
 
 // --- StringPair tests ---
 
-StringPair MakeStringPair(string_view k, string_view v)
+::taihe::expected<StringPair, ::taihe::error> MakeStringPair(string_view k, string_view v)
 {
-    return {k, v};
+    return StringPair {k, v};
 }
 
-string ConcatStringPair(StringPair const &p)
+::taihe::expected<string, ::taihe::error> ConcatStringPair(StringPair const &p)
 {
     return string(std::string(p.key.data(), p.key.size()) + ":" + std::string(p.value.data(), p.value.size()));
 }
 
 // --- MixedRefTuple tests ---
 
-MixedRefTuple MakeMixedRef(string_view name, int32_t age, double score, bool active, map_view<string, string> metadata)
+::taihe::expected<MixedRefTuple, ::taihe::error> MakeMixedRef(string_view name, int32_t age, double score, bool active,
+                                                              map_view<string, string> metadata)
 {
-    return {name, age, score, active, metadata, std::nullopt};
+    return MixedRefTuple {name, age, score, active, metadata, std::nullopt};
 }
 
-string DescribeMixedRef(MixedRefTuple const &m)
+::taihe::expected<string, ::taihe::error> DescribeMixedRef(MixedRefTuple const &m)
 {
     std::ostringstream oss;
     oss << "[" << std::string(m.name.data(), m.name.size()) << "," << m.age << "," << m.score << ","
@@ -86,7 +87,7 @@ string DescribeMixedRef(MixedRefTuple const &m)
 
 // --- Array<IntPair> tests ---
 
-array<IntPair> MakeIntPairArray(int32_t n)
+::taihe::expected<array<IntPair>, ::taihe::error> MakeIntPairArray(int32_t n)
 {
     static constexpr int32_t v = 10;
     array<IntPair> arr(n);
@@ -96,7 +97,7 @@ array<IntPair> MakeIntPairArray(int32_t n)
     return arr;
 }
 
-int32_t SumIntPairArray(array_view<IntPair> pairs)
+::taihe::expected<int32_t, ::taihe::error> SumIntPairArray(array_view<IntPair> pairs)
 {
     int32_t total = 0;
     for (size_t i = 0; i < pairs.size(); i++) {
@@ -107,17 +108,17 @@ int32_t SumIntPairArray(array_view<IntPair> pairs)
 
 // --- ArrayTuple tests ---
 
-ArrayTuple MakeArrayTuple(string_view label, int32_t n)
+::taihe::expected<ArrayTuple, ::taihe::error> MakeArrayTuple(string_view label, int32_t n)
 {
     static constexpr int32_t v = 10;
     array<int32_t> values(n);
     for (int32_t i = 0; i < n; i++) {
         values[i] = (i + 1) * v;
     }
-    return {label, std::move(values)};
+    return ArrayTuple {label, std::move(values)};
 }
 
-string SumArrayTuple(ArrayTuple const &t)
+::taihe::expected<string, ::taihe::error> SumArrayTuple(ArrayTuple const &t)
 {
     int32_t total = 0;
     for (size_t i = 0; i < t.values.size(); i++) {
@@ -128,9 +129,9 @@ string SumArrayTuple(ArrayTuple const &t)
     return string(oss.str());
 }
 
-MyTuple4x4 TransposeMyTuple4x4(MyTuple4x4 const &t)
+::taihe::expected<MyTuple4x4, ::taihe::error> TransposeMyTuple4x4(MyTuple4x4 const &t)
 {
-    return {
+    return MyTuple4x4 {
         .a =
             {
                 .a = t.a.a,
@@ -162,7 +163,7 @@ MyTuple4x4 TransposeMyTuple4x4(MyTuple4x4 const &t)
     };
 }
 
-array<MyTuple4> TransposeMyTuple4Array(MyTuple4Array const &t)
+::taihe::expected<array<MyTuple4>, ::taihe::error> TransposeMyTuple4Array(MyTuple4Array const &t)
 {
     size_t maxSize = 0;
     if (t.a.size() > maxSize) {
@@ -189,7 +190,7 @@ array<MyTuple4> TransposeMyTuple4Array(MyTuple4Array const &t)
     return result;
 }
 
-MyTuple4Array TransposeArrayMyTuple4(array_view<MyTuple4> t)
+::taihe::expected<MyTuple4Array, ::taihe::error> TransposeArrayMyTuple4(array_view<MyTuple4> t)
 {
     size_t length = t.size();
     MyTuple4Array result {
@@ -207,10 +208,12 @@ MyTuple4Array TransposeArrayMyTuple4(array_view<MyTuple4> t)
     return result;
 }
 
-MyTuple16 MakeMyTuple16(int32_t p0, int32_t p1, int32_t p2, int32_t p3, int32_t p4, int32_t p5, int32_t p6, int32_t p7,
-                        int32_t p8, int32_t p9, int32_t pa, int32_t pb, int32_t pc, int32_t pd, int32_t pe, int32_t pf)
+::taihe::expected<MyTuple16, ::taihe::error> MakeMyTuple16(int32_t p0, int32_t p1, int32_t p2, int32_t p3, int32_t p4,
+                                                           int32_t p5, int32_t p6, int32_t p7, int32_t p8, int32_t p9,
+                                                           int32_t pa, int32_t pb, int32_t pc, int32_t pd, int32_t pe,
+                                                           int32_t pf)
 {
-    return {
+    return MyTuple16 {
         .f0 = p0,
         .f1 = p1,
         .f2 = p2,
@@ -230,7 +233,7 @@ MyTuple16 MakeMyTuple16(int32_t p0, int32_t p1, int32_t p2, int32_t p3, int32_t 
     };
 }
 
-int32_t SumMyTuple16(MyTuple16 const &t)
+::taihe::expected<int32_t, ::taihe::error> SumMyTuple16(MyTuple16 const &t)
 {
     int32_t result = 0;
     result += t.f0;
@@ -252,22 +255,22 @@ int32_t SumMyTuple16(MyTuple16 const &t)
     return result;
 }
 
-SingleFieldTuple MakeSingleFieldTuple(int32_t v)
+::taihe::expected<SingleFieldTuple, ::taihe::error> MakeSingleFieldTuple(int32_t v)
 {
-    return {v};
+    return SingleFieldTuple {v};
 }
 
-int32_t GetSingleFieldValue(SingleFieldTuple const &t)
+::taihe::expected<int32_t, ::taihe::error> GetSingleFieldValue(SingleFieldTuple const &t)
 {
     return t.value;
 }
 
-OuterTuple MakeOuterTuple(int32_t a, int32_t b, int32_t c, string_view s)
+::taihe::expected<OuterTuple, ::taihe::error> MakeOuterTuple(int32_t a, int32_t b, int32_t c, string_view s)
 {
-    return {a, {b, {c, s}}};
+    return OuterTuple {a, {b, {c, s}}};
 }
 
-string DescribeOuterTuple(OuterTuple const &t)
+::taihe::expected<string, ::taihe::error> DescribeOuterTuple(OuterTuple const &t)
 {
     std::ostringstream oss;
     oss << "[" << t.a << ",[" << t.b.a << ",[" << t.b.b.a << "," << std::string(t.b.b.b.data(), t.b.b.b.size())
@@ -275,7 +278,7 @@ string DescribeOuterTuple(OuterTuple const &t)
     return string(oss.str());
 }
 
-string DescribeComplexTuple(ComplexTuple const &t)
+::taihe::expected<string, ::taihe::error> DescribeComplexTuple(ComplexTuple const &t)
 {
     std::ostringstream oss;
     oss << "[" << t.color << ",{x:" << t.point.x << ",y:" << t.point.y << "},";
@@ -290,7 +293,10 @@ string DescribeComplexTuple(ComplexTuple const &t)
             oss << "unknown";
             break;
     }
-    oss << "," << t.printable->print() << "]";
+    auto res = t.printable->print();
+    if (res.has_value()) {
+        oss << "," << res.value() << "]";
+    }
     return oss.str();
 }
 }  // namespace

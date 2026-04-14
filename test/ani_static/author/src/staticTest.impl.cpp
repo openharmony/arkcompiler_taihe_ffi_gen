@@ -22,18 +22,17 @@
 #include "taihe/runtime.hpp"
 
 namespace {
-int32_t add_impl(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> add_impl(int32_t a, int32_t b)
 {
     if (a == 0) {
-        taihe::set_business_error(1, "some error happen in add impl");
-        return b;
+        return ::taihe::unexpected<::taihe::error>(::taihe::error("some error happen in add impl", 1));
     } else {
         std::cout << "add impl " << a + b << std::endl;
         return a + b;
     }
 }
 
-int32_t sum_impl(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> sum_impl(int32_t a, int32_t b)
 {
     return a * b;
 }
@@ -53,24 +52,24 @@ struct AuthorIBase {
     {
     }
 
-    taihe::string get()
+    ::taihe::expected<taihe::string, ::taihe::error> get()
     {
         return name;
     }
 
-    void set(taihe::string_view a)
+    ::taihe::expected<void, ::taihe::error> set(taihe::string_view a)
     {
         this->name = a;
-        return;
+        return {};
     }
 };
 
-::staticTest::IBase getIBase_impl(taihe::string_view name)
+::taihe::expected<::staticTest::IBase, ::taihe::error> getIBase_impl(taihe::string_view name)
 {
     return taihe::make_holder<AuthorIBase, ::staticTest::IBase>(name);
 }
 
-::staticTest::IBase getIBase_test_impl(taihe::string_view name, taihe::string_view t)
+::taihe::expected<::staticTest::IBase, ::taihe::error> getIBase_test_impl(taihe::string_view name, taihe::string_view t)
 {
     return taihe::make_holder<AuthorIBase, ::staticTest::IBase>(name, t);
 }
@@ -87,34 +86,34 @@ public:
 
     taihe::string name;
 
-    taihe::string get()
+    ::taihe::expected<taihe::string, ::taihe::error> get()
     {
         return name;
     }
 
-    void set(taihe::string_view a)
+    ::taihe::expected<void, ::taihe::error> set(taihe::string_view a)
     {
         this->name = a;
-        return;
+        return {};
     }
 };
 
-int32_t static_func(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> static_func(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-::staticTest::ITest ctor_func()
+::taihe::expected<::staticTest::ITest, ::taihe::error> ctor_func()
 {
     return taihe::make_holder<ITest, ::staticTest::ITest>();
 }
 
-::taihe::string getName()
+::taihe::expected<::taihe::string, ::taihe::error> getName()
 {
     TH_THROW(std::runtime_error, "getName not implemented");
 }
 
-void setName(::taihe::string_view a)
+::taihe::expected<void, ::taihe::error> setName(::taihe::string_view a)
 {
     TH_THROW(std::runtime_error, "setName not implemented");
 }

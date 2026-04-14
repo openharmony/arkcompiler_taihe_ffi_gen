@@ -43,108 +43,118 @@ public:
     {
     }
 
-    void SetBundleName(optional_view<string> bundleName)
+    ::taihe::expected<void, ::taihe::error> SetBundleName(optional_view<string> bundleName)
     {
         bundleName_ = bundleName;
+        return {};
     }
 
-    optional<string> GetBundleName()
+    ::taihe::expected<optional<string>, ::taihe::error> GetBundleName()
     {
         return bundleName_;
     }
 
-    void SetAbilityName(optional_view<string> abilityName)
+    ::taihe::expected<void, ::taihe::error> SetAbilityName(optional_view<string> abilityName)
     {
         abilityName_ = abilityName;
+        return {};
     }
 
-    optional<string> GetAbilityName()
+    ::taihe::expected<optional<string>, ::taihe::error> GetAbilityName()
     {
         return abilityName_;
     }
 
-    void SetDeviceId(optional_view<string> deviceId)
+    ::taihe::expected<void, ::taihe::error> SetDeviceId(optional_view<string> deviceId)
     {
         deviceId_ = deviceId;
+        return {};
     }
 
-    optional<string> GetDeviceId()
+    ::taihe::expected<optional<string>, ::taihe::error> GetDeviceId()
     {
         return deviceId_;
     }
 
-    void SetUri(optional_view<string> uri)
+    ::taihe::expected<void, ::taihe::error> SetUri(optional_view<string> uri)
     {
         uri_ = uri;
+        return {};
     }
 
-    optional<string> GetUri()
+    ::taihe::expected<optional<string>, ::taihe::error> GetUri()
     {
         return uri_;
     }
 
-    void SetType(optional_view<string> type)
+    ::taihe::expected<void, ::taihe::error> SetType(optional_view<string> type)
     {
         type_ = type;
+        return {};
     }
 
-    optional<string> GetType()
+    ::taihe::expected<optional<string>, ::taihe::error> GetType()
     {
         return type_;
     }
 
-    void SetFlags(optional<float> flags)
+    ::taihe::expected<void, ::taihe::error> SetFlags(optional<float> flags)
     {
         flags_ = flags;
+        return {};
     }
 
-    optional<float> GetFlags()
+    ::taihe::expected<optional<float>, ::taihe::error> GetFlags()
     {
         return flags_;
     }
 
-    void SetAction(optional_view<string> action)
+    ::taihe::expected<void, ::taihe::error> SetAction(optional_view<string> action)
     {
         action_ = action;
+        return {};
     }
 
-    optional<string> GetAction()
+    ::taihe::expected<optional<string>, ::taihe::error> GetAction()
     {
         return action_;
     }
 
-    void SetParameters(optional_view<map<string, uintptr_t>> parameters)
+    ::taihe::expected<void, ::taihe::error> SetParameters(optional_view<map<string, uintptr_t>> parameters)
     {
         this->parameters_ = parameters;
+        return {};
     }
 
-    optional<map<string, uintptr_t>> GetParameters()
+    ::taihe::expected<optional<map<string, uintptr_t>>, ::taihe::error> GetParameters()
     {
         return parameters_;
     }
 
-    void SetEntities(optional_view<array<string>> entities)
+    ::taihe::expected<void, ::taihe::error> SetEntities(optional_view<array<string>> entities)
     {
         entities_ = entities;
+        return {};
     }
 
-    optional<array<string>> GetEntities()
+    ::taihe::expected<optional<array<string>>, ::taihe::error> GetEntities()
     {
         return entities_;
     }
 
-    void SetModuleName(optional_view<string> moduleName)
+    ::taihe::expected<void, ::taihe::error> SetModuleName(optional_view<string> moduleName)
     {
         moduleName_ = moduleName;
+        return {};
     }
 
-    optional<string> GetModuleName()
+    ::taihe::expected<optional<string>, ::taihe::error> GetModuleName()
     {
         return moduleName_;
     }
 };
 
-Want CreateWant()
+::taihe::expected<Want, ::taihe::error> CreateWant()
 {
     return make_holder<WantImpl, Want>();
 }

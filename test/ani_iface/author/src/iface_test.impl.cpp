@@ -26,24 +26,26 @@ using namespace taihe;
 namespace {
 
 class Foo {
-    string name_ {"foo"};
+    ::taihe::string name_ {"foo"};
 
 public:
-    void Bar()
+    ::taihe::expected<void, ::taihe::error> Bar()
     {
         std::cout << "Fooimpl: " << __func__ << std::endl;
+        return {};
     }
 
-    string GetName()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetName()
     {
         std::cout << "Fooimpl: " << __func__ << " " << name_ << std::endl;
         return name_;
     }
 
-    void SetName(string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(::taihe::string_view name)
     {
         std::cout << "Fooimpl: " << __func__ << " " << name << std::endl;
         name_ = name;
+        return {};
     }
 };
 
@@ -53,12 +55,12 @@ public:
     {
     }
 
-    ::taihe::string Base()
+    ::taihe::expected<::taihe::string, ::taihe::error> Base()
     {
         return "BaseFun.base";
     }
 
-    ::taihe::string Fun()
+    ::taihe::expected<::taihe::string, ::taihe::error> Fun()
     {
         return "BaseFun.fun";
     }
@@ -70,17 +72,17 @@ public:
     {
     }
 
-    ::taihe::string Sub()
+    ::taihe::expected<::taihe::string, ::taihe::error> Sub()
     {
         return "SubBaseFun.sub";
     }
 
-    ::taihe::string Base()
+    ::taihe::expected<::taihe::string, ::taihe::error> Base()
     {
         return "SubBaseFun.base";
     }
 
-    ::taihe::string Fun()
+    ::taihe::expected<::taihe::string, ::taihe::error> Fun()
     {
         return "SubBaseFun.fun";
     }
@@ -88,76 +90,82 @@ public:
 
 class BaseElemImpl {
 public:
-    string base = "base";
+    ::taihe::string base = "base";
 
     BaseElemImpl()
     {
     }
 
-    ::taihe::string GetBase()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetBase()
     {
         return base;
     }
 
-    void SetBase(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> SetBase(::taihe::string_view s)
     {
         this->base = s;
+        return {};
     }
 };
 
 class SubBaseElemImpl {
 public:
-    string base = "SubBaseElem";
+    ::taihe::string base = "SubBaseElem";
 
     SubBaseElemImpl()
     {
     }
 
-    ::taihe::string Sub()
+    ::taihe::expected<::taihe::string, ::taihe::error> Sub()
     {
         return "SubBaseElem.sub";
     }
 
-    ::taihe::string GetBase()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetBase()
     {
         return base;
     }
 
-    void SetBase(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> SetBase(::taihe::string_view s)
     {
         this->base = s;
+        return {};
     }
 };
 
-::iface_test::Foo GetFooIface()
+::taihe::expected<::iface_test::Foo, ::taihe::error> GetFooIface()
 {
     std::cout << __func__ << std::endl;
     return make_holder<Foo, ::iface_test::Foo>();
 }
 
-string PrintFooName(::iface_test::weak::Foo foo)
+::taihe::expected<::taihe::string, ::taihe::error> PrintFooName(::iface_test::weak::Foo foo)
 {
-    auto name = foo->GetName();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = foo->GetName();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return "";
 }
 
-::iface_test::BaseFun GetBaseFun()
+::taihe::expected<::iface_test::BaseFun, ::taihe::error> GetBaseFun()
 {
     return taihe::make_holder<BaseFunImpl, ::iface_test::BaseFun>();
 }
 
-::iface_test::SubBaseFun GetSubBaseFun()
+::taihe::expected<::iface_test::SubBaseFun, ::taihe::error> GetSubBaseFun()
 {
     return taihe::make_holder<SubBaseFunImpl, ::iface_test::SubBaseFun>();
 }
 
-::iface_test::BaseElem GetBaseElem()
+::taihe::expected<::iface_test::BaseElem, ::taihe::error> GetBaseElem()
 {
     return taihe::make_holder<BaseElemImpl, ::iface_test::BaseElem>();
 }
 
-::iface_test::SubBaseElem GetSubBaseElem()
+::taihe::expected<::iface_test::SubBaseElem, ::taihe::error> GetSubBaseElem()
 {
     return taihe::make_holder<SubBaseElemImpl, ::iface_test::SubBaseElem>();
 }
@@ -177,15 +185,15 @@ public:
         std::cout << "del base " << this << std::endl;
     }
 
-    ::taihe::string GetId()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetId()
     {
         return id;
     }
 
-    void SetId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> SetId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
@@ -206,15 +214,15 @@ public:
         std::cout << "del shape " << this << std::endl;
     }
 
-    ::taihe::string GetId()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetId()
     {
         return id;
     }
 
-    void SetId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> SetId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 
     float CalculateArea()
@@ -230,9 +238,10 @@ protected:
     float b = 2;
 
 public:
-    void Call()
+    ::taihe::expected<void, ::taihe::error> Call()
     {
         std::cout << "derived call!" << std::endl;
+        return {};
     }
 
     double CalculateArea()
@@ -240,35 +249,38 @@ public:
         return a * b;
     }
 
-    ::taihe::string GetId()
+    ::taihe::expected<::taihe::string, ::taihe::error> GetId()
     {
         return id;
     }
 
-    void SetId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> SetId(::taihe::string_view s)
     {
         this->id = s;
-        return;
+        return {};
     }
 };
 
-::iface_test::IBase MakeIBase(::taihe::string_view id)
+::taihe::expected<::iface_test::IBase, ::taihe::error> MakeIBase(::taihe::string_view id)
 {
     return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
 
-void CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b)
+::taihe::expected<void, ::taihe::error> CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b)
 {
-    a->SetId(b->GetId());
-    return;
+    auto result = b->GetId();
+    if (result.has_value()) {
+        a->SetId(result.value());
+    }
+    return {};
 }
 
-::iface_test::IShape MakeIShape(::taihe::string_view id, double a, double b)
+::taihe::expected<::iface_test::IShape, ::taihe::error> MakeIShape(::taihe::string_view id, double a, double b)
 {
     return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
 }
 
-::iface_test::IDerived CreateIDerived()
+::taihe::expected<::iface_test::IDerived, ::taihe::error> CreateIDerived()
 {
     return taihe::make_holder<Derived, ::iface_test::IDerived>();
 }

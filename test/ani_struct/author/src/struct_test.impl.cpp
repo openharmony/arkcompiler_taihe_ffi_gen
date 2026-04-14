@@ -33,12 +33,13 @@ public:
     {
     }
 
-    void SetStructD(::struct_test::DBase5 const &d)
+    ::taihe::expected<void, ::taihe::error> SetStructD(::struct_test::DBase5 const &d)
     {
         this->structD = d;
+        return {};
     }
 
-    ::struct_test::DBase5 GetStructD()
+    ::taihe::expected<::struct_test::DBase5, ::taihe::error> GetStructD()
     {
         return structD;
     }
@@ -52,12 +53,13 @@ public:
     {
     }
 
-    void SetStructE(::struct_test::EBigint const &e)
+    ::taihe::expected<void, ::taihe::error> SetStructE(::struct_test::EBigint const &e)
     {
         this->structE = e;
+        return {};
     }
 
-    ::struct_test::EBigint GetStructE()
+    ::taihe::expected<::struct_test::EBigint, ::taihe::error> GetStructE()
     {
         return structE;
     }
@@ -74,12 +76,13 @@ public:
         this->structF.param3.emplace("rsK", "rsV");
     }
 
-    void SetStructF(::struct_test::FUnion const &f)
+    ::taihe::expected<void, ::taihe::error> SetStructF(::struct_test::FUnion const &f)
     {
         this->structF = f;
+        return {};
     }
 
-    ::struct_test::FUnion GetStructF()
+    ::taihe::expected<::struct_test::FUnion, ::taihe::error> GetStructF()
     {
         return structF;
     }
@@ -93,12 +96,13 @@ public:
     {
     }
 
-    void SetGArray(::struct_test::GArray const &sa)
+    ::taihe::expected<void, ::taihe::error> SetGArray(::struct_test::GArray const &sa)
     {
         this->gArray = sa;
+        return {};
     }
 
-    ::struct_test::GArray GetGArray()
+    ::taihe::expected<::struct_test::GArray, ::taihe::error> GetGArray()
     {
         return gArray;
     }
@@ -112,12 +116,13 @@ public:
     {
     }
 
-    void SetDB5Readonly(::struct_test::DB5Readonly const &d)
+    ::taihe::expected<void, ::taihe::error> SetDB5Readonly(::struct_test::DB5Readonly const &d)
     {
         this->db5 = d;
+        return {};
     }
 
-    ::struct_test::DB5Readonly GetDB5Readonly()
+    ::taihe::expected<::struct_test::DB5Readonly, ::taihe::error> GetDB5Readonly()
     {
         return db5;
     }
@@ -131,86 +136,86 @@ public:
     {
     }
 
-    void SetSEBReadonly(::struct_test::EBigintReadonly const &e)
+    ::taihe::expected<void, ::taihe::error> SetSEBReadonly(::struct_test::EBigintReadonly const &e)
     {
         this->ebr = e;
+        return {};
     }
 
-    ::struct_test::EBigintReadonly GetSEBReadonly()
+    ::taihe::expected<::struct_test::EBigintReadonly, ::taihe::error> GetSEBReadonly()
     {
         return ebr;
     }
 };
 
-::struct_test::StructD GetStructD()
+::taihe::expected<::struct_test::StructD, ::taihe::error> GetStructD()
 {
     return taihe::make_holder<StructDImpl, ::struct_test::StructD>();
 }
 
-::struct_test::StructE GetStructE()
+::taihe::expected<::struct_test::StructE, ::taihe::error> GetStructE()
 {
     return taihe::make_holder<StructEImpl, ::struct_test::StructE>();
 }
 
-::struct_test::StructF GetStructF()
+::taihe::expected<::struct_test::StructF, ::taihe::error> GetStructF()
 {
     return taihe::make_holder<StructFImpl, ::struct_test::StructF>();
 }
 
-::struct_test::StructG GetStructG()
+::taihe::expected<::struct_test::StructG, ::taihe::error> GetStructG()
 {
     return taihe::make_holder<StructGImpl, ::struct_test::StructG>();
 }
 
-::struct_test::Canvas addNewCanvas(::taihe::string_view name)
+::taihe::expected<::struct_test::Canvas, ::taihe::error> addNewCanvas(::taihe::string_view name)
 {
-    return {{255, 0, 255}, name};
+    return ::struct_test::Canvas {{255, 0, 255}, name};
 }
 
-::struct_test::SDB5Readonly GetSDB5Readonly()
+::taihe::expected<::struct_test::SDB5Readonly, ::taihe::error> GetSDB5Readonly()
 {
     return taihe::make_holder<SDB5ReadonlyImpl, ::struct_test::SDB5Readonly>();
 }
 
-::struct_test::SEBReadonly GetSEBReadonly()
+::taihe::expected<::struct_test::SEBReadonly, ::taihe::error> GetSEBReadonly()
 {
     return taihe::make_holder<SEBReadonlyImpl, ::struct_test::SEBReadonly>();
 }
 
-::struct_test::Draw AddNewDraw(::taihe::string_view drawName)
+::taihe::expected<::struct_test::Draw, ::taihe::error> AddNewDraw(::taihe::string_view drawName)
 {
-    return {{255, 0, 255}, drawName};
-    ;
+    return ::struct_test::Draw {{255, 0, 255}, drawName};
 }
 
-::struct_test::Student create_student()
+::taihe::expected<::struct_test::Student, ::taihe::error> create_student()
 {
     return ::struct_test::Student {"Mary", 15};
 }
 
-::struct_test::Student process_student(::struct_test::Student const &a)
+::taihe::expected<::struct_test::Student, ::taihe::error> process_student(::struct_test::Student const &a)
 {
-    return {a.name + " student", a.age + 10};
+    return ::struct_test::Student {a.name + " student", a.age + 10};
 }
 
-::struct_test::Teacher create_teacher()
+::taihe::expected<::struct_test::Teacher, ::taihe::error> create_teacher()
 {
     return ::struct_test::Teacher {"Rose", 25};
 }
 
-::struct_test::Teacher process_teacher(::struct_test::Teacher const &a)
+::taihe::expected<::struct_test::Teacher, ::taihe::error> process_teacher(::struct_test::Teacher const &a)
 {
-    return {a.name + " teacher", a.age + 15};
+    return ::struct_test::Teacher {a.name + " teacher", a.age + 15};
 }
 
-::struct_test::G process_g(::struct_test::G const &a)
+::taihe::expected<::struct_test::G, ::taihe::error> process_g(::struct_test::G const &a)
 {
-    return {{a.f.f + 1}, a.g + 2};
+    return ::struct_test::G {{a.f.f + 1}, a.g + 2};
 }
 
-::struct_test::H process_h(::struct_test::H const &a)
+::taihe::expected<::struct_test::H, ::taihe::error> process_h(::struct_test::H const &a)
 {
-    return {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
+    return ::struct_test::H {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
 }
 }  // namespace
 

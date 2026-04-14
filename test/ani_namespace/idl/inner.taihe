@@ -88,7 +88,7 @@ interface TestInterface{
     @get geti8(): i8;
     @get geti16(): i16;
     @get geti32(): i32;
-    @get geti64(): i16;
+    @get geti64(): i64;
     @get getf32(): f32;
     @get getf64(): f64;
     @get getbool(): bool;

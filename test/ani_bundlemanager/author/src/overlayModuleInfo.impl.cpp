@@ -34,33 +34,33 @@ public:
     {
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return "OverlayModuleInfoImpl::getBundleName";
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return "OverlayModuleInfoImpl::getModuleName";
     }
 
-    string GetTargetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetTargetModuleName()
     {
         return "OverlayModuleInfoImpl::getTargetModuleName";
     }
 
-    int32_t GetPriority()
+    ::taihe::expected<int32_t, ::taihe::error> GetPriority()
     {
         return overlayModuleInfoImpl;
     }
 
-    int32_t GetState()
+    ::taihe::expected<int32_t, ::taihe::error> GetState()
     {
         return overlayModuleInfoImpl;
     }
 };
 
-OverlayModuleInfo GetOverlayModuleInfo()
+::taihe::expected<OverlayModuleInfo, ::taihe::error> GetOverlayModuleInfo()
 {
     return make_holder<OverlayModuleInfoImpl, OverlayModuleInfo>();
 }

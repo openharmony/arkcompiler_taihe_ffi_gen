@@ -35,74 +35,74 @@ public:
     {
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return "ExtensionAbilityInfoImpl::getBundleName";
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return "ExtensionAbilityInfoImpl::getModuleName";
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "ExtensionAbilityInfoImpl::getName";
     }
 
-    int32_t GetLabelId()
+    ::taihe::expected<int32_t, ::taihe::error> GetLabelId()
     {
         return extensionAbilityInfoImpl;
     }
 
-    int32_t GetDescriptionId()
+    ::taihe::expected<int32_t, ::taihe::error> GetDescriptionId()
     {
         return extensionAbilityInfoImpl;
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return extensionAbilityInfoImpl;
     }
 
-    bool GetExported()
+    ::taihe::expected<bool, ::taihe::error> GetExported()
     {
         return true;
     }
 
-    bool GetExtensionAbilityTypeName()
+    ::taihe::expected<bool, ::taihe::error> GetExtensionAbilityTypeName()
     {
         return true;
     }
 
-    array<string> GetPermissions()
+    ::taihe::expected<array<string>, ::taihe::error> GetPermissions()
     {
         array<string> str = {"ExtensionAbilityInfoImpl::getPermissions"};
         return str;
     }
 
-    bool GetEnabled()
+    ::taihe::expected<bool, ::taihe::error> GetEnabled()
     {
         return true;
     }
 
-    string GetReadPermission()
+    ::taihe::expected<string, ::taihe::error> GetReadPermission()
     {
         return "ExtensionAbilityInfoImpl::getReadPermission";
     }
 
-    string GetWritePermission()
+    ::taihe::expected<string, ::taihe::error> GetWritePermission()
     {
         return "ExtensionAbilityInfoImpl::getWritePermission";
     }
 
-    int32_t GetAppIndex()
+    ::taihe::expected<int32_t, ::taihe::error> GetAppIndex()
     {
         return extensionAbilityInfoImpl;
     }
 };
 
-ExtensionAbilityInfo GetExtensionAbilityInfo()
+::taihe::expected<ExtensionAbilityInfo, ::taihe::error> GetExtensionAbilityInfo()
 {
     return make_holder<ExtensionAbilityInfoImpl, ExtensionAbilityInfo>();
 }

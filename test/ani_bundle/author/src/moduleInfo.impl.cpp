@@ -35,18 +35,18 @@ public:
     {
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return moduleName_;
     }
 
-    string GetModuleSourceDir()
+    ::taihe::expected<string, ::taihe::error> GetModuleSourceDir()
     {
         return moduleSourceDir_;
     }
 };
 
-ModuleInfo GetModuleInfo()
+::taihe::expected<ModuleInfo, ::taihe::error> GetModuleInfo()
 {
     return make_holder<ModuleInfoImpl, ModuleInfo>();
 }
