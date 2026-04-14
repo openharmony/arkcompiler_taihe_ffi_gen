@@ -27,73 +27,73 @@ namespace {
 
 // C++ side uses original names
 
-int32_t OldAdd(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> OldAdd(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-int32_t GetColorValue(OldColor c)
+::taihe::expected<int32_t, ::taihe::error> GetColorValue(OldColor c)
 {
     return c.get_value();
 }
 
-OldPoint CreatePoint(int32_t x, int32_t y)
+::taihe::expected<OldPoint, ::taihe::error> CreatePoint(int32_t x, int32_t y)
 {
-    return {x, y};
+    return OldPoint {x, y};
 }
 
-int32_t GetPointSum(OldPoint const &p)
+::taihe::expected<int32_t, ::taihe::error> GetPointSum(OldPoint const &p)
 {
     return p.x + p.y;
 }
 
 class OldCalculatorImpl {
 public:
-    int32_t OldCompute(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> OldCompute(int32_t a, int32_t b)
     {
         return a * b;
     }
 };
 
-OldCalculator CreateCalculator()
+::taihe::expected<OldCalculator, ::taihe::error> CreateCalculator()
 {
     return make_holder<OldCalculatorImpl, OldCalculator>();
 }
 
-OldData CreateIntData(int32_t v)
+::taihe::expected<OldData, ::taihe::error> CreateIntData(int32_t v)
 {
     return OldData::make_intVal(v);
 }
 
-OldData CreateStrData(string_view v)
+::taihe::expected<OldData, ::taihe::error> CreateStrData(string_view v)
 {
     return OldData::make_strVal(v);
 }
 
-OldMyStruct MyStructCtor(unit dummy, int32_t a, string_view b)
+::taihe::expected<OldMyStruct, ::taihe::error> MyStructCtor(unit dummy, int32_t a, string_view b)
 {
     return OldMyStruct {a, b};
 }
 
-string MyStructStaticFunc()
+::taihe::expected<string, ::taihe::error> MyStructStaticFunc()
 {
     return "Hello from MyStructStaticFunc";
 }
 
 class OldMyInterfaceImpl {
 public:
-    std::string doSomething(string_view s)
+    ::taihe::expected<string, ::taihe::error> doSomething(string_view s)
     {
         return "Hello, " + std::string(s);
     }
 };
 
-OldMyInterface MyInterfaceCtor(unit dummy)
+::taihe::expected<OldMyInterface, ::taihe::error> MyInterfaceCtor(unit dummy)
 {
     return taihe::make_holder<OldMyInterfaceImpl, OldMyInterface>();
 }
 
-string MyInterfaceStaticMethod()
+::taihe::expected<string, ::taihe::error> MyInterfaceStaticMethod()
 {
     return "Hello from MyInterfaceStaticMethod";
 }

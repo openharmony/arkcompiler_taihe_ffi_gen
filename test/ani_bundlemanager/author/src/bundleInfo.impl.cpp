@@ -37,42 +37,46 @@ public:
     {
     }
 
-    void SetName(string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(string_view name)
     {
         this->name_ = name;
+        return {};
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return name_;
     }
 
-    void SetModuleName(string_view moduleName)
+    ::taihe::expected<void, ::taihe::error> SetModuleName(string_view moduleName)
     {
         this->moduleName_ = moduleName;
+        return {};
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return moduleName_;
     }
 
-    void SetReason(string_view reason)
+    ::taihe::expected<void, ::taihe::error> SetReason(string_view reason)
     {
         this->reason_ = reason;
+        return {};
     }
 
-    string GetReason()
+    ::taihe::expected<string, ::taihe::error> GetReason()
     {
         return reason_;
     }
 
-    void SetReasonId(int32_t reasonId)
+    ::taihe::expected<void, ::taihe::error> SetReasonId(int32_t reasonId)
     {
         this->reasonId_ = reasonId;
+        return {};
     }
 
-    int32_t GetReasonId()
+    ::taihe::expected<int32_t, ::taihe::error> GetReasonId()
     {
         return reasonId_;
     }
@@ -87,22 +91,24 @@ public:
     {
     }
 
-    void SetAbilities(array_view<string> abilities)
+    ::taihe::expected<void, ::taihe::error> SetAbilities(array_view<string> abilities)
     {
         abilities_ = abilities;
+        return {};
     }
 
-    array<string> GetAbilities()
+    ::taihe::expected<array<string>, ::taihe::error> GetAbilities()
     {
         return abilities_;
     }
 
-    void SetWhen(string_view when)
+    ::taihe::expected<void, ::taihe::error> SetWhen(string_view when)
     {
         this->when_ = when;
+        return {};
     }
 
-    string GetWhen()
+    ::taihe::expected<string, ::taihe::error> GetWhen()
     {
         return when_;
     }
@@ -114,22 +120,22 @@ public:
     {
     }
 
-    string GetAppId()
+    ::taihe::expected<string, ::taihe::error> GetAppId()
     {
         return "SignatureInfoImpl::getAppId";
     }
 
-    string GetFingerprint()
+    ::taihe::expected<string, ::taihe::error> GetFingerprint()
     {
         return "SignatureInfoImpl::getFingerprint";
     }
 
-    string GetAppIdentifier()
+    ::taihe::expected<string, ::taihe::error> GetAppIdentifier()
     {
         return "SignatureInfoImpl::getAppIdentifier";
     }
 
-    string GetCertificate()
+    ::taihe::expected<string, ::taihe::error> GetCertificate()
     {
         return "SignatureInfoImpl::getCertificate";
     }
@@ -143,12 +149,12 @@ public:
     {
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return "AppCloneIdentityImpl::getBundleName";
     }
 
-    int32_t GetAppIndex()
+    ::taihe::expected<int32_t, ::taihe::error> GetAppIndex()
     {
         return appCloneIdentityImpl;
     }
@@ -162,73 +168,73 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "BundleInfoImpl::getName";
     }
 
-    string GetVendor()
+    ::taihe::expected<string, ::taihe::error> GetVendor()
     {
         return "BundleInfoImpl::getVendor";
     }
 
-    int32_t GetVersionCode()
+    ::taihe::expected<int32_t, ::taihe::error> GetVersionCode()
     {
         return version;
     }
 
-    string GetVersionName()
+    ::taihe::expected<string, ::taihe::error> GetVersionName()
     {
         return "BundleInfoImpl::getVersionName";
     }
 
-    string GetMinCompatibleVersionCode()
+    ::taihe::expected<string, ::taihe::error> GetMinCompatibleVersionCode()
     {
         return "BundleInfoImpl::getMinCompatibleVersionCode";
     }
 
-    int32_t GetTargetVersion()
+    ::taihe::expected<int32_t, ::taihe::error> GetTargetVersion()
     {
         return version;
     }
 
-    int32_t GetInstallTime()
+    ::taihe::expected<int32_t, ::taihe::error> GetInstallTime()
     {
         return version;
     }
 
-    int32_t GetUpdateTime()
+    ::taihe::expected<int32_t, ::taihe::error> GetUpdateTime()
     {
         return version;
     }
 
-    int32_t GetAppIndex()
+    ::taihe::expected<int32_t, ::taihe::error> GetAppIndex()
     {
         return version;
     }
 };
 
-BundleInfo GetBundleInfo()
+::taihe::expected<BundleInfo, ::taihe::error> GetBundleInfo()
 {
     return make_holder<BundleInfoImpl, BundleInfo>();
 }
 
-ReqPermissionDetail GetReqPermissionDetail()
+::taihe::expected<ReqPermissionDetail, ::taihe::error> GetReqPermissionDetail()
 {
     return make_holder<ReqPermissionDetailImpl, ReqPermissionDetail>();
 }
 
-UsedScene GetIUsedScene()
+::taihe::expected<UsedScene, ::taihe::error> GetIUsedScene()
 {
     return make_holder<UsedSceneImpl, UsedScene>();
 }
 
-SignatureInfo GetISignatureInfo()
+::taihe::expected<SignatureInfo, ::taihe::error> GetISignatureInfo()
 {
     return make_holder<SignatureInfoImpl, SignatureInfo>();
 }
 
-AppCloneIdentity GetAppCloneIdentity()
+::taihe::expected<AppCloneIdentity, ::taihe::error> GetAppCloneIdentity()
 {
     return make_holder<AppCloneIdentityImpl, AppCloneIdentity>();
 }

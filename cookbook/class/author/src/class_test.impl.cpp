@@ -24,47 +24,51 @@ using namespace taihe;
 namespace {
 class UIAbility {
 public:
-    void onForeground()
+    ::taihe::expected<void, ::taihe::error> onForeground()
     {
         std::cout << "in cpp onForeground" << std::endl;
+        return {};
     }
 
-    void onBackground()
+    ::taihe::expected<void, ::taihe::error> onBackground()
     {
         std::cout << "in cpp onBackground" << std::endl;
+        return {};
     }
 };
 
-::class_test::UIAbility getUIAbility()
+::taihe::expected<::class_test::UIAbility, ::taihe::error> getUIAbility()
 {
     return make_holder<UIAbility, ::class_test::UIAbility>();
 }
 
-void useUIAbility(::class_test::weak::UIAbility a)
+::taihe::expected<void, ::taihe::error> useUIAbility(::class_test::weak::UIAbility a)
 {
     a->onForeground();
     a->onBackground();
+    return {};
 }
 
-void logLifecycle(string_view str)
+::taihe::expected<void, ::taihe::error> logLifecycle(string_view str)
 {
     std::cout << "[UIAbility]: " << str << std::endl;
+    return {};
 }
 
-string MyStructStaticFunc()
+::taihe::expected<string, ::taihe::error> MyStructStaticFunc()
 {
     return "Hello from MyStructStaticFunc";
 }
 
 class OldMyInterfaceImpl {
 public:
-    std::string doSomething(string_view s)
+    ::taihe::expected<::taihe::string, ::taihe::error> doSomething(string_view s)
     {
         return "Hello, " + std::string(s);
     }
 };
 
-::class_test::OldMyInterface MyInterfaceCtor()
+::taihe::expected<::class_test::OldMyInterface, ::taihe::error> MyInterfaceCtor()
 {
     return taihe::make_holder<OldMyInterfaceImpl, ::class_test::OldMyInterface>();
 }

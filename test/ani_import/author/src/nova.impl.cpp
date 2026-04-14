@@ -34,19 +34,22 @@ public:
     }
 };
 
-void testBar(::mate::bar::BarType const &bar)
+::taihe::expected<void, ::taihe::error> testBar(::mate::bar::BarType const &bar)
 {
     TH_THROW(std::runtime_error, "testBar not implemented");
+    return {};
 }
 
-void testPura(::pura::PuraType pura)
+::taihe::expected<void, ::taihe::error> testPura(::pura::PuraType pura)
 {
     TH_THROW(std::runtime_error, "testPura not implemented");
+    return {};
 }
 
-void testNova(weak::NovaType nova)
+::taihe::expected<void, ::taihe::error> testNova(weak::NovaType nova)
 {
     TH_THROW(std::runtime_error, "testNova not implemented");
+    return {};
 }
 }  // namespace
 

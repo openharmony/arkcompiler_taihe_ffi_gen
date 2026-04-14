@@ -27,7 +27,7 @@ constexpr int32_t TAG_NULL = 0;
 constexpr int32_t TAG_STRING = 1;
 constexpr int32_t TAG_INT = 2;
 
-::nullabletype::NullableValue makeNullableValue(int32_t tag)
+::taihe::expected<::nullabletype::NullableValue, ::taihe::error> makeNullableValue(int32_t tag)
 {
     switch (tag) {
         case TAG_NULL:

@@ -23,7 +23,9 @@
 namespace {
 // To be implemented.
 
-bool cbCompare(::taihe::callback_view<::taihe::string()> cb1, ::taihe::callback_view<::taihe::string()> cb2)
+::taihe::expected<bool, ::taihe::error> cbCompare(
+    ::taihe::callback_view<::taihe::expected<::taihe::string, ::taihe::error>()> cb1,
+    ::taihe::callback_view<::taihe::expected<::taihe::string, ::taihe::error>()> cb2)
 {
     return cb1 == cb2 ? true : false;
 }

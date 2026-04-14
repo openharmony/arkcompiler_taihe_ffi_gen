@@ -30,7 +30,7 @@ class PlayString {
     string name_ {"PlayString"};
 
 public:
-    string pickString(array_view<string> nums, int32_t n1, int32_t n2)
+    ::taihe::expected<string, ::taihe::error> pickString(array_view<string> nums, int32_t n1, int32_t n2)
     {
         int32_t size = static_cast<int32_t>(nums.size());
         if (n1 > n2 || n1 < 0 || n2 >= size) {
@@ -43,23 +43,24 @@ public:
         return res;
     }
 
-    string getName()
+    ::taihe::expected<string, ::taihe::error> getName()
     {
         return name_;
     }
 
-    void setName(string_view name)
+    ::taihe::expected<void, ::taihe::error> setName(string_view name)
     {
         name_ = name;
+        return {};
     }
 };
 
-string concatString(string_view a, string_view b)
+::taihe::expected<string, ::taihe::error> concatString(string_view a, string_view b)
 {
     return a + b;
 }
 
-string makeString(string_view a, int32_t b)
+::taihe::expected<string, ::taihe::error> makeString(string_view a, int32_t b)
 {
     string result = "";
     while (b-- > 0) {
@@ -68,7 +69,7 @@ string makeString(string_view a, int32_t b)
     return result;
 }
 
-::string_op::StringPair split(string_view a, int32_t n)
+::taihe::expected<::string_op::StringPair, ::taihe::error> split(string_view a, int32_t n)
 {
     int32_t l = a.size();
     if (n > l) {
@@ -78,13 +79,13 @@ string makeString(string_view a, int32_t b)
     } else if (n < 0) {
         n = n + l;
     }
-    return {
+    return ::string_op::StringPair {
         a.substr(0, n),
         a.substr(n, l - n),
     };
 }
 
-array<string> split2(string_view a, int32_t n)
+::taihe::expected<array<string>, ::taihe::error> split2(string_view a, int32_t n)
 {
     int32_t l = a.size();
     if (n > l) {
@@ -94,35 +95,36 @@ array<string> split2(string_view a, int32_t n)
     } else if (n < 0) {
         n = n + l;
     }
-    return {a.substr(0, n), a.substr(n, l - n)};
+    return array<string> {a.substr(0, n), a.substr(n, l - n)};
 }
 
-int32_t to_i32(string_view a)
+::taihe::expected<int32_t, ::taihe::error> to_i32(string_view a)
 {
     return std::atoi(a.c_str());
 }
 
-string from_i32(int32_t a)
+::taihe::expected<string, ::taihe::error> from_i32(int32_t a)
 {
     return to_string(a);
 }
 
-::string_op::PlayString makePlayStringIface()
+::taihe::expected<::string_op::PlayString, ::taihe::error> makePlayStringIface()
 {
     return make_holder<PlayString, ::string_op::PlayString>();
 }
 
-float to_f32(string_view a)
+::taihe::expected<float, ::taihe::error> to_f32(string_view a)
 {
     return std::atof(a.c_str());
 }
 
-string from_f32(float a)
+::taihe::expected<string, ::taihe::error> from_f32(float a)
 {
     return to_string(a);
 }
 
-string concatString2(string_view s, int32_t n, array_view<string> sArr, bool b, array_view<uint8_t> buffer)
+::taihe::expected<string, ::taihe::error> concatString2(string_view s, int32_t n, array_view<string> sArr, bool b,
+                                                        array_view<uint8_t> buffer)
 {
     string result = "";
     for (auto i = 0; i < n; i++) {
