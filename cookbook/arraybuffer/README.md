@@ -32,8 +32,7 @@ using namespace taihe;
 // 将字节数组转换为 int32
 int32_t convert2Int(array_view<uint8_t> a) {
     if (a.size() < 4) {
-        set_business_error(1, "ArrayBuffer len < 4");
-        return 0;
+        return ::taihe::unexpected<::taihe::error>(::taihe::error("ArrayBuffer len < 4", 1));
     }
     return *reinterpret_cast<const int32_t*>(a.begin());
 }

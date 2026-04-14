@@ -29,7 +29,7 @@ using namespace taihe;
 
 namespace {
 
-bool is_string(uintptr_t a)
+::taihe::expected<bool, ::taihe::error> is_string(uintptr_t a)
 {
     ani_boolean res;
     ani_class cls;
@@ -39,7 +39,7 @@ bool is_string(uintptr_t a)
     return res;
 }
 
-array<uintptr_t> get_objects()
+::taihe::expected<array<uintptr_t>, ::taihe::error> get_objects()
 {
     ani_env *env = get_env();
     ani_string ani_arr_0;
@@ -50,7 +50,7 @@ array<uintptr_t> get_objects()
     return array<uintptr_t>({(uintptr_t)ani_arr_0, (uintptr_t)ani_arr_1});
 }
 
-uintptr_t get_object()
+::taihe::expected<uintptr_t, ::taihe::error> get_object()
 {
     ani_env *env = get_env();
     ani_string ani_arr_0;
@@ -59,7 +59,7 @@ uintptr_t get_object()
     return (uintptr_t)ani_arr_0;
 }
 
-bool is_opaque(::opaque_test::Union const &s)
+::taihe::expected<bool, ::taihe::error> is_opaque(::opaque_test::Union const &s)
 {
     ani_boolean res;
     ani_class cls;

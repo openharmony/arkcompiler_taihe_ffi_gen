@@ -32,8 +32,9 @@ public:
     {
     }
 
-    void pay(double amountDue)
+    ::taihe::expected<void, ::taihe::error> pay(double amountDue)
     {
+        return {};
     }
 
 private:
@@ -45,32 +46,33 @@ public:
     {
     }
 
-    void topUp(double topUpAmount)
+    ::taihe::expected<void, ::taihe::error> topUp(double topUpAmount)
     {
         this->amount += topUpAmount;
+        return {};
     }
 
-    double getBalance()
+    ::taihe::expected<double, ::taihe::error> getBalance()
     {
         return this->amount;
     }
 
-    void pay(double amountDue)
+    ::taihe::expected<void, ::taihe::error> pay(double amountDue)
     {
         if (amountDue > this->amount) {
             std::cout << "Insufficient balance" << std::endl;
-            return;
+            return {};
         }
         this->amount -= amountDue;
         std::cout << "Payment successful" << std::endl;
-        return;
+        return {};
     }
 
 private:
     double amount;
 };
 
-CreditCard makeCreditCard(double initAmount)
+::taihe::expected<CreditCard, ::taihe::error> makeCreditCard(double initAmount)
 {
     return make_holder<CreditCardImpl, CreditCard>(initAmount);
 }

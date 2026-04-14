@@ -24,9 +24,10 @@
 namespace {
 // To be implemented.
 
-void ToplevelFunc()
+::taihe::expected<void, ::taihe::error> ToplevelFunc()
 {
     std::cout << "Export default toplevel func" << std::endl;
+    return {};
 }
 }  // namespace
 

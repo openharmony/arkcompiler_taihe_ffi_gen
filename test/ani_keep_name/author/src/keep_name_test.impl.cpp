@@ -34,16 +34,18 @@ public:
     {
     }
 
-    void OnSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> OnSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IBase::onSet" << std::endl;
+        return {};
     }
 
-    void OffSet(callback_view<void()> a)
+    ::taihe::expected<void, ::taihe::error> OffSet(callback_view<::taihe::expected<void, ::taihe::error>()> a)
     {
         a();
         std::cout << "IBase::offSet" << std::endl;
+        return {};
     }
 
 private:
@@ -55,39 +57,43 @@ class Foo {
     string name_ {"foo"};
 
 public:
-    void Bar()
+    ::taihe::expected<void, ::taihe::error> Bar()
     {
         std::cout << "Fooimpl: " << __func__ << std::endl;
+        return {};
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         std::cout << "Fooimpl: " << __func__ << " " << name_ << std::endl;
         return name_;
     }
 
-    void SetName(string_view name)
+    ::taihe::expected<void, ::taihe::error> SetName(string_view name)
     {
         std::cout << "Fooimpl: " << __func__ << " " << name << std::endl;
         name_ = name;
+        return {};
     }
 };
 
-::keep_name_test::IBase GetIBase(string_view a, string_view b)
+::taihe::expected<::keep_name_test::IBase, ::taihe::error> GetIBase(string_view a, string_view b)
 {
     return make_holder<IBase, ::keep_name_test::IBase>(a, b);
 }
 
-::keep_name_test::Foo GetFooIface()
+::taihe::expected<::keep_name_test::Foo, ::taihe::error> GetFooIface()
 {
     std::cout << __func__ << std::endl;
     return make_holder<Foo, ::keep_name_test::Foo>();
 }
 
-string PrintFooName(::keep_name_test::weak::Foo foo)
+::taihe::expected<string, ::taihe::error> PrintFooName(::keep_name_test::weak::Foo foo)
 {
     auto name = foo->GetName();
-    std::cout << __func__ << ": " << name << std::endl;
+    if (name.has_value()) {
+        std::cout << __func__ << ": " << name.value() << std::endl;
+    }
     return name;
 }
 

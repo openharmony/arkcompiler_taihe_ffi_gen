@@ -24,9 +24,10 @@
 using namespace taihe;
 
 namespace {
-void module1Run()
+::taihe::expected<void, ::taihe::error> module1Run()
 {
     std::cout << "Module: module1" << std::endl;
+    return {};
 }
 }  // namespace
 
