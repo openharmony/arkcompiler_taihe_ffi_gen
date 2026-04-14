@@ -31,25 +31,27 @@ public:
     {
     }
 
-    int32_t getCount()
+    ::taihe::expected<int32_t, ::taihe::error> getCount()
     {
         return count_;
     }
 
-    string getLabel()
+    ::taihe::expected<string, ::taihe::error> getLabel()
     {
         return label_;
     }
 
-    void setLabel(string_view val)
+    ::taihe::expected<void, ::taihe::error> setLabel(string_view val)
     {
         label_ = std::string(val.data(), val.size());
+        return {};
     }
 
-    void increment()
+    ::taihe::expected<void, ::taihe::error> increment()
     {
         ++count_;
         std::cout << label_ << ": " << count_ << std::endl;
+        return {};
     }
 
 private:
@@ -57,12 +59,12 @@ private:
     std::string label_;
 };
 
-Config createConfig(string_view name, int32_t version, string_view description)
+::taihe::expected<Config, ::taihe::error> createConfig(string_view name, int32_t version, string_view description)
 {
-    return {name, version, description};
+    return Config {name, version, description};
 }
 
-Counter createCounter(string_view label)
+::taihe::expected<Counter, ::taihe::error> createCounter(string_view label)
 {
     return make_holder<CounterImpl, Counter>(label);
 }

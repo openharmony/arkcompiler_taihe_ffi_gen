@@ -24,9 +24,10 @@
 using namespace taihe;
 
 namespace {
-void fooFunc()
+::taihe::expected<void, ::taihe::error> fooFunc()
 {
     std::cout << "namespace: module1.foo, func: foo" << std::endl;
+    return {};
 }
 }  // namespace
 

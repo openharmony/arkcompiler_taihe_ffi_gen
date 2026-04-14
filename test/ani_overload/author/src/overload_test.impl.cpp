@@ -28,28 +28,28 @@ namespace {
 
 class Foo {
 public:
-    int32_t bar_int(int32_t a)
+    ::taihe::expected<int32_t, ::taihe::error> bar_int(int32_t a)
     {
         return a;
     }
 
-    string bar_str(string_view a)
+    ::taihe::expected<string, ::taihe::error> bar_str(string_view a)
     {
         return a;
     }
 };
 
-int32_t add_int(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> add_int(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-string add_str(string_view a, string_view b)
+::taihe::expected<string, ::taihe::error> add_str(string_view a, string_view b)
 {
     return a + b;
 }
 
-::overload_test::Foo makeFoo()
+::taihe::expected<::overload_test::Foo, ::taihe::error> makeFoo()
 {
     return make_holder<Foo, ::overload_test::Foo>();
 }

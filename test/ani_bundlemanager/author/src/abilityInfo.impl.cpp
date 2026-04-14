@@ -36,117 +36,117 @@ public:
     {
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return "abilityInfoImpl::getBundleName";
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return "abilityInfoImpl::getModuleName";
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "abilityInfoImpl::getName";
     }
 
-    string GetLabel()
+    ::taihe::expected<string, ::taihe::error> GetLabel()
     {
         return "abilityInfoImpl::getLabel";
     }
 
-    int32_t GetLabelId()
+    ::taihe::expected<int32_t, ::taihe::error> GetLabelId()
     {
         return abilityInfoImpl;
     }
 
-    string GetDescription()
+    ::taihe::expected<string, ::taihe::error> GetDescription()
     {
         return "abilityInfoImpl::getDescription";
     }
 
-    int32_t GetDescriptionId()
+    ::taihe::expected<int32_t, ::taihe::error> GetDescriptionId()
     {
         return abilityInfoImpl;
     }
 
-    string GetIcon()
+    ::taihe::expected<string, ::taihe::error> GetIcon()
     {
         return "abilityInfoImpl::getIcon";
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return abilityInfoImpl;
     }
 
-    string GetProcess()
+    ::taihe::expected<string, ::taihe::error> GetProcess()
     {
         return "abilityInfoImpl::getProcess";
     }
 
-    bool GetExported()
+    ::taihe::expected<bool, ::taihe::error> GetExported()
     {
         return true;
     }
 
-    ::ohos::bundle::bundleManager::AbilityType GetType()
+    ::taihe::expected<::ohos::bundle::bundleManager::AbilityType, ::taihe::error> GetType()
     {
         return ::ohos::bundle::bundleManager::AbilityType::key_t::DATA;
     }
 
-    ::ohos::bundle::bundleManager::DisplayOrientation GetOrientation()
+    ::taihe::expected<::ohos::bundle::bundleManager::DisplayOrientation, ::taihe::error> GetOrientation()
     {
         return ::ohos::bundle::bundleManager::DisplayOrientation::key_t::LANDSCAPE;
     }
 
-    ::ohos::bundle::bundleManager::LaunchType GetLaunchType()
+    ::taihe::expected<::ohos::bundle::bundleManager::LaunchType, ::taihe::error> GetLaunchType()
     {
         return ::ohos::bundle::bundleManager::LaunchType::key_t::MULTITON;
     }
 
-    array<string> GetPermissions()
+    ::taihe::expected<array<string>, ::taihe::error> GetPermissions()
     {
         array<string> res = {"abilityInfoImpl::getPermissions"};
         return res;
     }
 
-    string GetReadPermission()
+    ::taihe::expected<string, ::taihe::error> GetReadPermission()
     {
         return "abilityInfoImpl::getReadPermission";
     }
 
-    string GetWritePermission()
+    ::taihe::expected<string, ::taihe::error> GetWritePermission()
     {
         string res = "abilityInfoImpl::getWritePermission";
         return res;
     }
 
-    string GetUri()
+    ::taihe::expected<string, ::taihe::error> GetUri()
     {
         return "abilityInfoImpl::getUri";
     }
 
-    array<string> GetDeviceTypes()
+    ::taihe::expected<array<string>, ::taihe::error> GetDeviceTypes()
     {
         array<string> res = {"abilityInfoImpl::getDeviceTypes"};
         return res;
     }
 
-    array<::metadata::Metadata> GetMetadata()
+    ::taihe::expected<array<::metadata::Metadata>, ::taihe::error> GetMetadata()
     {
         metadata::Metadata data = make_holder<MetadataImpl, metadata::Metadata>();
         array<metadata::Metadata> res = {data};
         return res;
     }
 
-    bool GetEnabled()
+    ::taihe::expected<bool, ::taihe::error> GetEnabled()
     {
         return true;
     }
 
-    array<::ohos::bundle::bundleManager::SupportWindowMode> GetSupportWindowModes()
+    ::taihe::expected<array<::ohos::bundle::bundleManager::SupportWindowMode>, ::taihe::error> GetSupportWindowModes()
     {
         array<::ohos::bundle::bundleManager::SupportWindowMode> res = {
             ::ohos::bundle::bundleManager::SupportWindowMode::key_t::FLOATING};
@@ -154,12 +154,12 @@ public:
         return res;
     }
 
-    bool GetExcludeFromDock()
+    ::taihe::expected<bool, ::taihe::error> GetExcludeFromDock()
     {
         return true;
     }
 
-    array<::skill::Skill> GetSkills()
+    ::taihe::expected<array<::skill::Skill>, ::taihe::error> GetSkills()
     {
         ::skill::Skill data = make_holder<SkillImpl, ::skill::Skill>();
         array<::skill::Skill> res = {data};
@@ -167,18 +167,18 @@ public:
         return res;
     }
 
-    int32_t GetAppIndex()
+    ::taihe::expected<int32_t, ::taihe::error> GetAppIndex()
     {
         return abilityInfoImpl;
     }
 
-    int32_t GetOrientationId()
+    ::taihe::expected<int32_t, ::taihe::error> GetOrientationId()
     {
         return abilityInfoImpl;
     }
 };
 
-AbilityInfo GetAbilityInfo()
+::taihe::expected<AbilityInfo, ::taihe::error> GetAbilityInfo()
 {
     return make_holder<AbilityInfoImpl, AbilityInfo>();
 }

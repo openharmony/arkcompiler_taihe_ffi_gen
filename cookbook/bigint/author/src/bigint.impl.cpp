@@ -115,7 +115,7 @@ taihe::array<T> build_num(bool sign, taihe::array_view<T> abs)
 }
 
 namespace {
-taihe::array<uint8_t> processBigInt(taihe::array_view<uint8_t> a)
+::taihe::expected<taihe::array<uint8_t>, ::taihe::error> processBigInt(taihe::array_view<uint8_t> a)
 {
     // Convert a 2's complement big integer to its sign and absolute value.
     auto [sign, abs] = get_sign_and_abs(a);

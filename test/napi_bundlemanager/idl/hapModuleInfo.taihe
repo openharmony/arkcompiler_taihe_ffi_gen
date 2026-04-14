@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+interface HapModuleInfo {
+    @get("name") GetName(): String;
+    @get("icon") GetIcon(): String;
+    @get("iconId") GetIconId(): i32;
+    @get("label") GetLabel(): String;
+    @get("labelId") GetLabelId(): i32;
+    @get("description") GetDescription(): String;
+    @get("descriptionId") GetDescriptionId(): i32;
+    @get("mainElementName") GetMainElementName(): String;
+    @get("deviceTypes") GetDeviceTypes(): Array<String>;
+    @get("installationFree") GetInstallationFree(): bool;
+    @get("hashValue") GetHashValue(): String;
+    @get("fileContextMenuConfig") GetFileContextMenuConfig(): String;
+    @get("nativeLibraryPath") GetNativeLibraryPath(): String;
+    @get("codePath") GetCodePath(): String;
+}
+function GetHapModuleInfo(): HapModuleInfo;
+
+interface Dependency {
+    @get("moduleName") GetModuleName(): String;
+    @get("bundleName") GetBundleName(): String;
+    @get("versionCode") GetVersionCode(): i32;
+}
+function GetDependency(): Dependency;
+
+interface PreloadItem {
+    @get("moduleName") GetModuleName(): String;
+}
+function GetPreloadItem(): PreloadItem;
+
+interface RouterItem {
+    @get("name") GetName(): String;
+    @get("pageSourceFile") GetPageSourceFile(): String;
+    @get("buildFunction") GetBuildFunction(): String;
+    @get("customData") GetCustomData(): String;
+}
+function GetRouterItem(): RouterItem;
+
+interface DataItem {
+    @get("key") GetKey(): String;
+    @get("value") GetValue(): String;
+}
+function GetDataItem(): DataItem;

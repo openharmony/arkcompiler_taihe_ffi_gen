@@ -79,7 +79,7 @@ public:
         }
     }
 
-    PixelMap createAlphaPixelmapSync()
+    ::taihe::expected<PixelMap, ::taihe::error> createAlphaPixelmapSync()
     {
         OHOS::Media::InitializationOptions opts;
         opts.pixelFormat = OHOS::Media::PixelFormat::ALPHA_8;
@@ -87,7 +87,7 @@ public:
         return make_holder<PixelMapImpl, PixelMap>();
     }
 
-    ImageInfo getImageInfoSync()
+    ::taihe::expected<ImageInfo, ::taihe::error> getImageInfoSync()
     {
         OHOS::Media::ImageInfo imgInfo;
         this->m_pdata->GetImageInfo(imgInfo);
@@ -100,49 +100,55 @@ public:
                 this->m_pdata->IsHdr()};
     }
 
-    int32_t getBytesNumberPerRow()
+    ::taihe::expected<int32_t, ::taihe::error> getBytesNumberPerRow()
     {
         return this->m_pdata->GetRowBytes();
     }
 
-    int32_t getPixelBytesNumber()
+    ::taihe::expected<int32_t, ::taihe::error> getPixelBytesNumber()
     {
         return this->m_pdata->GetByteCount();
     }
 
-    void readPixelsToBufferSync(array_view<uint8_t> buff)
+    ::taihe::expected<void, ::taihe::error> readPixelsToBufferSync(array_view<uint8_t> buff)
     {
         this->m_pdata->ReadPixels(buff.size(), buff.data());
+        return {};
     }
 
-    void scaleSyncWithoutLevel(double x, double y)
+    ::taihe::expected<void, ::taihe::error> scaleSyncWithoutLevel(double x, double y)
     {
         this->m_pdata->scale(static_cast<float>(x), static_cast<float>(y), OHOS::Media::AntiAliasingOption::NONE);
+        return {};
     }
 
-    void scaleSyncWithLevel(double x, double y, AntiAliasingLevel level)
+    ::taihe::expected<void, ::taihe::error> scaleSyncWithLevel(double x, double y, AntiAliasingLevel level)
     {
         this->m_pdata->scale(static_cast<float>(x), static_cast<float>(y),
                              OHOS::Media::AntiAliasingOption(level.get_value()));
+        return {};
     }
 
-    void cropSync(Region const &region)
+    ::taihe::expected<void, ::taihe::error> cropSync(Region const &region)
     {
         OHOS::Media::Rect rect = {region.x, region.y, region.size.width, region.size.height};
         this->m_pdata->crop(rect);
+        return {};
     }
 
-    void flipSync(bool horizontal, bool vertical)
+    ::taihe::expected<void, ::taihe::error> flipSync(bool horizontal, bool vertical)
     {
         this->m_pdata->flip(horizontal, vertical);
+        return {};
     }
 
-    void releaseSync()
+    ::taihe::expected<void, ::taihe::error> releaseSync()
     {
         this->m_pdata.reset();
+        return {};
     }
 
-    int64_t getInner()
+    ::taihe::expected<int64_t, ::taihe::error> getInner()
     {
         return reinterpret_cast<int64_t>(this);
     }
@@ -175,7 +181,7 @@ public:
         this->fileDescriptor_ = 0;  // TODO
     }
 
-    ImageInfo getImageInfoSync(int32_t index)
+    ::taihe::expected<ImageInfo, ::taihe::error> getImageInfoSync(int32_t index)
     {
         OHOS::Media::ImageInfo imgInfo;
         return {{imgInfo.size.width, imgInfo.size.height},
@@ -187,17 +193,18 @@ public:
                 false};
     }
 
-    PixelMap createPixelMapSync(optional_view<DecodingOptions> options)
+    ::taihe::expected<PixelMap, ::taihe::error> createPixelMapSync(optional_view<DecodingOptions> options)
     {
         return make_holder<PixelMapImpl, PixelMap>(std::make_shared<OHOS::Media::PixelMap>());
     }
 
-    void modifyImageProperty(string_view key, string_view value)
+    ::taihe::expected<void, ::taihe::error> modifyImageProperty(string_view key, string_view value)
     {
         std::cout << "ModifyImageProperty get key:" << key << "value:" << value << std::endl;
+        return {};
     }
 
-    void modifyImagePropertiesSync(map_view<string, NullableString> records)
+    ::taihe::expected<void, ::taihe::error> modifyImagePropertiesSync(map_view<string, NullableString> records)
     {
         for (auto it = records.begin(); it != records.end(); ++it) {
             auto const &[key, value] = *it;
@@ -208,9 +215,10 @@ public:
                     this->modifyImageProperty(key, "");
             }
         }
+        return {};
     }
 
-    map<string, NullableString> getImagePropertiesSync(array_view<string> key)
+    ::taihe::expected<map<string, NullableString>, ::taihe::error> getImagePropertiesSync(array_view<string> key)
     {
         map<string, NullableString> result;
         for (auto it = key.begin(); it != key.end(); ++it) {
@@ -219,9 +227,10 @@ public:
         return result;
     }
 
-    void release()
+    ::taihe::expected<void, ::taihe::error> release()
     {
         this->m_pdata.reset();
+        return {};
     }
 
 private:

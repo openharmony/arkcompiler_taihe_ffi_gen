@@ -27,13 +27,14 @@ namespace {
 
 class Foo {
 public:
-    void CallWithThis(uintptr_t thiz)
+    ::taihe::expected<void, ::taihe::error> CallWithThis(uintptr_t thiz)
     {
         std::cout << thiz << std::endl;
+        return {};
     }
 };
 
-::inject_test::Foo MakeFooWithThis(uintptr_t thiz)
+::taihe::expected<::inject_test::Foo, ::taihe::error> MakeFooWithThis(uintptr_t thiz)
 {
     std::cout << thiz << std::endl;
     return make_holder<Foo, ::inject_test::Foo>();
