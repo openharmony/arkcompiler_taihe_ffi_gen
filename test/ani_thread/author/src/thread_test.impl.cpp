@@ -29,16 +29,18 @@ using namespace taihe;
 namespace {
 static constexpr int32_t THOUSAND = 1000;
 
-void invokeFromOtherThreadAfter(double sec, callback_view<void()> cb)
+::taihe::expected<void, ::taihe::error> invokeFromOtherThreadAfter(
+    double sec, callback_view<::taihe::expected<void, ::taihe::error>()> cb)
 {
     std::cerr << "-- begin invokeFromOtherThreadAfter --" << std::endl;
-    std::thread thread([sec, cb = callback<void()>(cb)]() {
+    std::thread thread([sec, cb = callback<::taihe::expected<void, ::taihe::error>()>(cb)]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(sec * THOUSAND)));
         std::cerr << "invokeFromOtherThreadAfter: " << sec << " seconds" << std::endl;
         cb();
     });
     thread.detach();
     std::cerr << "-- end invokeFromOtherThreadAfter --" << std::endl;
+    return {};
 }
 }  // namespace
 

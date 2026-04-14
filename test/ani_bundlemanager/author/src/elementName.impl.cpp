@@ -39,68 +39,74 @@ public:
     {
     }
 
-    void SetDevicedId(string_view deviceId)
+    ::taihe::expected<void, ::taihe::error> SetDevicedId(string_view deviceId)
     {
         this->deviceId = deviceId;
+        return {};
     }
 
-    string GetDevicedId()
+    ::taihe::expected<string, ::taihe::error> GetDevicedId()
     {
         return deviceId;
     }
 
-    void SetBundleName(string_view bundleName)
+    ::taihe::expected<void, ::taihe::error> SetBundleName(string_view bundleName)
     {
         this->bundleName = bundleName;
+        return {};
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return bundleName;
     }
 
-    void SetMundleName(string_view moduleName)
+    ::taihe::expected<void, ::taihe::error> SetMundleName(string_view moduleName)
     {
         this->moduleName = moduleName;
+        return {};
     }
 
-    string GetMundleName()
+    ::taihe::expected<string, ::taihe::error> GetMundleName()
     {
         return moduleName;
     }
 
-    void SetAbilityName(string_view abilityName)
+    ::taihe::expected<void, ::taihe::error> SetAbilityName(string_view abilityName)
     {
         this->abilityName = abilityName;
+        return {};
     }
 
-    string GetAbilityName()
+    ::taihe::expected<string, ::taihe::error> GetAbilityName()
     {
         return abilityName;
     }
 
-    void SetUri(string_view uri)
+    ::taihe::expected<void, ::taihe::error> SetUri(string_view uri)
     {
         this->uri = uri;
+        return {};
     }
 
-    string GetUri()
+    ::taihe::expected<string, ::taihe::error> GetUri()
     {
         return uri;
     }
 
-    void SetShortName(string_view shortName)
+    ::taihe::expected<void, ::taihe::error> SetShortName(string_view shortName)
     {
         this->shortName = shortName;
+        return {};
     }
 
-    string GetShortName()
+    ::taihe::expected<string, ::taihe::error> GetShortName()
     {
         return shortName;
     }
 };
 
-ElementName GetElementName()
+::taihe::expected<ElementName, ::taihe::error> GetElementName()
 {
     return make_holder<ElementNameImpl, ElementName>();
 }

@@ -35,73 +35,73 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "HapModuleInfoImpl::getName";
     }
 
-    string GetIcon()
+    ::taihe::expected<string, ::taihe::error> GetIcon()
     {
         return "HapModuleInfoImpl::getIcon";
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return hapModuleInfoImpl;
     }
 
-    string GetLabel()
+    ::taihe::expected<string, ::taihe::error> GetLabel()
     {
         return "HapModuleInfoImpl::getLabel";
     }
 
-    int32_t GetLabelId()
+    ::taihe::expected<int32_t, ::taihe::error> GetLabelId()
     {
         return hapModuleInfoImpl;
     }
 
-    string GetDescription()
+    ::taihe::expected<string, ::taihe::error> GetDescription()
     {
         return "HapModuleInfoImpl::getDescription";
     }
 
-    int32_t GetDescriptionId()
+    ::taihe::expected<int32_t, ::taihe::error> GetDescriptionId()
     {
         return hapModuleInfoImpl;
     }
 
-    string GetMainElementName()
+    ::taihe::expected<string, ::taihe::error> GetMainElementName()
     {
         return "HapModuleInfoImpl::getMainElementName";
     }
 
-    array<string> GetDeviceTypes()
+    ::taihe::expected<array<string>, ::taihe::error> GetDeviceTypes()
     {
         array<string> str = {"HapModuleInfoImpl::getDeviceTypes"};
         return str;
     }
 
-    bool GetInstallationFree()
+    ::taihe::expected<bool, ::taihe::error> GetInstallationFree()
     {
         return true;
     }
 
-    string GetHashValue()
+    ::taihe::expected<string, ::taihe::error> GetHashValue()
     {
         return "HapModuleInfoImpl::getHashValue";
     }
 
-    string GetFileContextMenuConfig()
+    ::taihe::expected<string, ::taihe::error> GetFileContextMenuConfig()
     {
         return "HapModuleInfoImpl::getFileContextMenuConfig";
     }
 
-    string GetNativeLibraryPath()
+    ::taihe::expected<string, ::taihe::error> GetNativeLibraryPath()
     {
         return "HapModuleInfoImpl::getNativeLibraryPath";
     }
 
-    string GetCodePath()
+    ::taihe::expected<string, ::taihe::error> GetCodePath()
     {
         return "HapModuleInfoImpl::getCodePath";
     }
@@ -115,17 +115,17 @@ public:
     {
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return "HapModuleInfoImpl::getModuleName";
     }
 
-    string GetBundleName()
+    ::taihe::expected<string, ::taihe::error> GetBundleName()
     {
         return "HapModuleInfoImpl::getBundleName";
     }
 
-    int32_t GetVersionCode()
+    ::taihe::expected<int32_t, ::taihe::error> GetVersionCode()
     {
         return dependencyImpl;
     }
@@ -137,7 +137,7 @@ public:
     {
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return "PreloadItemImpl::getModuleName";
     }
@@ -149,22 +149,22 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "RouterItemImpl::getName";
     }
 
-    string GetPageSourceFile()
+    ::taihe::expected<string, ::taihe::error> GetPageSourceFile()
     {
         return "RouterItemImpl::getPageSourceFile";
     }
 
-    string GetBuildFunction()
+    ::taihe::expected<string, ::taihe::error> GetBuildFunction()
     {
         return "RouterItemImpl::getBuildFunction";
     }
 
-    string GetCustomData()
+    ::taihe::expected<string, ::taihe::error> GetCustomData()
     {
         return "RouterItemImpl::getCustomData";
     }
@@ -176,38 +176,38 @@ public:
     {
     }
 
-    string GetKey()
+    ::taihe::expected<string, ::taihe::error> GetKey()
     {
         return "DataItemImpl::getKey";
     }
 
-    string GetValue()
+    ::taihe::expected<string, ::taihe::error> GetValue()
     {
         return "DataItemImpl::getValue";
     }
 };
 
-HapModuleInfo GetHapModuleInfo()
+::taihe::expected<HapModuleInfo, ::taihe::error> GetHapModuleInfo()
 {
     return make_holder<HapModuleInfoImpl, HapModuleInfo>();
 }
 
-Dependency GetDependency()
+::taihe::expected<Dependency, ::taihe::error> GetDependency()
 {
     return make_holder<DependencyImpl, Dependency>();
 }
 
-PreloadItem GetPreloadItem()
+::taihe::expected<PreloadItem, ::taihe::error> GetPreloadItem()
 {
     return make_holder<PreloadItemImpl, PreloadItem>();
 }
 
-RouterItem GetRouterItem()
+::taihe::expected<RouterItem, ::taihe::error> GetRouterItem()
 {
     return make_holder<RouterItemImpl, RouterItem>();
 }
 
-DataItem GetDataItem()
+::taihe::expected<DataItem, ::taihe::error> GetDataItem()
 {
     return make_holder<DataItemImpl, DataItem>();
 }

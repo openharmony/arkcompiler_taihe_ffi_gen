@@ -163,7 +163,7 @@ def run_core_tests(project_root: Path, **config: Path | str):
     log_stage("Run core tests...")
     for test_dir in [project_root / "test/rgb", project_root / "test/object"]:
         log_stage(f"Testing: {test_dir}")
-        run_taihe_tryit(["test", "-u", "cpp", test_dir, "-Cnoexcept-all"], project_root)
+        run_taihe_tryit(["test", "-u", "cpp", test_dir], project_root)
 
 
 def run_napi_tests(project_root: Path, **config: Path | str):

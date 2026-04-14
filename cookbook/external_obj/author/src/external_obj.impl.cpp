@@ -25,7 +25,7 @@
 using namespace taihe;
 
 namespace {
-bool is_string(uintptr_t s)
+::taihe::expected<bool, ::taihe::error> is_string(uintptr_t s)
 {
     env_guard guard;
     ani_env *env = guard.get_env();
@@ -36,7 +36,7 @@ bool is_string(uintptr_t s)
     return res;
 }
 
-array<uintptr_t> get_objects()
+::taihe::expected<array<uintptr_t>, ::taihe::error> get_objects()
 {
     env_guard guard;
     ani_env *env = guard.get_env();
@@ -47,7 +47,7 @@ array<uintptr_t> get_objects()
     return array<uintptr_t>({(uintptr_t)ani_arr_0, (uintptr_t)ani_arr_1});
 }
 
-void processPerson(uintptr_t person)
+::taihe::expected<void, ::taihe::error> processPerson(uintptr_t person)
 {
     env_guard guard;
     ani_env *env = guard.get_env();
@@ -62,6 +62,7 @@ void processPerson(uintptr_t person)
     env->String_GetUTF8(name, name_utf8, len + 1, &len);
     std::cout << "name: " << name_utf8 << ", age: " << age << std::endl;
     delete[] name_utf8;
+    return {};
 }
 }  // namespace
 

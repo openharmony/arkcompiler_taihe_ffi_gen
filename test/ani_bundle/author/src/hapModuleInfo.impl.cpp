@@ -33,80 +33,80 @@ public:
     {
     }
 
-    string GetName()
+    ::taihe::expected<string, ::taihe::error> GetName()
     {
         return "HapModuleInfo::getName";
     }
 
-    string GetDescription()
+    ::taihe::expected<string, ::taihe::error> GetDescription()
     {
         return "HapModuleInfo::getDescription";
     }
 
-    int32_t GetDescriptionId()
+    ::taihe::expected<int32_t, ::taihe::error> GetDescriptionId()
     {
         return hapModuleInfoImpl;
     }
 
-    string GetIcon()
+    ::taihe::expected<string, ::taihe::error> GetIcon()
     {
         return "HapModuleInfo::getIcon";
     }
 
-    string GetLabel()
+    ::taihe::expected<string, ::taihe::error> GetLabel()
     {
         return "HapModuleInfo::getLabel";
     }
 
-    int32_t GetLabelId()
+    ::taihe::expected<int32_t, ::taihe::error> GetLabelId()
     {
         return hapModuleInfoImpl;
     }
 
-    int32_t GetIconId()
+    ::taihe::expected<int32_t, ::taihe::error> GetIconId()
     {
         return hapModuleInfoImpl;
     }
 
-    string GetBackgroundImg()
+    ::taihe::expected<string, ::taihe::error> GetBackgroundImg()
     {
         return "HapModuleInfo::getBackgroundImg";
     }
 
-    int32_t GetSupportedModes()
+    ::taihe::expected<int32_t, ::taihe::error> GetSupportedModes()
     {
         return hapModuleInfoImpl;
     }
 
-    array<string> GetReqCapabilities()
+    ::taihe::expected<array<string>, ::taihe::error> GetReqCapabilities()
     {
         array<string> str = {"HapModuleInfo::getReqCapabilities"};
         return str;
     }
 
-    array<string> GetDeviceTypes()
+    ::taihe::expected<array<string>, ::taihe::error> GetDeviceTypes()
     {
         array<string> str = {"HapModuleInfo::getDeviceTypes"};
         return str;
     }
 
-    string GetModuleName()
+    ::taihe::expected<string, ::taihe::error> GetModuleName()
     {
         return "HapModuleInfo::getModuleName";
     }
 
-    string GetMainAbilityName()
+    ::taihe::expected<string, ::taihe::error> GetMainAbilityName()
     {
         return "HapModuleInfo::getMainAbilityName";
     }
 
-    bool GetInstallationFree()
+    ::taihe::expected<bool, ::taihe::error> GetInstallationFree()
     {
         return true;
     }
 };
 
-HapModuleInfo GetHapModuleInfo()
+::taihe::expected<HapModuleInfo, ::taihe::error> GetHapModuleInfo()
 {
     return make_holder<HapModuleInfoImpl, HapModuleInfo>();
 }

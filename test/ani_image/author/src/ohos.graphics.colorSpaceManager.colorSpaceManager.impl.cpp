@@ -35,17 +35,17 @@ public:
     {
     }
 
-    ColorSpace getColorSpaceName()
+    ::taihe::expected<ColorSpace, ::taihe::error> getColorSpaceName()
     {
         return this->m_spaceName;
     }
 
-    array<double> getWhitePoint()
+    ::taihe::expected<array<double>, ::taihe::error> getWhitePoint()
     {
         return {this->m_primaries.whitePointX, this->m_primaries.whitePointY};
     }
 
-    double getGamma()
+    ::taihe::expected<double, ::taihe::error> getGamma()
     {
         return this->m_gamma;
     }

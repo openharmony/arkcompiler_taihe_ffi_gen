@@ -36,99 +36,117 @@ using namespace taihe;
 namespace {
 class TestInterface {
 public:
-    void Noparam_noreturn()
+    ::taihe::expected<void, ::taihe::error> Noparam_noreturn()
     {
+        return {};
     }
 
-    void Primitives_noreturn(int8_t a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn(int8_t a)
     {
+        return {};
     }
 
-    void Primitives_noreturn1(int16_t a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn1(int16_t a)
     {
+        return {};
     }
 
-    void Primitives_noreturn2(int32_t a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn2(int32_t a)
     {
+        return {};
     }
 
-    void Primitives_noreturn3(float a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn3(float a)
     {
+        return {};
     }
 
-    void Primitives_noreturn4(double a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn4(double a)
     {
+        return {};
     }
 
-    void Primitives_noreturn5(bool a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn5(bool a)
     {
+        return {};
     }
 
-    void Primitives_noreturn6(string_view a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn6(string_view a)
     {
+        return {};
     }
 
-    void Primitives_noreturn7(int64_t a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn7(int64_t a)
     {
+        return {};
     }
 
-    void Primitives_noreturn8(int8_t a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn8(int8_t a)
     {
+        return {};
     }
 
-    void Primitives_noreturn9(int32_t a)
+    ::taihe::expected<void, ::taihe::error> Primitives_noreturn9(int32_t a)
     {
+        return {};
     }
 
-    int32_t Primitives_return(int32_t a)
+    ::taihe::expected<int32_t, ::taihe::error> Primitives_return(int32_t a)
     {
         return 1;
     }
 
-    void Containers_noreturn1(array_view<int8_t> a)
+    ::taihe::expected<void, ::taihe::error> Containers_noreturn1(array_view<int8_t> a)
     {
+        return {};
     }
 
-    void Containers_noreturn3(array_view<uint8_t> a)
+    ::taihe::expected<void, ::taihe::error> Containers_noreturn3(array_view<uint8_t> a)
     {
+        return {};
     }
 
-    void Containers_noreturn2(::inner::union_primitive const &a)
+    ::taihe::expected<void, ::taihe::error> Containers_noreturn2(::inner::union_primitive const &a)
     {
+        return {};
     }
 
-    void Containers_noreturn4(::inner::Color a)
+    ::taihe::expected<void, ::taihe::error> Containers_noreturn4(::inner::Color a)
     {
+        return {};
     }
 
-    void Containers_noreturn5(map_view<string, int32_t> a)
+    ::taihe::expected<void, ::taihe::error> Containers_noreturn5(map_view<string, int32_t> a)
     {
+        return {};
     }
 
-    string Containers_return(::inner::union_primitive const &a)
+    ::taihe::expected<string, ::taihe::error> Containers_return(::inner::union_primitive const &a)
     {
         return "containers_return";
     }
 
-    ::inner::ErrorResponse Func_ErrorResponse()
+    ::taihe::expected<::inner::ErrorResponse, ::taihe::error> Func_ErrorResponse()
     {
-        return {true, 10000, "test58"};
+        return ::inner::ErrorResponse {true, 10000, "test58"};
     }
 
-    void OverloadFunc_i8(int8_t a, int8_t b)
+    ::taihe::expected<void, ::taihe::error> OverloadFunc_i8(int8_t a, int8_t b)
     {
+        return {};
     }
 
-    string OverloadFunc_i16(array_view<int8_t> a, array_view<uint8_t> b)
+    ::taihe::expected<string, ::taihe::error> OverloadFunc_i16(array_view<int8_t> a, array_view<uint8_t> b)
     {
         return "overload array";
     }
 
-    void OverloadFunc_i32()
+    ::taihe::expected<void, ::taihe::error> OverloadFunc_i32()
     {
+        return {};
     }
 
-    ::inner::Mystruct OverloadFunc_f32(::inner::Mystruct const &a)
+    ::taihe::expected<::inner::Mystruct, ::taihe::error> OverloadFunc_f32(::inner::Mystruct const &a)
     {
         return a;
     }
@@ -147,55 +165,55 @@ public:
     string name_ {"String"};
     bool flag = true;  // 布尔类型，值: true 或 false
 
-    string getName()
+    ::taihe::expected<string, ::taihe::error> getName()
     {
         std::cout << __func__ << " " << name_ << std::endl;
         return name_;
     }
 
-    int8_t geti8()
+    ::taihe::expected<int8_t, ::taihe::error> geti8()
     {
         std::cout << __func__ << " " << (int)i8 << std::endl;
         return i8;
     }
 
-    int16_t geti16()
+    ::taihe::expected<int16_t, ::taihe::error> geti16()
     {
         std::cout << __func__ << " " << i16 << std::endl;
         return i16;
     }
 
-    int32_t geti32()
+    ::taihe::expected<int32_t, ::taihe::error> geti32()
     {
         std::cout << __func__ << " " << i32 << std::endl;
         return i32;
     }
 
-    int64_t geti64()
+    ::taihe::expected<int64_t, ::taihe::error> geti64()
     {
         std::cout << __func__ << " " << i64 << std::endl;
         return i64;
     }
 
-    float getf32()
+    ::taihe::expected<float, ::taihe::error> getf32()
     {
         std::cout << __func__ << " " << f32 << std::endl;
         return f32;
     }
 
-    double getf64()
+    ::taihe::expected<double, ::taihe::error> getf64()
     {
         std::cout << __func__ << " " << f64 << std::endl;
         return f64;
     }
 
-    bool getbool()
+    ::taihe::expected<bool, ::taihe::error> getbool()
     {
         std::cout << __func__ << " " << flag << std::endl;
         return flag;
     }
 
-    array<uint8_t> getArraybuffer()
+    ::taihe::expected<array<uint8_t>, ::taihe::error> getArraybuffer()
     {
         int const len = 5;
         int const member = 3;
@@ -204,7 +222,7 @@ public:
         return result;
     }
 
-    array<int8_t> getArray()
+    ::taihe::expected<array<int8_t>, ::taihe::error> getArray()
     {
         int const len = 5;
         int const member = 3;
@@ -213,12 +231,12 @@ public:
         return result;
     }
 
-    ::inner::union_primitive getunion()
+    ::taihe::expected<::inner::union_primitive, ::taihe::error> getunion()
     {
         return ::inner::union_primitive::make_sValue("union string");
     }
 
-    map<string, int8_t> getrecord()
+    ::taihe::expected<map<string, int8_t>, ::taihe::error> getrecord()
     {
         map<string, int8_t> m;
         int const key1num = 1;
@@ -230,7 +248,7 @@ public:
         return m;
     }
 
-    ::inner::Color getColorEnum()
+    ::taihe::expected<::inner::Color, ::taihe::error> getColorEnum()
     {
         return (::inner::Color::key_t)((int)1);
     }
@@ -238,227 +256,267 @@ public:
 
 class Test1 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test2 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test3 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test4 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test5 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test6 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test7 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test8 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test9 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test10 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test11 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test12 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test13 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test14 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test15 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test16 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test17 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test18 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test19 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class Test20 {
 public:
-    void Fun1()
+    ::taihe::expected<void, ::taihe::error> Fun1()
     {
+        return {};
     }
 
-    void Fun2()
+    ::taihe::expected<void, ::taihe::error> Fun2()
     {
+        return {};
     }
 };
 
 class TestA {
 public:
-    string Fun1()
+    ::taihe::expected<string, ::taihe::error> Fun1()
     {
         std::cout << "fun1" << std::endl;
         return "fun1";
@@ -467,13 +525,13 @@ public:
 
 class TestB {
 public:
-    string Fun2()
+    ::taihe::expected<string, ::taihe::error> Fun2()
     {
         std::cout << "IfaceB func_b" << std::endl;
         return "fun2";
     }
 
-    string Fun1()
+    ::taihe::expected<string, ::taihe::error> Fun1()
     {
         std::cout << "IfaceB func_a" << std::endl;
         return "fun1";
@@ -482,176 +540,224 @@ public:
 
 class TestC {
 public:
-    string Fun3()
+    ::taihe::expected<string, ::taihe::error> Fun3()
     {
         std::cout << "IfaceC func_c" << std::endl;
         return "fun3";
     }
 
-    string Fun1()
+    ::taihe::expected<string, ::taihe::error> Fun1()
     {
         std::cout << "IfaceC func_a" << std::endl;
         return "fun1";
     }
 };
 
-void Primitives_noreturn(int32_t a, double b, bool c, string_view d, int8_t e)
+::taihe::expected<void, ::taihe::error> Primitives_noreturn(int32_t a, double b, bool c, string_view d, int8_t e)
 {
+    return {};
 }
 
-string Primitives_return(int32_t a, double b, bool c, string_view d, int8_t e)
+::taihe::expected<string, ::taihe::error> Primitives_return(int32_t a, double b, bool c, string_view d, int8_t e)
 {
     return "primitives_return";
 }
 
-void Containers_noreturn(array_view<int8_t> a, array_view<int16_t> b, array_view<float> c, array_view<double> d,
-                         ::inner::union_primitive const &e)
+::taihe::expected<void, ::taihe::error> Containers_noreturn(array_view<int8_t> a, array_view<int16_t> b,
+                                                            array_view<float> c, array_view<double> d,
+                                                            ::inner::union_primitive const &e)
 {
+    return {};
 }
 
-string Containers_return(array_view<int8_t> a, array_view<int16_t> b, array_view<float> c, array_view<double> d,
-                         ::inner::union_primitive const &e)
+::taihe::expected<string, ::taihe::error> Containers_return(array_view<int8_t> a, array_view<int16_t> b,
+                                                            array_view<float> c, array_view<double> d,
+                                                            ::inner::union_primitive const &e)
 {
     return "containers_return";
 }
 
-void Enum_noreturn(::inner::Color a, ::inner::Color b, ::inner::Color c, ::inner::Color d, ::inner::Color e)
+::taihe::expected<void, ::taihe::error> Enum_noreturn(::inner::Color a, ::inner::Color b, ::inner::Color c,
+                                                      ::inner::Color d, ::inner::Color e)
 {
+    return {};
 }
 
-string Enum_return(::inner::Color a, ::inner::Color b, ::inner::Color c, ::inner::Color d, ::inner::Color e)
+::taihe::expected<string, ::taihe::error> Enum_return(::inner::Color a, ::inner::Color b, ::inner::Color c,
+                                                      ::inner::Color d, ::inner::Color e)
 {
     return "enum_return";
 }
 
-::inner::TestInterface get_interface()
+::taihe::expected<::inner::TestInterface, ::taihe::error> get_interface()
 {
     return make_holder<TestInterface, ::inner::TestInterface>();
 }
 
-string PrintTestInterfaceName(::inner::weak::TestInterface testiface)
+::taihe::expected<string, ::taihe::error> PrintTestInterfaceName(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->getName();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->getName();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return "";
 }
 
-int8_t PrintTestInterfaceNumberi8(::inner::weak::TestInterface testiface)
+::taihe::expected<int8_t, ::taihe::error> PrintTestInterfaceNumberi8(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->geti8();
-    std::cout << __func__ << ": " << (int)name << std::endl;
-    return name;
+    auto result = testiface->geti8();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << (int)name << std::endl;
+        return name;
+    }
+    return 0;
 }
 
-int16_t PrintTestInterfaceNumberi16(::inner::weak::TestInterface testiface)
+::taihe::expected<int16_t, ::taihe::error> PrintTestInterfaceNumberi16(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->geti16();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->geti16();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return 0;
 }
 
-int32_t PrintTestInterfaceNumberi32(::inner::weak::TestInterface testiface)
+::taihe::expected<int32_t, ::taihe::error> PrintTestInterfaceNumberi32(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->geti32();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->geti32();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return 0;
 }
 
-int64_t PrintTestInterfaceNumberi64(::inner::weak::TestInterface testiface)
+::taihe::expected<int64_t, ::taihe::error> PrintTestInterfaceNumberi64(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->geti64();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->geti64();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return 0;
 }
 
-float PrintTestInterfaceNumberf32(::inner::weak::TestInterface testiface)
+::taihe::expected<float, ::taihe::error> PrintTestInterfaceNumberf32(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->getf32();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->getf32();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return 0.0f;
 }
 
-double PrintTestInterfaceNumberf64(::inner::weak::TestInterface testiface)
+::taihe::expected<double, ::taihe::error> PrintTestInterfaceNumberf64(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->getf64();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->getf64();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return 0.0;
 }
 
-bool PrintTestInterfacebool(::inner::weak::TestInterface testiface)
+::taihe::expected<bool, ::taihe::error> PrintTestInterfacebool(::inner::weak::TestInterface testiface)
 {
-    auto name = testiface->getbool();
-    std::cout << __func__ << ": " << name << std::endl;
-    return name;
+    auto result = testiface->getbool();
+    if (result.has_value()) {
+        auto name = result.value();
+        std::cout << __func__ << ": " << name << std::endl;
+        return name;
+    }
+    return false;
 }
 
-array<uint8_t> PrintTestInterfaceArraybuffer(::inner::weak::TestInterface testiface)
+::taihe::expected<array<uint8_t>, ::taihe::error> PrintTestInterfaceArraybuffer(::inner::weak::TestInterface testiface)
 {
-    array<uint8_t> arr = testiface->getArraybuffer();
-    for (size_t i = 0; i < arr.size(); ++i) {
-        std::cout << static_cast<int>(arr.data()[i]);
-        if (i < arr.size() - 1) {
-            std::cout << ", ";
+    ::taihe::expected<array<uint8_t>, ::taihe::error> arr = testiface->getArraybuffer();
+    if (arr.has_value()) {
+        for (size_t i = 0; i < arr.value().size(); ++i) {
+            std::cout << static_cast<int>(arr.value().data()[i]);
+            if (i < arr.value().size() - 1) {
+                std::cout << ", ";
+            }
         }
     }
     return arr;
 }
 
-array<int8_t> PrintTestInterfaceArray(::inner::weak::TestInterface testiface)
+::taihe::expected<array<int8_t>, ::taihe::error> PrintTestInterfaceArray(::inner::weak::TestInterface testiface)
 {
-    array<int8_t> arr = testiface->getArray();
-    for (size_t i = 0; i < arr.size(); ++i) {
-        std::cout << static_cast<int>(arr.data()[i]);
-        if (i < arr.size() - 1) {
-            std::cout << ", ";
+    ::taihe::expected<array<int8_t>, ::taihe::error> arr = testiface->getArray();
+    if (arr.has_value()) {
+        for (size_t i = 0; i < arr.value().size(); ++i) {
+            std::cout << static_cast<int>(arr.value().data()[i]);
+            if (i < arr.value().size() - 1) {
+                std::cout << ", ";
+            }
         }
     }
     return arr;
 }
 
-::inner::union_primitive PrintTestInterfaceUnion(::inner::weak::TestInterface testiface)
+::taihe::expected<::inner::union_primitive, ::taihe::error> PrintTestInterfaceUnion(
+    ::inner::weak::TestInterface testiface)
 {
     return testiface->getunion();
 }
 
-map<string, int8_t> PrintTestInterfaceRecord(::inner::weak::TestInterface testiface)
+::taihe::expected<map<string, int8_t>, ::taihe::error> PrintTestInterfaceRecord(::inner::weak::TestInterface testiface)
 {
-    map<string, int8_t> m = testiface->getrecord();
-    for (auto const &[key, value] : m) {
-        std::cout << "Key: " << key << ", Value: " << static_cast<int>(value) << std::endl;
-        // 注意：int8_t 需要转为 int 打印，否则会输出 ASCII 字符
+    ::taihe::expected<map<string, int8_t>, ::taihe::error> m = testiface->getrecord();
+    if (m.has_value()) {
+        for (auto const &[key, value] : m.value()) {
+            std::cout << "Key: " << key << ", Value: " << static_cast<int>(value) << std::endl;
+            // 注意：int8_t 需要转为 int 打印，否则会输出 ASCII 字符
+        }
     }
     return m;
 }
 
-::inner::Color PrintTestInterfaceEnum(::inner::weak::TestInterface testiface)
+::taihe::expected<::inner::Color, ::taihe::error> PrintTestInterfaceEnum(::inner::weak::TestInterface testiface)
 {
-    ::inner::Color c = testiface->getColorEnum();
-    std::cout << "enum get_key " << (int)c.get_key() << std::endl;
+    ::taihe::expected<::inner::Color, ::taihe::error> c = testiface->getColorEnum();
+    if (c.has_value()) {
+        std::cout << "enum get_key " << (int)c.value().get_key() << std::endl;
+    }
     return c;
 }
 
-::inner::Test1 get_interface_1()
+::taihe::expected<::inner::Test1, ::taihe::error> get_interface_1()
 {
     return make_holder<Test1, ::inner::Test1>();
 }
 
-::inner::Test20 get_interface_20()
+::taihe::expected<::inner::Test20, ::taihe::error> get_interface_20()
 {
     return make_holder<Test20, ::inner::Test20>();
 }
 
-::inner::TestA get_interface_A()
+::taihe::expected<::inner::TestA, ::taihe::error> get_interface_A()
 {
     return make_holder<TestA, ::inner::TestA>();
 }
 
-::inner::TestB get_interface_B()
+::taihe::expected<::inner::TestB, ::taihe::error> get_interface_B()
 {
     return make_holder<TestB, ::inner::TestB>();
 }
 
-::inner::TestC get_interface_C()
+::taihe::expected<::inner::TestC, ::taihe::error> get_interface_C()
 {
     return make_holder<TestC, ::inner::TestC>();
 }

@@ -24,9 +24,10 @@
 namespace {
 // To be implemented.
 
-void Bar()
+::taihe::expected<void, ::taihe::error> Bar()
 {
     std::cout << "Export Namespace Bar()" << std::endl;
+    return {};
 }
 }  // namespace
 
