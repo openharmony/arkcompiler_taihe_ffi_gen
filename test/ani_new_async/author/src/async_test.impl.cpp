@@ -32,71 +32,71 @@ namespace {
     }
 }
 
+struct AuthorIBase {
+    taihe::string name;
+
+    AuthorIBase() : name("My IBase")
+    {
+    }
+
+    ~AuthorIBase()
+    {
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> Get()
+    {
+        return name;
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> GetWithCallback()
+    {
+        return name;
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> GetReturnsPromise()
+    {
+        return name;
+    }
+
+    ::taihe::expected<void, ::taihe::error> Set(taihe::string_view a)
+    {
+        this->name = a;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> SetWithCallback(taihe::string_view a)
+    {
+        this->name = a;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> SetReturnsPromise(taihe::string_view a)
+    {
+        this->name = a;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> MakeSync()
+    {
+        TH_THROW(std::runtime_error, "makeSync not implemented");
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> MakeWithCallback()
+    {
+        TH_THROW(std::runtime_error, "makeSync not implemented");
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> MakeReturnsPromise()
+    {
+        TH_THROW(std::runtime_error, "makeSync not implemented");
+        return {};
+    }
+};
+
 ::taihe::expected<::async_test::IBase, ::taihe::error> GetIBaseImpl()
 {
-    struct AuthorIBase {
-        taihe::string name;
-
-        AuthorIBase() : name("My IBase")
-        {
-        }
-
-        ~AuthorIBase()
-        {
-        }
-
-        ::taihe::expected<::taihe::string, ::taihe::error> Get()
-        {
-            return name;
-        }
-
-        ::taihe::expected<::taihe::string, ::taihe::error> GetWithCallback()
-        {
-            return name;
-        }
-
-        ::taihe::expected<::taihe::string, ::taihe::error> GetReturnsPromise()
-        {
-            return name;
-        }
-
-        ::taihe::expected<void, ::taihe::error> Set(taihe::string_view a)
-        {
-            this->name = a;
-            return {};
-        }
-
-        ::taihe::expected<void, ::taihe::error> SetWithCallback(taihe::string_view a)
-        {
-            this->name = a;
-            return {};
-        }
-
-        ::taihe::expected<void, ::taihe::error> SetReturnsPromise(taihe::string_view a)
-        {
-            this->name = a;
-            return {};
-        }
-
-        ::taihe::expected<void, ::taihe::error> MakeSync()
-        {
-            TH_THROW(std::runtime_error, "makeSync not implemented");
-            return {};
-        }
-
-        ::taihe::expected<void, ::taihe::error> MakeWithCallback()
-        {
-            TH_THROW(std::runtime_error, "makeSync not implemented");
-            return {};
-        }
-
-        ::taihe::expected<void, ::taihe::error> MakeReturnsPromise()
-        {
-            TH_THROW(std::runtime_error, "makeSync not implemented");
-            return {};
-        }
-    };
-
     return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 

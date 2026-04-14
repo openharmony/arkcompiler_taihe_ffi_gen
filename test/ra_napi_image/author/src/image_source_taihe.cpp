@@ -458,7 +458,6 @@ static PixelMap CreatePixelMapComplete(std::unique_ptr<ImageSourceTaiheContext> 
 
 PixelMap ImageSourceImpl::CreatePixelMapSync(DecodingOptions const &options)
 {
-    // return make_holder<PixelMapImpl, PixelMap>();
     std::unique_ptr<ImageSourceTaiheContext> taiheContext = std::make_unique<ImageSourceTaiheContext>();
     taiheContext->rImageSource = nativeImgSrc;
     if (taiheContext->rImageSource == nullptr) {
