@@ -24,7 +24,7 @@ using namespace taihe;
 
 namespace {
 
-string add(int32_t a, int32_t b)
+::taihe::expected<string, ::taihe::error> add(int32_t a, int32_t b)
 {
     std::string sum = std::to_string(a + b);
     return sum;

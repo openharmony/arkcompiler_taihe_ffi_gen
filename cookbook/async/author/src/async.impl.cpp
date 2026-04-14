@@ -34,46 +34,49 @@ public:
     {
     }
 
-    string getStringSync()
+    ::taihe::expected<::taihe::string, ::taihe::error> getStringSync()
     {
         return str;
     }
 
-    ::taihe::string getStringWithCallback()
+    ::taihe::expected<::taihe::string, ::taihe::error> getStringWithCallback()
     {
         return getStringSync();
     }
 
-    ::taihe::string getStringReturnsPromise()
+    ::taihe::expected<::taihe::string, ::taihe::error> getStringReturnsPromise()
     {
         return getStringSync();
     }
 
-    void setStringSync(string_view a)
+    ::taihe::expected<void, ::taihe::error> setStringSync(::taihe::string_view a)
     {
         this->str = a;
+        return {};
     }
 
-    void setStringWithCallback(::taihe::string_view a)
+    ::taihe::expected<void, ::taihe::error> setStringWithCallback(::taihe::string_view a)
     {
         setStringSync(a);
+        return {};
     }
 
-    void setStringReturnsPromise(::taihe::string_view a)
+    ::taihe::expected<void, ::taihe::error> setStringReturnsPromise(::taihe::string_view a)
     {
         setStringSync(a);
+        return {};
     }
 
 private:
-    string str;
+    ::taihe::string str;
 };
 
-int32_t addSync(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> addSync(int32_t a, int32_t b)
 {
     return a + b;
 }
 
-::async::IStringHolder makeIStringHolder()
+::taihe::expected<::async::IStringHolder, ::taihe::error> makeIStringHolder()
 {
     return make_holder<IStringHolder, ::async::IStringHolder>();
 }

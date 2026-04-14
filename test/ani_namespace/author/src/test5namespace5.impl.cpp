@@ -22,8 +22,9 @@
 using namespace taihe;
 
 namespace {
-void Funtest(::test5namespace5::MyStruct const &s)
+::taihe::expected<void, ::taihe::error> Funtest(::test5namespace5::MyStruct const &s)
 {
+    return {};
 }
 }  // namespace
 

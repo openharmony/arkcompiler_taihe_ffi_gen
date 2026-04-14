@@ -24,7 +24,8 @@
 namespace {
 using expected_type = ::taihe::expected<::taihe::string, ::taihe::error>;
 
-void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::completer<expected_type> completer)
+::taihe::expected<void, ::taihe::error> futureResultWithCallback(int64_t ms, ::taihe::string_view val,
+                                                                 ::taihe::completer<expected_type> completer)
 {
     std::thread([ms, val = taihe::string(val), completer = std::move(completer)]() mutable {
         std::cout << "[Future Result] Waiting for " << ms << " milliseconds..." << std::endl;
@@ -32,6 +33,7 @@ void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::com
         std::cout << "[Future Result] Task completed, setting future..." << std::endl;
         completer.complete(std::move(val));
     }).detach();
+    return {};
 }
 
 taihe::future<expected_type> futureResultReturnsPromise(int64_t ms, ::taihe::string_view val)

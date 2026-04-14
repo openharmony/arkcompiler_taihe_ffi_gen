@@ -25,12 +25,13 @@ using namespace taihe;
 
 namespace {
 
-array<string> convert_arr(array_view<int32_t> a, string_view str)
+::taihe::expected<::taihe::array<::taihe::string>, ::taihe::error> convert_arr(::taihe::array_view<int32_t> a,
+                                                                               ::taihe::string_view str)
 {
     int32_t input_size = a.size();
     int32_t input_begin_val = a[0];
     int32_t input_end_val = a[input_size - 1];
-    array<string> res = {
+    ::taihe::array<::taihe::string> res = {
         {std::to_string(input_size)}, {std::to_string(input_begin_val)}, {std::to_string(input_end_val)}, str};
     return res;
 }
