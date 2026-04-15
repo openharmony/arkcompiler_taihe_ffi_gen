@@ -13,5 +13,18 @@
  * limitations under the License.
  */
 
+@noexcept
 function futureResultWithCallback(ms: i64, result: String, set: Completer<String>);
+@noexcept
 function futureResultReturnsPromise(ms: i64, result: String): Future<String>;
+
+// Reverse async tests
+interface UserType {
+    fooWithCallback(ms: i64, result: String, set: Completer<String>);
+    fooReturnsPromise(ms: i64, result: String): Future<String>;
+}
+
+@noexcept
+function processUserTypeWithCallback(user: UserType, ms: i64, result: String, set: Completer<String>);
+@noexcept
+function processUserTypeReturnsPromise(user: UserType, ms: i64, result: String): Future<String>;

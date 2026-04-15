@@ -806,7 +806,7 @@ class AniIfaceImplGenerator:
                         result_cpp,
                     )
                     self.target.writelns(
-                        f"return {result_cpp};",
+                        f"return std::move({result_cpp});",
                     )
                 else:
                     self.target.writelns(
@@ -859,7 +859,7 @@ class AniIfaceImplGenerator:
                         result_cpp,
                     )
                     self.target.writelns(
-                        f"return {result_cpp};",
+                        f"return std::move({result_cpp});",
                     )
                 else:
                     self.target.writelns(
