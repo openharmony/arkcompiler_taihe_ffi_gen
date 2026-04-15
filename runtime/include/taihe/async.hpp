@@ -39,8 +39,8 @@ struct async_context {
     uint32_t flags;
 
     TAsyncHandlerStorage storage;
-    void (*process_handler_ptr)(TAsyncHandlerStorage storage, Result *result_ptr);
-    void (*cleanup_handler_ptr)(TAsyncHandlerStorage storage);
+    void (*process_handler_ptr)(TAsyncHandlerStorage *storage, Result *result_ptr);
+    void (*cleanup_handler_ptr)(TAsyncHandlerStorage *storage);
 
     ResultBuffer buffer;
 
@@ -66,12 +66,12 @@ struct async_context {
 
     void process_handler()
     {
-        process_handler_ptr(storage, &buffer.result);
+        process_handler_ptr(&storage, &buffer.result);
     }
 
     void cleanup_handler()
     {
-        cleanup_handler_ptr(storage);
+        cleanup_handler_ptr(&storage);
     }
 
     template<typename... Args>
@@ -93,11 +93,11 @@ struct async_context {
                       "Handler type is too large for small storage");
         TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
         new (&storage.buf) SmallConstHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage storage, Result *result_ptr) {
-            reinterpret_cast<SmallConstHandler const *>(&storage.buf)->handle_result(std::forward<Result>(*result_ptr));
+        process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
+            reinterpret_cast<SmallConstHandler *>(&storage->buf)->handle_result(std::forward<Result>(*result_ptr));
         };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage storage) {
-            reinterpret_cast<SmallConstHandler const *>(&storage.buf)->~SmallConstHandler();
+        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
+            reinterpret_cast<SmallConstHandler *>(&storage->buf)->~SmallConstHandler();
         };
 
         uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
@@ -111,11 +111,11 @@ struct async_context {
     {
         TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
         storage.ptr = new LargeMutableHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage storage, Result *result_ptr) {
-            reinterpret_cast<LargeMutableHandler *>(storage.ptr)->handle_result(std::forward<Result>(*result_ptr));
+        process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
+            reinterpret_cast<LargeMutableHandler *>(storage->ptr)->handle_result(std::forward<Result>(*result_ptr));
         };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage storage) {
-            delete reinterpret_cast<LargeMutableHandler *>(storage.ptr);
+        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
+            delete reinterpret_cast<LargeMutableHandler *>(storage->ptr);
         };
 
         uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
