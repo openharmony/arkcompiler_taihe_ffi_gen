@@ -66,10 +66,14 @@ public:
     }
 };
 
-class dref_guard : public sref_guard {
+class dref_guard {
+protected:
+    ani_ref ref = nullptr;
+
 public:
-    dref_guard(ani_env *env, ani_ref val) : sref_guard(env, val)
+    dref_guard(ani_env *env, ani_ref val)
     {
+        env->GlobalReference_Create(val, &ref);
     }
 
     ~dref_guard()
@@ -78,6 +82,11 @@ public:
         ani_env *env = guard.get_env();
         env->GlobalReference_Delete(ref);
     }
+
+    dref_guard(dref_guard const &) = delete;
+    dref_guard &operator=(dref_guard const &) = delete;
+    dref_guard(dref_guard &&) = delete;
+    dref_guard &operator=(dref_guard &&) = delete;
 };
 
 template<typename AniRefGuard>
