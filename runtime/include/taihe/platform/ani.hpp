@@ -90,7 +90,7 @@ public:
 };
 
 template<typename AniRefGuard>
-struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, AniRefGuard>>> {
+struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<dref_guard, AniRefGuard>>> {
     bool operator()(data_view lhs, data_view rhs) const
     {
         auto lhs_as_ani = ::taihe::platform::ani::weak::AniObject(lhs);
@@ -108,7 +108,7 @@ struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, A
 };
 
 template<typename AniRefGuard>
-struct hash_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, AniRefGuard>>> {
+struct hash_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<dref_guard, AniRefGuard>>> {
     std::size_t operator()(data_view val) const
     {
         auto val_as_ani = ::taihe::platform::ani::weak::AniObject(val);

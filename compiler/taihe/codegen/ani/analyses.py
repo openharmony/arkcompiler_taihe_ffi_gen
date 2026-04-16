@@ -391,7 +391,7 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     BE_type = "_taihe_BusinessError"
     AC_type = "_taihe_AsyncCallback"
 
-    async_handler_on_fullfilled = "_taihe_asyncHandlerOnFullfilled"
+    async_handler_on_fulfilled = "_taihe_asyncHandlerOnFulfilled"
     async_handler_on_rejected = "_taihe_asyncHandlerOnRejected"
     async_handler_drop = "_taihe_asyncHandlerDrop"
     async_handler_registry = "_taihe_asyncHandlerRegistry"
@@ -2808,7 +2808,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
                 )
         target.writelns(
-            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_contract<{self.expected_ty_cpp_name}>();",
+            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
             f"{cpp_future}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
@@ -2822,10 +2822,10 @@ class CompleterTypeAniInfo(TypeAniInfo):
     ):
         cpp_copy = f"{ani_after}_cpp_copy"
         cpp_scope = f"{ani_after}_cpp_scope"
-        on_fullfilled_name = "on_fullfilled"
+        on_fulfilled_name = "on_fulfilled"
         on_rejected_name = "on_rejected"
         free_name = "free"
-        ani_on_fullfilled_ptr = f"{ani_after}_ani_on_fullfilled_ptr"
+        ani_on_fulfilled_ptr = f"{ani_after}_ani_on_fulfilled_ptr"
         ani_on_rejected_ptr = f"{ani_after}_ani_on_rejected_ptr"
         ani_free_ptr = f"{ani_after}_ani_free_ptr"
         ani_context_ptr = f"{ani_after}_ani_context_ptr"
@@ -2834,21 +2834,21 @@ class CompleterTypeAniInfo(TypeAniInfo):
             f"struct {cpp_scope} {{",
             f"}};",
         ):
-            self.gen_async_on_fullfilled(target, on_fullfilled_name)
+            self.gen_async_on_fulfilled(target, on_fulfilled_name)
             self.gen_async_on_rejected(target, on_rejected_name)
             self.gen_async_free(target, free_name)
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
-            f"ani_long {ani_on_fullfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fullfilled_name});",
+            f"ani_long {ani_on_fulfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fulfilled_name});",
             f"ani_long {ani_on_rejected_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_rejected_name});",
             f"ani_long {ani_free_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{free_name});",
             f"ani_long {ani_context_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_ctx);",
             f"{cpp_copy}.m_ctx = nullptr;",
             f"ani_fn_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.completer_factory}", "llll:C{{std.core.Function2}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_on_fullfilled_ptr}, {ani_on_rejected_ptr}, {ani_free_ptr}, {ani_context_ptr});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.completer_factory}", "llll:C{{std.core.Function2}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_on_fulfilled_ptr}, {ani_on_rejected_ptr}, {ani_free_ptr}, {ani_context_ptr});',
         )
 
-    def gen_async_on_fullfilled(
+    def gen_async_on_fulfilled(
         self,
         target: CSourceWriter,
         name: str,
@@ -2924,10 +2924,10 @@ class FutureTypeAniInfo(TypeAniInfo):
     ):
         cpp_completer = f"{cpp_after}_cpp_completer"
         cpp_scope = f"{cpp_after}_cpp_scope"
-        on_fullfilled_name = "on_fullfilled"
+        on_fulfilled_name = "on_fulfilled"
         on_rejected_name = "on_rejected"
         free_name = "free"
-        ani_on_fullfilled_ptr = f"{cpp_after}_ani_on_fullfilled_ptr"
+        ani_on_fulfilled_ptr = f"{cpp_after}_ani_on_fulfilled_ptr"
         ani_on_rejected_ptr = f"{cpp_after}_ani_on_rejected_ptr"
         ani_free_ptr = f"{cpp_after}_ani_free_ptr"
         ani_context_ptr = f"{cpp_after}_ani_context_ptr"
@@ -2936,20 +2936,20 @@ class FutureTypeAniInfo(TypeAniInfo):
             f"struct {cpp_scope} {{",
             f"}};",
         ):
-            self.gen_async_on_fullfilled(target, on_fullfilled_name)
+            self.gen_async_on_fulfilled(target, on_fulfilled_name)
             self.gen_async_on_rejected(target, on_rejected_name)
             self.gen_async_free(target, free_name)
         target.writelns(
-            f"auto [{cpp_completer}, {cpp_after}] = ::taihe::make_contract<{self.expected_ty_cpp_name}>();",
-            f"ani_long {ani_on_fullfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fullfilled_name});",
+            f"auto [{cpp_completer}, {cpp_after}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
+            f"ani_long {ani_on_fulfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fulfilled_name});",
             f"ani_long {ani_on_rejected_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_rejected_name});",
             f"ani_long {ani_free_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{free_name});",
             f"ani_long {ani_context_ptr} = reinterpret_cast<ani_long>({cpp_completer}.m_ctx);",
             f"{cpp_completer}.m_ctx = nullptr;",
-            f'{env}->Function_Call_Void(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.future_completory}", "llllC{{std.core.Promise}}:"), {ani_on_fullfilled_ptr}, {ani_on_rejected_ptr}, {ani_free_ptr}, {ani_context_ptr}, {ani_value});',
+            f'{env}->Function_Call_Void(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.future_completory}", "llllC{{std.core.Promise}}:"), {ani_on_fulfilled_ptr}, {ani_on_rejected_ptr}, {ani_free_ptr}, {ani_context_ptr}, {ani_value});',
         )
 
-    def gen_async_on_fullfilled(
+    def gen_async_on_fulfilled(
         self,
         target: CSourceWriter,
         name: str,

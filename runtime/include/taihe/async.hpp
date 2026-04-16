@@ -147,7 +147,7 @@ template<typename Result>
 class future;
 
 template<typename Result>
-std::pair<completer<Result>, future<Result>> make_contract();
+std::pair<completer<Result>, future<Result>> make_async_pair();
 
 template<typename Result>
 class completer {
@@ -158,7 +158,7 @@ public:
     {
     }
 
-    friend std::pair<completer<Result>, future<Result>> make_contract<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
     completer(completer const &) = delete;
 
@@ -196,7 +196,7 @@ public:
     {
     }
 
-    friend std::pair<completer<Result>, future<Result>> make_contract<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
     future(future const &) = delete;
 
@@ -228,6 +228,12 @@ public:
         }
     }
 
+    template<typename Handler>
+    void on_complete(Handler &&handler) const
+    {
+        on_complete<Handler, Handler>(std::forward<Handler>(handler));
+    }
+
     bool is_ready() const
     {
         return m_ctx->is_ready();
@@ -235,7 +241,7 @@ public:
 };
 
 template<typename Result>
-std::pair<completer<Result>, future<Result>> make_contract()
+std::pair<completer<Result>, future<Result>> make_async_pair()
 {
     async_context<Result> *ctx = new async_context<Result>(2);
     return {
@@ -384,7 +390,7 @@ constexpr inline bool dependent_false_v = false;
 template<typename Next, typename Last, typename Processor>
 future<Next> then(future<Last> old, Processor &&processor)
 {
-    auto [com, fut] = make_contract<Next>();
+    auto [com, fut] = make_async_pair<Next>();
 
     struct ProcessHandler {
         Processor processor;
