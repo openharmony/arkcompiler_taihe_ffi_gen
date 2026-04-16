@@ -391,13 +391,13 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     BE_type = "_taihe_BusinessError"
     AC_type = "_taihe_AsyncCallback"
 
-    async_handler_on_fullfilled = "_taihe_asyncHandlerOnFullfilled"
+    async_handler_on_fulfilled = "_taihe_asyncHandlerOnFulfilled"
     async_handler_on_rejected = "_taihe_asyncHandlerOnRejected"
     async_handler_drop = "_taihe_asyncHandlerDrop"
     async_handler_registry = "_taihe_asyncHandlerRegistry"
     async_handler = "_taihe_AsyncHandler"
-    completer_factory = "_taihe_CompleterFactory"
-    future_completory = "_taihe_FutureCompletory"
+    completer_factory = "_taihe_completerFactory"
+    future_completory = "_taihe_futureCompletory"
 
     @property
     def mod(self) -> "ArkTsModule":
@@ -2522,7 +2522,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         result_cpp,
                     )
                     target.writelns(
-                        f"return {result_cpp};",
+                        f"return std::move({result_cpp});",
                     )
                 else:
                     target.writelns(
@@ -2570,7 +2570,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         result_cpp,
                     )
                     target.writelns(
-                        f"return {result_cpp};",
+                        f"return std::move({result_cpp});",
                     )
                 else:
                     target.writelns(
@@ -2743,6 +2743,11 @@ class CompleterTypeAniInfo(TypeAniInfo):
         self.ani_type = ANI_FN_OBJECT
         self.ets_type = EtsClassType("std.core.Function1")
 
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        self.expected_ty_cpp_name = (
+            f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>"
+        )
+
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
@@ -2757,8 +2762,6 @@ class CompleterTypeAniInfo(TypeAniInfo):
         ani_value: str,
         cpp_after: str,
     ):
-        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         cpp_future = f"{cpp_after}_cpp_future"
         cpp_handler_t = f"{cpp_after}_cpp_handler_t"
         with target.indented(
@@ -2769,7 +2772,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void handle_result(::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> cpp_result) const {{",
+                f"void operator()({self.expected_ty_cpp_name} cpp_result) const {{",
                 f"}}",
             ):
                 target.writelns(
@@ -2781,6 +2784,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"if (cpp_result) {{",
                     f"}}",
                 ):
+                    item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
                     item_ty_ani_info.into_ani_boxed(
                         target,
                         "env",
@@ -2804,7 +2808,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
                 )
         target.writelns(
-            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_contract<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
+            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
             f"{cpp_future}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
@@ -2816,7 +2820,79 @@ class CompleterTypeAniInfo(TypeAniInfo):
         cpp_value: str,
         ani_after: str,
     ):
-        raise NotImplementedError("CompleterType is not supported in ANI yet.")
+        cpp_copy = f"{ani_after}_cpp_copy"
+        cpp_scope = f"{ani_after}_cpp_scope"
+        on_fulfilled_name = "on_fulfilled"
+        on_rejected_name = "on_rejected"
+        free_name = "free"
+        ani_on_fulfilled_ptr = f"{ani_after}_ani_on_fulfilled_ptr"
+        ani_on_rejected_ptr = f"{ani_after}_ani_on_rejected_ptr"
+        ani_free_ptr = f"{ani_after}_ani_free_ptr"
+        ani_context_ptr = f"{ani_after}_ani_context_ptr"
+        pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
+        with target.indented(
+            f"struct {cpp_scope} {{",
+            f"}};",
+        ):
+            self.gen_async_on_fulfilled(target, on_fulfilled_name)
+            self.gen_async_on_rejected(target, on_rejected_name)
+            self.gen_async_free(target, free_name)
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_copy} = std::move({cpp_value});",
+            f"ani_long {ani_on_fulfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fulfilled_name});",
+            f"ani_long {ani_on_rejected_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_rejected_name});",
+            f"ani_long {ani_free_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{free_name});",
+            f"ani_long {ani_context_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_ctx);",
+            f"{cpp_copy}.m_ctx = nullptr;",
+            f"ani_fn_object {ani_after} = {{}};",
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.completer_factory}", "llll:C{{std.core.Function2}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_on_fulfilled_ptr}, {ani_on_rejected_ptr}, {ani_free_ptr}, {ani_context_ptr});',
+        )
+
+    def gen_async_on_fulfilled(
+        self,
+        target: CSourceWriter,
+        name: str,
+    ):
+        with target.indented(
+            f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref data) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+            )
+            item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+            item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
+            target.writelns(
+                f"ctx->emplace_result(std::move(cpp_data));",
+            )
+
+    def gen_async_on_rejected(
+        self,
+        target: CSourceWriter,
+        name: str,
+    ):
+        with target.indented(
+            f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref err) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, static_cast<ani_error>(err))));",
+            )
+
+    def gen_async_free(
+        self,
+        target: CSourceWriter,
+        name: str,
+    ):
+        with target.indented(
+            f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"if (ctx->dec_ref()) {{ delete ctx; }}",
+            )
 
 
 class FutureTypeAniInfo(TypeAniInfo):
@@ -2826,6 +2902,11 @@ class FutureTypeAniInfo(TypeAniInfo):
         self.t = t
         self.ani_type = ANI_OBJECT
         self.ets_type = EtsClassType("std.core.Promise")
+
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        self.expected_ty_cpp_name = (
+            f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>"
+        )
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2841,7 +2922,78 @@ class FutureTypeAniInfo(TypeAniInfo):
         ani_value: str,
         cpp_after: str,
     ):
-        raise NotImplementedError("FutureType is not supported in ANI yet.")
+        cpp_completer = f"{cpp_after}_cpp_completer"
+        cpp_scope = f"{cpp_after}_cpp_scope"
+        on_fulfilled_name = "on_fulfilled"
+        on_rejected_name = "on_rejected"
+        free_name = "free"
+        ani_on_fulfilled_ptr = f"{cpp_after}_ani_on_fulfilled_ptr"
+        ani_on_rejected_ptr = f"{cpp_after}_ani_on_rejected_ptr"
+        ani_free_ptr = f"{cpp_after}_ani_free_ptr"
+        ani_context_ptr = f"{cpp_after}_ani_context_ptr"
+        pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
+        with target.indented(
+            f"struct {cpp_scope} {{",
+            f"}};",
+        ):
+            self.gen_async_on_fulfilled(target, on_fulfilled_name)
+            self.gen_async_on_rejected(target, on_rejected_name)
+            self.gen_async_free(target, free_name)
+        target.writelns(
+            f"auto [{cpp_completer}, {cpp_after}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
+            f"ani_long {ani_on_fulfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fulfilled_name});",
+            f"ani_long {ani_on_rejected_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_rejected_name});",
+            f"ani_long {ani_free_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{free_name});",
+            f"ani_long {ani_context_ptr} = reinterpret_cast<ani_long>({cpp_completer}.m_ctx);",
+            f"{cpp_completer}.m_ctx = nullptr;",
+            f'{env}->Function_Call_Void(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.future_completory}", "llllC{{std.core.Promise}}:"), {ani_on_fulfilled_ptr}, {ani_on_rejected_ptr}, {ani_free_ptr}, {ani_context_ptr}, {ani_value});',
+        )
+
+    def gen_async_on_fulfilled(
+        self,
+        target: CSourceWriter,
+        name: str,
+    ):
+        with target.indented(
+            f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref data) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+            )
+            item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+            item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
+            target.writelns(
+                f"ctx->emplace_result(std::move(cpp_data));",
+            )
+
+    def gen_async_on_rejected(
+        self,
+        target: CSourceWriter,
+        name: str,
+    ):
+        with target.indented(
+            f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref err) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, static_cast<ani_error>(err))));",
+            )
+
+    def gen_async_free(
+        self,
+        target: CSourceWriter,
+        name: str,
+    ):
+        with target.indented(
+            f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"if (ctx->dec_ref()) {{ delete ctx; }}",
+            )
 
     @override
     def into_ani(
@@ -2851,9 +3003,6 @@ class FutureTypeAniInfo(TypeAniInfo):
         cpp_value: str,
         ani_after: str,
     ):
-        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        ani_completer = f"{ani_after}_ani_completer"
         cpp_handler_t = f"{ani_after}_cpp_handler_t"
         with target.indented(
             f"struct {cpp_handler_t} : ::taihe::dref_guard {{",
@@ -2863,7 +3012,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void handle_result(::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> cpp_result) const {{",
+                f"void operator()({self.expected_ty_cpp_name} cpp_result) {{",
                 f"}}",
             ):
                 target.writelns(
@@ -2874,6 +3023,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                     f"if (cpp_result) {{",
                     f"}}",
                 ):
+                    item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
                     item_ty_ani_info.into_ani_boxed(
                         target,
                         "env",
@@ -2881,7 +3031,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                         "ani_result",
                     )
                     target.writelns(
-                        f"env->PromiseResolver_Resolve(reinterpret_cast<ani_resolver>(this->ref), ani_result);",
+                        f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "resolveImpl", nullptr), ani_result, false);',
                     )
                 with target.indented(
                     f"else {{",
@@ -2889,13 +3039,12 @@ class FutureTypeAniInfo(TypeAniInfo):
                 ):
                     target.writelns(
                         f"ani_error ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
-                        f"env->PromiseResolver_Reject(reinterpret_cast<ani_resolver>(this->ref), ani_err);",
+                        f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "rejectImpl", nullptr), ani_err, false);',
                     )
         target.writelns(
             f"ani_object {ani_after} = {{}};",
-            f"ani_resolver {ani_completer} = {{}};",
-            f"{env}->Promise_New(&{ani_completer}, &{ani_after});",
-            f"{cpp_value}.on_complete<{cpp_handler_t}>({env}, reinterpret_cast<ani_ref>({ani_completer}));",
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Promise"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "<ctor>", ":"), &{ani_after});',
+            f"{cpp_value}.on_complete<{cpp_handler_t}>(env, {ani_after});",
         )
 
 

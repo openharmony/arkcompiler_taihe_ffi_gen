@@ -66,10 +66,14 @@ public:
     }
 };
 
-class dref_guard : public sref_guard {
+class dref_guard {
+protected:
+    ani_ref ref = nullptr;
+
 public:
-    dref_guard(ani_env *env, ani_ref val) : sref_guard(env, val)
+    dref_guard(ani_env *env, ani_ref val)
     {
+        env->GlobalReference_Create(val, &ref);
     }
 
     ~dref_guard()
@@ -78,10 +82,15 @@ public:
         ani_env *env = guard.get_env();
         env->GlobalReference_Delete(ref);
     }
+
+    dref_guard(dref_guard const &) = delete;
+    dref_guard &operator=(dref_guard const &) = delete;
+    dref_guard(dref_guard &&) = delete;
+    dref_guard &operator=(dref_guard &&) = delete;
 };
 
 template<typename AniRefGuard>
-struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, AniRefGuard>>> {
+struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<dref_guard, AniRefGuard>>> {
     bool operator()(data_view lhs, data_view rhs) const
     {
         auto lhs_as_ani = ::taihe::platform::ani::weak::AniObject(lhs);
@@ -99,7 +108,7 @@ struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, A
 };
 
 template<typename AniRefGuard>
-struct hash_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, AniRefGuard>>> {
+struct hash_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<dref_guard, AniRefGuard>>> {
     std::size_t operator()(data_view val) const
     {
         auto val_as_ani = ::taihe::platform::ani::weak::AniObject(val);
