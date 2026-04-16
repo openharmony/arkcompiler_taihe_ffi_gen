@@ -2804,7 +2804,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
                 )
         target.writelns(
-            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_contract<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
+            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_async_pair<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>();",
             f"{cpp_future}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
