@@ -270,11 +270,11 @@ class AniPackageSourceGenerator:
                 pkg_ani_info.ns.mod.callback_invoke,
                 f"{utils_ns}::{callback_invoke_cpp_name}",
             )
-            async_handler_on_fullfilled_cpp_name = "async_handler_on_fullfilled"
-            self.gen_async_handler_on_fullfilled(async_handler_on_fullfilled_cpp_name)
+            async_handler_on_fulfilled_cpp_name = "async_handler_on_fulfilled"
+            self.gen_async_handler_on_fulfilled(async_handler_on_fulfilled_cpp_name)
             mod_member_infos.setdefault(
-                pkg_ani_info.ns.mod.async_handler_on_fullfilled,
-                f"{utils_ns}::{async_handler_on_fullfilled_cpp_name}",
+                pkg_ani_info.ns.mod.async_handler_on_fulfilled,
+                f"{utils_ns}::{async_handler_on_fulfilled_cpp_name}",
             )
             async_handler_on_rejected_cpp_name = "async_handler_on_rejected"
             self.gen_async_handler_on_rejected(async_handler_on_rejected_cpp_name)
@@ -541,13 +541,13 @@ class AniPackageSourceGenerator:
                 f"return reinterpret_cast<{return_ty_ani_name} (*)(ani_env *env, ani_long ani_vtbl_ptr, ani_long ani_data_ptr, {params_ani_str})>(ani_invoke_ptr)(env, ani_vtbl_ptr, ani_data_ptr, {args_ani_str});",
             )
 
-    def gen_async_handler_on_fullfilled(self, name: str):
+    def gen_async_handler_on_fulfilled(self, name: str):
         with self.target.indented(
-            f"static void {name}([[maybe_unused]] ani_env *env, ani_long ani_on_fullfilled_ptr, ani_long ani_context_ptr, ani_ref data) {{",
+            f"static void {name}([[maybe_unused]] ani_env *env, ani_long ani_on_fulfilled_ptr, ani_long ani_context_ptr, ani_ref data) {{",
             f"}}",
         ):
             self.target.writelns(
-                f"reinterpret_cast<void (*)(ani_env *env, ani_long ani_context_ptr, ani_ref data)>(ani_on_fullfilled_ptr)(env, ani_context_ptr, data);",
+                f"reinterpret_cast<void (*)(ani_env *env, ani_long ani_context_ptr, ani_ref data)>(ani_on_fulfilled_ptr)(env, ani_context_ptr, data);",
             )
 
     def gen_async_handler_on_rejected(self, name: str):
@@ -806,7 +806,7 @@ class AniIfaceImplGenerator:
                         result_cpp,
                     )
                     self.target.writelns(
-                        f"return {result_cpp};",
+                        f"return std::move({result_cpp});",
                     )
                 else:
                     self.target.writelns(
@@ -859,7 +859,7 @@ class AniIfaceImplGenerator:
                         result_cpp,
                     )
                     self.target.writelns(
-                        f"return {result_cpp};",
+                        f"return std::move({result_cpp});",
                     )
                 else:
                     self.target.writelns(

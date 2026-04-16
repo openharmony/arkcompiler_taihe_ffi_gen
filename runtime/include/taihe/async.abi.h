@@ -20,7 +20,7 @@
 
 union TAsyncHandlerStorage {
     void *ptr;
-    char buf[sizeof(void *) * 4];
+    char buf[sizeof(void *)];
 };
 
 enum TAsyncContextFlags : uint32_t {
@@ -34,8 +34,8 @@ struct TAsyncContext {
     uint32_t flags;
 
     union TAsyncHandlerStorage storage;
-    void (*process_handler_ptr)(union TAsyncHandlerStorage storage, void *resptr);
-    void (*cleanup_handler_ptr)(union TAsyncHandlerStorage storage);
+    void (*process_handler_ptr)(union TAsyncHandlerStorage *storage, void *resptr);
+    void (*cleanup_handler_ptr)(union TAsyncHandlerStorage *storage);
 
     char buffer[];
 };

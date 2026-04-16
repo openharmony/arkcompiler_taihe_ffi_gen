@@ -39,8 +39,8 @@ struct async_context {
     uint32_t flags;
 
     TAsyncHandlerStorage storage;
-    void (*process_handler_ptr)(TAsyncHandlerStorage storage, Result *result_ptr);
-    void (*cleanup_handler_ptr)(TAsyncHandlerStorage storage);
+    void (*process_handler_ptr)(TAsyncHandlerStorage *storage, Result *result_ptr);
+    void (*cleanup_handler_ptr)(TAsyncHandlerStorage *storage);
 
     ResultBuffer buffer;
 
@@ -66,12 +66,12 @@ struct async_context {
 
     void process_handler()
     {
-        process_handler_ptr(storage, &buffer.result);
+        process_handler_ptr(&storage, &buffer.result);
     }
 
     void cleanup_handler()
     {
-        cleanup_handler_ptr(storage);
+        cleanup_handler_ptr(&storage);
     }
 
     template<typename... Args>
@@ -93,11 +93,11 @@ struct async_context {
                       "Handler type is too large for small storage");
         TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
         new (&storage.buf) SmallConstHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage storage, Result *result_ptr) {
-            reinterpret_cast<SmallConstHandler const *>(&storage.buf)->handle_result(std::forward<Result>(*result_ptr));
+        process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
+            (*reinterpret_cast<SmallConstHandler *>(&storage->buf))(std::forward<Result>(*result_ptr));
         };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage storage) {
-            reinterpret_cast<SmallConstHandler const *>(&storage.buf)->~SmallConstHandler();
+        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
+            reinterpret_cast<SmallConstHandler *>(&storage->buf)->~SmallConstHandler();
         };
 
         uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
@@ -111,11 +111,11 @@ struct async_context {
     {
         TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
         storage.ptr = new LargeMutableHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage storage, Result *result_ptr) {
-            reinterpret_cast<LargeMutableHandler *>(storage.ptr)->handle_result(std::forward<Result>(*result_ptr));
+        process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
+            (*reinterpret_cast<LargeMutableHandler *>(storage->ptr))(std::forward<Result>(*result_ptr));
         };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage storage) {
-            delete reinterpret_cast<LargeMutableHandler *>(storage.ptr);
+        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
+            delete reinterpret_cast<LargeMutableHandler *>(storage->ptr);
         };
 
         uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
@@ -147,7 +147,7 @@ template<typename Result>
 class future;
 
 template<typename Result>
-std::pair<completer<Result>, future<Result>> make_contract();
+std::pair<completer<Result>, future<Result>> make_async_pair();
 
 template<typename Result>
 class completer {
@@ -158,7 +158,7 @@ public:
     {
     }
 
-    friend std::pair<completer<Result>, future<Result>> make_contract<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
     completer(completer const &) = delete;
 
@@ -196,7 +196,7 @@ public:
     {
     }
 
-    friend std::pair<completer<Result>, future<Result>> make_contract<Result>();
+    friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
     future(future const &) = delete;
 
@@ -228,6 +228,12 @@ public:
         }
     }
 
+    template<typename Handler>
+    void on_complete(Handler &&handler) const
+    {
+        on_complete<Handler, Handler>(std::forward<Handler>(handler));
+    }
+
     bool is_ready() const
     {
         return m_ctx->is_ready();
@@ -235,7 +241,7 @@ public:
 };
 
 template<typename Result>
-std::pair<completer<Result>, future<Result>> make_contract()
+std::pair<completer<Result>, future<Result>> make_async_pair()
 {
     async_context<Result> *ctx = new async_context<Result>(2);
     return {
@@ -316,7 +322,7 @@ Result wait(future<Result> fut)
         {
         }
 
-        void handle_result(Result &&result) const
+        void operator()(Result &&result) const
         {
             std::unique_lock<std::mutex> lock(ctx.mtx);
             ctx.waited.emplace(std::forward<Result>(result));
@@ -351,7 +357,7 @@ Result race(std::initializer_list<future<Result>> futs)
         {
         }
 
-        void handle_result(Result &&result) const
+        void operator()(Result &&result) const
         {
             std::unique_lock<std::mutex> lock(ptr->mtx);
             if (!ptr->waited.has_value()) {
@@ -384,7 +390,7 @@ constexpr inline bool dependent_false_v = false;
 template<typename Next, typename Last, typename Processor>
 future<Next> then(future<Last> old, Processor &&processor)
 {
-    auto [com, fut] = make_contract<Next>();
+    auto [com, fut] = make_async_pair<Next>();
 
     struct ProcessHandler {
         Processor processor;
@@ -402,13 +408,13 @@ future<Next> then(future<Last> old, Processor &&processor)
             {
             }
 
-            void handle_result(Next &&result) const
+            void operator()(Next &&result) const
             {
                 com.complete(std::forward<Next>(result));
             }
         };
 
-        void handle_result(Last &&result)
+        void operator()(Last &&result)
         {
             if constexpr (std::is_invocable_r_v<future<Next>, Processor, Last>) {
                 this->processor(std::forward<Last>(result))
