@@ -67,7 +67,7 @@ void processUserTypeWithCallback(::hello::weak::UserType user, int64_t ms, ::tai
         {
         }
 
-        void handle_result(expected_type res) const
+        void operator()(expected_type res) const
         {
             if (res) {
                 std::cout << "[Process UserType With Callback] UserType method completed successfully." << std::endl;
@@ -111,7 +111,7 @@ taihe::future<expected_type> processUserTypeReturnsPromise(::hello::weak::UserTy
         {
         }
 
-        void handle_result(expected_type res) const
+        void operator()(expected_type res) const
         {
             if (res) {
                 std::cout << "[Process UserType Returns Promise] UserType method completed successfully." << std::endl;

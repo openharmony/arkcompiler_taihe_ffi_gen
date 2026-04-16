@@ -2772,7 +2772,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void handle_result({self.expected_ty_cpp_name} cpp_result) const {{",
+                f"void operator()({self.expected_ty_cpp_name} cpp_result) const {{",
                 f"}}",
             ):
                 target.writelns(
@@ -3012,7 +3012,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void handle_result({self.expected_ty_cpp_name} cpp_result) {{",
+                f"void operator()({self.expected_ty_cpp_name} cpp_result) {{",
                 f"}}",
             ):
                 target.writelns(

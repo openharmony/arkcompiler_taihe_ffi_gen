@@ -139,7 +139,7 @@ void run() {
 
     // 方式一：直接设置回调处理器
     struct MyHandler {
-        void handle_result(taihe::string&& result) const {
+        void operator()(taihe::string&& result) const {
             // 在这里处理最终结果
             std::cout << "Result received: " << result << std::endl;
         }

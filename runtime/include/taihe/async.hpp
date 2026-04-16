@@ -94,7 +94,7 @@ struct async_context {
         TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
         new (&storage.buf) SmallConstHandler(std::forward<Args>(args)...);
         process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
-            reinterpret_cast<SmallConstHandler *>(&storage->buf)->handle_result(std::forward<Result>(*result_ptr));
+            (*reinterpret_cast<SmallConstHandler *>(&storage->buf))(std::forward<Result>(*result_ptr));
         };
         cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
             reinterpret_cast<SmallConstHandler *>(&storage->buf)->~SmallConstHandler();
@@ -112,7 +112,7 @@ struct async_context {
         TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
         storage.ptr = new LargeMutableHandler(std::forward<Args>(args)...);
         process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
-            reinterpret_cast<LargeMutableHandler *>(storage->ptr)->handle_result(std::forward<Result>(*result_ptr));
+            (*reinterpret_cast<LargeMutableHandler *>(storage->ptr))(std::forward<Result>(*result_ptr));
         };
         cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
             delete reinterpret_cast<LargeMutableHandler *>(storage->ptr);
@@ -316,7 +316,7 @@ Result wait(future<Result> fut)
         {
         }
 
-        void handle_result(Result &&result) const
+        void operator()(Result &&result) const
         {
             std::unique_lock<std::mutex> lock(ctx.mtx);
             ctx.waited.emplace(std::forward<Result>(result));
@@ -351,7 +351,7 @@ Result race(std::initializer_list<future<Result>> futs)
         {
         }
 
-        void handle_result(Result &&result) const
+        void operator()(Result &&result) const
         {
             std::unique_lock<std::mutex> lock(ptr->mtx);
             if (!ptr->waited.has_value()) {
@@ -402,13 +402,13 @@ future<Next> then(future<Last> old, Processor &&processor)
             {
             }
 
-            void handle_result(Next &&result) const
+            void operator()(Next &&result) const
             {
                 com.complete(std::forward<Next>(result));
             }
         };
 
-        void handle_result(Last &&result)
+        void operator()(Last &&result)
         {
             if constexpr (std::is_invocable_r_v<future<Next>, Processor, Last>) {
                 this->processor(std::forward<Last>(result))
