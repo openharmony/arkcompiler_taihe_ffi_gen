@@ -1,21 +1,49 @@
-# Taihe 跨语言接口生成工具
+# Taihe 跨语言接口定义与代码生成工具
 
 ## 简介
 
-Taihe 是一个多语言系统接口编程模型，为 OpenHarmony 生态提供跨语言接口定义、桥接代码生成的能力。Taihe 作为连接不同编程语言（如 ArkTS、C++、C）的桥梁，通过一个统一的接口定义语言（IDL）和自动化的代码生成流程，简化跨语言开发的复杂性，提高了接口演进的灵活性和开发效率，并实现 API 的发布方与消费方在二进制级别的隔离。
+Taihe 是一个面向 OpenHarmony 生态的跨语言接口定义与代码生成工具。Taihe 作为连接不同编程语言（如 ArkTS、C++、C）的桥梁，通过一个统一的接口定义语言（IDL）和自动化的代码生成流程，简化跨语言开发的复杂性，提高了接口演进的灵活性和开发效率，并实现 API 的发布方与消费方在二进制级别的隔离。
 
 **图1** Taihe 架构图
 
 ![Taihe](./docs/public/figures/architecture_diagram.svg)
 
-如图，使用 Taihe 工具时，开发者首先编写 IDL 文件描述跨语言接口，运行 Taihe 编译器生成多种语言之间的桥接代码，然后在生成的框架中填充实现具体的业务逻辑代码，最后通过 Taihe 提供的相关构建模板，结合 Taihe 运行时库编译链接，得到最终的可执行产物（如动态库、字节码等）。
+如图，Taihe 工具由 **IDL 编译组件**和**项目构建组件**两大内部组件构成，并依赖外部运行时提供语言桥接能力。使用 Taihe 工具时，开发者首先编写 IDL 文件描述跨语言接口，运行 Taihe 编译器生成多种语言之间的桥接代码，然后在生成的框架中填充实现具体的业务逻辑代码，最后通过 Taihe 提供的相关构建模板，结合 Taihe 运行时库编译链接，得到最终的可执行产物（如动态库、字节码等）。
+
+### 组件说明
+
+**IDL 编译组件**
+
+Taihe IDL 编译器负责将 `.taihe` 接口描述文件解析并编译为目标语言代码。编译器内部由三部分组成：
+
+- **编译器前端**：进行词法分析和语法分析，将 IDL 源文件转换为编译器内部的中间表示（IR）。
+- **编译器核心**：对中间表示进行类型检查、名称解析和语义验证，确保接口定义正确无误。
+- **编译器后端**：采用插件化设计，将经过验证的中间表示转换为目标语言代码。每个代码生成后端以插件形式存在，负责一个独立的代码生成职责，后端之间通过声明依赖关系自动组合——用户只需指定最终需要的后端，编译器会自动启用其所依赖的全部后端。当前提供以下代码生成后端：
+  - **C ABI 代码生成后端**：生成与语言无关的 C ABI 层头文件和源文件，是所有其它语言后端的基础。
+  - **C++ 投影和模板代码生成后端**：在 C ABI 之上生成 C++ 类型投影、接口提供方实现模板和消费方使用的头文件。
+  - **ANI → ArkTS-STA 桥接代码生成后端**：生成 ANI 桥接代码和 ArkTS 静态类型投影代码，使 ArkTS-STA 代码能够调用 C++ 实现。
+  - **NAPI → ArkTS-DYN 桥接代码生成后端**：生成 NAPI 桥接代码和 ArkTS 动态类型投影代码，使 ArkTS-DYN 代码能够调用 C++ 实现。
+
+**项目构建组件**
+
+- **构建模板**：Taihe 提供了适配不同构建系统的项目模板，帮助用户将生成的代码无缝集成到现有项目的构建流程中。包括适用于 OpenHarmony 平台的 **GN 模板**和适用于本地开发测试的 **CMake 模板**。
+- **运行时**：Taihe 运行时库为跨语言调用提供底层支撑，包括实现与语言无关的二进制接口约定的 **C ABI 运行时**，以及在其之上提供 C++ 风格类型封装（如 `string`、`array`、`map` 等容器类型）和引用计数内存管理的 **C++ 运行时**。
+
+**外部依赖**
+
+Taihe 生成的桥接代码在运行时依赖以下外部组件：
+
+- **arkcompiler_runtime_core**：方舟编译器运行时核心，为 ArkTS-STA 提供 ANI FFI 能力，是 ANI 桥接代码的运行时基础。
+- **arkcompiler_ets_runtime**：方舟编译器 ETS 运行时，为 ArkTS-DYN 提供 NAPI FFI 能力，是 NAPI 桥接代码的运行时基础。
+
+以上各组件的详细设计文档参见 [Taihe 内部设计文档](#taihe-内部设计文档) 一节。
 
 ## 主要目录结构
 
 
 ```
 arkcompiler/taihe_ffi_gen
-├── compiler/              # - IDL 编译器（对应图中浅蓝色部分）
+├── compiler/              # - IDL 编译组件
 │   ├── Taihe.g4           #     - ANTLR 语法定义
 │   └── taihe/             #
 │       ├── utils/         #     - 编译器工具库（错误处理、日志、辅助函数等）
@@ -23,29 +51,29 @@ arkcompiler/taihe_ffi_gen
 │       ├── driver/        #     - 编译器整体流程驱动
 │       ├── parse/         #     - 编译器前端（词法分析、语法分析）
 │       ├── semantics/     #     - 编译器核心（中间表示的类型系统、语义分析）
-│       └── codegen/       #     - 代码生成后端
-│           ├── abi/       #         - C ABI 代码
-│           ├── cpp/       #         - C++ 实现模板
-│           ├── ani/       #         - ANI 桥接代码 + ArkTS-STA 投影代码
-│           └── napi/      #         - NAPI 桥接代码 + ArkTS-DYN 投影代码
+│       └── codegen/       #     - 编译器后端（代码生成）
+│           ├── abi/       #         - C ABI 代码生成后端
+│           ├── cpp/       #         - C++ 投影和模板代码生成后端
+│           ├── ani/       #         - ANI → ArkTS-STA 桥接代码生成后端
+│           └── napi/      #         - NAPI → ArkTS-DYN 桥接代码生成后端
 ├── stdlib/                #     - Taihe 标准库（编译器内置的 IDL 定义文件）
-├── runtime/               # - 运行时及构建模板（对应图中浅绿色部分）
+├── runtime/               # - 项目构建组件：运行时及构建模板
 │   ├── include/           #     - C ABI 及 C++ 运行时头文件
 │   │   └── taihe/         #
 │   └── src/               #     - 运行时实现
 ├── BUILD.gn               #     - GN 构建模板（OpenHarmony 场景）
-├── cmake/                 #     - CMake 构建工具（本地开发/测试场景）
-├── test/                  # - 测试项目
-├── cookbook/              # - 示例项目
+├── cmake/                 #     - CMake 构建模板（本地开发/测试场景）
+├── test/                  # - 测试工程
+├── cookbook/              # - 示例工程
 └── docs/                  # - 文档
     ├── public/            #     - 面向 Taihe 使用者的文档
     │   ├── spec/          #         - IDL 语言规范
-    │   ├── backend-cpp/   #         - C++ 后端文档
-    │   ├── backend-ani/   #         - ANI/ArkTS 后端文档
-    │   └── backend-napi/  #         - NAPI 后端文档
-    └── internal/          #     - 面向 Taihe 开发者的内部文档
-        ├── compiler/      #         - 编译器开发文档
-        └── runtime/       #         - 运行时开发文档
+    │   ├── backend-cpp/   #         - C++ 开发指南
+    │   ├── backend-ani/   #         - ArkTS-STA / ANI 开发指南
+    │   └── backend-napi/  #         - ArkTS-DYN / NAPI 开发指南
+    └── internal/          #     - Taihe 内部设计文档
+        ├── compiler/      #         - 编译器设计文档
+        └── runtime/       #         - 运行时设计文档
 ```
 
 ## 约束
@@ -75,7 +103,7 @@ OpenHarmony 环境下的编译命令如下：
 Taihe 提供了以下两个命令行工具：
 
 - **`taihec`**：核心编译器，用于解析 Taihe IDL 文件并生成目标语言代码
-- **`taihe-tryit`**：集成测试工具，用于快速创建、生成、编译和运行测试项目
+- **`taihe-tryit`**：集成测试工具，用于快速创建、生成、编译和运行测试工程
 
 具体使用说明和开发流程请参考 [Taihe 命令行工具文档](/docs/public/CliReference.md)。
 
@@ -83,30 +111,38 @@ Taihe 提供了以下两个命令行工具：
 
 具体请参考 [Taihe IDL 语言规范](docs/public/spec/IdlReference.md)。
 
-### 各后端使用指南
+### 目标语言开发指南
 
-**C++ 后端**
+Taihe 支持将 C++ 实现的接口暴露给不同的目标语言调用。下面按目标语言分类列出了相关文档。如果是初次使用 Taihe 进行跨语言开发，建议从快速入门教程开始。
+
+**ArkTS-STA（通过 ANI 桥接）**
+
+适用于将 C++ 实现暴露给 ArkTS 静态类型代码调用的场景。
+
+- [快速入门](docs/public/backend-ani/AniQuickStart.md)：使用 Taihe 定义接口并在 ArkTS-STA 中调用的快速入门教程（以集成测试场景为例）
+- [生成代码说明](docs/public/backend-ani/AniGeneratedCode.md)：Taihe 编译器为 ANI/ArkTS 生成的桥接代码和 ArkTS 投影代码的结构与内容说明
+- [`.d.ts` 文件与 Taihe IDL 间的映射关系](docs/public/backend-ani/DtsToIdlConversion.md)：根据已有的 ArkTS-STA `.d.ts` 文件来编写 Taihe IDL 文件的说明文档，帮助用户理解如何将现有的 ArkTS 接口定义转换为 Taihe IDL 定义
+- [ArkTS 通用注解](docs/public/spec/supported-attributes/ArkTSAttributes.md) 和 [ArkTS-STA 特有注解](docs/public/spec/supported-attributes/AniAttributes.md)：ANI/ArkTS 支持的 Taihe IDL 注解列表及其说明
+- [示例工程和教程](cookbook/quick_ref/README.md)：按照特性分类的 ANI/ArkTS 示例工程和教程
+
+**ArkTS-DYN（通过 NAPI 桥接）**
+
+适用于将 C++ 实现暴露给 ArkTS 动态类型代码调用的场景。
+
+- [快速入门](docs/public/backend-napi/NapiQuickStart.md)：使用 Taihe 定义接口并在 ArkTS-DYN 中调用的快速入门教程（以集成测试场景为例）
+- [使用指南](docs/public/backend-napi/NapiUsageGuide.md)：Taihe IDL 中定义的接口和数据结构在 ArkTS/NAPI 侧的使用说明，包括接口实现、数据类型映射、Taihe NAPI 运行时库的使用等内容
+- [ArkTS 通用注解](docs/public/spec/supported-attributes/ArkTSAttributes.md) 和 [ArkTS-DYN 特有注解](docs/public/spec/supported-attributes/NapiAttributes.md)：NAPI/ArkTS 支持的 Taihe IDL 注解列表及其说明
+
+**C++**
+
+适用于 C++ 模块之间通过 Taihe 进行接口解耦的场景。
 
 - [C++ 使用指南](docs/public/backend-cpp/CppUsageGuide.md)：Taihe IDL 中定义的接口和数据结构在 C++ 侧的使用说明，包括接口实现、数据类型映射、Taihe C++ 运行时库的使用等内容
-- [生成代码说明](docs/public/backend-cpp/CppGeneratedCode.md)：Taihe 编译器为 C++ 后端生成的代码结构和内容说明
+- [生成代码说明](docs/public/backend-cpp/CppGeneratedCode.md)：Taihe 编译器为 C++ 生成的代码结构和内容说明
 
-**ArkTS/ANI 后端**
+## Taihe 内部设计文档
 
-- [Taihe ArkTS/ANI 快速入门](docs/public/backend-ani/AniQuickStart.md)：使用 Taihe 定义接口并在 ArkTS-STA 中调用的快速入门教程（以集成测试场景为例）
-- [生成代码说明](docs/public/backend-ani/AniGeneratedCode.md)：Taihe 编译器为 ANI/ArkTS 后端生成的桥接代码和 ArkTS 投影代码的结构与内容说明
-- [`.d.ts` 文件与 Taihe IDL 间的映射关系](docs/public/backend-ani/DtsToIdlConversion.md)：根据已有的 ArkTS-STA `.d.ts` 文件来编写 Taihe IDL 文件的说明文档，帮助用户理解如何将现有的 ArkTS 接口定义转换为 Taihe IDL 定义
-- [ArkTS 通用注解](docs/public/spec/supported-attributes/ArkTSAttributes.md) 和 [ArkTS-STA 特有注解](docs/public/spec/supported-attributes/AniAttributes.md)：ANI/ArkTS 后端支持的 Taihe IDL 注解列表及其说明
-- [示例项目和教程](cookbook/quick_ref/README.md)：按照特性分类的 ANI/ArkTS 示例项目和教程
-
-**ArkTS/NAPI 后端**
-
-- [Taihe ArkTS/NAPI 快速入门](docs/public/backend-napi/NapiQuickStart.md)：使用 Taihe 定义接口并在 ArkTS-DYN 中调用的快速入门教程（以集成测试场景为例）
-- [使用指南](docs/public/backend-napi/NapiUsageGuide.md)：Taihe IDL 中定义的接口和数据结构在 ArkTS/NAPI 侧的使用说明，包括接口实现、数据类型映射、Taihe NAPI 运行时库的使用等内容
-- [ArkTS 通用注解](docs/public/spec/supported-attributes/ArkTSAttributes.md) 和 [ArkTS-DYN 特有注解](docs/public/spec/supported-attributes/NapiAttributes.md)：NAPI/ArkTS 后端支持的 Taihe IDL 注解列表及其说明
-
-## 开发者文档
-
-以下文档面向 Taihe 编译器和运行时的开发者，包含编译器的架构设计、核心算法、数据结构以及 Taihe 定义的 ABI 规范等内容：
+以下文档面向 Taihe 项目的代码贡献者，包含编译器的架构设计、核心算法、数据结构以及 Taihe 定义的 ABI 规范等内容：
 
 **编译器相关**
 
@@ -125,4 +161,6 @@ Taihe 提供了以下两个命令行工具：
 
 [**arkcompiler_taihe_ffi_gen**](https://gitcode.com/openharmony-sig/arkcompiler_taihe_ffi_gen)
 
-[arkcompiler\_runtime\_core](https://gitcode.com/openharmony/arkcompiler_runtime_core)
+[arkcompiler_runtime_core](https://gitcode.com/openharmony/arkcompiler_runtime_core)
+
+[arkcompiler_ets_runtime](https://gitcode.com/openharmony/arkcompiler_ets_runtime)

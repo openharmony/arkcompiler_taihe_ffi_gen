@@ -37,36 +37,44 @@ taihec idl/*.taihe -Ogenerated -Gani-bridge -Gcpp-author \
 
 ### 1. 创建项目
 
-运行以下命令创建一个新的样例目录：
+运行以下命令在 `test/my_ani_test` 目录下创建一个新的测试项目：
 
 ```sh
-taihe-tryit create --user sts path/to/demo
+taihe-tryit create --user sts test/my_ani_test
 ```
 
 生成的标准目录结构如下：
 
 ```
-demo/
+test/my_ani_test/
 ├── idl/                            # Taihe IDL 文件目录
-│   └── hello.taihe
+│   └── hello.taihe                 # 示例 IDL 文件
 ├── author/                         # C++ 接口提供者侧代码目录
 │   ├── include/
 │   └── src/
 │       ├── hello.impl.cpp          # hello.taihe 的 C++ 实现
 │       └── ani_constructor.cpp     # ANI 注册文件
 └── user/                           # 接口消费者侧代码目录
-    └── main.ets                    # 测试入口
+    └── main.ets                    # ArkTS 测试代码
 ```
 
-### 2. 生成代码
+### 2. 编写 IDL
 
-运行以下命令生成桥接代码：
+在 `idl` 目录下的 `hello.taihe` 文件中定义一个简单的接口（语法参考 [IDL 语言规范](../spec/IdlReference.md)）：
+
+```
+function add(a: i32, b: i32): i32;
+```
+
+### 3. 生成代码
+
+编写好 IDL 后，运行以下命令生成 C++ 实现所需的模板代码和 ANI 桥接代码：
 
 ```sh
-taihe-tryit generate --user sts path/to/demo
+taihe-tryit generate --user sts test/my_ani_test
 ```
 
-生成的 `generated` 目录结构如下：
+执行后，会在测试项目目录下生成一个 `generated` 目录，包含自动生成的桥接代码和头文件：
 
 ```
 generated/
@@ -88,22 +96,14 @@ generated/
     └── hello.impl.cpp
 ```
 
-也可以尝试修改 `hello.taihe`，按照 [Taihe IDL 语言规范](../spec/IdlReference.md) 编写自己的接口描述文件并进行生成。
-
-### 3. 实现接口
+### 4. 实现接口
 
 参考 `generated/temp` 目录下的模板文件，在 `author/src` 目录下编写 C++ 实现代码。
-
-**示例 IDL（`idl/hello.taihe`）：**
-
-```
-function add(a: i32, b: i32): i32;
-```
 
 **示例实现（`author/src/hello.impl.cpp`）：**
 
 ```cpp
-#include "hello.impl.hpp"
+#include <hello.impl.hpp>
 
 int32_t add(int32_t a, int32_t b) {
     return a + b;
@@ -112,12 +112,37 @@ int32_t add(int32_t a, int32_t b) {
 TH_EXPORT_CPP_API_add(add);
 ```
 
+此外，还需要在 `author/src/ani_constructor.cpp` 中注册该模块：
+
+```cpp
+#include <ani.h>
+
+#include <hello.ani.hpp>
+
+ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
+{
+    ani_env *env;
+    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {
+        return ANI_ERROR;
+    }
+    if (ANI_OK != hello::ANIRegister(env)) {  // 将 hello 模块下的所有接口注册到 ANI 环境中
+        return ANI_ERROR;
+    }
+    *result = ANI_VERSION_1;
+    return ANI_OK;
+}
+```
+
+### 5. 编写测试代码
+
+在 `user/main.ets` 中编写 ArkTS 测试代码调用该模块下的接口，注意需要先使用 `loadLibrary` 将编译出的 ANI 动态链接库加载到 ArkTS 环境中，加载时的名称由项目目录名决定。
+
 **示例测试（`user/main.ets`）：**
 
 ```typescript
-import * as hello from "hello";
+import * as hello from "hello";  // 导入自动生成的 ArkTS 模块
 
-loadLibrary("hello");
+loadLibrary("my_ani_test");  // 加载编译出的 ANI 动态链接库
 
 function main() {
     let result = hello.add(1, 2);
@@ -125,22 +150,18 @@ function main() {
 }
 ```
 
-### 4. 编译运行
+### 6. 编译运行
 
 运行以下命令编译并执行测试：
 
 ```sh
-taihe-tryit test --user sts path/to/demo
+taihe-tryit build --user sts test/my_ani_test
 ```
 
-或者分步执行：
+执行后可以看到控制台输出：
 
-```sh
-# 仅生成代码
-taihe-tryit generate --user sts path/to/demo
-
-# 仅编译运行（不重新生成）
-taihe-tryit build --user sts path/to/demo
+```
+1 + 2 = 3
 ```
 
 ---

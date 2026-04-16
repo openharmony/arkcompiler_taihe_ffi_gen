@@ -177,12 +177,12 @@ taihe-tryit [mode] [test_dir] [options ...]
                    │   ├── src/       # 实现代码
                    │   ├── temp/      # 临时文件
                    │   ├── proxy/     # 代理 ts 实现文件（用户需要时生成）
-                   |   └── member_test.d.ts   # 声明文件
+                   │   └── member_test.d.ts   # 声明文件
                    └── idl/
                        └── member_test.ohidl  # 源文件
    ```
 
-4. **书写 .cpp 文件**
+4. **编写接口实现**
    运行 taihec 命令会在 `memberTest/entry/src/main/generated/temp` 目录下生成 cpp 实现文件模板 `membertest_test.impl.cpp`，需要用户将其拷贝到存放实现文件的目录中并手动填写实现逻辑
 
 5. **将生成文件加入编译流程**
