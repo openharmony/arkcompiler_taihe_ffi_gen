@@ -38,7 +38,7 @@ using expected_type = ::taihe::expected<::taihe::string, ::taihe::error>;
 
 taihe::future<expected_type> futureResultReturnsPromise(int64_t ms, ::taihe::string_view val)
 {
-    auto [completer, future] = taihe::make_contract<expected_type>();
+    auto [completer, future] = taihe::make_async_pair<expected_type>();
     futureResultWithCallback(ms, val, std::move(completer));
     return std::move(future);
 }
