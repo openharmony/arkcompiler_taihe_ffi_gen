@@ -25,6 +25,6 @@ interface UserType {
 }
 
 @noexcept
-function processUserTypeWithCallback(user: UserType, ms: i64, result: String, set: Completer<String>);
+function processUserTypeWithCallback(user: UserType, ets_ms: i64, cpp_ms: i64, result: String, set: Completer<String>);
 @noexcept
-function processUserTypeReturnsPromise(user: UserType, ms: i64, result: String): Future<String>;
+function processUserTypeReturnsPromise(user: UserType, ets_ms: i64, cpp_ms: i64, result: String): Future<String>;

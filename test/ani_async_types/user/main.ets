@@ -41,7 +41,10 @@ function test_with_callback(): void {
 }
 
 class UserTypeImpl implements hello.UserType {
-    fooWithCallback(ms: long, result: string, set: (error: BusinessError | null, data: string | undefined) => void): void {
+    fooWithCallback(
+        ms: long, result: string,
+        set: (error: BusinessError|null, data: string|undefined) => void):
+        void {
         setTimeout(() => {
             set(null, "EtsAsyncProcessed-" + result);
         }, ms.toInt());
@@ -59,7 +62,7 @@ function test_reverse_with_callback(): void {
     let user = new UserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
-            user, 1000, "InitialValue",
+            user, 500, 500, "InitialValue",
             (err: BusinessError|null, res: String|undefined) => {
                 resolve(res!);
             });
@@ -72,7 +75,7 @@ function test_reverse_with_callback(): void {
 
 function test_reverse_returns_promise(): void {
     let user = new UserTypeImpl();
-    let x = hello.processUserTypeReturnsPromise(user, 1000, "InitialValue");
+    let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
     console.log("Waiting for reverse promise...");
     waitForCompletion(() => x.then((s: String) => {
         console.log("Reverse Promise Result: " + s);

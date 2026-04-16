@@ -36,95 +36,73 @@ void futureResultWithCallback(int64_t ms, ::taihe::string_view val, ::taihe::com
 
 taihe::future<expected_type> futureResultReturnsPromise(int64_t ms, ::taihe::string_view val)
 {
-    auto [completer, future] = taihe::make_contract<expected_type>();
+    auto [completer, future] = taihe::make_async_pair<expected_type>();
     futureResultWithCallback(ms, val, std::move(completer));
     return std::move(future);
 }
 
-void processUserTypeWithCallback(::hello::weak::UserType user, int64_t ms, ::taihe::string_view result,
-                                 ::taihe::completer<expected_type> fin)
+void processUserTypeWithCallback(::hello::weak::UserType user, int64_t ets_ms, int64_t cpp_ms,
+                                 ::taihe::string_view result, ::taihe::completer<expected_type> fin)
 {
     std::cout << "[Process UserType With Callback] Calling UserType method with callback..." << std::endl;
 
-    auto [mid, tmp] = taihe::make_contract<expected_type>();
+    auto [mid, tmp] = taihe::make_async_pair<expected_type>();
 
-    auto exp = user->fooWithCallback(ms, "C++SyncProcessed-" + result, std::move(mid));
+    auto exp = user->fooWithCallback(ets_ms, "C++SyncProcessed-" + result, std::move(mid));
 
     if (not exp) {
         std::cerr << "[Process UserType With Callback] Error calling UserType method: " << exp.error().message()
                   << std::endl;
         fin.complete(taihe::unexpected<taihe::error>(exp.error()));
-        return;
-    }
+    } else {
+        std::cerr << "[Process UserType With Callback] UserType method called successfully, waiting for result..."
+                  << std::endl;
 
-    std::cerr << "[Process UserType With Callback] UserType method called successfully, waiting for result..."
-              << std::endl;
-
-    struct Processor {
-        taihe::completer<expected_type> fin;
-
-        Processor(taihe::completer<expected_type> fin) : fin(std::move(fin))
-        {
-        }
-
-        void operator()(expected_type res) const
-        {
+        tmp.on_complete([fin = std::move(fin), cpp_ms](expected_type &&res) mutable {
             if (res) {
                 std::cout << "[Process UserType With Callback] UserType method completed successfully." << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(cpp_ms));
                 fin.complete("C++AsyncProcessed-" + res.value());
             } else {
                 std::cerr << "[Process UserType With Callback] UserType method completed with error: "
                           << res.error().message() << std::endl;
                 fin.complete(taihe::unexpected<taihe::error>(res.error()));
             }
-        }
-    };
-
-    tmp.on_complete<Processor>(std::move(fin));
-    return;
+        });
+    }
 }
 
-taihe::future<expected_type> processUserTypeReturnsPromise(::hello::weak::UserType user, int64_t ms,
+taihe::future<expected_type> processUserTypeReturnsPromise(::hello::weak::UserType user, int64_t ets_ms, int64_t cpp_ms,
                                                            ::taihe::string_view result)
 {
     std::cout << "[Process UserType Returns Promise] Calling UserType method that returns promise..." << std::endl;
 
-    auto exp = user->fooReturnsPromise(ms, "C++SyncProcessed-" + result);
+    auto exp = user->fooReturnsPromise(ets_ms, "C++SyncProcessed-" + result);
 
-    auto [fin, fut] = taihe::make_contract<expected_type>();
+    auto [fin, fut] = taihe::make_async_pair<expected_type>();
 
     if (not exp) {
         std::cerr << "[Process UserType Returns Promise] Error calling UserType method: " << exp.error().message()
                   << std::endl;
         fin.complete(taihe::unexpected<taihe::error>(exp.error()));
-        return std::move(fut);
-    }
+    } else {
+        std::cerr << "[Process UserType Returns Promise] UserType method called successfully, waiting for promise to "
+                     "complete..."
+                  << std::endl;
 
-    std::cerr
-        << "[Process UserType Returns Promise] UserType method called successfully, waiting for promise to complete..."
-        << std::endl;
-
-    struct Processor {
-        taihe::completer<expected_type> fin;
-
-        Processor(taihe::completer<expected_type> fin) : fin(std::move(fin))
-        {
-        }
-
-        void operator()(expected_type res) const
-        {
+        exp.value().on_complete([fin = std::move(fin), cpp_ms](expected_type &&res) mutable {
             if (res) {
                 std::cout << "[Process UserType Returns Promise] UserType method completed successfully." << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(cpp_ms));
                 fin.complete("C++AsyncProcessed-" + res.value());
             } else {
                 std::cerr << "[Process UserType Returns Promise] UserType method completed with error: "
                           << res.error().message() << std::endl;
                 fin.complete(taihe::unexpected<taihe::error>(res.error()));
             }
-        }
-    };
+        });
+    }
 
-    exp.value().on_complete<Processor>(std::move(fin));
     return std::move(fut);
 }
 }  // namespace
