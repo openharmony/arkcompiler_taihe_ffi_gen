@@ -455,7 +455,7 @@ class StsBuildSystem(BuildSystem):
         elapsed_time = self.ark_toolchain.run(
             self.abc_target,
             self.ani_lib_dir,
-            entry="main.ETSGLOBAL::main",
+            entry="main::main",
         )
 
         logger.info("Done, time = %f s", elapsed_time)
