@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -45,22 +45,21 @@ function testSyncAdd() {
     console.log("testSyncAdd end");
 }
 
-function testAsyncAdd() {
+async function testAsyncAdd(): Promise<void> {
     {
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = waitForCompletion(
-                () => new Promise<int>((resolve, reject) => {
-                    async_test.add(
-                        10, 20, (err: BusinessError|null, data?: int) => {
-                            if (err !== null && err.code !== 0) {
-                                reject(err);
-                            } else {
-                                resolve(data!);
-                            }
-                        });
-                }));
+            res = await new Promise<int>((resolve, reject) => {
+                async_test.add(
+                    10, 20, (err: BusinessError|null, data?: int) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            });
         } catch (e) {
             err = e as BusinessError;
         }
@@ -70,17 +69,16 @@ function testAsyncAdd() {
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = waitForCompletion(
-                () => new Promise<int>((resolve, reject) => {
-                    async_test.add(
-                        0, 2, (err: BusinessError|null, data?: int) => {
-                            if (err !== null && err.code !== 0) {
-                                reject(err);
-                            } else {
-                                resolve(data!);
-                            }
-                        });
-                }));
+            res = await new Promise<int>((resolve, reject) => {
+                async_test.add(
+                    0, 2, (err: BusinessError|null, data?: int) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            });
         } catch (e) {
             err = e as BusinessError;
         }
@@ -92,12 +90,12 @@ function testAsyncAdd() {
     console.log("testAsyncAdd end");
 }
 
-function testPromiseAdd() {
+async function testPromiseAdd(): Promise<void> {
     {
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = waitForCompletion(() => async_test.add(1, 2));
+            res = await async_test.add(1, 2);
         } catch (e) {
             err = e as BusinessError;
         }
@@ -107,7 +105,7 @@ function testPromiseAdd() {
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = waitForCompletion(() => async_test.add(0, 2));
+            res = await async_test.add(0, 2);
         } catch (e) {
             err = e as BusinessError;
         }
@@ -119,31 +117,29 @@ function testPromiseAdd() {
     console.log("testPromiseAdd end");
 }
 
-function testIBase() {
+async function testIBase(): Promise<void> {
     const ibase = async_test.getIBase();
     arktest.assertEQ(
         ibase.get(), "My IBase", "IBase.get() should return 'My IBase'");
 
-    waitForCompletion(() => ibase.setString("interface async set"));
+    await ibase.setString("interface async set");
     arktest.assertEQ(
-        waitForCompletion(() => ibase.getString()), "interface async set",
+        await ibase.getString(), "interface async set",
         "getString should resolve with the value set in setString");
 }
 
-function testStaticAsyncMethods() {
-    waitForCompletion(() => async_test.IBase.print());
+async function testStaticAsyncMethods(): Promise<void> {
+    await async_test.IBase.print();
 }
 
-function testStructMethods() {
-    waitForCompletion(
-        () => async_test.fromStruct(
-            {a: "abc", b: "efg", c: 3}));  // should not throw an error
+async function testStructMethods(): Promise<void> {
+    await async_test.fromStruct(
+        {a: "abc", b: "efg", c: 3});  // should not throw an error
 
     {
         let err: BusinessError|undefined;
         try {
-            waitForCompletion(
-                () => async_test.fromStruct({a: "abc", b: "efg", c: 0}));
+            await async_test.fromStruct({a: "abc", b: "efg", c: 0});
         } catch (e) {
             err = e as BusinessError;
         }
@@ -154,7 +150,7 @@ function testStructMethods() {
     }
 
     let data: async_test.Data =
-        waitForCompletion(() => async_test.toStruct("aaa", "bbb", 1));
+        await async_test.toStruct("aaa", "bbb", 1);
     arktest.assertEQ(data.a, "aaa", "Data.a should be 'aaa'");
     arktest.assertEQ(data.b, "bbb", "Data.b should be 'bbb'");
     arktest.assertEQ(data.c, 1, "Data.c should be 1");
@@ -162,8 +158,7 @@ function testStructMethods() {
     {
         let err: BusinessError|undefined;
         try {
-            data =
-                waitForCompletion(() => async_test.toStruct("aaa", "bbb", 0));
+            data = await async_test.toStruct("aaa", "bbb", 0);
         } catch (e) {
             err = e as BusinessError;
         }
@@ -178,11 +173,11 @@ function main() {
     const suite = new arktest.ArkTestsuite("Async Test Suite");
 
     suite.addTest("Sync Add Tests", testSyncAdd);
-    suite.addTest("Async Add Tests", testAsyncAdd);
-    suite.addTest("Promise Add Tests", testPromiseAdd);
-    suite.addTest("IBase Tests", testIBase);
-    suite.addTest("Static Async Methods Tests", testStaticAsyncMethods);
-    suite.addTest("Struct Methods Tests", testStructMethods);
+    suite.addAsyncTest("Async Add Tests", testAsyncAdd);
+    suite.addAsyncTest("Promise Add Tests", testPromiseAdd);
+    suite.addAsyncTest("IBase Tests", testIBase);
+    suite.addAsyncTest("Static Async Methods Tests", testStaticAsyncMethods);
+    suite.addAsyncTest("Struct Methods Tests", testStructMethods);
 
     exit(suite.run());
 }

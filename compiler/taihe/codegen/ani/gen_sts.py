@@ -2255,14 +2255,14 @@ class StsReverseFuncGenerator:
             elif (promise_name := func_ani_info.promise_name) is not None:
                 args_sts_str = ", ".join(args_sts)
                 self.target.writelns(
-                    f"return waitForCompletion(() => {self.func_kind.call_from_reverse(promise_name)}({args_sts_str}));",
+                    f"return {self.func_kind.call_from_reverse(promise_name)}({args_sts_str}).awaitSync();",
                 )
             elif (async_name := func_ani_info.async_name) is not None:
                 pkg_ani_info = PackageAniInfo.get(self.am, self.func.parent_pkg)
 
                 with self.target.indented(
-                    f"return waitForCompletion(() => new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
-                    f"}}));",
+                    f"const promise = new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
+                    f"}});",
                 ):
                     with self.target.indented(
                         f"let callback: {pkg_ani_info.ns.mod.AC_type}<{return_ty_sts_name}> = (err: {pkg_ani_info.ns.mod.BE_type} | null, res?: {return_ty_sts_real}): void => {{",
@@ -2286,6 +2286,9 @@ class StsReverseFuncGenerator:
                     self.target.writelns(
                         f"{self.func_kind.call_from_reverse(async_name)}({args_with_cbname_sts_str});",
                     )
+                self.target.writelns(
+                    f"return promise.awaitSync();",
+                )
             else:
                 self.target.writelns(
                     f"throw new Error(`No valid reverse function found`);",
