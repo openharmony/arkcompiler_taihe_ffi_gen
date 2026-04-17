@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,15 +18,15 @@ import * as hello from "hello";
 
 loadLibrary("ani_async_types");
 
-function test_returns_promise(): void {
+async function test_returns_promise(): Promise<void> {
     let x = hello.futureResultReturnsPromise(1000, "InitialValue");
     console.log("Waiting for result...");
-    waitForCompletion(() => x.then((s: String) => {
+    await x.then((s: String) => {
         console.log("Promise Result: " + s);
-    }));
+    });
 }
 
-function test_with_callback(): void {
+async function test_with_callback(): Promise<void> {
     let x = new Promise<string>((resolve, reject) => {
         hello.futureResultWithCallback(
             1000, "InitialValue",
@@ -35,9 +35,9 @@ function test_with_callback(): void {
             });
     });
     console.log("Waiting for callback...");
-    waitForCompletion(() => x.then((s: String) => {
+    await x.then((s: String) => {
         console.log("Callback Result: " + s);
-    }));
+    });
 }
 
 class UserTypeImpl implements hello.UserType {
@@ -58,7 +58,7 @@ class UserTypeImpl implements hello.UserType {
     }
 }
 
-function test_reverse_with_callback(): void {
+async function test_reverse_with_callback(): Promise<void> {
     let user = new UserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
@@ -68,25 +68,25 @@ function test_reverse_with_callback(): void {
             });
     });
     console.log("Waiting for reverse callback...");
-    waitForCompletion(() => x.then((s: String) => {
+    await x.then((s: String) => {
         console.log("Reverse Callback Result: " + s);
-    }));
+    });
 }
 
-function test_reverse_returns_promise(): void {
+async function test_reverse_returns_promise(): Promise<void> {
     let user = new UserTypeImpl();
     let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
     console.log("Waiting for reverse promise...");
-    waitForCompletion(() => x.then((s: String) => {
+    await x.then((s: String) => {
         console.log("Reverse Promise Result: " + s);
-    }));
+    });
 }
 
 function main(): void {
     const suite = new arktest.ArkTestsuite("Hello Module Test");
-    suite.addTest("test_returns_promise", test_returns_promise);
-    suite.addTest("test_with_callback", test_with_callback);
-    suite.addTest("test_reverse_returns_promise", test_reverse_returns_promise);
-    suite.addTest("test_reverse_with_callback", test_reverse_with_callback);
+    suite.addAsyncTest("test_returns_promise", test_returns_promise);
+    suite.addAsyncTest("test_with_callback", test_with_callback);
+    suite.addAsyncTest("test_reverse_returns_promise", test_reverse_returns_promise);
+    suite.addAsyncTest("test_reverse_with_callback", test_reverse_with_callback);
     exit(suite.run());
 }
