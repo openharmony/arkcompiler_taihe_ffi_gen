@@ -329,7 +329,7 @@ function(run_abc demo_name main_abc)
     LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR} ${ETS_RUNTIME}
     --boot-panda-files=$ENV{PANDA_HOME}/../ets/etsstdlib.abc
     --boot-panda-files=$ENV{PANDA_HOME}/../ets/etssdk.abc
-    --load-runtimes=ets ${main_abc} main.ETSGLOBAL::main
+    --load-runtimes=ets ${main_abc} main::main
     && echo "Run successful" || (echo "Run failed" && exit 1)
     COMMENT "Running ${demo_name}"
     DEPENDS ${main_abc} ${demo_name}
