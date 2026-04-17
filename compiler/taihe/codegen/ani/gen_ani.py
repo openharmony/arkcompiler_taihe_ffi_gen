@@ -485,7 +485,7 @@ class AniPackageSourceGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     self.target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
                         f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -501,7 +501,7 @@ class AniPackageSourceGenerator:
                 else:
                     self.target.writelns(
                         f"if (::taihe::has_error()) {{ return; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return; }}",
                         f"return;",
                     )
 
@@ -844,11 +844,11 @@ class AniIfaceImplGenerator:
                         f"env->Function_Call_Void({function}, {args_ani_str});",
                     )
                 with self.target.indented(
-                    f"if (ani_error {error_ani} = ::taihe::take_ani_error(env)) {{",
+                    f"if (ani_error {error_ani} = ::taihe::catch_ani_error(env)) {{",
                     f"}}",
                 ):
                     self.target.writelns(
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, {error_ani}));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, {error_ani}));",
                     )
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)

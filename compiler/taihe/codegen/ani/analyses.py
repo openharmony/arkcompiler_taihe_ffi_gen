@@ -2555,11 +2555,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
                 )
                 with target.indented(
-                    f"if (ani_error {error_ani} = ::taihe::take_ani_error(env)) {{",
+                    f"if (ani_error {error_ani} = ::taihe::catch_ani_error(env)) {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, {error_ani}));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, {error_ani}));",
                     )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -2714,7 +2714,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
                         f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -2730,7 +2730,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 else:
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
                         f"return {{}};",
                     )
 
@@ -2800,7 +2800,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_argv[0] = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"ani_argv[0] = ::taihe::into_ani_taihe_error(env, cpp_result.error());",
                         f"env->GetUndefined(&ani_argv[1]);",
                     )
                 target.writelns(
@@ -2877,7 +2877,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
-                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, static_cast<ani_error>(err))));",
+                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
     def gen_async_free(
@@ -2978,7 +2978,7 @@ class FutureTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
-                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, static_cast<ani_error>(err))));",
+                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
     def gen_async_free(
@@ -3038,7 +3038,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_error ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"ani_error ani_err = ::taihe::into_ani_taihe_error(env, cpp_result.error());",
                         f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "rejectImpl", nullptr), ani_err, false);',
                     )
         target.writelns(

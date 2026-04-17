@@ -29,24 +29,10 @@
 #include <taihe/expected.hpp>
 
 namespace taihe {
-// Error handling functions
-
-void set_error(taihe::string_view msg);
-void set_business_error(int32_t err_code, taihe::string_view msg);
-void reset_error();
-bool has_error();
-}  // namespace taihe
-
-namespace taihe {
 // VM and Environment related functions
 
 void set_vm(ani_vm *vm);
 ani_vm *get_vm();
-
-ani_error take_ani_error(ani_env *env);
-taihe::error from_ani_error(ani_env *env, ani_error err);
-ani_error into_ani_error(ani_env *env, taihe::error const &err);
-void make_ani_error(ani_env *env, taihe::error const &err);
 
 inline ani_env *get_env()
 {
@@ -85,6 +71,24 @@ public:
         return env;
     }
 };
+}  // namespace taihe
+
+namespace taihe {
+// Error handling functions
+
+void set_error(taihe::string_view msg);
+void set_business_error(int32_t err_code, taihe::string_view msg);
+void reset_error();
+bool has_error();
+}  // namespace taihe
+
+namespace taihe {
+// Internal Error handling functions
+
+ani_error catch_ani_error(ani_env *env);
+taihe::error from_ani_taihe_error(ani_env *env, ani_error err);
+ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err);
+void throw_ani_taihe_error(ani_env *env, taihe::error const &err);
 }  // namespace taihe
 
 #endif  // TAIHE_RUNTIME_ANI_HPP
