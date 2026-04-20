@@ -193,8 +193,13 @@ class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
-            dm.emit(AttrDeprecatedWarn(self, "Attached to a type reference instead."))
             ty = parent.ty
+            dm.emit(
+                AttrDeprecatedWarn(
+                    self,
+                    f"Use `{parent.name}: @{self.NAME} {ty.signature};` instead.",
+                )
+            )
         if not isinstance(ty, UnitType):
             dm.emit(
                 AdhocError(
@@ -223,8 +228,13 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDec
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
-            dm.emit(AttrDeprecatedWarn(self, "Attached to a type reference instead."))
             ty = parent.ty
+            dm.emit(
+                AttrDeprecatedWarn(
+                    self,
+                    f"Use `{parent.name}: @{self.NAME} {ty.signature};` instead.",
+                )
+            )
         if not isinstance(ty, UnitType):
             dm.emit(
                 AdhocError(
