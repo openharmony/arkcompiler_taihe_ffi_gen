@@ -44,6 +44,7 @@ from taihe.semantics.types import (
     MapType,
     NonVoidType,
     OptionalType,
+    ScalarType,
     StructType,
     UnitType,
 )
@@ -423,6 +424,32 @@ class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
 
 
 @dataclass
+class ValueArrayAttr(TypedAttribute[TypeRefDecl]):
+    NAME = "valuearray"
+    TARGETS = (TypeRefDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+
+    item_ty: ScalarType = field(init=False)
+
+    @override
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
+        if not (
+            isinstance(parent.resolved_ty, ArrayType)
+            and isinstance(parent.resolved_ty.item_ty, ScalarType)
+        ):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to array types with scalar item types.",
+                    loc=self.loc,
+                )
+            )
+        else:
+            self.item_ty = parent.resolved_ty.item_ty
+
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
 class RecordAttr(TypedAttribute[TypeRefDecl]):
     NAME = "record"
     TARGETS = (TypeRefDecl,)
@@ -778,6 +805,7 @@ all_attr_types: list[CheckedAttrT] = [
     ArrayBufferAttr,
     TypedArrayAttr,
     FixedArrayAttr,
+    ValueArrayAttr,
     RecordAttr,
     StsTypeAttr,
     # Function attributes

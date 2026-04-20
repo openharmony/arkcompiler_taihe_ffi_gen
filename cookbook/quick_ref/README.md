@@ -45,7 +45,6 @@
 | `@namespace` | 指定 ArkTS 命名空间 | [Namespace](../namespace/README.md) |
 | `@arraybuffer` | 映射为 ArrayBuffer | [ArrayBuffer](../arraybuffer/README.md) |
 | `@typedarray` | 映射为 TypedArray | [TypedArray](../typedarray/README.md) |
-| `@fixedarray` | 映射为 FixedArray | [TypedArray](../typedarray/README.md) |
 | `@bigint` | 映射为 BigInt | [BigInt](../bigint/README.md) |
 | `@record` | 映射为 Record | [Optional](../optional/README.md) |
 | `@null` / `@undefined` | 声明可空类型 | [Null 与 Undefined](../null_undefined/README.md) |
