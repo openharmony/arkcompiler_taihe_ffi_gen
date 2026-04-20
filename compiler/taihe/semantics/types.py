@@ -39,18 +39,20 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.visitor import (
         ArrayTypeVisitor,
+        BooleanTypeVisitor,
         BuiltinTypeVisitor,
         CallbackTypeVisitor,
         CompleterTypeVisitor,
         EnumTypeVisitor,
+        FloatingPointTypeVisitor,
         FutureTypeVisitor,
         GenericTypeVisitor,
         IfaceTypeVisitor,
+        IntegerTypeVisitor,
         MapTypeVisitor,
         NonVoidTypeVisitor,
         OpaqueTypeVisitor,
         OptionalTypeVisitor,
-        ScalarTypeVisitor,
         SetTypeVisitor,
         StringTypeVisitor,
         StructTypeVisitor,
@@ -136,26 +138,88 @@ class UnitType(BuiltinType):
         return v.visit_unit_type(self)
 
 
-class ScalarKind(Enum):
-    """Enumeration of scalar types."""
+class ScalarKindClass:
+    """Base class for scalar type kinds."""
 
-    BOOL = ("bool", 8, False, False)
-    F32 = ("f32", 32, True, True)
-    F64 = ("f64", 64, True, True)
-    I8 = ("i8", 8, True, False)
-    I16 = ("i16", 16, True, False)
-    I32 = ("i32", 32, True, False)
-    I64 = ("i64", 64, True, False)
-    U8 = ("u8", 8, False, False)
-    U16 = ("u16", 16, False, False)
-    U32 = ("u32", 32, False, False)
-    U64 = ("u64", 64, False, False)
-
-    def __init__(self, symbol: str, width: int, is_signed: bool, is_float: bool):
+    def __init__(self, symbol: str):
         self.symbol = symbol
-        self.width = width
-        self.is_signed = is_signed
-        self.is_float = is_float
+
+    @property
+    @abstractmethod
+    def width(self) -> int: ...
+
+    @abstractmethod
+    def is_signed(self) -> bool: ...
+
+
+class IntegerKind(ScalarKindClass, Enum):
+    I8 = ("i8", 8, True)
+    I16 = ("i16", 16, True)
+    I32 = ("i32", 32, True)
+    I64 = ("i64", 64, True)
+    U8 = ("u8", 8, False)
+    U16 = ("u16", 16, False)
+    U32 = ("u32", 32, False)
+    U64 = ("u64", 64, False)
+
+    def __init__(self, symbol: str, width: int, is_signed: bool):
+        super().__init__(symbol)
+        self._width = width
+        self._is_signed = is_signed
+
+    @property
+    def width(self) -> int:
+        return self._width
+
+    def is_signed(self) -> bool:
+        return self._is_signed
+
+
+class BooleanKind(ScalarKindClass, Enum):
+    BOOL = ("bool",)
+
+    def __init__(self, symbol: str):
+        super().__init__(symbol)
+
+    @property
+    def width(self) -> int:
+        return 8
+
+    def is_signed(self) -> bool:
+        return False
+
+
+class FloatingPointKind(ScalarKindClass, Enum):
+    F32 = ("f32", 32)
+    F64 = ("f64", 64)
+
+    def __init__(self, symbol: str, width: int):
+        super().__init__(symbol)
+        self._width = width
+
+    @property
+    def width(self) -> int:
+        return self._width
+
+    def is_signed(self) -> bool:
+        return True
+
+
+ScalarKind = BooleanKind | IntegerKind | FloatingPointKind
+
+
+class ScalarKinds:
+    BOOL = BooleanKind.BOOL
+    I8 = IntegerKind.I8
+    I16 = IntegerKind.I16
+    I32 = IntegerKind.I32
+    I64 = IntegerKind.I64
+    U8 = IntegerKind.U8
+    U16 = IntegerKind.U16
+    U32 = IntegerKind.U32
+    U64 = IntegerKind.U64
+    F32 = FloatingPointKind.F32
+    F64 = FloatingPointKind.F64
 
 
 @dataclass(frozen=True, repr=False)
@@ -167,9 +231,32 @@ class ScalarType(BuiltinType):
     def signature(self):
         return self.kind.symbol
 
+
+@dataclass(frozen=True, repr=False)
+class BooleanType(ScalarType):
+    kind: BooleanKind = BooleanKind.BOOL
+
     @override
-    def accept(self, v: "ScalarTypeVisitor[_R]") -> _R:
-        return v.visit_scalar_type(self)
+    def accept(self, v: "BooleanTypeVisitor[_R]") -> _R:
+        return v.visit_boolean_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class FloatingPointType(ScalarType):
+    kind: FloatingPointKind
+
+    @override
+    def accept(self, v: "FloatingPointTypeVisitor[_R]") -> _R:
+        return v.visit_floating_point_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class IntegerType(ScalarType):
+    kind: IntegerKind
+
+    @override
+    def accept(self, v: "IntegerTypeVisitor[_R]") -> _R:
+        return v.visit_integer_type(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -200,17 +287,17 @@ class OpaqueType(BuiltinType):
 BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], Type]] = {
     "void": VoidType,
     "unit": UnitType,
-    "bool": lambda ty_ref: ScalarType(ty_ref, ScalarKind.BOOL),
-    "f32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F32),
-    "f64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F64),
-    "i8": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I8),
-    "i16": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I16),
-    "i32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I32),
-    "i64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I64),
-    "u8": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U8),
-    "u16": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U16),
-    "u32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U32),
-    "u64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U64),
+    "bool": BooleanType,
+    "f32": lambda ty_ref: FloatingPointType(ty_ref, FloatingPointKind.F32),
+    "f64": lambda ty_ref: FloatingPointType(ty_ref, FloatingPointKind.F64),
+    "i8": lambda ty_ref: IntegerType(ty_ref, IntegerKind.I8),
+    "i16": lambda ty_ref: IntegerType(ty_ref, IntegerKind.I16),
+    "i32": lambda ty_ref: IntegerType(ty_ref, IntegerKind.I32),
+    "i64": lambda ty_ref: IntegerType(ty_ref, IntegerKind.I64),
+    "u8": lambda ty_ref: IntegerType(ty_ref, IntegerKind.U8),
+    "u16": lambda ty_ref: IntegerType(ty_ref, IntegerKind.U16),
+    "u32": lambda ty_ref: IntegerType(ty_ref, IntegerKind.U32),
+    "u64": lambda ty_ref: IntegerType(ty_ref, IntegerKind.U64),
     "String": StringType,
     "Opaque": OpaqueType,
 }

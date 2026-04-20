@@ -56,13 +56,16 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.types import (
         ArrayType,
+        BooleanType,
         BuiltinType,
         CallbackType,
         CompleterType,
         EnumType,
+        FloatingPointType,
         FutureType,
         GenericType,
         IfaceType,
+        IntegerType,
         MapType,
         NonVoidType,
         OpaqueType,
@@ -83,13 +86,45 @@ if TYPE_CHECKING:
 _R = TypeVar("_R")
 
 
-class UnitTypeVisitor(Generic[_R]):
-    def visit_unit_type(self, t: "UnitType") -> _R:
+class IntegerTypeVisitor(Generic[_R]):
+    def visit_integer_type(self, t: "IntegerType") -> _R:
         raise NotImplementedError
 
 
-class ScalarTypeVisitor(Generic[_R]):
+class FloatingPointTypeVisitor(Generic[_R]):
+    def visit_floating_point_type(self, t: "FloatingPointType") -> _R:
+        raise NotImplementedError
+
+
+class BooleanTypeVisitor(Generic[_R]):
+    def visit_boolean_type(self, t: "BooleanType") -> _R:
+        raise NotImplementedError
+
+
+class ScalarTypeVisitor(
+    Generic[_R],
+    IntegerTypeVisitor[_R],
+    FloatingPointTypeVisitor[_R],
+    BooleanTypeVisitor[_R],
+):
     def visit_scalar_type(self, t: "ScalarType") -> _R:
+        raise NotImplementedError
+
+    @override
+    def visit_integer_type(self, t: "IntegerType") -> _R:
+        return self.visit_scalar_type(t)
+
+    @override
+    def visit_floating_point_type(self, t: "FloatingPointType") -> _R:
+        return self.visit_scalar_type(t)
+
+    @override
+    def visit_boolean_type(self, t: "BooleanType") -> _R:
+        return self.visit_scalar_type(t)
+
+
+class UnitTypeVisitor(Generic[_R]):
+    def visit_unit_type(self, t: "UnitType") -> _R:
         raise NotImplementedError
 
 

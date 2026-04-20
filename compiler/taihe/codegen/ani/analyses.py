@@ -107,7 +107,7 @@ from taihe.semantics.types import (
     NonVoidType,
     OpaqueType,
     OptionalType,
-    ScalarKind,
+    ScalarKinds,
     ScalarType,
     SetType,
     StringType,
@@ -1461,17 +1461,17 @@ class ScalarTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         super().__init__(am, t)
         sts_info = {
-            ScalarKind.BOOL: (ANI_BOOLEAN, "boolean", "z"),
-            ScalarKind.F32: (ANI_FLOAT, "float", "f"),
-            ScalarKind.F64: (ANI_DOUBLE, "double", "d"),
-            ScalarKind.I8: (ANI_BYTE, "byte", "b"),
-            ScalarKind.I16: (ANI_SHORT, "short", "s"),
-            ScalarKind.I32: (ANI_INT, "int", "i"),
-            ScalarKind.I64: (ANI_LONG, "long", "l"),
-            ScalarKind.U8: (ANI_BYTE, "byte", "b"),
-            ScalarKind.U16: (ANI_SHORT, "short", "s"),
-            ScalarKind.U32: (ANI_INT, "int", "i"),
-            ScalarKind.U64: (ANI_LONG, "long", "l"),
+            ScalarKinds.BOOL: (ANI_BOOLEAN, "boolean", "z"),
+            ScalarKinds.F32: (ANI_FLOAT, "float", "f"),
+            ScalarKinds.F64: (ANI_DOUBLE, "double", "d"),
+            ScalarKinds.I8: (ANI_BYTE, "byte", "b"),
+            ScalarKinds.I16: (ANI_SHORT, "short", "s"),
+            ScalarKinds.I32: (ANI_INT, "int", "i"),
+            ScalarKinds.I64: (ANI_LONG, "long", "l"),
+            ScalarKinds.U8: (ANI_BYTE, "byte", "b"),
+            ScalarKinds.U16: (ANI_SHORT, "short", "s"),
+            ScalarKinds.U32: (ANI_INT, "int", "i"),
+            ScalarKinds.U64: (ANI_LONG, "long", "l"),
         }[t.kind]
         ani_type, sts_type, sig = sts_info
         ets_type_boxed = EtsClassType(f"std.core.{sts_type.capitalize()}")
@@ -1935,7 +1935,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
         )
         assert isinstance(self.t.item_ty, ScalarType), self.t.item_ty
-        if self.t.item_ty.kind.is_signed:
+        if self.t.item_ty.kind.is_signed():
             target.writelns(
                 f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "byteLength"), &{ani_byte_length});',
                 f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "byteOffset"), &{ani_byte_offset});',
