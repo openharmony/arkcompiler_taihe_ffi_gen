@@ -67,6 +67,7 @@ from taihe.codegen.ani.attributes import (
     TupleAttr,
     TypedArrayAttr,
     UndefinedAttr,
+    ValueArrayAttr,
 )
 from taihe.codegen.ani.writer import (
     ArkTsImportManager,
@@ -227,6 +228,19 @@ class EtsUndefinedType(EtsNonPrimitiveType):
 
 
 @dataclass
+class EtsValueArrayType(EtsUnionMemberType):
+    _element: EtsPrimitiveType
+
+    @property
+    def sig(self) -> str:
+        return f"A{{{self._element.sig}}}"
+
+    @property
+    def desc(self) -> str:
+        return self.sig
+
+
+@dataclass
 class EtsFixedArrayType(EtsUnionMemberType):
     _element: EtsNonPrimitiveType
 
@@ -302,6 +316,13 @@ ANI_ENUM_ITEM = AniType(hint="enum_item", base=ANI_REF)
 ANI_STRING = AniType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = AniType(hint="arraybuffer", base=ANI_REF)
 ANI_FIXEDARRAY_REF = AniType(hint="fixedarray_ref", base=ANI_REF)
+ANI_FIXEDARRAY_BOOLEAN = AniType(hint="fixedarray_boolean", base=ANI_REF)
+ANI_FIXEDARRAY_FLOAT = AniType(hint="fixedarray_float", base=ANI_REF)
+ANI_FIXEDARRAY_DOUBLE = AniType(hint="fixedarray_double", base=ANI_REF)
+ANI_FIXEDARRAY_BYTE = AniType(hint="fixedarray_byte", base=ANI_REF)
+ANI_FIXEDARRAY_SHORT = AniType(hint="fixedarray_short", base=ANI_REF)
+ANI_FIXEDARRAY_INT = AniType(hint="fixedarray_int", base=ANI_REF)
+ANI_FIXEDARRAY_LONG = AniType(hint="fixedarray_long", base=ANI_REF)
 
 
 # Ani Scopes
@@ -1778,6 +1799,85 @@ class OptionalTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"{ani_after} = {ani_temp};",
             )
+
+
+class ValueArrayTypeAniInfo(TypeAniInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: ArrayType,
+        valuearray_attr: ValueArrayAttr,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type_inner = {
+            ScalarKinds.BOOL: ANI_FIXEDARRAY_BOOLEAN,
+            ScalarKinds.F32: ANI_FIXEDARRAY_FLOAT,
+            ScalarKinds.F64: ANI_FIXEDARRAY_DOUBLE,
+            ScalarKinds.I8: ANI_FIXEDARRAY_BYTE,
+            ScalarKinds.I16: ANI_FIXEDARRAY_SHORT,
+            ScalarKinds.I32: ANI_FIXEDARRAY_INT,
+            ScalarKinds.I64: ANI_FIXEDARRAY_LONG,
+            ScalarKinds.U8: ANI_FIXEDARRAY_BYTE,
+            ScalarKinds.U16: ANI_FIXEDARRAY_SHORT,
+            ScalarKinds.U32: ANI_FIXEDARRAY_INT,
+            ScalarKinds.U64: ANI_FIXEDARRAY_LONG,
+        }[valuearray_attr.item_ty.kind]
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return self.ani_type_inner
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        item_ty_ani_info = ScalarTypeAniInfo.get(self.am, self.t.item_ty)
+        return EtsValueArrayType(item_ty_ani_info.ets_type)
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        item_ty_ani_info = ScalarTypeAniInfo.get(self.am, self.t.item_ty)
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"ValueArray<{item_sts_type}>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        ani_size = f"{cpp_after}_ani_size"
+        cpp_buffer = f"{cpp_after}_cpp_buffer"
+        target.writelns(
+            f"ani_size {ani_size} = {{}};",
+            f"{env}->FixedArray_GetLength({ani_value}, &{ani_size});",
+            f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({ani_size} * sizeof({item_ty_cpp_info.as_owner})));",
+            f"{env}->FixedArray_GetRegion_{item_ty_ani_info.ani_type.suffix}({ani_value}, 0, {ani_size}, reinterpret_cast<{item_ty_ani_info.ani_type}*>({cpp_buffer}));",
+            f"{self.cpp_info.as_owner} {cpp_after}({cpp_buffer}, {ani_size});",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        cpp_size = f"{ani_after}_cpp_size"
+        target.writelns(
+            f"size_t {cpp_size} = {cpp_value}.size();",
+            f"{self.ani_type} {ani_after} = {{}};",
+            f"{env}->FixedArray_New_{item_ty_ani_info.ani_type.suffix}({cpp_size}, &{ani_after});",
+            f"{env}->FixedArray_SetRegion_{item_ty_ani_info.ani_type.suffix}({ani_after}, 0, {cpp_size}, reinterpret_cast<{item_ty_ani_info.ani_type} const*>({cpp_value}.data()));",
+        )
 
 
 class FixedArrayTypeAniInfo(TypeAniInfo):
@@ -3325,6 +3425,8 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
             return ArrayBufferTypeAniInfo(self.am, t, arraybuffer_attr)
         if fixedarray_attr := FixedArrayAttr.get(t.ref):
             return FixedArrayTypeAniInfo(self.am, t, fixedarray_attr)
+        if valuearray_attr := ValueArrayAttr.get(t.ref):
+            return ValueArrayTypeAniInfo(self.am, t, valuearray_attr)
         return ArrayTypeAniInfo(self.am, t)
 
     @override

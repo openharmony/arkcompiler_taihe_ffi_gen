@@ -66,6 +66,26 @@ function testOptionalFixedArrayData(
     }
 }
 
+function testValueArrayInt(
+    test: hello.TestInterface, intArray: hello.ValueArray<int>) {
+    test.setValueArrayInt(intArray);
+    let result = test.getValueArrayInt();
+    arktest.assertEQ(intArray.length, result.length);
+    for (let i = 0; i < intArray.length; i++) {
+        arktest.assertEQ(intArray[i], result[i]);
+    }
+}
+
+function testValueArrayDouble(
+    test: hello.TestInterface, doubleArray: hello.ValueArray<double>) {
+    test.setValueArrayDouble(doubleArray);
+    let result = test.getValueArrayDouble();
+    arktest.assertEQ(doubleArray.length, result.length);
+    for (let i = 0; i < doubleArray.length; i++) {
+        arktest.assertEQ(doubleArray[i], result[i]);
+    }
+}
+
 function main() {
     const suite = new arktest.ArkTestsuite("FixedArray Test");
 
@@ -88,6 +108,12 @@ function main() {
     });
     suite.addTest("OptionalFixedArrayData", () => {
         testOptionalFixedArrayData(test, undefined);
+    });
+    suite.addTest("ValueArrayInt", () => {
+        testValueArrayInt(test, [1, 2, 3, 4, 5]);
+    });
+    suite.addTest("ValueArrayDouble", () => {
+        testValueArrayDouble(test, [1.1, 2.2, 3.3]);
     });
 
     exit(suite.run());

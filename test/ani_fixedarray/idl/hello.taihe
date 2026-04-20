@@ -22,12 +22,16 @@ interface TestInterface {
     setFixedArrayString(value: @fixedarray Array<String>);
     setFixedArrayData(value: @fixedarray Array<Data>);
     setOptionalFixedArrayData(value: Optional<@fixedarray Array<Data>>);
+    setValueArrayInt(value: @valuearray Array<i32>);
+    setValueArrayDouble(value: @valuearray Array<f64>);
 
     getFixedArrayBoolean(): @fixedarray Array<bool>;
     getFixedArrayNumber(): @fixedarray Array<f64>;
     getFixedArrayString(): @fixedarray Array<String>;
     getFixedArrayData(): @fixedarray Array<Data>;
     getOptionalFixedArrayData(): Optional<@fixedarray Array<Data>>;
+    getValueArrayInt(): @valuearray Array<i32>;
+    getValueArrayDouble(): @valuearray Array<f64>;
 }
 
 @ctor("TestInterface")

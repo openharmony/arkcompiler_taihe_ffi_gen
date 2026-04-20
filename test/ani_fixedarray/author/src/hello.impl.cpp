@@ -27,6 +27,8 @@ class TestInterfaceImpl {
     taihe::array<::taihe::string> m_fixedArrayString = {};
     taihe::array<::hello::Data> m_fixedArrayData = {};
     taihe::optional<taihe::array<::hello::Data>> m_optionalFixedArrayData;
+    taihe::array<int32_t> m_valueArrayInt = {};
+    taihe::array<double> m_valueArrayDouble = {};
 
 public:
     TestInterfaceImpl()
@@ -56,6 +58,16 @@ public:
     ::taihe::expected<::taihe::optional<::taihe::array<::hello::Data>>, ::taihe::error> getOptionalFixedArrayData()
     {
         return m_optionalFixedArrayData;
+    }
+
+    ::taihe::expected<::taihe::array<int32_t>, ::taihe::error> getValueArrayInt()
+    {
+        return m_valueArrayInt;
+    }
+
+    ::taihe::expected<::taihe::array<double>, ::taihe::error> getValueArrayDouble()
+    {
+        return m_valueArrayDouble;
     }
 
     ::taihe::expected<void, ::taihe::error> setFixedArrayBoolean(::taihe::array_view<bool> value)
@@ -104,6 +116,28 @@ public:
         std::cout << "setOptionalFixedArrayData called with "
                   << (value.has_value() ? std::to_string(value->size()) : "no") << " elements." << std::endl;
         m_optionalFixedArrayData = value;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> setValueArrayInt(::taihe::array_view<int32_t> value)
+    {
+        std::cout << "setValueArrayInt called with values: ";
+        for (auto const &v : value) {
+            std::cout << v << " ";
+        }
+        std::cout << std::endl;
+        m_valueArrayInt = value;
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> setValueArrayDouble(::taihe::array_view<double> value)
+    {
+        std::cout << "setValueArrayDouble called with values: ";
+        for (auto const &v : value) {
+            std::cout << v << " ";
+        }
+        std::cout << std::endl;
+        m_valueArrayDouble = value;
         return {};
     }
 };
