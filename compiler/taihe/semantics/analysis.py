@@ -16,7 +16,7 @@
 from collections.abc import Callable
 from itertools import chain
 from math import isfinite
-from typing import Any, TypeGuard, TypeVar
+from typing import TypeVar
 
 from typing_extensions import override
 
@@ -51,10 +51,12 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
+    BooleanType,
     CallbackType,
+    FloatingPointType,
     IfaceType,
+    IntegerType,
     NonVoidType,
-    ScalarKind,
     ScalarType,
     StringType,
     Type,
@@ -424,69 +426,6 @@ class _ResolveEnumItemValuePass(RecursiveDeclVisitor):
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
         match d.ty_or_none:
-            case None:
-                pass
-
-            case ScalarType():
-                succ: Callable[[Any | None], Any]
-                check: Callable[[Any], bool]
-
-                def check_int(val: Any, min: int, max: int) -> TypeGuard[int]:
-                    return (
-                        not isinstance(val, bool)
-                        and isinstance(val, int)
-                        and min <= val < max
-                    )
-
-                def succ_int(pred: int | None, min: int, max: int) -> int:
-                    if pred is None:
-                        return 0
-                    return succ if (succ := pred + 1) < max else min
-
-                match d.ty_or_none.kind:
-                    case ScalarKind.I8:
-                        succ = lambda pred: succ_int(pred, -(2**7), 2**7)
-                        check = lambda val: check_int(val, -(2**7), 2**7)
-                    case ScalarKind.I16:
-                        succ = lambda pred: succ_int(pred, -(2**15), 2**15)
-                        check = lambda val: check_int(val, -(2**15), 2**15)
-                    case ScalarKind.I32:
-                        succ = lambda pred: succ_int(pred, -(2**31), 2**31)
-                        check = lambda val: check_int(val, -(2**31), 2**31)
-                    case ScalarKind.I64:
-                        succ = lambda pred: succ_int(pred, -(2**63), 2**63)
-                        check = lambda val: check_int(val, -(2**63), 2**63)
-                    case ScalarKind.U8:
-                        succ = lambda pred: succ_int(pred, 0, 2**8)
-                        check = lambda val: check_int(val, 0, 2**8)
-                    case ScalarKind.U16:
-                        succ = lambda pred: succ_int(pred, 0, 2**16)
-                        check = lambda val: check_int(val, 0, 2**16)
-                    case ScalarKind.U32:
-                        succ = lambda pred: succ_int(pred, 0, 2**32)
-                        check = lambda val: check_int(val, 0, 2**32)
-                    case ScalarKind.U64:
-                        succ = lambda pred: succ_int(pred, 0, 2**64)
-                        check = lambda val: check_int(val, 0, 2**64)
-                    case ScalarKind.BOOL:
-                        succ = lambda pred: False
-                        check = lambda val: isinstance(val, bool)
-                    case ScalarKind.F32:
-                        succ = lambda pred: 0.0
-                        check = lambda val: isinstance(val, float) and isfinite(val)
-                    case ScalarKind.F64:
-                        succ = lambda pred: 0.0
-                        check = lambda val: isinstance(val, float) and isfinite(val)
-
-                pred = None
-                for item in d.items:
-                    if item.value is None:
-                        item.value = succ(pred)
-                    elif not check(item.value):
-                        self.dm.emit(EnumValueError(item, d))
-                        item.value = succ(None)
-                    pred = item.value
-
             case StringType():
                 for item in d.items:
                     if item.value is None:
@@ -494,6 +433,48 @@ class _ResolveEnumItemValuePass(RecursiveDeclVisitor):
                     elif not isinstance(item.value, str):
                         self.dm.emit(EnumValueError(item, d))
                         item.value = item.name
+
+            case FloatingPointType():
+                for item in d.items:
+                    if item.value is None:
+                        item.value = 0.0
+                    elif not isinstance(item.value, float) or not isfinite(item.value):
+                        self.dm.emit(EnumValueError(item, d))
+                        item.value = 0.0
+
+            case BooleanType():
+                for item in d.items:
+                    if item.value is None:
+                        item.value = False
+                    elif not isinstance(item.value, bool):
+                        self.dm.emit(EnumValueError(item, d))
+                        item.value = False
+
+            case IntegerType():
+                if d.ty_or_none.kind.is_signed():
+                    minv = -(2 ** (d.ty_or_none.kind.width - 1))
+                    maxv = 2 ** (d.ty_or_none.kind.width - 1)
+                else:
+                    minv = 0
+                    maxv = 2**d.ty_or_none.kind.width
+                pred: int | None = None
+                for item in d.items:
+                    if item.value is None:
+                        if pred is None:
+                            item.value = 0
+                        else:
+                            item.value = succ if (succ := pred + 1) < maxv else minv
+                    elif (
+                        isinstance(item.value, bool)
+                        or not isinstance(item.value, int)
+                        or not (minv <= item.value < maxv)
+                    ):
+                        self.dm.emit(EnumValueError(item, d))
+                        item.value = 0
+                    pred = item.value  # type: ignore
+
+            case _:
+                pass
 
 
 class _CheckStructAndUnionNotEmptyPass(RecursiveDeclVisitor):
