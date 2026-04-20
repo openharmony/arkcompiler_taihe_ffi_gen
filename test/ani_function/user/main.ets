@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -81,23 +81,22 @@ function test_string_return_value() {
     arktest.assertEQ(result, "888");
 }
 
-function test_from_callback() {
+async function test_from_callback(): Promise<void> {
     let foo = FuncTest.makeFoo();
     let res: int;
     let err: BusinessError = new BusinessError();
     try {
-        res = waitForCompletion(
-            () => new Promise<int>((resolve, reject) => {
-                foo.add(
-                    10, NUMBER_TWENTY,
-                    (error: BusinessError|null, data?: int) => {
-                        if (error != null && error.message) {
-                            reject(error);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            }));
+        res = await new Promise<int>((resolve, reject) => {
+            foo.add(
+                10, NUMBER_TWENTY,
+                (error: BusinessError|null, data?: int) => {
+                    if (error != null && error.message) {
+                        reject(error);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -151,7 +150,7 @@ function main() {
     suite.addTest(
         "test callback string boolean input", test_string_boolean_input);
     suite.addTest("test callback", test_string_return_value);
-    suite.addTest("test from callback", test_from_callback);
+    suite.addAsyncTest("test from callback", test_from_callback);
     suite.addTest("test static func add", test_static_func_add);
     suite.addTest("test static func sub", test_static_func_sub);
     suite.addTest("test new class", test_new_class);
