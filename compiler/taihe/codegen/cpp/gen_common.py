@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dumps
-
 from taihe.codegen.abi.analyses import (
     EnumAbiInfo,
     IfaceAbiInfo,
@@ -22,7 +20,10 @@ from taihe.codegen.abi.analyses import (
     StructAbiInfo,
     UnionAbiInfo,
 )
-from taihe.codegen.abi.writer import CHeaderWriter
+from taihe.codegen.abi.writer import (
+    CHeaderWriter,
+    render_c_value,
+)
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -276,7 +277,7 @@ class CppEnumDefnGenerator:
         ):
             for item in self.enum.items:
                 self.target.writelns(
-                    f"{dumps(item.value)},",
+                    f"{render_c_value(item.typed_value)},",
                 )
         # value getter
         with self.target.indented(
@@ -301,7 +302,7 @@ class CppEnumDefnGenerator:
         ):
             for i, item in enumerate(self.enum.items):
                 with self.target.indented(
-                    f"if (value == {dumps(item.value)}) {{",
+                    f"if (value == {render_c_value(item.typed_value)}) {{",
                     f"}}",
                 ):
                     self.target.writelns(

@@ -13,11 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from json import dumps
 from typing import TextIO
 
 from typing_extensions import override
 
+from taihe.semantics.declarations import TypedValue
 from taihe.utils.outputs import FileWriter, OutputManager
+
+
+def render_ets_value(typed_value: "TypedValue") -> str:
+    return dumps(typed_value.value)
 
 
 class DtsWriter(FileWriter):

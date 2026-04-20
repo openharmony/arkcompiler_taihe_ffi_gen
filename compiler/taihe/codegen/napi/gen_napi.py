@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dumps
-
 from taihe.codegen.abi.analyses import (
     GlobFuncAbiInfo,
     IfaceAbiInfo,
     IfaceMethodAbiInfo,
 )
-from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
+from taihe.codegen.abi.writer import (
+    CHeaderWriter,
+    CSourceWriter,
+    render_c_value,
+)
 from taihe.codegen.cpp.analyses import (
     GlobFuncCppUserInfo,
     IfaceCppInfo,
@@ -2494,7 +2496,7 @@ class NapiCodeGenerator:
                         item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
                         item_ty_napi_info.into_napi(
                             pkg_napi_target,
-                            f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
+                            f"(({item_ty_cpp_info.as_owner}){render_c_value(item.typed_value)})",
                             f"value_{item.name}",
                         )
                         pkg_napi_target.writelns(
@@ -2512,7 +2514,7 @@ class NapiCodeGenerator:
                         item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
                         item_ty_napi_info.into_napi(
                             pkg_napi_target,
-                            f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
+                            f"(({item_ty_cpp_info.as_owner}){render_c_value(item.typed_value)})",
                             f"value_{item.name}",
                         )
                         pkg_napi_target.writelns(

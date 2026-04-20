@@ -17,7 +17,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from dataclasses import field as datafield
-from json import dumps
 from typing import ClassVar
 
 from typing_extensions import override
@@ -26,7 +25,10 @@ from taihe.codegen.abi.analyses import (
     CallbackAbiInfo,
     IfaceAbiInfo,
 )
-from taihe.codegen.abi.writer import CSourceWriter
+from taihe.codegen.abi.writer import (
+    CSourceWriter,
+    render_c_string,
+)
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
     AsyncAttribute,
@@ -70,6 +72,7 @@ from taihe.codegen.ani.writer import (
     ArkTsImportManager,
     DefaultNamingStrategy,
     UnchangeNamingStrategy,
+    render_ets_string,
 )
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -1405,7 +1408,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
-        return dumps(self.value)
+        return render_ets_string(self.value)
 
     @override
     def from_ani(
@@ -1429,7 +1432,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
     ):
         cpp_strv = f"{ani_after}_cpp_strv"
         target.writelns(
-            f"std::string_view {cpp_strv} = {dumps(self.value)};",
+            f"std::string_view {cpp_strv} = {render_c_string(self.value)};",
             f"ani_string {ani_after} = {{}};",
             f"{env}->String_NewUTF8({cpp_strv}.data(), {cpp_strv}.size(), &{ani_after});",
         )
@@ -1447,7 +1450,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         ani_size = f"{is_field_ani}_size"
         cpp_buff = f"{is_field_ani}_buff"
         target.writelns(
-            f"std::string_view {cpp_strv} = {dumps(self.value)};",
+            f"std::string_view {cpp_strv} = {render_c_string(self.value)};",
             f"ani_size {ani_size} = {{}};",
             f"{env}->String_GetUTF8Size(static_cast<ani_string>({ani_value}), &{ani_size});",
             f"char {cpp_buff}[{ani_size} + 1];",

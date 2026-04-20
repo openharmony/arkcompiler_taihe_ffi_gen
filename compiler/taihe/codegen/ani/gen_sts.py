@@ -15,7 +15,6 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from json import dumps
 from typing import ClassVar
 
 from taihe.codegen.abi.analyses import (
@@ -49,7 +48,10 @@ from taihe.codegen.ani.attributes import (
     OptionalAttr,
     ReadOnlyAttr,
 )
-from taihe.codegen.ani.writer import StsWriter
+from taihe.codegen.ani.writer import (
+    StsWriter,
+    render_ets_value,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -539,7 +541,7 @@ class StsEnumGenerator:
         for item in self.enum.items:
             item_ani_info = EnumFieldAniInfo.get(self.am, item)
             self.target.writelns(
-                f"export const {item_ani_info.sts_name}: {enum_ani_info.sts_type} = {dumps(item.value)};",
+                f"export const {item_ani_info.sts_name}: {enum_ani_info.sts_type} = {render_ets_value(item.typed_value)};",
             )
 
     def gen_enum_decl(self, enum_ani_info: EnumObjectAniInfo):
@@ -561,7 +563,7 @@ class StsEnumGenerator:
             for item in self.enum.items:
                 item_ani_info = EnumFieldAniInfo.get(self.am, item)
                 self.target.writelns(
-                    f"{item_ani_info.sts_name} = {dumps(item.value)},",
+                    f"{item_ani_info.sts_name} = {render_ets_value(item.typed_value)},",
                 )
 
 

@@ -16,11 +16,22 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from json import dumps
 from typing import TextIO
 
 from typing_extensions import override
 
+from taihe.semantics.declarations import TypedValue
 from taihe.utils.outputs import FileWriter, GeneratedFileGroup, OutputManager
+
+
+def render_c_string(value: str) -> str:
+    return dumps(value)
+
+
+def render_c_value(typed_value: TypedValue) -> str:
+    return dumps(typed_value.value)
+
 
 C_DEFAULT_INDENT = "    "
 C_COMMENT_PREFIX = "// "
