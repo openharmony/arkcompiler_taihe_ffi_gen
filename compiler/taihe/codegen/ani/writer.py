@@ -14,14 +14,24 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+from json import dumps
 from typing import TYPE_CHECKING, TextIO
 
 from typing_extensions import override
 
+from taihe.semantics.declarations import TypedValue
 from taihe.utils.outputs import FileWriter, OutputManager
 
 if TYPE_CHECKING:
     from taihe.codegen.ani.analyses import ArkTsModule
+
+
+def render_ets_string(value: str) -> str:
+    return dumps(value)
+
+
+def render_ets_value(typed_value: "TypedValue") -> str:
+    return dumps(typed_value.value)
 
 
 class NamingStrategy(ABC):

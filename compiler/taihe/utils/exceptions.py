@@ -423,7 +423,7 @@ class EnumValueError(DiagError):
 
     @override
     def describe(self) -> str:
-        return f"value of {self.item.description} ({dumps(self.item.value)}) is conflict with {self.enum.description} ({self.enum.ty.signature})"
+        return f"value of {self.item.description} ({dumps(self.item.raw_value)}) is conflict with {self.enum.description} ({self.enum.ty.signature})"
 
 
 @dataclass

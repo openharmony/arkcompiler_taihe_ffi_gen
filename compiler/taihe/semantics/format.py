@@ -47,14 +47,17 @@ if TYPE_CHECKING:
         PackageDecl,
         PackageGroup,
         PackageImportDecl,
+        PackageLevelDecl,
         PackageRefDecl,
         ParamDecl,
         ShortTypeRefDecl,
         StructDecl,
         StructFieldDecl,
+        TypedValue,
         UnionDecl,
         UnionFieldDecl,
     )
+    from taihe.semantics.types import Type
 
 WrapF = Callable[[str], str]
 
@@ -76,6 +79,29 @@ class TaiheFormatter(ExplicitTypeRefVisitor[str]):
             self.as_attr = lambda s: s
             self.as_comment = lambda s: s
 
+    def render_raw_value(self, typed_value: int | float | str | bool) -> str:
+        return dumps(typed_value)
+
+    def render_typed_value(self, typed_value: "TypedValue | None") -> str:
+        if typed_value is None:
+            return "<ERROR>"
+        return self.render_raw_value(typed_value.value)
+
+    def render_pkg(self, d: "PackageDecl | None") -> str:
+        if d is None:
+            return "<ERROR>"
+        return d.description
+
+    def render_decl(self, d: "PackageLevelDecl | None") -> str:
+        if d is None:
+            return "<ERROR>"
+        return d.description
+
+    def render_ty(self, d: "Type | None") -> str:
+        if d is None:
+            return "<ERROR>"
+        return d.signature
+
     def with_attr(self, d: "Decl", s: str, bracket: bool = False) -> str:
         attrs: list[str] = []
         for item in chain(*d.attributes.values()):
@@ -92,10 +118,7 @@ class TaiheFormatter(ExplicitTypeRefVisitor[str]):
         type_ref_repr = d.accept(self)
         if not d.is_resolved or not self.show_resolved:
             return type_ref_repr
-        if (ty := d.resolved_ty_or_none) is None:
-            ty_sig = "<ERROR>"
-        else:
-            ty_sig = ty.signature
+        ty_sig = self.render_ty(d.resolved_ty_or_none)
         comment = self.as_comment(f"/* {ty_sig} */")
         return f"{type_ref_repr} {comment}"
 
@@ -122,10 +145,7 @@ class TaiheFormatter(ExplicitTypeRefVisitor[str]):
         package_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return package_ref_repr
-        if (pkg := d.resolved_pkg_or_none) is None:
-            pkg_desc = "<ERROR>"
-        else:
-            pkg_desc = pkg.description
+        pkg_desc = self.render_pkg(d.resolved_pkg_or_none)
         comment = self.as_comment(f"/* {pkg_desc} */")
         return f"{package_ref_repr} {comment}"
 
@@ -133,11 +153,8 @@ class TaiheFormatter(ExplicitTypeRefVisitor[str]):
         decl_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return decl_ref_repr
-        if (decl := d.resolved_decl_or_none) is None:
-            desc_desc = "<ERROR>"
-        else:
-            desc_desc = decl.description
-        comment = self.as_comment(f"/* {desc_desc} */")
+        decl_desc = self.render_decl(d.resolved_decl_or_none)
+        comment = self.as_comment(f"/* {decl_desc} */")
         return f"{decl_ref_repr} {comment}"
 
     def get_generic_arg_decl(self, d: "GenericArgDecl") -> str:
@@ -157,7 +174,7 @@ class TaiheFormatter(ExplicitTypeRefVisitor[str]):
         args = item.get_args()
         args_str: list[str] = []
         for arg in args:
-            value = dumps(arg.value)
+            value = self.render_raw_value(arg.value)
             if arg.key:
                 arg_str = f"{arg.key}={value}"
             else:
@@ -241,10 +258,17 @@ class TaihePrinter(RecursiveDeclVisitor):
     def visit_enum_item(self, d: "EnumItemDecl") -> None:
         self.write_attr(d)
 
-        if d.value is None:
-            self.out.writeln(f"{d.name},")
+        if d.raw_value is None:
+            line = f"{d.name},"
         else:
-            self.out.writeln(f"{d.name} = {dumps(d.value)},")
+            line = f"{d.name} = {self.fmt.render_raw_value(d.raw_value)},"
+
+        if self.fmt.show_resolved:
+            value = self.fmt.render_typed_value(d.typed_value_or_none)
+            comment = self.fmt.as_comment(f"/* {value} */")
+            line = f"{line} {comment}"
+
+        self.out.writeln(line)
 
     @override
     def visit_enum_decl(self, d: "EnumDecl") -> None:

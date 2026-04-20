@@ -17,16 +17,19 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Sequence
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from typing_extensions import deprecated, override
 
 from taihe.semantics.format import TaiheFormatter
 from taihe.semantics.types import (
+    BooleanType,
     EnumType,
+    FloatingPointType,
     IfaceType,
+    IntegerType,
     NonVoidType,
-    ScalarType,
     StringType,
     StructType,
     Type,
@@ -631,13 +634,54 @@ class DeclarationImportDecl(ImportDecl):
         return v.visit_declaration_import(self)
 
 
+##########################
+# Typed Values and Types #
+##########################
+
+
+ValueType = StringType | IntegerType | FloatingPointType | BooleanType
+
+
+@dataclass(frozen=True)
+class StringTypedValue:
+    type: StringType
+    value: str
+
+
+@dataclass(frozen=True)
+class IntegerTypedValue:
+    type: IntegerType
+    value: int
+
+
+@dataclass(frozen=True)
+class FloatingPointTypedValue:
+    type: FloatingPointType
+    value: float
+
+
+@dataclass(frozen=True)
+class BooleanTypedValue:
+    type: BooleanType
+    value: bool
+
+
+TypedValue = (
+    StringTypedValue
+    | IntegerTypedValue
+    | FloatingPointTypedValue
+    | BooleanTypedValue
+)  # fmt: skip
+
+
 ############################
 # Field Level Declarations #
 ############################
 
 
 class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
-    value: int | float | str | bool | None
+    raw_value: int | float | str | bool | None
+    typed_value_or_none: TypedValue | None = None
 
     def __init__(
         self,
@@ -647,7 +691,7 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
         loc: SourceLocation | None,
     ):
         super().__init__(name, loc=loc)
-        self.value = value
+        self.raw_value = value
 
     @property
     @override
@@ -658,6 +702,11 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
     def parent_enum(self) -> "EnumDecl":
         assert self._node_parent
         return self._node_parent
+
+    @property
+    def typed_value(self) -> TypedValue:
+        assert self.typed_value_or_none, "Enum item value is not resolved"
+        return self.typed_value_or_none
 
     @override
     def accept(self, v: "EnumItemVisitor[_R]") -> _R:
@@ -934,14 +983,14 @@ class EnumDecl(TypeDecl):
         return list(self._item_dict.values())
 
     @property
-    def ty_or_none(self) -> ScalarType | StringType | None:
-        return cast(ScalarType | StringType | None, self.ty_ref.resolved_ty_or_none)
+    def ty_or_none(self) -> ValueType | None:
+        return cast(ValueType | None, self.ty_ref.resolved_ty_or_none)
 
     @property
-    def ty(self) -> ScalarType | StringType:
-        return cast(ScalarType | StringType, self.ty_ref.resolved_ty)
+    def ty(self) -> ValueType:
+        return cast(ValueType, self.ty_ref.resolved_ty)
 
-    def resolve_ty(self, ty: ScalarType | StringType | None):
+    def resolve_ty(self, ty: ValueType | None):
         self.ty_ref.resolve(ty)
 
     def add_item(self, i: EnumItemDecl):
