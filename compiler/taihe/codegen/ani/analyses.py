@@ -225,7 +225,7 @@ class EtsUndefinedType(EtsNonPrimitiveType):
 
 @dataclass
 class EtsFixedArrayType(EtsUnionMemberType):
-    _element: EtsType
+    _element: EtsNonPrimitiveType
 
     @property
     def sig(self) -> str:
@@ -1678,7 +1678,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         self.t = t
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         self.ani_type = ANI_FIXEDARRAY_REF
-        self.ets_type = EtsFixedArrayType(item_ty_ani_info.ets_type)
+        self.ets_type = EtsFixedArrayType(item_ty_ani_info.ets_type.boxed)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
