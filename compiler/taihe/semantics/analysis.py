@@ -15,18 +15,19 @@
 
 from collections.abc import Callable
 from itertools import chain
-from math import isfinite
-from typing import Any, TypeGuard, TypeVar
+from typing import TypeVar
 
 from typing_extensions import override
 
 from taihe.semantics.attributes import AttributeRegistry, UncheckedAttribute
 from taihe.semantics.declarations import (
+    BooleanTypedValue,
     CallbackTypeRefDecl,
     Decl,
     DeclarationRefDecl,
     EnumDecl,
     ExplicitTypeRefDecl,
+    FloatingPointTypedValue,
     GenericArgDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
@@ -34,6 +35,7 @@ from taihe.semantics.declarations import (
     IfaceExtendDecl,
     IfaceMethodDecl,
     ImplicitTypeRefDecl,
+    IntegerTypedValue,
     LongTypeRefDecl,
     PackageDecl,
     PackageGroup,
@@ -41,6 +43,7 @@ from taihe.semantics.declarations import (
     PackageRefDecl,
     ParamDecl,
     ShortTypeRefDecl,
+    StringTypedValue,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
@@ -51,11 +54,12 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
+    BooleanType,
     CallbackType,
+    FloatingPointType,
     IfaceType,
+    IntegerType,
     NonVoidType,
-    ScalarKind,
-    ScalarType,
     StringType,
     Type,
     UnitType,
@@ -384,7 +388,13 @@ class _ResolveTypePass(RecursiveDeclVisitor):
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
         super().visit_enum_decl(d)
-        ty = self.resolve_explicit_type_ref(d.ty_ref, ScalarType, StringType)
+        ty = self.resolve_explicit_type_ref(
+            d.ty_ref,
+            BooleanType,
+            IntegerType,
+            FloatingPointType,
+            StringType,
+        )
         d.resolve_ty(ty)
 
     def resolve_explicit_type_ref(
@@ -427,73 +437,63 @@ class _ResolveEnumItemValuePass(RecursiveDeclVisitor):
             case None:
                 pass
 
-            case ScalarType():
-                succ: Callable[[Any | None], Any]
-                check: Callable[[Any], bool]
-
-                def check_int(val: Any, min: int, max: int) -> TypeGuard[int]:
-                    return (
-                        not isinstance(val, bool)
-                        and isinstance(val, int)
-                        and min <= val < max
-                    )
-
-                def succ_int(pred: int | None, min: int, max: int) -> int:
-                    if pred is None:
-                        return 0
-                    return succ if (succ := pred + 1) < max else min
-
-                match d.ty_or_none.kind:
-                    case ScalarKind.I8:
-                        succ = lambda pred: succ_int(pred, -(2**7), 2**7)
-                        check = lambda val: check_int(val, -(2**7), 2**7)
-                    case ScalarKind.I16:
-                        succ = lambda pred: succ_int(pred, -(2**15), 2**15)
-                        check = lambda val: check_int(val, -(2**15), 2**15)
-                    case ScalarKind.I32:
-                        succ = lambda pred: succ_int(pred, -(2**31), 2**31)
-                        check = lambda val: check_int(val, -(2**31), 2**31)
-                    case ScalarKind.I64:
-                        succ = lambda pred: succ_int(pred, -(2**63), 2**63)
-                        check = lambda val: check_int(val, -(2**63), 2**63)
-                    case ScalarKind.U8:
-                        succ = lambda pred: succ_int(pred, 0, 2**8)
-                        check = lambda val: check_int(val, 0, 2**8)
-                    case ScalarKind.U16:
-                        succ = lambda pred: succ_int(pred, 0, 2**16)
-                        check = lambda val: check_int(val, 0, 2**16)
-                    case ScalarKind.U32:
-                        succ = lambda pred: succ_int(pred, 0, 2**32)
-                        check = lambda val: check_int(val, 0, 2**32)
-                    case ScalarKind.U64:
-                        succ = lambda pred: succ_int(pred, 0, 2**64)
-                        check = lambda val: check_int(val, 0, 2**64)
-                    case ScalarKind.BOOL:
-                        succ = lambda pred: False
-                        check = lambda val: isinstance(val, bool)
-                    case ScalarKind.F32:
-                        succ = lambda pred: 0.0
-                        check = lambda val: isinstance(val, float) and isfinite(val)
-                    case ScalarKind.F64:
-                        succ = lambda pred: 0.0
-                        check = lambda val: isinstance(val, float) and isfinite(val)
-
-                pred = None
-                for item in d.items:
-                    if item.value is None:
-                        item.value = succ(pred)
-                    elif not check(item.value):
-                        self.dm.emit(EnumValueError(item, d))
-                        item.value = succ(None)
-                    pred = item.value
-
             case StringType():
                 for item in d.items:
-                    if item.value is None:
-                        item.value = item.name
-                    elif not isinstance(item.value, str):
+                    if item.raw_value is None:
+                        value = item.name
+                    elif not isinstance(item.raw_value, str):
                         self.dm.emit(EnumValueError(item, d))
-                        item.value = item.name
+                        value = item.name
+                    else:
+                        value = item.raw_value
+                    item.typed_value_or_none = StringTypedValue(d.ty_or_none, value)
+
+            case FloatingPointType():
+                for item in d.items:
+                    if item.raw_value is None:
+                        value = 0.0
+                    elif not isinstance(item.raw_value, float):
+                        self.dm.emit(EnumValueError(item, d))
+                        value = 0.0
+                    else:
+                        value = item.raw_value
+                    item.typed_value_or_none = FloatingPointTypedValue(d.ty_or_none, value)  # fmt: skip
+
+            case BooleanType():
+                for item in d.items:
+                    if item.raw_value is None:
+                        value = False
+                    elif not isinstance(item.raw_value, bool):
+                        self.dm.emit(EnumValueError(item, d))
+                        value = False
+                    else:
+                        value = item.raw_value
+                    item.typed_value_or_none = BooleanTypedValue(d.ty_or_none, value)
+
+            case IntegerType():
+                if d.ty_or_none.kind.is_signed():
+                    minv: int = -(2 ** (d.ty_or_none.kind.width - 1))
+                    maxv: int = 2 ** (d.ty_or_none.kind.width - 1)
+                else:
+                    minv: int = 0
+                    maxv: int = 2**d.ty_or_none.kind.width
+                value = None
+                for item in d.items:
+                    if item.raw_value is None:
+                        if value is None:
+                            value = 0
+                        else:
+                            value = succ if (succ := value + 1) < maxv else minv
+                    elif (
+                        isinstance(item.raw_value, bool)
+                        or not isinstance(item.raw_value, int)
+                        or not (minv <= item.raw_value < maxv)
+                    ):
+                        self.dm.emit(EnumValueError(item, d))
+                        value = 0
+                    else:
+                        value = item.raw_value
+                    item.typed_value_or_none = IntegerTypedValue(d.ty_or_none, value)
 
 
 class _CheckStructAndUnionNotEmptyPass(RecursiveDeclVisitor):

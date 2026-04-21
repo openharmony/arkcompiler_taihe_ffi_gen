@@ -124,11 +124,6 @@ struct async_context {
         }
     }
 
-    bool is_ready() const
-    {
-        return flags & ASYNC_CONTEXT_RESULT_SET;
-    }
-
     ~async_context()
     {
         if (flags & ASYNC_CONTEXT_RESULT_SET) {
@@ -232,11 +227,6 @@ public:
     void on_complete(Handler &&handler) const
     {
         on_complete<Handler, Handler>(std::forward<Handler>(handler));
-    }
-
-    bool is_ready() const
-    {
-        return m_ctx->is_ready();
     }
 };
 

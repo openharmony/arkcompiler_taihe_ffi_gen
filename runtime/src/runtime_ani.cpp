@@ -30,7 +30,9 @@ ani_vm *get_vm()
 {
     return global_vm;
 }
+}  // namespace taihe
 
+namespace taihe {
 static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
 {
     ani_class errCls;
@@ -86,24 +88,24 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
     return businessErrObj;
 }
 
-void ani_set_error(ani_env *env, taihe::string_view msg)
+static void set_ani_error(ani_env *env, taihe::string_view msg)
 {
     ani_error errObj = create_ani_error(env, msg);
     env->ThrowError(errObj);
 }
 
-void ani_set_business_error(ani_env *env, int32_t code, taihe::string_view msg)
+static void set_ani_business_error(ani_env *env, int32_t code, taihe::string_view msg)
 {
     ani_error businessErrObj = create_ani_business_error(env, code, msg);
     env->ThrowError(businessErrObj);
 }
 
-void ani_reset_error(ani_env *env)
+static void reset_ani_error(ani_env *env)
 {
     env->ResetError();
 }
 
-bool ani_has_error(ani_env *env)
+static bool has_ani_error(ani_env *env)
 {
     ani_boolean res;
     env->ExistUnhandledError(&res);
@@ -114,45 +116,33 @@ void set_error(taihe::string_view msg)
 {
     env_guard guard;
     ani_env *env = guard.get_env();
-    ani_set_error(env, msg);
+    set_ani_error(env, msg);
 }
 
 void set_business_error(int32_t code, taihe::string_view msg)
 {
     env_guard guard;
     ani_env *env = guard.get_env();
-    ani_set_business_error(env, code, msg);
+    set_ani_business_error(env, code, msg);
 }
 
 void reset_error()
 {
     env_guard guard;
     ani_env *env = guard.get_env();
-    ani_reset_error(env);
+    reset_ani_error(env);
 }
 
 bool has_error()
 {
     env_guard guard;
     ani_env *env = guard.get_env();
-    return ani_has_error(env);
+    return has_ani_error(env);
 }
+}  // namespace taihe
 
-ani_error take_ani_error(ani_env *env)
-{
-    ani_boolean hasErr;
-    env->ExistUnhandledError(&hasErr);
-    if (hasErr) {
-        ani_error errObj;
-        env->GetUnhandledError(&errObj);
-        env->ResetError();
-        return errObj;
-    } else {
-        return nullptr;
-    }
-}
-
-taihe::error from_ani_error(ani_env *env, ani_error errObj)
+namespace taihe {
+taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
 {
     ani_string errMsg {};
     env->Object_GetPropertyByName_Ref(ani_object(errObj), "message", reinterpret_cast<ani_ref *>(&errMsg));
@@ -173,18 +163,28 @@ taihe::error from_ani_error(ani_env *env, ani_error errObj)
     }
 }
 
-ani_error into_ani_error(ani_env *env, taihe::error const &err)
+ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err)
 {
-    if (err.code() != 0) {
-        return create_ani_business_error(env, err.code(), err.message());
-    } else {
-        return create_ani_error(env, err.message());
-    }
+    return create_ani_business_error(env, err.code(), err.message());
 }
 
-void make_ani_error(ani_env *env, taihe::error const &err)
+void throw_ani_taihe_error(ani_env *env, taihe::error const &err)
 {
-    ani_error errObj = into_ani_error(env, err);
+    ani_error errObj = into_ani_taihe_error(env, err);
     env->ThrowError(errObj);
+}
+
+ani_error catch_ani_error(ani_env *env)
+{
+    ani_boolean hasErr;
+    env->ExistUnhandledError(&hasErr);
+    if (hasErr) {
+        ani_error errObj;
+        env->GetUnhandledError(&errObj);
+        env->ResetError();
+        return errObj;
+    } else {
+        return nullptr;
+    }
 }
 }  // namespace taihe

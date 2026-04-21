@@ -42,7 +42,7 @@ from taihe.semantics.types import (
     MapType,
     NonVoidType,
     OptionalType,
-    ScalarKind,
+    ScalarKinds,
     ScalarType,
     StructType,
     UnitType,
@@ -193,8 +193,13 @@ class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
-            dm.emit(AttrDeprecatedWarn(self, "Attached to a type reference instead."))
             ty = parent.ty
+            dm.emit(
+                AttrDeprecatedWarn(
+                    self,
+                    f"Use `{parent.name}: @{self.NAME} {ty.signature};` instead.",
+                )
+            )
         if not isinstance(ty, UnitType):
             dm.emit(
                 AdhocError(
@@ -223,8 +228,13 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDec
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
-            dm.emit(AttrDeprecatedWarn(self, "Attached to a type reference instead."))
             ty = parent.ty
+            dm.emit(
+                AttrDeprecatedWarn(
+                    self,
+                    f"Use `{parent.name}: @{self.NAME} {ty.signature};` instead.",
+                )
+            )
         if not isinstance(ty, UnitType):
             dm.emit(
                 AdhocError(
@@ -327,14 +337,14 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
             and isinstance(item_ty := array_ty.item_ty, ScalarType)
             and item_ty.kind
             in (
-                ScalarKind.I8,
-                ScalarKind.I16,
-                ScalarKind.I32,
-                ScalarKind.I64,
-                ScalarKind.U8,
-                ScalarKind.U16,
-                ScalarKind.U32,
-                ScalarKind.U64,
+                ScalarKinds.I8,
+                ScalarKinds.I16,
+                ScalarKinds.I32,
+                ScalarKinds.I64,
+                ScalarKinds.U8,
+                ScalarKinds.U16,
+                ScalarKinds.U32,
+                ScalarKinds.U64,
             )
         ):
             dm.emit(
@@ -358,7 +368,7 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
         if not (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
             and isinstance(item_ty := array_ty.item_ty, ScalarType)
-            and item_ty.kind in (ScalarKind.I8, ScalarKind.U8)
+            and item_ty.kind in (ScalarKinds.I8, ScalarKinds.U8)
         ):
             dm.emit(
                 AdhocError(
@@ -385,16 +395,16 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
             and isinstance(item_ty := array_ty.item_ty, ScalarType)
             and (
                 sts_type := {
-                    ScalarKind.F32: "Float32Array",
-                    ScalarKind.F64: "Float64Array",
-                    ScalarKind.I8: "Int8Array",
-                    ScalarKind.I16: "Int16Array",
-                    ScalarKind.I32: "Int32Array",
-                    ScalarKind.I64: "BigInt64Array",
-                    ScalarKind.U8: "Uint8Array",
-                    ScalarKind.U16: "Uint16Array",
-                    ScalarKind.U32: "Uint32Array",
-                    ScalarKind.U64: "BigUint64Array",
+                    ScalarKinds.F32: "Float32Array",
+                    ScalarKinds.F64: "Float64Array",
+                    ScalarKinds.I8: "Int8Array",
+                    ScalarKinds.I16: "Int16Array",
+                    ScalarKinds.I32: "Int32Array",
+                    ScalarKinds.I64: "BigInt64Array",
+                    ScalarKinds.U8: "Uint8Array",
+                    ScalarKinds.U16: "Uint16Array",
+                    ScalarKinds.U32: "Uint32Array",
+                    ScalarKinds.U64: "BigUint64Array",
                 }.get(item_ty.kind, None)
             )
             is not None

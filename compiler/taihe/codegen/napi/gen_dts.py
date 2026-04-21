@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from collections.abc import Collection
-from json import dumps
 
 from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.napi.analyses import (
@@ -29,7 +28,10 @@ from taihe.codegen.napi.analyses import (
     UnionNapiInfo,
 )
 from taihe.codegen.napi.attributes import ReadOnlyAttr
-from taihe.codegen.napi.writer import DtsWriter
+from taihe.codegen.napi.writer import (
+    DtsWriter,
+    render_ets_value,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -404,7 +406,7 @@ class DtsCodeGenerator:
         if enum_napi_info.is_literal:
             for item in enum.items:
                 target.writelns(
-                    f"export const {item.name} = {dumps(item.value)};",
+                    f"export const {item.name} = {render_ets_value(item.typed_value)};",
                 )
         else:
             with target.indented(
@@ -412,14 +414,9 @@ class DtsCodeGenerator:
                 f"}}",
             ):
                 for item in enum.items:
-                    if item.value is None:
-                        target.writelns(
-                            f"{item.name},",
-                        )
-                    else:
-                        target.writelns(
-                            f"{item.name} = {dumps(item.value)},",
-                        )
+                    target.writelns(
+                        f"{item.name} = {render_ets_value(item.typed_value)},",
+                    )
 
     def gen_union(
         self,
