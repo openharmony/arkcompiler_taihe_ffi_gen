@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -1042,50 +1042,52 @@ function testCasetestBaseBoolFunc4_2() {
     arktest.assertEQ(res, true)
 }
 
-async function testCasetestBaseBoolFunc5(): Promise<void> {
+function testCasetestBaseBoolFunc5() {
     let res: boolean;
     let err: BusinessError = new BusinessError();
     try {
-        res = await new Promise<boolean>((resolve, reject) => {
-            primitivesBoolTest.TestBaseBoolFunc5Async(
-                true, (err: BusinessError|null, data?: boolean) => {
-                    if (err !== null && err.code !== 0) {
-                        reject(err);
-                    } else {
-                        resolve(data!);
-                    }
-                });
-        });
+        res = waitForCompletion(
+            () => new Promise<boolean>((resolve, reject) => {
+                primitivesBoolTest.TestBaseBoolFunc5Async(
+                    true, (err: BusinessError|null, data?: boolean) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
     arktest.assertEQ(res, true);
 }
 
-async function testCasetestBaseBoolFunc5_1(): Promise<void> {
+function testCasetestBaseBoolFunc5_1() {
     let res: boolean;
     let err: BusinessError = new BusinessError();
     try {
-        res = await new Promise<boolean>((resolve, reject) => {
-            primitivesBoolTest.TestBaseBoolFunc5Async(
-                false, (err: BusinessError|null, data?: boolean) => {
-                    if (err !== null && err.code !== 0) {
-                        reject(err);
-                    } else {
-                        resolve(data!);
-                    }
-                });
-        });
+        res = waitForCompletion(
+            () => new Promise<boolean>((resolve, reject) => {
+                primitivesBoolTest.TestBaseBoolFunc5Async(
+                    false, (err: BusinessError|null, data?: boolean) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
     arktest.assertEQ(res, false);
 }
 
-async function testCasetestBaseBoolFunc5_2(): Promise<void> {
+function testCasetestBaseBoolFunc5_2() {
     try {
-        let result: boolean =
-            await primitivesBoolTest.TestBaseBoolFunc5Promise(true);
+        let result: boolean = waitForCompletion(
+            () => primitivesBoolTest.TestBaseBoolFunc5Promise(true));
         arktest.assertEQ(result, true);
         console.log("testCasetestBaseBoolFunc5_2 result: " + result);
     } catch (error) {
@@ -1512,10 +1514,10 @@ function main() {
         "check testCasetestBaseBoolFunc4_1", testCasetestBaseBoolFunc4_1);
     suite.addTest(
         "check testCasetestBaseBoolFunc4_2", testCasetestBaseBoolFunc4_2);
-    suite.addAsyncTest("check testCasetestBaseBoolFunc5", testCasetestBaseBoolFunc5);
-    suite.addAsyncTest(
+    suite.addTest("check testCasetestBaseBoolFunc5", testCasetestBaseBoolFunc5);
+    suite.addTest(
         "check testCasetestBaseBoolFunc5_1", testCasetestBaseBoolFunc5_1);
-    suite.addAsyncTest(
+    suite.addTest(
         "check testCasetestBaseBoolFunc5_2", testCasetestBaseBoolFunc5_2);
     suite.addTest(
         "check testCasetestBaseBoolFunc5_3", testCasetestBaseBoolFunc5_3);
