@@ -502,6 +502,12 @@ inline auto make_holder(Args &&...args)
 {
     return impl_holder<Impl, InterfaceTypes...>::make(std::forward<Args>(args)...);
 }
+
+template<typename... InterfaceTypes, typename Impl>
+inline auto as_holder(Impl &&impl)
+{
+    return make_holder<Impl, InterfaceTypes...>(std::forward<Impl>(impl));
+}
 }  // namespace taihe
 
 #endif  // TAIHE_OBJECT_HPP
