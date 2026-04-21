@@ -74,8 +74,8 @@ constexpr static_tag_t<tag> static_tag;
 // Compile-Time String Type //
 //////////////////////////////
 
-namespace taihe {
-struct ct_null_string_t {
+namespace taihe::__detail {
+struct __ct_null_string_t {
     static constexpr char const *c_str()
     {
         return nullptr;
@@ -83,7 +83,7 @@ struct ct_null_string_t {
 };
 
 template<char... Chars>
-struct ct_string_t {
+struct __ct_string_t {
     static constexpr char value[] = {Chars..., '\0'};
 
     static constexpr char const *c_str()
@@ -91,20 +91,20 @@ struct ct_string_t {
         return value;
     }
 };
-}  // namespace taihe
+}  // namespace taihe::__detail
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wgnu-string-literal-operator-template"
 
 template<typename CharT, CharT... Chars>
-constexpr taihe::ct_string_t<Chars...> operator""_taihe_ct_string()
+constexpr taihe::__detail::__ct_string_t<Chars...> operator""_taihe_ct_string()
 {
     return {};
 }
 
 #pragma GCC diagnostic pop
 
-constexpr taihe::ct_null_string_t nullptr_taihe_ct_string;
+constexpr taihe::__detail::__ct_null_string_t nullptr_taihe_ct_string;
 
 #define TH_AS_CT_STRING_T(c_str) decltype(c_str##_taihe_ct_string)
 #define TH_AS_C_STR(ct_string_t) ct_string_t::c_str()
