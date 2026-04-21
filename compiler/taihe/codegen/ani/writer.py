@@ -15,11 +15,13 @@
 
 from abc import ABC, abstractmethod
 from json import dumps
+import math
 from typing import TYPE_CHECKING, TextIO
 
 from typing_extensions import override
 
-from taihe.semantics.declarations import TypedValue
+from taihe.semantics.declarations import FloatingPointTypedValue, TypedValue
+from taihe.semantics.types import FloatingPointKind
 from taihe.utils.outputs import FileWriter, OutputManager
 
 if TYPE_CHECKING:
@@ -31,6 +33,20 @@ def render_ets_string(value: str) -> str:
 
 
 def render_ets_value(typed_value: "TypedValue") -> str:
+    if (
+        isinstance(typed_value, FloatingPointTypedValue)
+        and typed_value.type.kind == FloatingPointKind.F32
+    ):
+        value = typed_value.value
+        if math.isnan(value):
+            return "Float.NaN"
+        if math.isinf(value):
+            return (
+                "Float.POSITIVE_INFINITY"
+                if value > 0
+                else "Float.NEGATIVE_INFINITY"
+            )
+        return f"{dumps(value)}f"
     return dumps(typed_value.value)
 
 
