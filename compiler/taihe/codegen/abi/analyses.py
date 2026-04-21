@@ -40,7 +40,7 @@ from taihe.semantics.types import (
     NonVoidType,
     OpaqueType,
     OptionalType,
-    ScalarKind,
+    ScalarKinds,
     ScalarType,
     SetType,
     StringType,
@@ -265,17 +265,17 @@ class UnitTypeAbiInfo(TypeAbiInfo):
 class ScalarTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         res = {
-            ScalarKind.BOOL: "bool",
-            ScalarKind.F32: "float",
-            ScalarKind.F64: "double",
-            ScalarKind.I8: "int8_t",
-            ScalarKind.I16: "int16_t",
-            ScalarKind.I32: "int32_t",
-            ScalarKind.I64: "int64_t",
-            ScalarKind.U8: "uint8_t",
-            ScalarKind.U16: "uint16_t",
-            ScalarKind.U32: "uint32_t",
-            ScalarKind.U64: "uint64_t",
+            ScalarKinds.BOOL: "bool",
+            ScalarKinds.F32: "float",
+            ScalarKinds.F64: "double",
+            ScalarKinds.I8: "int8_t",
+            ScalarKinds.I16: "int16_t",
+            ScalarKinds.I32: "int32_t",
+            ScalarKinds.I64: "int64_t",
+            ScalarKinds.U8: "uint8_t",
+            ScalarKinds.U16: "uint16_t",
+            ScalarKinds.U32: "uint32_t",
+            ScalarKinds.U64: "uint64_t",
         }[t.kind]
         self.defn_headers = []
         self.impl_headers = []

@@ -17,7 +17,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from dataclasses import field as datafield
-from json import dumps
 from typing import ClassVar
 
 from typing_extensions import override
@@ -26,7 +25,10 @@ from taihe.codegen.abi.analyses import (
     CallbackAbiInfo,
     IfaceAbiInfo,
 )
-from taihe.codegen.abi.writer import CSourceWriter
+from taihe.codegen.abi.writer import (
+    CSourceWriter,
+    render_c_string,
+)
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
     AsyncAttribute,
@@ -70,6 +72,7 @@ from taihe.codegen.ani.writer import (
     ArkTsImportManager,
     DefaultNamingStrategy,
     UnchangeNamingStrategy,
+    render_ets_string,
 )
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -107,7 +110,7 @@ from taihe.semantics.types import (
     NonVoidType,
     OpaqueType,
     OptionalType,
-    ScalarKind,
+    ScalarKinds,
     ScalarType,
     SetType,
     StringType,
@@ -225,7 +228,7 @@ class EtsUndefinedType(EtsNonPrimitiveType):
 
 @dataclass
 class EtsFixedArrayType(EtsUnionMemberType):
-    _element: EtsType
+    _element: EtsNonPrimitiveType
 
     @property
     def sig(self) -> str:
@@ -1405,7 +1408,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
-        return dumps(self.value)
+        return render_ets_string(self.value)
 
     @override
     def from_ani(
@@ -1429,7 +1432,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
     ):
         cpp_strv = f"{ani_after}_cpp_strv"
         target.writelns(
-            f"std::string_view {cpp_strv} = {dumps(self.value)};",
+            f"std::string_view {cpp_strv} = {render_c_string(self.value)};",
             f"ani_string {ani_after} = {{}};",
             f"{env}->String_NewUTF8({cpp_strv}.data(), {cpp_strv}.size(), &{ani_after});",
         )
@@ -1447,7 +1450,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         ani_size = f"{is_field_ani}_size"
         cpp_buff = f"{is_field_ani}_buff"
         target.writelns(
-            f"std::string_view {cpp_strv} = {dumps(self.value)};",
+            f"std::string_view {cpp_strv} = {render_c_string(self.value)};",
             f"ani_size {ani_size} = {{}};",
             f"{env}->String_GetUTF8Size(static_cast<ani_string>({ani_value}), &{ani_size});",
             f"char {cpp_buff}[{ani_size} + 1];",
@@ -1461,17 +1464,17 @@ class ScalarTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         super().__init__(am, t)
         sts_info = {
-            ScalarKind.BOOL: (ANI_BOOLEAN, "boolean", "z"),
-            ScalarKind.F32: (ANI_FLOAT, "float", "f"),
-            ScalarKind.F64: (ANI_DOUBLE, "double", "d"),
-            ScalarKind.I8: (ANI_BYTE, "byte", "b"),
-            ScalarKind.I16: (ANI_SHORT, "short", "s"),
-            ScalarKind.I32: (ANI_INT, "int", "i"),
-            ScalarKind.I64: (ANI_LONG, "long", "l"),
-            ScalarKind.U8: (ANI_BYTE, "byte", "b"),
-            ScalarKind.U16: (ANI_SHORT, "short", "s"),
-            ScalarKind.U32: (ANI_INT, "int", "i"),
-            ScalarKind.U64: (ANI_LONG, "long", "l"),
+            ScalarKinds.BOOL: (ANI_BOOLEAN, "boolean", "z"),
+            ScalarKinds.F32: (ANI_FLOAT, "float", "f"),
+            ScalarKinds.F64: (ANI_DOUBLE, "double", "d"),
+            ScalarKinds.I8: (ANI_BYTE, "byte", "b"),
+            ScalarKinds.I16: (ANI_SHORT, "short", "s"),
+            ScalarKinds.I32: (ANI_INT, "int", "i"),
+            ScalarKinds.I64: (ANI_LONG, "long", "l"),
+            ScalarKinds.U8: (ANI_BYTE, "byte", "b"),
+            ScalarKinds.U16: (ANI_SHORT, "short", "s"),
+            ScalarKinds.U32: (ANI_INT, "int", "i"),
+            ScalarKinds.U64: (ANI_LONG, "long", "l"),
         }[t.kind]
         ani_type, sts_type, sig = sts_info
         ets_type_boxed = EtsClassType(f"std.core.{sts_type.capitalize()}")
@@ -1678,7 +1681,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         self.t = t
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         self.ani_type = ANI_FIXEDARRAY_REF
-        self.ets_type = EtsFixedArrayType(item_ty_ani_info.ets_type)
+        self.ets_type = EtsFixedArrayType(item_ty_ani_info.ets_type.boxed)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1935,7 +1938,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
         )
         assert isinstance(self.t.item_ty, ScalarType), self.t.item_ty
-        if self.t.item_ty.kind.is_signed:
+        if self.t.item_ty.kind.is_signed():
             target.writelns(
                 f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "byteLength"), &{ani_byte_length});',
                 f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.ets_desc}", "byteOffset"), &{ani_byte_offset});',
@@ -2555,11 +2558,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
                 )
                 with target.indented(
-                    f"if (ani_error {error_ani} = ::taihe::take_ani_error(env)) {{",
+                    f"if (ani_error {error_ani} = ::taihe::catch_ani_error(env)) {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, {error_ani}));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, {error_ani}));",
                     )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -2714,7 +2717,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
                         f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -2730,7 +2733,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 else:
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::make_ani_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
                         f"return {{}};",
                     )
 
@@ -2800,7 +2803,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_argv[0] = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"ani_argv[0] = ::taihe::into_ani_taihe_error(env, cpp_result.error());",
                         f"env->GetUndefined(&ani_argv[1]);",
                     )
                 target.writelns(
@@ -2877,7 +2880,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
-                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, static_cast<ani_error>(err))));",
+                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
     def gen_async_free(
@@ -2978,7 +2981,7 @@ class FutureTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
-                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_error(env, static_cast<ani_error>(err))));",
+                f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
     def gen_async_free(
@@ -3038,7 +3041,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                     f"}}",
                 ):
                     target.writelns(
-                        f"ani_error ani_err = ::taihe::into_ani_error(env, cpp_result.error());",
+                        f"ani_error ani_err = ::taihe::into_ani_taihe_error(env, cpp_result.error());",
                         f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "rejectImpl", nullptr), ani_err, false);',
                     )
         target.writelns(

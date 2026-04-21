@@ -15,7 +15,6 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from json import dumps
 from typing import ClassVar
 
 from taihe.codegen.abi.analyses import (
@@ -49,7 +48,10 @@ from taihe.codegen.ani.attributes import (
     OptionalAttr,
     ReadOnlyAttr,
 )
-from taihe.codegen.ani.writer import StsWriter
+from taihe.codegen.ani.writer import (
+    StsWriter,
+    render_ets_value,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -539,7 +541,7 @@ class StsEnumGenerator:
         for item in self.enum.items:
             item_ani_info = EnumFieldAniInfo.get(self.am, item)
             self.target.writelns(
-                f"export const {item_ani_info.sts_name}: {enum_ani_info.sts_type} = {dumps(item.value)};",
+                f"export const {item_ani_info.sts_name}: {enum_ani_info.sts_type} = {render_ets_value(item.typed_value)};",
             )
 
     def gen_enum_decl(self, enum_ani_info: EnumObjectAniInfo):
@@ -561,7 +563,7 @@ class StsEnumGenerator:
             for item in self.enum.items:
                 item_ani_info = EnumFieldAniInfo.get(self.am, item)
                 self.target.writelns(
-                    f"{item_ani_info.sts_name} = {dumps(item.value)},",
+                    f"{item_ani_info.sts_name} = {render_ets_value(item.typed_value)},",
                 )
 
 
@@ -2259,10 +2261,9 @@ class StsReverseFuncGenerator:
                 )
             elif (async_name := func_ani_info.async_name) is not None:
                 pkg_ani_info = PackageAniInfo.get(self.am, self.func.parent_pkg)
-
                 with self.target.indented(
-                    f"const promise = new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
-                    f"}});",
+                    f"return new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
+                    f"}}).awaitSync();",
                 ):
                     with self.target.indented(
                         f"let callback: {pkg_ani_info.ns.mod.AC_type}<{return_ty_sts_name}> = (err: {pkg_ani_info.ns.mod.BE_type} | null, res?: {return_ty_sts_real}): void => {{",
@@ -2286,9 +2287,6 @@ class StsReverseFuncGenerator:
                     self.target.writelns(
                         f"{self.func_kind.call_from_reverse(async_name)}({args_with_cbname_sts_str});",
                     )
-                self.target.writelns(
-                    f"return promise.awaitSync();",
-                )
             else:
                 self.target.writelns(
                     f"throw new Error(`No valid reverse function found`);",

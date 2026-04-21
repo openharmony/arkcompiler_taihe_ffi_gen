@@ -80,7 +80,7 @@ from taihe.semantics.types import (
     NonVoidType,
     OpaqueType,
     OptionalType,
-    ScalarKind,
+    ScalarKinds,
     ScalarType,
     StringType,
     StructType,
@@ -589,11 +589,11 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         napi_type = {
-            ScalarKind.BOOL: "napi_boolean",
-            ScalarKind.F64: "napi_number",
-            ScalarKind.I32: "napi_number",
-            ScalarKind.I64: "napi_number",
-            ScalarKind.U32: "napi_number",
+            ScalarKinds.BOOL: "napi_boolean",
+            ScalarKinds.F64: "napi_number",
+            ScalarKinds.I32: "napi_number",
+            ScalarKinds.I64: "napi_number",
+            ScalarKinds.U32: "napi_number",
         }.get(self.type.kind)
         if napi_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -602,11 +602,11 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
         dts_type = {
-            ScalarKind.BOOL: "boolean",
-            ScalarKind.F64: "number",
-            ScalarKind.I32: "number",
-            ScalarKind.I64: "number",
-            ScalarKind.U32: "number",
+            ScalarKinds.BOOL: "boolean",
+            ScalarKinds.F64: "number",
+            ScalarKinds.I32: "number",
+            ScalarKinds.I64: "number",
+            ScalarKinds.U32: "number",
         }.get(self.type.kind)
         if dts_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -623,11 +623,11 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         cpp_result: str,
     ):
         from_js_to_c_func = {
-            ScalarKind.BOOL: "napi_get_value_bool",
-            ScalarKind.F64: "napi_get_value_double",
-            ScalarKind.I32: "napi_get_value_int32",
-            ScalarKind.I64: "napi_get_value_int64",
-            ScalarKind.U32: "napi_get_value_uint32",
+            ScalarKinds.BOOL: "napi_get_value_bool",
+            ScalarKinds.F64: "napi_get_value_double",
+            ScalarKinds.I32: "napi_get_value_int32",
+            ScalarKinds.I64: "napi_get_value_int64",
+            ScalarKinds.U32: "napi_get_value_uint32",
         }.get(self.type.kind)
         if from_js_to_c_func is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -643,11 +643,11 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         napi_result: str,
     ):
         from_c_to_js_func = {
-            ScalarKind.BOOL: "napi_get_boolean",
-            ScalarKind.F64: "napi_create_double",
-            ScalarKind.I32: "napi_create_int32",
-            ScalarKind.I64: "napi_create_int64",
-            ScalarKind.U32: "napi_create_uint32",
+            ScalarKinds.BOOL: "napi_get_boolean",
+            ScalarKinds.F64: "napi_create_double",
+            ScalarKinds.I32: "napi_create_int32",
+            ScalarKinds.I64: "napi_create_int64",
+            ScalarKinds.U32: "napi_create_uint32",
         }.get(self.type.kind)
         if from_c_to_js_func is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -1641,8 +1641,8 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         self.napi_type_name = "napi_object"
 
         if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
-            ScalarKind.I8,
-            ScalarKind.U8,
+            ScalarKinds.I8,
+            ScalarKinds.U8,
         ):
             raise ValueError(
                 "@arraybuffer only supports Array<i8> or Array<i8>",
@@ -1778,16 +1778,16 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         napi_type_name = None
         if isinstance(self.type.item_ty, ScalarType):
             napi_type_name = {
-                ScalarKind.F32: "napi_float32_array",
-                ScalarKind.F64: "napi_float64_array",
-                ScalarKind.I8: "napi_int8_array",
-                ScalarKind.I16: "napi_int16_array",
-                ScalarKind.I32: "napi_int32_array",
-                ScalarKind.I64: "napi_bigint64_array",
-                ScalarKind.U8: "napi_uint8_array",
-                ScalarKind.U16: "napi_uint16_array",
-                ScalarKind.U32: "napi_uint32_array",
-                ScalarKind.U64: "napi_biguint64_array",
+                ScalarKinds.F32: "napi_float32_array",
+                ScalarKinds.F64: "napi_float64_array",
+                ScalarKinds.I8: "napi_int8_array",
+                ScalarKinds.I16: "napi_int16_array",
+                ScalarKinds.I32: "napi_int32_array",
+                ScalarKinds.I64: "napi_bigint64_array",
+                ScalarKinds.U8: "napi_uint8_array",
+                ScalarKinds.U16: "napi_uint16_array",
+                ScalarKinds.U32: "napi_uint32_array",
+                ScalarKinds.U64: "napi_biguint64_array",
             }.get(self.type.item_ty.kind)
         if napi_type_name is None:
             raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
@@ -1798,16 +1798,16 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         dts_type = None
         if isinstance(self.type.item_ty, ScalarType):
             dts_type = {
-                ScalarKind.F32: "Float32Array",
-                ScalarKind.F64: "Float64Array",
-                ScalarKind.I8: "Int8Array",
-                ScalarKind.I16: "Int16Array",
-                ScalarKind.I32: "Int32Array",
-                ScalarKind.I64: "BigInt64Array",
-                ScalarKind.U8: "Uint8Array",
-                ScalarKind.U16: "Uint16Array",
-                ScalarKind.U32: "Uint32Array",
-                ScalarKind.U64: "BigUint64Array",
+                ScalarKinds.F32: "Float32Array",
+                ScalarKinds.F64: "Float64Array",
+                ScalarKinds.I8: "Int8Array",
+                ScalarKinds.I16: "Int16Array",
+                ScalarKinds.I32: "Int32Array",
+                ScalarKinds.I64: "BigInt64Array",
+                ScalarKinds.U8: "Uint8Array",
+                ScalarKinds.U16: "Uint16Array",
+                ScalarKinds.U32: "Uint32Array",
+                ScalarKinds.U64: "BigUint64Array",
             }.get(self.type.item_ty.kind)
         if dts_type is None:
             raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
@@ -1833,16 +1833,16 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         element_size = None
         if isinstance(self.type.item_ty, ScalarType):
             element_size = {
-                ScalarKind.F32: "float",
-                ScalarKind.F64: "double",
-                ScalarKind.I8: "int8_t",
-                ScalarKind.I16: "int16_t",
-                ScalarKind.I32: "int32_t",
-                ScalarKind.I64: "int64_t",
-                ScalarKind.U8: "uint8_t",
-                ScalarKind.U16: "uint16_t",
-                ScalarKind.U32: "uint32_t",
-                ScalarKind.U64: "uint64_t",
+                ScalarKinds.F32: "float",
+                ScalarKinds.F64: "double",
+                ScalarKinds.I8: "int8_t",
+                ScalarKinds.I16: "int16_t",
+                ScalarKinds.I32: "int32_t",
+                ScalarKinds.I64: "int64_t",
+                ScalarKinds.U8: "uint8_t",
+                ScalarKinds.U16: "uint16_t",
+                ScalarKinds.U32: "uint32_t",
+                ScalarKinds.U64: "uint64_t",
             }.get(self.type.item_ty.kind)
         if element_size is None:
             raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
@@ -2196,7 +2196,7 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         self.type = t
         if not (
             isinstance(self.type.item_ty, ScalarType)
-            and self.type.item_ty.kind == ScalarKind.U64
+            and self.type.item_ty.kind == ScalarKinds.U64
         ):
             raise ValueError(
                 "Attribute bigint can only be attached to array types with u64 items"
