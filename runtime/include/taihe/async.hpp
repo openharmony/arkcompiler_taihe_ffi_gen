@@ -19,13 +19,13 @@
 #include <taihe/async.abi.h>
 #include <taihe/common.hpp>
 #include <taihe/expected.hpp>
+#include <utility>
 
 namespace taihe {
 template<typename Result>
 struct async_context {
+private:
     union ResultBuffer {
-        Result result;
-
         ResultBuffer()
         {
         }
@@ -33,16 +33,23 @@ struct async_context {
         ~ResultBuffer()
         {
         }
+
+        Result result;
     };
 
     uint32_t ref_count;
-    uint32_t flags;
+    uint8_t handler_guard;
+    uint8_t result_guard;
+    uint8_t handshake_flags;
+    uint8_t reserved;
 
+    void (*process_handler_ptr)(TAsyncHandlerStorage *storage_ptr, Result *result_ptr);
+    void (*cleanup_handler_ptr)(TAsyncHandlerStorage *storage_ptr);
     TAsyncHandlerStorage storage;
-    void (*process_handler_ptr)(TAsyncHandlerStorage *storage, Result *result_ptr);
-    void (*cleanup_handler_ptr)(TAsyncHandlerStorage *storage);
-
     ResultBuffer buffer;
+
+public:
+    using result_type = Result;
 
     async_context(async_context const &) = delete;
     async_context &operator=(async_context const &) = delete;
@@ -50,8 +57,19 @@ struct async_context {
     async_context &operator=(async_context &&) = delete;
 
     explicit async_context(uint32_t ref_count)
-        : ref_count(ref_count), flags(ASYNC_CONTEXT_NONE), process_handler_ptr(nullptr), cleanup_handler_ptr(nullptr)
+        : ref_count(ref_count)
+        , handler_guard(TH_ASYNC_CONTEXT_HANDLER_NONE)
+        , result_guard(TH_ASYNC_CONTEXT_RESULT_NONE)
+        , handshake_flags(TH_ASYNC_HANDSHAKE_NONE)
+        , reserved(0)
+        , process_handler_ptr(nullptr)
+        , cleanup_handler_ptr(nullptr)
     {
+    }
+
+    void inc_ref()
+    {
+        __atomic_fetch_add(&ref_count, 1, __ATOMIC_ACQ_REL);
     }
 
     bool dec_ref()
@@ -59,9 +77,47 @@ struct async_context {
         return __atomic_sub_fetch(&ref_count, 1, __ATOMIC_ACQ_REL) == 0;
     }
 
-    uint32_t set_flags(uint32_t new_flags)
+private:
+    // Atomically claims the result-emplacement slot. Returns true on first claim
+    // (lock acquired); false means the result was already set — a programming error.
+    bool try_lock_result()
     {
-        return __atomic_or_fetch(&flags, new_flags, __ATOMIC_ACQ_REL);
+        uint8_t prev = __atomic_fetch_or(&result_guard, TH_ASYNC_CONTEXT_RESULT_LOCKED, __ATOMIC_ACQ_REL);
+        return (prev & TH_ASYNC_CONTEXT_RESULT_LOCKED) == 0;
+    }
+
+    // Atomically claims the handler-registration slot. Returns true on first claim
+    // (lock acquired); false means the handler was already set — a programming error.
+    bool try_lock_handler()
+    {
+        uint8_t prev = __atomic_fetch_or(&handler_guard, TH_ASYNC_CONTEXT_HANDLER_LOCKED, __ATOMIC_ACQ_REL);
+        return (prev & TH_ASYNC_CONTEXT_HANDLER_LOCKED) == 0;
+    }
+
+    // Sets HANDLER_READY in handshake_flags. Returns true if RESULT_READY was
+    // already set, meaning this side arrived second and must dispatch the handler.
+    bool notify_handler_ready()
+    {
+        uint8_t prev = __atomic_fetch_or(&handshake_flags, TH_ASYNC_HANDSHAKE_HANDLER_READY, __ATOMIC_ACQ_REL);
+        return (prev & TH_ASYNC_HANDSHAKE_RESULT_READY) != 0;
+    }
+
+    // Sets RESULT_READY in handshake_flags. Returns true if HANDLER_READY was
+    // already set, meaning this side arrived second and must dispatch the handler.
+    bool notify_result_ready()
+    {
+        uint8_t prev = __atomic_fetch_or(&handshake_flags, TH_ASYNC_HANDSHAKE_RESULT_READY, __ATOMIC_ACQ_REL);
+        return (prev & TH_ASYNC_HANDSHAKE_HANDLER_READY) != 0;
+    }
+
+    bool is_result_ready() const
+    {
+        return (handshake_flags & TH_ASYNC_HANDSHAKE_RESULT_READY) != 0;
+    }
+
+    bool is_handler_ready() const
+    {
+        return (handshake_flags & TH_ASYNC_HANDSHAKE_HANDLER_READY) != 0;
     }
 
     void process_handler()
@@ -74,34 +130,43 @@ struct async_context {
         cleanup_handler_ptr(&storage);
     }
 
+public:
+    template<typename... Args>
+    bool try_emplace_result(Args &&...args)
+    {
+        if (!try_lock_result()) {
+            return false;
+        }
+        new (&buffer.result) Result(std::forward<Args>(args)...);
+
+        if (notify_result_ready()) {
+            process_handler();
+        }
+        return true;
+    }
+
     template<typename... Args>
     void emplace_result(Args &&...args)
     {
-        TH_ASSERT(!(flags & ASYNC_CONTEXT_RESULT_SET), "Result is already being set");
-        new (&buffer.result) Result(std::forward<Args>(args)...);
-
-        uint32_t old_flags = set_flags(ASYNC_CONTEXT_RESULT_SET);
-        if (old_flags & ASYNC_CONTEXT_HANDLER_SET) {
-            process_handler();
-        }
+        TH_ASSERT(try_emplace_result(std::forward<Args>(args)...), "Result has already been set");
     }
 
     template<typename SmallConstHandler, typename... Args>
     void emplace_handler(Args &&...args)
     {
-        static_assert(sizeof(SmallConstHandler) <= sizeof(TAsyncHandlerStorage::buf),
+        static_assert(sizeof(SmallConstHandler) <= sizeof(TAsyncHandlerStorage::buffer),
                       "Handler type is too large for small storage");
-        TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
-        new (&storage.buf) SmallConstHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
-            (*reinterpret_cast<SmallConstHandler *>(&storage->buf))(std::forward<Result>(*result_ptr));
+
+        TH_ASSERT(try_lock_handler(), "Handler has already been set");
+        new (&storage.buffer) SmallConstHandler(std::forward<Args>(args)...);
+        process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
+            (*reinterpret_cast<SmallConstHandler *>(&storage_ptr->buffer))(std::forward<Result>(*result_ptr));
         };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
-            reinterpret_cast<SmallConstHandler *>(&storage->buf)->~SmallConstHandler();
+        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
+            reinterpret_cast<SmallConstHandler *>(&storage_ptr->buffer)->~SmallConstHandler();
         };
 
-        uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
-        if (old_flags & ASYNC_CONTEXT_RESULT_SET) {
+        if (notify_handler_ready()) {
             process_handler();
         }
     }
@@ -109,27 +174,26 @@ struct async_context {
     template<typename LargeMutableHandler, typename... Args>
     void new_handler(Args &&...args)
     {
-        TH_ASSERT(!(flags & ASYNC_CONTEXT_HANDLER_SET), "Handler is already being set");
-        storage.ptr = new LargeMutableHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage *storage, Result *result_ptr) {
-            (*reinterpret_cast<LargeMutableHandler *>(storage->ptr))(std::forward<Result>(*result_ptr));
+        TH_ASSERT(try_lock_handler(), "Handler has already been set");
+        storage.pointer = new LargeMutableHandler(std::forward<Args>(args)...);
+        process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
+            (*reinterpret_cast<LargeMutableHandler *>(storage_ptr->pointer))(std::forward<Result>(*result_ptr));
         };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage) {
-            delete reinterpret_cast<LargeMutableHandler *>(storage->ptr);
+        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
+            delete reinterpret_cast<LargeMutableHandler *>(storage_ptr->pointer);
         };
 
-        uint32_t old_flags = set_flags(ASYNC_CONTEXT_HANDLER_SET);
-        if (old_flags & ASYNC_CONTEXT_RESULT_SET) {
+        if (notify_handler_ready()) {
             process_handler();
         }
     }
 
     ~async_context()
     {
-        if (flags & ASYNC_CONTEXT_RESULT_SET) {
+        if (is_result_ready()) {
             buffer.result.~Result();
         }
-        if (flags & ASYNC_CONTEXT_HANDLER_SET) {
+        if (is_handler_ready()) {
             cleanup_handler();
         }
     }
@@ -147,6 +211,8 @@ std::pair<completer<Result>, future<Result>> make_async_pair();
 template<typename Result>
 class completer {
 public:
+    using result_type = Result;
+
     async_context<Result> *m_ctx;
 
     explicit completer(async_context<Result> *ctx) : m_ctx(ctx)
@@ -155,7 +221,12 @@ public:
 
     friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
-    completer(completer const &) = delete;
+    completer(completer const &other) : m_ctx(other.m_ctx)
+    {
+        if (m_ctx) {
+            m_ctx->inc_ref();
+        }
+    }
 
     completer(completer &&other) : m_ctx(other.m_ctx)
     {
@@ -176,6 +247,12 @@ public:
     }
 
     template<typename... Args>
+    bool try_complete(Args &&...args) const
+    {
+        return m_ctx->try_emplace_result(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
     void complete(Args &&...args) const
     {
         m_ctx->emplace_result(std::forward<Args>(args)...);
@@ -185,6 +262,8 @@ public:
 template<typename Result>
 class future {
 public:
+    using result_type = Result;
+
     async_context<Result> *m_ctx;
 
     explicit future(async_context<Result> *ctx) : m_ctx(ctx)
@@ -193,7 +272,12 @@ public:
 
     friend std::pair<completer<Result>, future<Result>> make_async_pair<Result>();
 
-    future(future const &) = delete;
+    future(future const &other) : m_ctx(other.m_ctx)
+    {
+        if (m_ctx) {
+            m_ctx->inc_ref();
+        }
+    }
 
     future(future &&other) : m_ctx(other.m_ctx)
     {
@@ -216,7 +300,7 @@ public:
     template<typename Handler, typename... Args>
     void on_complete(Args &&...args) const
     {
-        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buf)) {
+        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buffer)) {
             m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
         } else {
             m_ctx->template new_handler<Handler>(std::forward<Args>(args)...);
@@ -261,13 +345,13 @@ struct as_param<future<Result>> {
 };
 
 template<typename Result>
-inline bool operator==(completer<Result> lhs, completer<Result> rhs)
+inline bool operator==(completer<Result> const &lhs, completer<Result> const &rhs)
 {
     return lhs.m_ctx == rhs.m_ctx;
 }
 
 template<typename Result>
-inline bool operator==(future<Result> lhs, future<Result> rhs)
+inline bool operator==(future<Result> const &lhs, future<Result> const &rhs)
 {
     return lhs.m_ctx == rhs.m_ctx;
 }
@@ -275,7 +359,7 @@ inline bool operator==(future<Result> lhs, future<Result> rhs)
 
 template<typename Result>
 struct std::hash<taihe::completer<Result>> {
-    std::size_t operator()(taihe::completer<Result> val) const
+    std::size_t operator()(taihe::completer<Result> const &val) const
     {
         return std::hash<void *>()(val.m_ctx);
     }
@@ -283,7 +367,7 @@ struct std::hash<taihe::completer<Result>> {
 
 template<typename Result>
 struct std::hash<taihe::future<Result>> {
-    std::size_t operator()(taihe::future<Result> val) const
+    std::size_t operator()(taihe::future<Result> const &val) const
     {
         return std::hash<void *>()(val.m_ctx);
     }
@@ -291,134 +375,106 @@ struct std::hash<taihe::future<Result>> {
 
 // Utils
 
-#include <condition_variable>
-#include <mutex>
-#include <optional>
-
 namespace taihe {
-template<typename Result>
-Result wait(future<Result> fut)
+template<typename Result, typename... Args>
+future<Result> make_ready_future(Args &&...args)
 {
-    struct WaitContext {
-        std::mutex mtx;
-        std::condition_variable cv;
-        std::optional<Result> waited;
-    };
-
-    struct WaitHandler {
-        WaitContext &ctx;
-
-        explicit WaitHandler(WaitContext &ctx) : ctx(ctx)
-        {
-        }
-
-        void operator()(Result &&result) const
-        {
-            std::unique_lock<std::mutex> lock(ctx.mtx);
-            ctx.waited.emplace(std::forward<Result>(result));
-            ctx.cv.notify_all();
-        }
-    };
-
-    WaitContext ctx;
-    fut.template on_complete<WaitHandler>(ctx);
-
-    std::unique_lock<std::mutex> lock(ctx.mtx);
-    ctx.cv.wait(lock, [&ctx]() {
-        return ctx.waited.has_value();
-    });
-
-    return std::move(ctx.waited.value());
+    auto [com, fut] = make_async_pair<Result>();
+    com.complete(std::forward<Args>(args)...);
+    return std::move(fut);
 }
 
 template<typename Result>
-Result race(std::initializer_list<future<Result>> futs)
+future<Result> make_ready_future(Result &&result)
 {
-    struct RaceContext {
-        std::mutex mtx;
-        std::condition_variable cv;
-        std::optional<Result> waited;
-    };
-
-    struct RaceHandler {
-        std::shared_ptr<RaceContext> ptr;
-
-        explicit RaceHandler(std::shared_ptr<RaceContext> ptr) : ptr(ptr)
-        {
-        }
-
-        void operator()(Result &&result) const
-        {
-            std::unique_lock<std::mutex> lock(ptr->mtx);
-            if (!ptr->waited.has_value()) {
-                ptr->waited.emplace(std::forward<Result>(result));
-                ptr->cv.notify_all();
-            }
-        }
-    };
-
-    auto ptr = std::make_shared<RaceContext>();
-    for (auto const &fut : futs) {
-        fut.template on_complete<RaceHandler>(ptr);
-    }
-
-    std::unique_lock<std::mutex> lock(ptr->mtx);
-    ptr->cv.wait(lock, [ptr = ptr.get()]() {
-        return ptr->waited.has_value();
-    });
-
-    return std::move(ptr->waited.value());
+    return make_ready_future<Result, Result>(std::forward<Result>(result));
 }
 }  // namespace taihe
 
-#include <type_traits>
+namespace taihe::__detail {
+template<typename Result, typename Func>
+struct __then_sync_adaptor {
+    using result_type = Result;
+    Func func;
+};
+
+template<typename Result, typename Func>
+struct __then_returns_future_adaptor {
+    using result_type = Result;
+    Func func;
+};
+
+template<typename Result, typename Func>
+struct __then_with_completer_adaptor {
+    using result_type = Result;
+    Func func;
+};
+}  // namespace taihe::__detail
 
 namespace taihe {
-template<typename...>
-constexpr inline bool dependent_false_v = false;
+template<typename Result, typename Func>
+__detail::__then_sync_adaptor<Result, Func> then_sync(Func &&func)
+{
+    return __detail::__then_sync_adaptor<Result, Func> {std::forward<Func>(func)};
+}
 
-template<typename Next, typename Last, typename Processor>
-future<Next> then(future<Last> old, Processor &&processor)
+template<typename Result, typename Func>
+__detail::__then_returns_future_adaptor<Result, Func> then_returns_future(Func &&func)
+{
+    return __detail::__then_returns_future_adaptor<Result, Func> {std::forward<Func>(func)};
+}
+
+template<typename Result, typename Func>
+__detail::__then_with_completer_adaptor<Result, Func> then_with_completer(Func &&func)
+{
+    return __detail::__then_with_completer_adaptor<Result, Func> {std::forward<Func>(func)};
+}
+
+template<typename Last, typename Next, typename Func>
+auto operator|(future<Last> old, __detail::__then_sync_adaptor<Next, Func> adaptor)
 {
     auto [com, fut] = make_async_pair<Next>();
+    old.on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
+        com.complete(func(std::forward<Last>(result)));
+    });
+    return std::move(fut);
+}
 
-    struct ProcessHandler {
-        Processor processor;
-        completer<Next> com;
+template<typename Last, typename Next, typename Func>
+auto operator|(future<Last> old, __detail::__then_returns_future_adaptor<Next, Func> adaptor)
+{
+    auto [com, fut] = make_async_pair<Next>();
+    old.on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
+        func(std::forward<Last>(result)).on_complete([com = std::move(com)](Next &&next) mutable {
+            com.complete(std::forward<Next>(next));
+        });
+    });
+    return std::move(fut);
+}
 
-        ProcessHandler(Processor &&processor, completer<Next> com)
-            : processor(std::forward<Processor>(processor)), com(std::move(com))
-        {
-        }
+template<typename Last, typename Next, typename Func>
+auto operator|(future<Last> old, __detail::__then_with_completer_adaptor<Next, Func> adaptor)
+{
+    auto [com, fut] = make_async_pair<Next>();
+    old.on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
+        func(std::forward<Last>(result), std::move(com));
+    });
+    return std::move(fut);
+}
+}  // namespace taihe
 
-        struct CompleterAsHandler {
-            completer<Next> com;
+namespace taihe {
+template<typename Result>
+future<Result> race(std::initializer_list<future<Result>> olds)
+{
+    auto [com, fut] = make_async_pair<Result>();
 
-            explicit CompleterAsHandler(completer<Next> com) : com(std::move(com))
-            {
-            }
+    for (auto const &old : olds) {
+        old.on_complete([com = com](Result &&result) mutable {
+            com.try_complete(std::forward<Result>(result));
+        });
+    }
 
-            void operator()(Next &&result) const
-            {
-                com.complete(std::forward<Next>(result));
-            }
-        };
-
-        void operator()(Last &&result)
-        {
-            if constexpr (std::is_invocable_r_v<future<Next>, Processor, Last>) {
-                this->processor(std::forward<Last>(result))
-                    .template on_complete<CompleterAsHandler>(std::move(this->com));
-            } else if constexpr (std::is_invocable_v<Processor, Last, completer<Next>>) {
-                this->processor(std::forward<Last>(result), std::move(this->com));
-            } else {
-                static_assert(dependent_false_v<Next, Last, Processor>,
-                              "Processor cannot handle result without completer or future return type");
-            }
-        }
-    };
-
-    old.template on_complete<ProcessHandler>(std::forward<Processor>(processor), std::move(com));
     return std::move(fut);
 }
 }  // namespace taihe
