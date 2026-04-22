@@ -158,8 +158,8 @@ interface PrimitivesInteger {
 
 function get_interface_interger(): PrimitivesInteger;
 @!sts_inject("""
-export const CONSTANT_BOOL_TRUE = true;
-export const CONSTANT_BOOL_FALSE = false;
+export const CONSTANT_BOOL_TRUE: boolean = true;
+export const CONSTANT_BOOL_FALSE: boolean = false;
 """)
 
 @const
