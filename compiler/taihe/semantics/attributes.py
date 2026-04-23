@@ -39,7 +39,7 @@ AnyAttribute
 1. **Backend Initialization**: Backends register attributes using
    `AbstractCheckedAttribute.register_to(registry)`
 2. **IR Construction**: The IR converter processes unchecked attributes:
-   - `AttributeRegistry.attach()` dispatches to appropriate handlers
+   - `AttributeRegistry.try_resolve()` dispatches to appropriate handlers
    - `AbstractCheckedAttribute.try_construct()` validates arguments and constructs instances
 """
 
@@ -517,7 +517,7 @@ class AttributeRegistry:
         for attr_type in attr_types:
             attr_type.register_to(self)
 
-    def attach(
+    def try_resolve(
         self,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,

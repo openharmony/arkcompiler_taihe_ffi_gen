@@ -140,8 +140,8 @@ The compilation is driven by `CompilerInstance.run()`, which executes the follow
 
 | Phase | Compiler Action | Backend Hook | Backend Action | Hook Constraints |
 |-------|-----------------|--------------|----------------|------------------|
-| (init) | Construct backends | `register()` | Register attributes | - |
-| `collect()` | Scan and add source files | `inject()` | Add backend-specific sources (e.g., stdlib) | - |
+| (init) | Build backends | `setup()` | Set up attributes, analyses | - |
+| `collect()` | Scan and add source files | `add_sources()` | Add backend-specific sources (e.g., stdlib) | - |
 | `parse()` | Parse sources to syntax IR | - | - | - |
 | `resolve()` | Resolve names, types, enum values, attributes | - | - | - |
 | `post_process()` | - | `post_process()` | Add backend-specific metadata to resolved IR | Must be idempotent. Must not affect other backends or modify shared attributes, only for adding backend-specific metadata. May call `Analysis.provide()`. |

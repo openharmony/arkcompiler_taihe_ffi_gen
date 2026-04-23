@@ -30,10 +30,10 @@ class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return AbiHeaderBackendConfig()
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.attributes import all_attr_types
         from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
@@ -41,7 +41,7 @@ class AbiHeaderBackendConfig(BackendConfig):
             def __init__(self, ci: "CompilerInstance"):
                 self._ci = ci
 
-            def register(self):
+            def setup(self):
                 self._ci.attribute_registry.register(*all_attr_types)
 
             def generate(self):
@@ -61,13 +61,13 @@ class AbiSourcesBackendConfig(BackendConfig):
     noexcept_all: bool = False
 
     @classmethod
-    def register(cls, option_registry: "OptionRegistry"):
+    def register_options_to(cls, option_registry: "OptionRegistry"):
         from taihe.codegen.abi.options import all_abi_config_options
 
         option_registry.register(*all_abi_config_options)
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         from taihe.codegen.abi.options import NoexceptAllOption
 
         noexcept_all_opt = options.get(NoexceptAllOption)
@@ -75,7 +75,7 @@ class AbiSourcesBackendConfig(BackendConfig):
             noexcept_all=noexcept_all_opt is not None,
         )
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.attributes import NoexceptAttr
         from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
 
@@ -128,8 +128,8 @@ class AbiSourcesBackendConfig(BackendConfig):
                 self._ci.package_group.accept(NoexceptCallbackVisitor())
 
             def generate(self):
-                self._ci.output_manager.register_runtime_cxx_src("string.cpp")
-                self._ci.output_manager.register_runtime_cxx_src("object.cpp")
+                self._ci.output_manager.record_runtime_cxx_src("string.cpp")
+                self._ci.output_manager.record_runtime_cxx_src("object.cpp")
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
@@ -144,10 +144,10 @@ class CAuthorBackendConfig(BackendConfig):
     DEPS: ClassVar = ["abi-source"]
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return CAuthorBackendConfig()
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_impl import (
             CImplHeadersGenerator,
             CImplSourcesGenerator,

@@ -632,7 +632,8 @@ class _ResolveAttributePass(RecursiveDeclVisitor):
     @override
     def visit_decl(self, d: Decl) -> None:
         for unchecked_attr in UncheckedAttribute.consume(d):
-            if (checked_attr := self.am.attach(unchecked_attr, self.dm)) is not None:
+            checked_attr = self.am.try_resolve(unchecked_attr, self.dm)
+            if checked_attr is not None:
                 d.add_attribute(checked_attr)
 
 

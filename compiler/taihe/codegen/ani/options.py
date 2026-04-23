@@ -36,7 +36,7 @@ class ArktsKeepNameOption(AbstractConfigOption):
     NAME = "arkts:keep-name"
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls()
 
 
@@ -55,7 +55,7 @@ class ArktsModulePrefixOption(AbstractConfigOption):
     prefix: str | None = None
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls(prefix=value)
 
 
@@ -74,7 +74,7 @@ class ArktsPathPrefixOption(AbstractConfigOption):
     prefix: str | None = None
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         return cls(prefix=value)
 
 

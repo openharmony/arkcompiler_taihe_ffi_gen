@@ -42,7 +42,7 @@ class AbstractAnalysis(Generic[_H], ABC):
     @classmethod
     def get(cls: type[_A], am: "AnalysisManager", arg: _H, /) -> _A:
         """Get or create an analysis instance using the factory."""
-        return am.get_or_create(cls, arg)
+        return am.get(cls, arg)
 
     @classmethod
     @abstractmethod
@@ -64,19 +64,9 @@ class AnalysisManager:
     def __init__(self) -> None:
         self._cache: dict[CacheKey, AbstractAnalysis[Any]] = {}
 
-    def get_or_create(self, analysis_type: type[_A], arg: Hashable, /) -> _A:
-        """Get existing analysis or create new one if not cached.
-
-        The analysis is uniquely identified by its type and the provided arguments.
-        """
-        key = CacheKey(analysis_type, arg)
-
-        if cached_analysis := self._cache.get(key):
-            return cast(_A, cached_analysis)
-
-        created_analysis = analysis_type._create(self, arg)  # type: ignore
-        self._cache[key] = created_analysis
-        return created_analysis
+    def clear(self) -> None:
+        """Clear the analysis cache."""
+        self._cache.clear()
 
     def provide(self, analysis_type: type[_A], arg: Hashable, analysis: _A, /) -> None:
         """Pre-populate the cache with an externally-constructed analysis instance.
@@ -89,6 +79,16 @@ class AnalysisManager:
         if self._cache.setdefault(key, analysis) != analysis:
             raise ValueError(f"Analysis for {key} already exists in cache.")
 
-    def clear(self) -> None:
-        """Clear the analysis cache."""
-        self._cache.clear()
+    def get(self, analysis_type: type[_A], arg: Hashable, /) -> _A:
+        """Get existing analysis or create new one if not cached.
+
+        The analysis is uniquely identified by its type and the provided arguments.
+        """
+        key = CacheKey(analysis_type, arg)
+
+        if cached_analysis := self._cache.get(key):
+            return cast(_A, cached_analysis)
+
+        created_analysis = analysis_type._create(self, arg)  # type: ignore
+        self._cache[key] = created_analysis
+        return created_analysis

@@ -16,6 +16,7 @@
 #ifndef TAIHE_COMMON_H
 #define TAIHE_COMMON_H
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

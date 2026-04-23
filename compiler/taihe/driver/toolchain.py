@@ -135,19 +135,19 @@ def taihec(
     debug: bool = False,
 ) -> None:
     registry = BackendRegistry()
-    registry.register_all()
+    registry.register_builtins()
 
     dm = ConsoleDiagnosticsManager()
 
-    backend_config_types = registry.collect_required_backends(backend_names, dm)
+    backend_config_types = registry.resolve(backend_names, dm)
     option_registry = OptionRegistry()
     for backend_config_type in backend_config_types:
-        backend_config_type.register(option_registry)
-    options = option_registry.parse_args(extra or [], dm)
+        backend_config_type.register_options_to(option_registry)
+    options = option_registry.parse_options(extra or [], dm)
     backend_configs = [
         backend_config
         for backend_config_type in backend_config_types
-        if (backend_config := backend_config_type.create(options, dm)) is not None
+        if (backend_config := backend_config_type.from_options(options, dm)) is not None
     ]
     if debug:
         pretty_print_backend_config = PrettyPrintBackendConfig(

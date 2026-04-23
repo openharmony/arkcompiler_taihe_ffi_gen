@@ -34,7 +34,7 @@ from taihe.utils.resources import (
 
 def main():
     backend_registry = BackendRegistry()
-    backend_registry.register_all()
+    backend_registry.register_builtins()
 
     parser = argparse.ArgumentParser(
         prog="taihec",
@@ -109,15 +109,15 @@ def main():
     ]
     dst_dir = Path(args.dst_dir)
 
-    backend_config_types = backend_registry.collect_required_backends(args.backends, dm)
+    backend_config_types = backend_registry.resolve(args.backends, dm)
     option_registry = OptionRegistry()
     for backend_config_type in backend_config_types:
-        backend_config_type.register(option_registry)
-    options = option_registry.parse_args(args.config, dm)
+        backend_config_type.register_options_to(option_registry)
+    options = option_registry.parse_options(args.config, dm)
     backend_configs = [
         backend_config
         for backend_config_type in backend_config_types
-        if (backend_config := backend_config_type.create(options, dm)) is not None
+        if (backend_config := backend_config_type.from_options(options, dm)) is not None
     ]
 
     match args.buildsys:
