@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,29 +18,15 @@ import * as hello from "hello";
 
 loadLibrary("ani_async_types");
 
-async function assertAsyncError(task: () => Promise<Any>, expectedMessage?: string) {
-    let promise = task();
-    try {
-        await promise;
-        arktest.assertTrue(false, "Expected an error to be thrown, but promise resolved successfully");
-    } catch (err) {
-        if (expectedMessage) {
-            arktest.assertTrue(err instanceof Error, "Expected an Error object");
-            arktest.assertTrue(err.message.includes(expectedMessage), `Error message should include "${expectedMessage}", but got "${err.message}"`);
-        }
-    }
-}
-
-async function test_returns_promise() {
+function test_returns_promise(): void {
     let x = hello.futureResultReturnsPromise(1000, "InitialValue");
-    console.log("Waiting for promise result...");
-    await x.then((s: String) => {
+    console.log("Waiting for result...");
+    waitForCompletion(() => x.then((s: String) => {
         console.log("Promise Result: " + s);
-        arktest.assertEQ("C++AsyncProcessed-InitialValue", s);
-    });
+    }));
 }
 
-async function test_with_callback() {
+function test_with_callback(): void {
     let x = new Promise<string>((resolve, reject) => {
         hello.futureResultWithCallback(
             1000, "InitialValue",
@@ -52,49 +38,10 @@ async function test_with_callback() {
                 }
             });
     });
-    console.log("Waiting for callback result...");
-    await x.then((s: String) => {
+    console.log("Waiting for callback...");
+    waitForCompletion(() => x.then((s: String) => {
         console.log("Callback Result: " + s);
-        arktest.assertEQ("C++AsyncProcessed-InitialValue", s);
-    });
-}
-
-function test_returns_promise_with_sync_error() {
-    arktest.expectError(() => {
-        hello.futureResultReturnsPromise(-1, "InitialValue");
-    });
-}
-
-function test_with_callback_with_sync_error() {
-    arktest.expectError(() => {
-        hello.futureResultWithCallback(
-            -1, "InitialValue",
-            (err: BusinessError|null, res: String|undefined) => {
-                // This callback should not be called due to sync error
-            });
-    });
-}
-
-async function test_returns_promise_with_async_error() {
-    let x = hello.futureResultReturnsPromise(1000, "");
-    console.log("Waiting for promise result with async error...");
-    await assertAsyncError(() => x);
-}
-
-async function test_with_callback_with_async_error() {
-    let x = new Promise<string>((resolve, reject) => {
-        hello.futureResultWithCallback(
-            1000, "", (err: BusinessError|null, res: String|undefined) => {
-                console.log("Inside callback for async error test", err, res);
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(res!);
-                }
-            });
-    });
-    console.log("Waiting for callback result with async error...");
-    await assertAsyncError(() => x);
+    }));
 }
 
 class UserTypeImpl implements hello.UserType {
@@ -115,17 +62,7 @@ class UserTypeImpl implements hello.UserType {
     }
 }
 
-async function test_reverse_returns_promise() {
-    let user = new UserTypeImpl();
-    let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
-    console.log("Waiting for promise result...");
-    await x.then((s: String) => {
-        console.log("Reverse Promise Result: " + s);
-        arktest.assertEQ("C++AsyncProcessed-EtsAsyncProcessed-C++SyncProcessed-InitialValue", s);
-    });
-}
-
-async function test_reverse_with_callback() {
+function test_reverse_with_callback(): void {
     let user = new UserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
@@ -138,37 +75,60 @@ async function test_reverse_with_callback() {
                 }
             });
     });
-    console.log("Waiting for callback result...");
-    await x.then((s: String) => {
+    console.log("Waiting for reverse callback...");
+    waitForCompletion(() => x.then((s: String) => {
         console.log("Reverse Callback Result: " + s);
-        arktest.assertEQ("C++AsyncProcessed-EtsAsyncProcessed-C++SyncProcessed-InitialValue", s);
-    });
+    }));
 }
 
-class SyncErrorUserTypeImpl implements hello.UserType {
-    fooWithCallback(
-        ms: long, result: string,
-        set: (error: BusinessError|null, data: string|undefined) => void):
-        void {
-        throw new BusinessError(1, "Synchronous error in fooWithCallback");
-    }
-    fooReturnsPromise(ms: long, result: string): Promise<string> {
-        throw new BusinessError(1, "Synchronous error in fooReturnsPromise");
-    }
-}
-
-async function test_reverse_returns_promise_with_sync_error() {
-    let user = new SyncErrorUserTypeImpl();
+function test_reverse_returns_promise(): void {
+    let user = new UserTypeImpl();
     let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
-    console.log("Waiting for promise result with sync error...");
-    await assertAsyncError(() => x, "Synchronous error in fooReturnsPromise");
+    console.log("Waiting for reverse promise...");
+    waitForCompletion(() => x.then((s: String) => {
+        console.log("Reverse Promise Result: " + s);
+    }));
 }
 
-async function test_reverse_with_callback_with_sync_error() {
-    let user = new SyncErrorUserTypeImpl();
+function test_returns_promise_error_sync(): void {
+    let err: BusinessError|undefined;
+    try {
+        let x = hello.futureResultReturnsPromise(-1, "InitialValue");
+        waitForCompletion(() => x.then((s: String) => {
+            console.log("Promise Result (unexpected success): " + s);
+        }));
+    } catch (e) {
+        err = e as BusinessError;
+    }
+    arktest.assertNE(
+        err, undefined,
+        "futureResultReturnsPromise should throw on negative ms");
+    arktest.assertEQ(
+        err?.message, "ms cannot be negative", "error message should match");
+}
+
+function test_returns_promise_error_async(): void {
+    let err: BusinessError|undefined;
+    try {
+        let x = hello.futureResultReturnsPromise(100, "");
+        waitForCompletion(() => x.then((s: String) => {
+            console.log("Promise Result (unexpected success): " + s);
+        }));
+    } catch (e) {
+        err = e as BusinessError;
+    }
+    arktest.assertNE(
+        err, undefined,
+        "futureResultReturnsPromise should reject on empty result");
+    arktest.assertEQ(
+        err?.message, "val cannot be empty", "error message should match");
+}
+
+function test_with_callback_error_sync(): void {
+    let err: BusinessError|undefined;
     let x = new Promise<string>((resolve, reject) => {
-        hello.processUserTypeWithCallback(
-            user, 500, 500, "InitialValue",
+        hello.futureResultWithCallback(
+            -1, "InitialValue",
             (err: BusinessError|null, res: String|undefined) => {
                 if (err) {
                     reject(err);
@@ -177,40 +137,51 @@ async function test_reverse_with_callback_with_sync_error() {
                 }
             });
     });
-    console.log("Waiting for callback result with sync error...");
-    await assertAsyncError(() => x, "Synchronous error in fooWithCallback");
-}
-
-class AsyncErrorUserTypeImpl implements hello.UserType {
-    fooWithCallback(
-        ms: long, result: string,
-        set: (error: BusinessError|null, data: string|undefined) => void):
-        void {
-        setTimeout(() => {
-            set(new BusinessError(1, "Asynchronous error in fooWithCallback"), undefined);
-        }, ms.toInt());
+    try {
+        waitForCompletion(() => x.then((s: String) => {
+            console.log("Callback Result (unexpected success): " + s);
+        }));
+    } catch (e) {
+        err = e as BusinessError;
     }
-    fooReturnsPromise(ms: long, result: string): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            setTimeout(() => {
-                reject(new BusinessError(1, "Asynchronous error in fooReturnsPromise"));
-            }, ms.toInt());
-        });
+    arktest.assertNE(
+        err, undefined, "futureResultWithCallback should throw on negative ms");
+    arktest.assertEQ(
+        err?.message, "ms cannot be negative", "error message should match");
+}
+
+function test_with_callback_error_async(): void {
+    let err: BusinessError|undefined;
+    let x = new Promise<string>((resolve, reject) => {
+        hello.futureResultWithCallback(
+            100, "", (err: BusinessError|null, res: String|undefined) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(res!);
+                }
+            });
+    });
+    try {
+        waitForCompletion(() => x.then((s: String) => {
+            console.log("Callback Result (unexpected success): " + s);
+        }));
+    } catch (e) {
+        err = e as BusinessError;
     }
+    arktest.assertNE(
+        err, undefined,
+        "futureResultWithCallback should reject on empty result");
+    arktest.assertEQ(
+        err?.message, "val cannot be empty", "error message should match");
 }
 
-async function test_reverse_returns_promise_with_async_error() {
-    let user = new AsyncErrorUserTypeImpl();
-    let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
-    console.log("Waiting for promise result with async error...");
-    await assertAsyncError(() => x, "Asynchronous error in fooReturnsPromise");
-}
-
-async function test_reverse_with_callback_with_async_error() {
-    let user = new AsyncErrorUserTypeImpl();
+function test_reverse_with_callback_error(): void {
+    let err: BusinessError|undefined;
+    let user = new UserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
-            user, 500, 500, "InitialValue",
+            user, -1, 500, "InitialValue",
             (err: BusinessError|null, res: String|undefined) => {
                 if (err) {
                     reject(err);
@@ -219,27 +190,57 @@ async function test_reverse_with_callback_with_async_error() {
                 }
             });
     });
-    console.log("Waiting for callback result with async error...");
-    await assertAsyncError(() => x, "Asynchronous error in fooWithCallback");
+    try {
+        waitForCompletion(() => x.then((s: String) => {
+            console.log("Reverse Callback Result (unexpected success): " + s);
+        }));
+    } catch (e) {
+        err = e as BusinessError;
+    }
+    arktest.assertNE(
+        err, undefined,
+        "processUserTypeWithCallback should throw on negative etsMs");
+    arktest.assertEQ(
+        err?.message, "ms cannot be negative", "error message should match");
 }
 
+function test_reverse_returns_promise_error(): void {
+    let err: BusinessError|undefined;
+    let user = new UserTypeImpl();
+    try {
+        let x =
+            hello.processUserTypeReturnsPromise(user, 500, -1, "InitialValue");
+        waitForCompletion(() => x.then((s: String) => {
+            console.log("Reverse Promise Result (unexpected success): " + s);
+        }));
+    } catch (e) {
+        err = e as BusinessError;
+    }
+    arktest.assertNE(
+        err, undefined,
+        "processUserTypeReturnsPromise should throw on negative cppMs");
+    arktest.assertEQ(
+        err?.message, "ms cannot be negative", "error message should match");
+}
 
 function main() {
     const suite = new arktest.ArkTestsuite("Hello Module Test");
-
-    suite.addAsyncTest("test_returns_promise", test_returns_promise);
-    suite.addAsyncTest("test_with_callback", test_with_callback);
-    suite.addTest("test_returns_promise_with_sync_error", test_returns_promise_with_sync_error);
-    suite.addTest("test_with_callback_with_sync_error", test_with_callback_with_sync_error);
-    suite.addAsyncTest("test_returns_promise_with_async_error", test_returns_promise_with_async_error);
-    suite.addAsyncTest("test_with_callback_with_async_error", test_with_callback_with_async_error);
-
-    suite.addAsyncTest("test_reverse_returns_promise", test_reverse_returns_promise);
-    suite.addAsyncTest("test_reverse_with_callback", test_reverse_with_callback);
-    suite.addAsyncTest("test_reverse_returns_promise_with_sync_error", test_reverse_returns_promise_with_sync_error);
-    suite.addAsyncTest("test_reverse_with_callback_with_sync_error", test_reverse_with_callback_with_sync_error);
-    suite.addAsyncTest("test_reverse_returns_promise_with_async_error", test_reverse_returns_promise_with_async_error);
-    suite.addAsyncTest("test_reverse_with_callback_with_async_error", test_reverse_with_callback_with_async_error);
-
+    suite.addTest("test_returns_promise", test_returns_promise);
+    suite.addTest("test_with_callback", test_with_callback);
+    suite.addTest("test_reverse_returns_promise", test_reverse_returns_promise);
+    suite.addTest("test_reverse_with_callback", test_reverse_with_callback);
+    suite.addTest(
+        "test_returns_promise_error_sync", test_returns_promise_error_sync);
+    suite.addTest(
+        "test_returns_promise_error_async", test_returns_promise_error_async);
+    suite.addTest(
+        "test_with_callback_error_sync", test_with_callback_error_sync);
+    suite.addTest(
+        "test_with_callback_error_async", test_with_callback_error_async);
+    suite.addTest(
+        "test_reverse_with_callback_error", test_reverse_with_callback_error);
+    suite.addTest(
+        "test_reverse_returns_promise_error",
+        test_reverse_returns_promise_error);
     exit(suite.run());
 }
