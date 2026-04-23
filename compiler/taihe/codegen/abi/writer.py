@@ -17,11 +17,18 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from json import dumps
+from math import isfinite
 from typing import TextIO
 
 from typing_extensions import override
 
-from taihe.semantics.declarations import TypedValue
+from taihe.semantics.declarations import (
+    BooleanTypedValue,
+    FloatingPointTypedValue,
+    IntegerTypedValue,
+    StringTypedValue,
+    TypedValue,
+)
 from taihe.utils.outputs import FileWriter, GeneratedFileGroup, OutputManager
 
 
@@ -30,7 +37,21 @@ def render_c_string(value: str) -> str:
 
 
 def render_c_value(typed_value: TypedValue) -> str:
-    return dumps(typed_value.value)
+    match typed_value:
+        case FloatingPointTypedValue(_, value):
+            if isfinite(value):
+                return f"{value}"
+            if value > 0:
+                return "+INFINITY"
+            if value < 0:
+                return "-INFINITY"
+            return "NAN"
+        case IntegerTypedValue(_, value):
+            return f"{value}"
+        case BooleanTypedValue(_, value):
+            return "true" if value else "false"
+        case StringTypedValue(_, value):
+            return render_c_string(value)
 
 
 C_DEFAULT_INDENT = "    "
