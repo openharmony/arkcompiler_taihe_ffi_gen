@@ -1512,7 +1512,8 @@ function main() {
         "check testCasetestBaseBoolFunc4_1", testCasetestBaseBoolFunc4_1);
     suite.addTest(
         "check testCasetestBaseBoolFunc4_2", testCasetestBaseBoolFunc4_2);
-    suite.addAsyncTest("check testCasetestBaseBoolFunc5", testCasetestBaseBoolFunc5);
+    suite.addAsyncTest(
+        "check testCasetestBaseBoolFunc5", testCasetestBaseBoolFunc5);
     suite.addAsyncTest(
         "check testCasetestBaseBoolFunc5_1", testCasetestBaseBoolFunc5_1);
     suite.addAsyncTest(

@@ -88,8 +88,7 @@ async function test_from_callback(): Promise<void> {
     try {
         res = await new Promise<int>((resolve, reject) => {
             foo.add(
-                10, NUMBER_TWENTY,
-                (error: BusinessError|null, data?: int) => {
+                10, NUMBER_TWENTY, (error: BusinessError|null, data?: int) => {
                     if (error != null && error.message) {
                         reject(error);
                     } else {

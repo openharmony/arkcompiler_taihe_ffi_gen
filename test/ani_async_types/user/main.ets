@@ -18,15 +18,22 @@ import * as hello from "hello";
 
 loadLibrary("ani_async_types");
 
-async function assertAsyncError(task: () => Promise<Any>, expectedMessage?: string) {
+async function assertAsyncError(
+    task: () => Promise<Any>, expectedMessage?: string) {
     let promise = task();
     try {
         await promise;
-        arktest.assertTrue(false, "Expected an error to be thrown, but promise resolved successfully");
+        arktest.assertTrue(
+            false,
+            "Expected an error to be thrown, but promise resolved successfully");
     } catch (err) {
         if (expectedMessage) {
-            arktest.assertTrue(err instanceof Error, "Expected an Error object");
-            arktest.assertTrue(err.message.includes(expectedMessage), `Error message should include "${expectedMessage}", but got "${err.message}"`);
+            arktest.assertTrue(
+                err instanceof Error, "Expected an Error object");
+            arktest.assertTrue(
+                err.message.includes(expectedMessage),
+                `Error message should include "${expectedMessage}", but got "${
+                    err.message}"`);
         }
     }
 }
@@ -121,7 +128,9 @@ async function test_reverse_returns_promise() {
     console.log("Waiting for promise result...");
     await x.then((s: String) => {
         console.log("Reverse Promise Result: " + s);
-        arktest.assertEQ("C++AsyncProcessed-EtsAsyncProcessed-C++SyncProcessed-InitialValue", s);
+        arktest.assertEQ(
+            "C++AsyncProcessed-EtsAsyncProcessed-C++SyncProcessed-InitialValue",
+            s);
     });
 }
 
@@ -141,7 +150,9 @@ async function test_reverse_with_callback() {
     console.log("Waiting for callback result...");
     await x.then((s: String) => {
         console.log("Reverse Callback Result: " + s);
-        arktest.assertEQ("C++AsyncProcessed-EtsAsyncProcessed-C++SyncProcessed-InitialValue", s);
+        arktest.assertEQ(
+            "C++AsyncProcessed-EtsAsyncProcessed-C++SyncProcessed-InitialValue",
+            s);
     });
 }
 
@@ -187,13 +198,15 @@ class AsyncErrorUserTypeImpl implements hello.UserType {
         set: (error: BusinessError|null, data: string|undefined) => void):
         void {
         setTimeout(() => {
-            set(new BusinessError(1, "Asynchronous error in fooWithCallback"), undefined);
+            set(new BusinessError(1, "Asynchronous error in fooWithCallback"),
+                undefined);
         }, ms.toInt());
     }
     fooReturnsPromise(ms: long, result: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             setTimeout(() => {
-                reject(new BusinessError(1, "Asynchronous error in fooReturnsPromise"));
+                reject(new BusinessError(
+                    1, "Asynchronous error in fooReturnsPromise"));
             }, ms.toInt());
         });
     }
@@ -229,17 +242,35 @@ function main() {
 
     suite.addAsyncTest("test_returns_promise", test_returns_promise);
     suite.addAsyncTest("test_with_callback", test_with_callback);
-    suite.addTest("test_returns_promise_with_sync_error", test_returns_promise_with_sync_error);
-    suite.addTest("test_with_callback_with_sync_error", test_with_callback_with_sync_error);
-    suite.addAsyncTest("test_returns_promise_with_async_error", test_returns_promise_with_async_error);
-    suite.addAsyncTest("test_with_callback_with_async_error", test_with_callback_with_async_error);
+    suite.addTest(
+        "test_returns_promise_with_sync_error",
+        test_returns_promise_with_sync_error);
+    suite.addTest(
+        "test_with_callback_with_sync_error",
+        test_with_callback_with_sync_error);
+    suite.addAsyncTest(
+        "test_returns_promise_with_async_error",
+        test_returns_promise_with_async_error);
+    suite.addAsyncTest(
+        "test_with_callback_with_async_error",
+        test_with_callback_with_async_error);
 
-    suite.addAsyncTest("test_reverse_returns_promise", test_reverse_returns_promise);
-    suite.addAsyncTest("test_reverse_with_callback", test_reverse_with_callback);
-    suite.addAsyncTest("test_reverse_returns_promise_with_sync_error", test_reverse_returns_promise_with_sync_error);
-    suite.addAsyncTest("test_reverse_with_callback_with_sync_error", test_reverse_with_callback_with_sync_error);
-    suite.addAsyncTest("test_reverse_returns_promise_with_async_error", test_reverse_returns_promise_with_async_error);
-    suite.addAsyncTest("test_reverse_with_callback_with_async_error", test_reverse_with_callback_with_async_error);
+    suite.addAsyncTest(
+        "test_reverse_returns_promise", test_reverse_returns_promise);
+    suite.addAsyncTest(
+        "test_reverse_with_callback", test_reverse_with_callback);
+    suite.addAsyncTest(
+        "test_reverse_returns_promise_with_sync_error",
+        test_reverse_returns_promise_with_sync_error);
+    suite.addAsyncTest(
+        "test_reverse_with_callback_with_sync_error",
+        test_reverse_with_callback_with_sync_error);
+    suite.addAsyncTest(
+        "test_reverse_returns_promise_with_async_error",
+        test_reverse_returns_promise_with_async_error);
+    suite.addAsyncTest(
+        "test_reverse_with_callback_with_async_error",
+        test_reverse_with_callback_with_async_error);
 
     exit(suite.run());
 }
