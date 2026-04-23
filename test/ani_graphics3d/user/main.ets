@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -39,12 +39,12 @@ function test_ani_graphics3d_scene_createCamera() {
     arktest.assertEQ(info.fov, 5.24f);
 }
 
-async function test_ani_graphics3d_scene_createCamera_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createCamera_promise() {
     let param = sNodePara;
     let info = SceneTest.getCamera();
     let err: BusinessError = new BusinessError();
     try {
-        info = await sResFactory.createCamera(param);
+        info = waitForCompletion(() => sResFactory.createCamera(param));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -53,12 +53,13 @@ async function test_ani_graphics3d_scene_createCamera_promise(): Promise<void> {
     arktest.assertEQ(info.fov, 5.24f);
 }
 
-async function test_ani_graphics3d_scene_createCamera_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createCamera_sync() {
     let param = sNodePara;
     let info = SceneTest.getCamera();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Camera>((resolve, reject): void => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Camera>((resolve, reject): void => {
                 sResFactory.createCamera(
                     param,
                     (err: BusinessError|null,
@@ -69,7 +70,7 @@ async function test_ani_graphics3d_scene_createCamera_sync(): Promise<void> {
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -93,14 +94,14 @@ function test_ani_graphics3d_scene_createLight() {
     arktest.assertEQ(info.intensity, 5.24f);
 }
 
-async function test_ani_graphics3d_scene_createLight_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createLight_promise() {
     let param = sNodePara;
     let lightType = SceneTest.LightType.SPOT;
     let info = SceneTest.getLight();
     let err: BusinessError = new BusinessError();
     try {
         info =
-            await sResFactory.createLight(param, lightType);
+            waitForCompletion(() => sResFactory.createLight(param, lightType));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -109,13 +110,14 @@ async function test_ani_graphics3d_scene_createLight_promise(): Promise<void> {
     arktest.assertEQ(info.intensity, 5.24f);
 }
 
-async function test_ani_graphics3d_scene_createLight_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createLight_sync() {
     let param = sNodePara;
     let lightType = SceneTest.LightType.SPOT;
     let info = SceneTest.getLight();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Light>((resolve, reject) => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Light>((resolve, reject) => {
                 sResFactory.createLight(
                     param, lightType,
                     (err: BusinessError|null,
@@ -126,7 +128,7 @@ async function test_ani_graphics3d_scene_createLight_sync(): Promise<void> {
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -149,12 +151,12 @@ function test_ani_graphics3d_scene_createNode() {
     arktest.assertEQ(info.visible, true);
 }
 
-async function test_ani_graphics3d_scene_createNode_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createNode_promise() {
     let param = sNodePara;
     let info = SceneTest.getNode();
     let err: BusinessError = new BusinessError();
     try {
-        info = await sResFactory.createNode(param);
+        info = waitForCompletion(() => sResFactory.createNode(param));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -163,12 +165,13 @@ async function test_ani_graphics3d_scene_createNode_promise(): Promise<void> {
     arktest.assertEQ(info.visible, true);
 }
 
-async function test_ani_graphics3d_scene_createNode_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createNode_sync() {
     let param = sNodePara;
     let info = SceneTest.getNode();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Node>((resolve, reject) => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Node>((resolve, reject) => {
                 sResFactory.createNode(
                     param,
                     (err: BusinessError|null,
@@ -179,7 +182,7 @@ async function test_ani_graphics3d_scene_createNode_sync(): Promise<void> {
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -203,13 +206,14 @@ function test_ani_graphics3d_scene_createMaterial() {
     arktest.assertEQ(info.materialType, 122 as byte);
 }
 
-async function test_ani_graphics3d_scene_createMaterial_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createMaterial_promise() {
     let param = sResPara;
     let materialType = SceneTest.MaterialType.SHADER;
     let info = SceneTest.getMaterial();
     let err: BusinessError = new BusinessError();
     try {
-        info = await sResFactory.createMaterial(param, materialType);
+        info = waitForCompletion(
+            () => sResFactory.createMaterial(param, materialType));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -218,13 +222,14 @@ async function test_ani_graphics3d_scene_createMaterial_promise(): Promise<void>
     arktest.assertEQ(info.materialType, 122 as byte);
 }
 
-async function test_ani_graphics3d_scene_createMaterial_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createMaterial_sync() {
     let param = sResPara;
     let materialType = SceneTest.MaterialType.SHADER;
     let info = SceneTest.getMaterial();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Material>((resolve, reject) => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Material>((resolve, reject) => {
                 sResFactory.createMaterial(
                     param, materialType,
                     (err: BusinessError|null,
@@ -235,7 +240,7 @@ async function test_ani_graphics3d_scene_createMaterial_sync(): Promise<void> {
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -258,12 +263,12 @@ function test_ani_graphics3d_scene_createShader() {
     arktest.assertEQ(info.inputs.size, 1);
 }
 
-async function test_ani_graphics3d_scene_createShader_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createShader_promise() {
     let param = sResPara;
     let info = SceneTest.getShader();
     let err: BusinessError = new BusinessError();
     try {
-        info = await sResFactory.createShader(param);
+        info = waitForCompletion(() => sResFactory.createShader(param));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -272,12 +277,13 @@ async function test_ani_graphics3d_scene_createShader_promise(): Promise<void> {
     arktest.assertEQ(info.inputs.size, 1);
 }
 
-async function test_ani_graphics3d_scene_createShader_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createShader_sync() {
     let param = sResPara;
     let info = SceneTest.getShader();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Shader>((resolve, reject) => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Shader>((resolve, reject) => {
                 sResFactory.createShader(
                     param,
                     (err: BusinessError|null,
@@ -288,7 +294,7 @@ async function test_ani_graphics3d_scene_createShader_sync(): Promise<void> {
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -311,12 +317,12 @@ function test_ani_graphics3d_scene_createImage() {
     arktest.assertEQ(info.width, 800);
 }
 
-async function test_ani_graphics3d_scene_createImage_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createImage_promise() {
     let param = sResPara;
     let info = SceneTest.getImage();
     let err: BusinessError = new BusinessError();
     try {
-        info = await sResFactory.createImage(param);
+        info = waitForCompletion(() => sResFactory.createImage(param));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -325,12 +331,13 @@ async function test_ani_graphics3d_scene_createImage_promise(): Promise<void> {
     arktest.assertEQ(info.height, 600);
 }
 
-async function test_ani_graphics3d_scene_createImage_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createImage_sync() {
     let param = sResPara;
     let info = SceneTest.getImage();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Image>((resolve, reject) => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Image>((resolve, reject) => {
                 sResFactory.createImage(
                     param,
                     (err: BusinessError|null,
@@ -341,7 +348,7 @@ async function test_ani_graphics3d_scene_createImage_sync(): Promise<void> {
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -364,12 +371,12 @@ function test_ani_graphics3d_scene_createEnvironment() {
     arktest.assertEQ(info.backgroundType, 0);
 }
 
-async function test_ani_graphics3d_scene_createEnvironment_promise(): Promise<void> {
+function test_ani_graphics3d_scene_createEnvironment_promise() {
     let param = sResPara;
     let info = SceneTest.getEnvironment();
     let err: BusinessError = new BusinessError();
     try {
-        info = await sResFactory.createEnvironment(param);
+        info = waitForCompletion(() => sResFactory.createEnvironment(param));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -378,12 +385,13 @@ async function test_ani_graphics3d_scene_createEnvironment_promise(): Promise<vo
     arktest.assertEQ(info.backgroundType, 0);
 }
 
-async function test_ani_graphics3d_scene_createEnvironment_sync(): Promise<void> {
+function test_ani_graphics3d_scene_createEnvironment_sync() {
     let param = sResPara;
     let info = SceneTest.getEnvironment();
     let err: BusinessError = new BusinessError();
     try {
-        info = await new Promise<SceneTest.Environment>((resolve, reject) => {
+        info = waitForCompletion(
+            () => new Promise<SceneTest.Environment>((resolve, reject) => {
                 sResFactory.createEnvironment(
                     param,
                     (err: BusinessError|null,
@@ -394,7 +402,7 @@ async function test_ani_graphics3d_scene_createEnvironment_sync(): Promise<void>
                             resolve(data!);
                         }
                     });
-            });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -410,64 +418,64 @@ function main() {
     suite.addTest(
         "test_ani_graphics3d_scene_createCamera",
         test_ani_graphics3d_scene_createCamera)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createCamera_promise",
         test_ani_graphics3d_scene_createCamera_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createCamera_sync",
         test_ani_graphics3d_scene_createCamera_sync)
     suite.addTest(
         "test_ani_graphics3d_scene_createLight",
         test_ani_graphics3d_scene_createLight)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createLight_promise",
         test_ani_graphics3d_scene_createLight_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createLight_sync",
         test_ani_graphics3d_scene_createLight_sync)
     suite.addTest(
         "test_ani_graphics3d_scene_createNode",
         test_ani_graphics3d_scene_createNode)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createNode_promise",
         test_ani_graphics3d_scene_createNode_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createNode_sync",
         test_ani_graphics3d_scene_createNode_sync)
     suite.addTest(
         "test_ani_graphics3d_scene_createMaterial",
         test_ani_graphics3d_scene_createMaterial)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createMaterial_promise",
         test_ani_graphics3d_scene_createMaterial_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createMaterial_sync",
         test_ani_graphics3d_scene_createMaterial_sync)
     suite.addTest(
         "test_ani_graphics3d_scene_createShader",
         test_ani_graphics3d_scene_createShader)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createShader_promise",
         test_ani_graphics3d_scene_createShader_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createShader_promise",
         test_ani_graphics3d_scene_createShader_sync)
     suite.addTest(
         "test_ani_graphics3d_scene_createImage",
         test_ani_graphics3d_scene_createImage)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createImage_promise",
         test_ani_graphics3d_scene_createImage_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createImage_sync",
         test_ani_graphics3d_scene_createImage_sync)
     suite.addTest(
         "test_ani_graphics3d_scene_createEnvironment",
         test_ani_graphics3d_scene_createEnvironment)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createEnvironment_promise",
         test_ani_graphics3d_scene_createEnvironment_promise)
-    suite.addAsyncTest(
+    suite.addTest(
         "test_ani_graphics3d_scene_createEnvironment_promise",
         test_ani_graphics3d_scene_createEnvironment_sync)
 
