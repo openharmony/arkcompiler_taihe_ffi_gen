@@ -30,10 +30,10 @@ class NapiBridgeBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-user"]
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         return NapiBridgeBackendConfig()
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.napi.attributes import all_napi_attr_types
         from taihe.codegen.napi.gen_dts import DtsCodeGenerator
         from taihe.codegen.napi.gen_napi import NapiCodeGenerator
@@ -43,11 +43,11 @@ class NapiBridgeBackendConfig(BackendConfig):
             def __init__(self, ci: "CompilerInstance"):
                 self._ci = ci
 
-            def register(self):
+            def setup(self):
                 self._ci.attribute_registry.register(*all_napi_attr_types)
 
             def generate(self):
-                self._ci.output_manager.register_runtime_cxx_src("runtime_napi.cpp")
+                self._ci.output_manager.record_runtime_cxx_src("runtime_napi.cpp")
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group

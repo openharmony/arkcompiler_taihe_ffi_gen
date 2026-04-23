@@ -36,13 +36,13 @@ class AniBridgeBackendConfig(BackendConfig):
     path_prefix: str | None = None
 
     @classmethod
-    def register(cls, option_registry: "OptionRegistry"):
+    def register_options_to(cls, option_registry: "OptionRegistry"):
         from taihe.codegen.ani.options import all_ani_config_options
 
         option_registry.register(*all_ani_config_options)
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         from taihe.codegen.ani.options import (
             ArktsKeepNameOption,
             ArktsModulePrefixOption,
@@ -58,7 +58,7 @@ class AniBridgeBackendConfig(BackendConfig):
             path_prefix=path_prefix_opt.prefix if path_prefix_opt else None,
         )
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.ani.analyses import ArkTsOutDir
         from taihe.codegen.ani.attributes import StsKeepNameAttr, all_attr_types
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
@@ -70,10 +70,10 @@ class AniBridgeBackendConfig(BackendConfig):
                 self._ci = ci
                 self._config = config
 
-            def register(self):
+            def setup(self):
                 self._ci.attribute_registry.register(*all_attr_types)
 
-            def inject(self):
+            def add_sources(self):
                 self._ci.source_manager.add_source(
                     SourceFile(
                         StandardLibrary.resolve_path() / "taihe.platform.ani.taihe",
@@ -93,7 +93,7 @@ class AniBridgeBackendConfig(BackendConfig):
                             p.add_attribute(StsKeepNameAttr(loc=p.loc))
 
             def generate(self):
-                self._ci.output_manager.register_runtime_cxx_src("runtime_ani.cpp")
+                self._ci.output_manager.record_runtime_cxx_src("runtime_ani.cpp")
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group

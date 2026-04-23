@@ -15,12 +15,18 @@
 
 from abc import ABC, abstractmethod
 from json import dumps
-import math
+from math import isfinite
 from typing import TYPE_CHECKING, TextIO
 
 from typing_extensions import override
 
-from taihe.semantics.declarations import FloatingPointTypedValue, TypedValue
+from taihe.semantics.declarations import (
+    BooleanTypedValue,
+    FloatingPointTypedValue,
+    IntegerTypedValue,
+    StringTypedValue,
+    TypedValue,
+)
 from taihe.semantics.types import FloatingPointKind
 from taihe.utils.outputs import FileWriter, OutputManager
 
@@ -33,21 +39,31 @@ def render_ets_string(value: str) -> str:
 
 
 def render_ets_value(typed_value: "TypedValue") -> str:
-    if (
-        isinstance(typed_value, FloatingPointTypedValue)
-        and typed_value.type.kind == FloatingPointKind.F32
-    ):
-        value = typed_value.value
-        if math.isnan(value):
-            return "Float.NaN"
-        if math.isinf(value):
-            return (
-                "Float.POSITIVE_INFINITY"
-                if value > 0
-                else "Float.NEGATIVE_INFINITY"
-            )
-        return f"{dumps(value)}f"
-    return dumps(typed_value.value)
+    match typed_value:
+        case FloatingPointTypedValue(type, value):
+            match type.kind:
+                case FloatingPointKind.F32:
+                    if isfinite(value):
+                        return f"{value}f"
+                    if value > 0:
+                        return "Float.POSITIVE_INFINITY"
+                    if value < 0:
+                        return "Float.NEGATIVE_INFINITY"
+                    return "Float.NaN"
+                case FloatingPointKind.F64:
+                    if isfinite(value):
+                        return f"{value}"
+                    if value > 0:
+                        return "Double.POSITIVE_INFINITY"
+                    if value < 0:
+                        return "Double.NEGATIVE_INFINITY"
+                    return "Double.NaN"
+        case IntegerTypedValue(_, value):
+            return f"{value}"
+        case BooleanTypedValue(_, value):
+            return "true" if value else "false"
+        case StringTypedValue(_, value):
+            return render_ets_string(value)
 
 
 class NamingStrategy(ABC):

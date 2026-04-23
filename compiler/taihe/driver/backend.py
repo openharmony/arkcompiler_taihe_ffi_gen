@@ -36,8 +36,8 @@ class BackendConfig(ABC):
     "List of backends that the current backend depends on."
 
     @classmethod
-    def register(cls, option_registry: "OptionRegistry"):
-        """Registers the backend configuration to the registry.
+    def register_options_to(cls, option_registry: "OptionRegistry"):
+        """Registers the backend's configuration options to the option registry.
 
         By default, this method does nothing. Subclass may override this method
         to register backend-specific configuration options.
@@ -46,31 +46,35 @@ class BackendConfig(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager") -> Self | None:
+    def from_options(
+        cls,
+        options: "OptionStore",
+        dm: "DiagnosticsManager",
+    ) -> Self | None:
         """Creates a backend configuration from the given options.
 
         This method is called after all options are parsed, and the returned
-        configuration will be used to construct the backend instance.
+        configuration will be used to build the backend instance.
         """
 
     @abstractmethod
-    def construct(self, instance: "CompilerInstance") -> "Backend":
-        """Constructs the backend instance from the configuration.
+    def build(self, instance: "CompilerInstance") -> "Backend":
+        """Builds the backend instance from the configuration.
 
-        This method is called by the CompilerInstance to construct the backend
+        This method is called by the CompilerInstance to build the backend
         after all backends are collected and their configurations are created.
         """
 
 
 class Backend(ABC):  # noqa: B024
-    def register(self):
-        """Register backend-specific analyses, attributes, etc.
+    def setup(self):
+        """Set up backend-specific analyses, attributes, etc.
 
-        This method is called just after the backend is constructed.
+        This method is called just after the backend is built.
         """
         return
 
-    def inject(self):
+    def add_sources(self):
         """Add backend-specific sources after the collection phase.
 
         For example, the standard library sources can be added in this stage.
@@ -147,7 +151,7 @@ class BackendRegistry:
     def clear(self):
         self._name_to_config_type.clear()
 
-    def collect_required_backends(
+    def resolve(
         self,
         names: Iterable[str],
         dm: "DiagnosticsManager",
@@ -178,7 +182,7 @@ class BackendRegistry:
 
         return config_types
 
-    def register_all(self):
+    def register_builtins(self):
         from taihe.codegen.abi import (
             AbiHeaderBackendConfig,
             AbiSourcesBackendConfig,

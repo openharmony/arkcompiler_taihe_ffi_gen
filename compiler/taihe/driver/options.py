@@ -36,15 +36,15 @@ OptionStore
 
 ## Lifecycle
 
-1. **Backend Collection**: `BackendRegistry.collect_required_backends()` gathers all
-   required backends
-2. **Option Registration**: Each backend's `BackendConfig.register()` registers its
-   option types into `OptionRegistry`
-3. **Parsing**: `OptionRegistry.parse_args()` validates and parses raw config strings
+1. **Backend Resolution**: `BackendRegistry.resolve()` gathers all required backends
+   and their dependencies
+2. **Option Registration**: Each backend's `BackendConfig.register_options_to()` registers
+   its option types into `OptionRegistry`
+3. **Parsing**: `OptionRegistry.parse_options()` validates and parses raw config strings
    into an `OptionStore`
-4. **Consumption**: `BackendConfig.create(options)` reads the `OptionStore` and stores
-   resolved values as fields on the config
-5. **Seeding**: During `Backend.register()`, resolved config is seeded into the
+4. **Consumption**: `BackendConfig.from_options(options)` reads the `OptionStore` and
+   stores resolved values as fields on the config
+5. **Seeding**: During `Backend.setup()`, resolved config is seeded into the
    `AnalysisManager` for access by analyses and code generators via the standard
    `Analysis.get()` API
 """
@@ -68,7 +68,7 @@ class AbstractConfigOption(ABC):
 
     Subclasses should define:
     - NAME: The option name as it appears on command line
-    - parse(): Class method to construct an instance from raw value
+    - try_parse(): Class method to construct an instance from raw value
     """
 
     NAME: ClassVar[str]
@@ -76,7 +76,7 @@ class AbstractConfigOption(ABC):
 
     @classmethod
     @abstractmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager") -> Self | None:
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager") -> Self | None:
         """Parse the option value from command line.
 
         Args:
@@ -155,13 +155,13 @@ class OptionRegistry:
                     f"because it is already registered as {setted_option_type.__qualname__}"
                 )
 
-    def parse(
+    def parse_option(
         self,
         name: str,
         value: str | None,
         dm: "DiagnosticsManager",
     ) -> AbstractConfigOption | None:
-        """Parse raw config list into a OptionStore.
+        """Parse a single config option from raw command-line values.
 
         Args:
             name: The option name from command line -C flags
@@ -184,9 +184,13 @@ class OptionRegistry:
             dm.emit(AdhocError(msg))
             return None
 
-        return option_type.parse(value, dm)
+        return option_type.try_parse(value, dm)
 
-    def parse_args(self, args: list[str], dm: "DiagnosticsManager") -> OptionStore:
+    def parse_options(
+        self,
+        args: list[str],
+        dm: "DiagnosticsManager",
+    ) -> OptionStore:
         """Parse a list of raw config strings into an OptionStore.
 
         Args:
@@ -203,7 +207,7 @@ class OptionRegistry:
         for arg in args:
             name, *values = arg.split("=", 1)
             value = values[0] if values else None
-            option = self.parse(name, value, dm)
+            option = self.parse_option(name, value, dm)
             if option is not None:
                 store.add(option)
         return store
