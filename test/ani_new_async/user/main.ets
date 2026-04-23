@@ -70,14 +70,13 @@ async function testAsyncAdd(): Promise<void> {
         let err: BusinessError|undefined;
         try {
             res = await new Promise<int>((resolve, reject) => {
-                async_test.add(
-                    0, 2, (err: BusinessError|null, data?: int) => {
-                        if (err !== null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
+                async_test.add(0, 2, (err: BusinessError|null, data?: int) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
             });
         } catch (e) {
             err = e as BusinessError;
@@ -149,8 +148,7 @@ async function testStructMethods(): Promise<void> {
             "fromStruct should throw an error when c is 0");
     }
 
-    let data: async_test.Data =
-        await async_test.toStruct("aaa", "bbb", 1);
+    let data: async_test.Data = await async_test.toStruct("aaa", "bbb", 1);
     arktest.assertEQ(data.a, "aaa", "Data.a should be 'aaa'");
     arktest.assertEQ(data.b, "bbb", "Data.b should be 'bbb'");
     arktest.assertEQ(data.c, 1, "Data.c should be 1");

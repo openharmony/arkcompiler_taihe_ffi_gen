@@ -59,17 +59,16 @@ async function test_ani_graphics3d_scene_createCamera_sync(): Promise<void> {
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Camera>((resolve, reject): void => {
-                sResFactory.createCamera(
-                    param,
-                    (err: BusinessError|null,
-                     data: SceneTest.Camera|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createCamera(
+                param,
+                (err: BusinessError|null, data: SceneTest.Camera|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -99,8 +98,7 @@ async function test_ani_graphics3d_scene_createLight_promise(): Promise<void> {
     let info = SceneTest.getLight();
     let err: BusinessError = new BusinessError();
     try {
-        info =
-            await sResFactory.createLight(param, lightType);
+        info = await sResFactory.createLight(param, lightType);
     } catch (e) {
         err = e as BusinessError;
     }
@@ -116,17 +114,16 @@ async function test_ani_graphics3d_scene_createLight_sync(): Promise<void> {
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Light>((resolve, reject) => {
-                sResFactory.createLight(
-                    param, lightType,
-                    (err: BusinessError|null,
-                     data: SceneTest.Light|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createLight(
+                param, lightType,
+                (err: BusinessError|null, data: SceneTest.Light|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -169,17 +166,16 @@ async function test_ani_graphics3d_scene_createNode_sync(): Promise<void> {
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Node>((resolve, reject) => {
-                sResFactory.createNode(
-                    param,
-                    (err: BusinessError|null,
-                     data: SceneTest.Node|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createNode(
+                param,
+                (err: BusinessError|null, data: SceneTest.Node|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -203,7 +199,8 @@ function test_ani_graphics3d_scene_createMaterial() {
     arktest.assertEQ(info.materialType, 122 as byte);
 }
 
-async function test_ani_graphics3d_scene_createMaterial_promise(): Promise<void> {
+async function test_ani_graphics3d_scene_createMaterial_promise():
+    Promise<void> {
     let param = sResPara;
     let materialType = SceneTest.MaterialType.SHADER;
     let info = SceneTest.getMaterial();
@@ -225,17 +222,17 @@ async function test_ani_graphics3d_scene_createMaterial_sync(): Promise<void> {
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Material>((resolve, reject) => {
-                sResFactory.createMaterial(
-                    param, materialType,
-                    (err: BusinessError|null,
-                     data: SceneTest.Material|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createMaterial(
+                param, materialType,
+                (err: BusinessError|null,
+                 data: SceneTest.Material|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -278,17 +275,16 @@ async function test_ani_graphics3d_scene_createShader_sync(): Promise<void> {
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Shader>((resolve, reject) => {
-                sResFactory.createShader(
-                    param,
-                    (err: BusinessError|null,
-                     data: SceneTest.Shader|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createShader(
+                param,
+                (err: BusinessError|null, data: SceneTest.Shader|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -331,17 +327,16 @@ async function test_ani_graphics3d_scene_createImage_sync(): Promise<void> {
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Image>((resolve, reject) => {
-                sResFactory.createImage(
-                    param,
-                    (err: BusinessError|null,
-                     data: SceneTest.Image|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createImage(
+                param,
+                (err: BusinessError|null, data: SceneTest.Image|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
@@ -364,7 +359,8 @@ function test_ani_graphics3d_scene_createEnvironment() {
     arktest.assertEQ(info.backgroundType, 0);
 }
 
-async function test_ani_graphics3d_scene_createEnvironment_promise(): Promise<void> {
+async function test_ani_graphics3d_scene_createEnvironment_promise():
+    Promise<void> {
     let param = sResPara;
     let info = SceneTest.getEnvironment();
     let err: BusinessError = new BusinessError();
@@ -378,23 +374,24 @@ async function test_ani_graphics3d_scene_createEnvironment_promise(): Promise<vo
     arktest.assertEQ(info.backgroundType, 0);
 }
 
-async function test_ani_graphics3d_scene_createEnvironment_sync(): Promise<void> {
+async function test_ani_graphics3d_scene_createEnvironment_sync():
+    Promise<void> {
     let param = sResPara;
     let info = SceneTest.getEnvironment();
     let err: BusinessError = new BusinessError();
     try {
         info = await new Promise<SceneTest.Environment>((resolve, reject) => {
-                sResFactory.createEnvironment(
-                    param,
-                    (err: BusinessError|null,
-                     data: SceneTest.Environment|undefined) => {
-                        if (err != null && err.code !== 0) {
-                            reject(err);
-                        } else {
-                            resolve(data!);
-                        }
-                    });
-            });
+            sResFactory.createEnvironment(
+                param,
+                (err: BusinessError|null,
+                 data: SceneTest.Environment|undefined) => {
+                    if (err != null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data!);
+                    }
+                });
+        });
     } catch (e) {
         err = e as BusinessError;
     }
