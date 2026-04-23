@@ -2257,13 +2257,13 @@ class StsReverseFuncGenerator:
             elif (promise_name := func_ani_info.promise_name) is not None:
                 args_sts_str = ", ".join(args_sts)
                 self.target.writelns(
-                    f"return {self.func_kind.call_from_reverse(promise_name)}({args_sts_str}).awaitSync();",
+                    f"return waitForCompletion(() => {self.func_kind.call_from_reverse(promise_name)}({args_sts_str}));",
                 )
             elif (async_name := func_ani_info.async_name) is not None:
                 pkg_ani_info = PackageAniInfo.get(self.am, self.func.parent_pkg)
                 with self.target.indented(
-                    f"return new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
-                    f"}}).awaitSync();",
+                    f"return waitForCompletion(() => new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
+                    f"}}));",
                 ):
                     with self.target.indented(
                         f"let callback: {pkg_ani_info.ns.mod.AC_type}<{return_ty_sts_name}> = (err: {pkg_ani_info.ns.mod.BE_type} | null, res?: {return_ty_sts_real}): void => {{",
