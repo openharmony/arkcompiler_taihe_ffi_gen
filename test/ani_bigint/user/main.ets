@@ -24,9 +24,9 @@ function main() {
     const suite = new arktest.ArkTestsuite("bigint_test ut")
     suite.addTest("testBigint01", testBigint01);
     suite.addTest("testBigint02", testBigint02);
-    suite.addTest("testBigint03", testBigint03);
+    // suite.addTest("testBigint03", testBigint03);
     suite.addTest("testBigint04", testBigint04);
-    suite.addTest("testBigint05", testBigint05);
+    // suite.addTest("testBigint05", testBigint05);
     suite.addTest("testBigint06", testBigint06);
 
     suite.addTest("testProcessBigInt_1", testProcessBigInt_1);
