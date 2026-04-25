@@ -1855,7 +1855,6 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.arraybuffer_attr = arraybuffer_attr
         self.ani_type = ANI_ARRAYBUFFER
         self.ets_type = EtsClassType("std.core.ArrayBuffer")
 
@@ -1909,14 +1908,25 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.ets_desc = f"std.core.{self.typedarray_attr.sts_type}"
+        self.sts_type = {
+            ScalarKinds.F32: "Float32Array",
+            ScalarKinds.F64: "Float64Array",
+            ScalarKinds.I8: "Int8Array",
+            ScalarKinds.I16: "Int16Array",
+            ScalarKinds.I32: "Int32Array",
+            ScalarKinds.I64: "BigInt64Array",
+            ScalarKinds.U8: "Uint8Array",
+            ScalarKinds.U16: "Uint16Array",
+            ScalarKinds.U32: "Uint32Array",
+            ScalarKinds.U64: "BigUint64Array",
+        }[typedarray_attr.item_ty.kind]
+        self.ets_desc = f"std.core.{self.sts_type}"
         self.ets_type = EtsClassType(self.ets_desc)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
-        return self.typedarray_attr.sts_type
+        return self.sts_type
 
     @override
     def from_ani(
@@ -1993,7 +2003,6 @@ class BigIntTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.bigint_attr = bigint_attr
         self.ani_type = ANI_OBJECT
         self.ets_type = EtsClassType("std.core.BigInt")
 
@@ -2055,7 +2064,6 @@ class RecordTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.record_attr = record_attr
         self.ani_type = ANI_OBJECT
         self.ets_type = EtsClassType("std.core.Record")
 
