@@ -124,7 +124,7 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
 @dataclass
-class ArkTsOutDir(AbstractAnalysis["PackageGroup"]):
+class ArkTsOutDir(AbstractAnalysis[PackageGroup]):
     module_prefix: str | None = None
     path_prefix: str | None = None
 
@@ -150,7 +150,7 @@ class EtsType(ABC):
 
 @dataclass
 class EtsPrimitiveType(EtsType):
-    _boxed: "EtsNonPrimitiveType"
+    _desc_boxed: str
     _sig: str
 
     @property
@@ -159,7 +159,7 @@ class EtsPrimitiveType(EtsType):
 
     @property
     def boxed(self) -> "EtsNonPrimitiveType":
-        return self._boxed
+        return EtsClassType(self._desc_boxed)
 
 
 @dataclass
@@ -1041,11 +1041,16 @@ class ParamAniInfo(AbstractAnalysis[ParamDecl]):
 
 
 class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
-    ani_type: AniType
-    ets_type: EtsType
-
     def __init__(self, am: AnalysisManager, t: NonVoidType):
         self.cpp_info = TypeCppInfo.get(am, t)
+
+    @property
+    @abstractmethod
+    def ani_type(self) -> AniType: ...
+
+    @property
+    @abstractmethod
+    def ets_type(self) -> EtsType: ...
 
     @abstractmethod
     def sts_type_in(self, target: ArkTsImportManager) -> str: ...
@@ -1128,9 +1133,18 @@ class EnumTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
         enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
-        self.ani_type = enum_ani_info.ani_type
-        self.ets_type = enum_ani_info.ets_type
+        return enum_ani_info.ani_type
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
+        return enum_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1173,9 +1187,18 @@ class StructTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
         struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
-        self.ani_type = struct_ani_info.ani_type
-        self.ets_type = struct_ani_info.ets_type
+        return struct_ani_info.ani_type
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
+        return struct_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1218,9 +1241,18 @@ class UnionTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
         union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
-        self.ani_type = union_ani_info.ani_type
-        self.ets_type = union_ani_info.ets_type
+        return union_ani_info.ani_type
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
+        return union_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1263,9 +1295,18 @@ class IfaceTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
         iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
-        self.ani_type = iface_ani_info.ani_type
-        self.ets_type = iface_ani_info.ets_type
+        return iface_ani_info.ani_type
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
+        return iface_ani_info.ets_type
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1304,10 +1345,23 @@ class IfaceTypeAniInfo(TypeAniInfo):
 
 
 class NullTypeAniInfo(TypeAniInfo):
-    def __init__(self, am: AnalysisManager, t: UnitType):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: UnitType,
+        null_attr: NullAttr | None = None,
+    ):
         super().__init__(am, t)
-        self.ani_type = ANI_REF
-        self.ets_type = EtsClassType("std.core.Null")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_REF
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Null")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1352,10 +1406,23 @@ class NullTypeAniInfo(TypeAniInfo):
 
 
 class UndefinedTypeAniInfo(TypeAniInfo):
-    def __init__(self, am: AnalysisManager, t: UnitType):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: UnitType,
+        undefined_attr: UndefinedAttr,
+    ):
         super().__init__(am, t)
-        self.ani_type = ANI_REF
-        self.ets_type = EtsUndefinedType()
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_REF
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsUndefinedType()
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1400,11 +1467,24 @@ class UndefinedTypeAniInfo(TypeAniInfo):
 
 
 class StringLiteralTypeAniInfo(TypeAniInfo):
-    def __init__(self, am: AnalysisManager, t: UnitType, literal_attr: LiteralAttr):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: UnitType,
+        literal_attr: LiteralAttr,
+    ):
         super().__init__(am, t)
-        self.ani_type = ANI_STRING
-        self.ets_type = EtsClassType("std.core.String")
         self.value = literal_attr.value
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_STRING
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.String")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1477,11 +1557,20 @@ class ScalarTypeAniInfo(TypeAniInfo):
             ScalarKinds.U64: (ANI_LONG, "long", "l"),
         }[t.kind]
         ani_type, sts_type, sig = sts_info
-        ets_type_boxed = EtsClassType(f"std.core.{sts_type.capitalize()}")
-        ets_type = EtsPrimitiveType(ets_type_boxed, sig)
-        self.ets_type = ets_type
-        self.ani_type = ani_type
+        ets_desc_boxed = f"std.core.{sts_type.capitalize()}"
+        self.ani_type_inner = ani_type
+        self.ets_type_inner = EtsPrimitiveType(ets_desc_boxed, sig)
         self.sts_type = sts_type
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return self.ani_type_inner
+
+    @property
+    @override
+    def ets_type(self) -> EtsPrimitiveType:
+        return self.ets_type_inner
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1515,8 +1604,16 @@ class ScalarTypeAniInfo(TypeAniInfo):
 class StringTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         super().__init__(am, t)
-        self.ani_type = ANI_STRING
-        self.ets_type = EtsClassType("std.core.String")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_STRING
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.String")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1563,12 +1660,18 @@ class OpaqueTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
-        if sts_type_attr := StsTypeAttr.get(self.t.ref):
-            self.sts_type = sts_type_attr.type_name
-        else:
-            self.sts_type = "Object"
-        self.ets_type = EtsClassType("std.core.Object")
+        sts_type_attr = StsTypeAttr.get(self.t.ref)
+        self.sts_type = sts_type_attr.type_name if sts_type_attr else "Object"
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Object")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1604,15 +1707,23 @@ class OptionalTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_REF
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        self.ani_type = ANI_REF
-        self.ets_type = item_ty_ani_info.ets_type.boxed
+        return item_ty_ani_info.ets_type.boxed
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        sts_type = item_ty_ani_info.sts_type_in(target)
-        return f"({sts_type} | undefined)"
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"({item_sts_type} | undefined)"
 
     @override
     def from_ani(
@@ -1679,15 +1790,23 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_FIXEDARRAY_REF
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        self.ani_type = ANI_FIXEDARRAY_REF
-        self.ets_type = EtsFixedArrayType(item_ty_ani_info.ets_type.boxed)
+        return EtsFixedArrayType(item_ty_ani_info.ets_type.boxed)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        sts_type = item_ty_ani_info.sts_type_in(target)
-        return f"FixedArray<{sts_type}>"
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"FixedArray<{item_sts_type}>"
 
     @override
     def from_ani(
@@ -1765,14 +1884,22 @@ class ArrayTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_ARRAY
-        self.ets_type = EtsClassType("std.core.Array")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_ARRAY
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Array")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        sts_type = item_ty_ani_info.sts_type_in(target)
-        return f"Array<{sts_type}>"
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"Array<{item_sts_type}>"
 
     @override
     def from_ani(
@@ -1855,8 +1982,16 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_ARRAYBUFFER
-        self.ets_type = EtsClassType("std.core.ArrayBuffer")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_ARRAYBUFFER
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.ArrayBuffer")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -1908,7 +2043,6 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
         self.sts_type = {
             ScalarKinds.F32: "Float32Array",
             ScalarKinds.F64: "Float64Array",
@@ -1922,7 +2056,16 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             ScalarKinds.U64: "BigUint64Array",
         }[typedarray_attr.item_ty.kind]
         self.ets_desc = f"std.core.{self.sts_type}"
-        self.ets_type = EtsClassType(self.ets_desc)
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType(self.ets_desc)
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2003,8 +2146,16 @@ class BigIntTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
-        self.ets_type = EtsClassType("std.core.BigInt")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.BigInt")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2064,8 +2215,16 @@ class RecordTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
-        self.ets_type = EtsClassType("std.core.Record")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Record")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2163,8 +2322,16 @@ class MapTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
-        self.ets_type = EtsClassType("std.core.Map")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Map")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2262,8 +2429,16 @@ class SetTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
-        self.ets_type = EtsClassType("std.core.Set")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Set")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2346,8 +2521,16 @@ class VectorTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_ARRAY
-        self.ets_type = EtsClassType("std.core.Array")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_ARRAY
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Array")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2427,8 +2610,16 @@ class CallbackTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_FN_OBJECT
-        self.ets_type = EtsClassType(f"std.core.Function{len(t.ref.params)}")
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_FN_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType(f"std.core.Function{len(self.t.ref.params)}")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2751,13 +2942,21 @@ class CompleterTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_FN_OBJECT
-        self.ets_type = EtsClassType("std.core.Function1")
 
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         self.expected_ty_cpp_name = (
             f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>"
         )
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_FN_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Function1")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -2912,13 +3111,21 @@ class FutureTypeAniInfo(TypeAniInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_OBJECT
-        self.ets_type = EtsClassType("std.core.Promise")
 
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         self.expected_ty_cpp_name = (
             f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>"
         )
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Promise")
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
@@ -3088,16 +3295,16 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
     def visit_unit_type(self, t: UnitType) -> TypeAniInfo:
         if literal_attr := LiteralAttr.get(t.ref):
             return StringLiteralTypeAniInfo(self.am, t, literal_attr)
-        if UndefinedAttr.get(t.ref):
-            return UndefinedTypeAniInfo(self.am, t)
-        if NullAttr.get(t.ref):
-            return NullTypeAniInfo(self.am, t)
+        if undefined_attr := UndefinedAttr.get(t.ref):
+            return UndefinedTypeAniInfo(self.am, t, undefined_attr)
+        if null_attr := NullAttr.get(t.ref):
+            return NullTypeAniInfo(self.am, t, null_attr)
         # TODO: compatible with older version, to be removed in future
         if isinstance(t.ref.parent_type_holder, StructFieldDecl | UnionFieldDecl):
-            if UndefinedAttr.get(t.ref.parent_type_holder):
-                return UndefinedTypeAniInfo(self.am, t)
-            if NullAttr.get(t.ref.parent_type_holder):
-                return NullTypeAniInfo(self.am, t)
+            if undefined_attr := UndefinedAttr.get(t.ref.parent_type_holder):
+                return UndefinedTypeAniInfo(self.am, t, undefined_attr)
+            if null_attr := NullAttr.get(t.ref.parent_type_holder):
+                return NullTypeAniInfo(self.am, t, null_attr)
         return NullTypeAniInfo(self.am, t)
 
     @override
