@@ -2755,7 +2755,8 @@ class CompleterTypeAniInfo(TypeAniInfo):
     def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         item_sts_type = item_ty_ani_info.sts_type_in(target)
-        return f"_taihe_AsyncCallback<({item_sts_type})>"
+        pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
+        return f"{pkg_ani_info.ns.mod.AC_type}<{item_sts_type}>"
 
     @override
     def from_ani(
