@@ -39,10 +39,11 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
+    FloatingPointType,
+    IntegerType,
     MapType,
     NonVoidType,
     OptionalType,
-    ScalarKinds,
     ScalarType,
     StructType,
     UnitType,
@@ -330,22 +331,13 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
     ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
+    item_ty: IntegerType = field(init=False)
+
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
-            and isinstance(item_ty := array_ty.item_ty, ScalarType)
-            and item_ty.kind
-            in (
-                ScalarKinds.I8,
-                ScalarKinds.I16,
-                ScalarKinds.I32,
-                ScalarKinds.I64,
-                ScalarKinds.U8,
-                ScalarKinds.U16,
-                ScalarKinds.U32,
-                ScalarKinds.U64,
-            )
+            and isinstance(item_ty := array_ty.item_ty, IntegerType)
         ):
             dm.emit(
                 AdhocError(
@@ -353,6 +345,8 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
+        else:
+            self.item_ty = item_ty
 
         super().check_typed_context(parent, dm)
 
@@ -363,12 +357,14 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
     ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
+    item_ty: IntegerType = field(init=False)
+
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
-            and isinstance(item_ty := array_ty.item_ty, ScalarType)
-            and item_ty.kind in (ScalarKinds.I8, ScalarKinds.U8)
+            and isinstance(item_ty := array_ty.item_ty, IntegerType)
+            and item_ty.kind.width == 8
         ):
             dm.emit(
                 AdhocError(
@@ -376,6 +372,8 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
+        else:
+            self.item_ty = item_ty
 
         super().check_typed_context(parent, dm)
 
@@ -386,37 +384,22 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
     ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
-    sts_type: str = field(init=False)
+    item_ty: IntegerType | FloatingPointType = field(init=False)
 
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
-        if (
+        if not (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
-            and isinstance(item_ty := array_ty.item_ty, ScalarType)
-            and (
-                sts_type := {
-                    ScalarKinds.F32: "Float32Array",
-                    ScalarKinds.F64: "Float64Array",
-                    ScalarKinds.I8: "Int8Array",
-                    ScalarKinds.I16: "Int16Array",
-                    ScalarKinds.I32: "Int32Array",
-                    ScalarKinds.I64: "BigInt64Array",
-                    ScalarKinds.U8: "Uint8Array",
-                    ScalarKinds.U16: "Uint16Array",
-                    ScalarKinds.U32: "Uint32Array",
-                    ScalarKinds.U64: "BigUint64Array",
-                }.get(item_ty.kind, None)
-            )
-            is not None
+            and isinstance(item_ty := array_ty.item_ty, IntegerType | FloatingPointType)
         ):
-            self.sts_type = sts_type
-        else:
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to integer or float array types.",
                     loc=self.loc,
                 )
             )
+        else:
+            self.item_ty = item_ty
 
         super().check_typed_context(parent, dm)
 
@@ -436,6 +419,32 @@ class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
+
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
+class ValueArrayAttr(TypedAttribute[TypeRefDecl]):
+    NAME = "valuearray"
+    TARGETS = (TypeRefDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+
+    item_ty: ScalarType = field(init=False)
+
+    @override
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
+        if not (
+            isinstance(parent.resolved_ty, ArrayType)
+            and isinstance(parent.resolved_ty.item_ty, ScalarType)
+        ):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to array types with scalar item types.",
+                    loc=self.loc,
+                )
+            )
+        else:
+            self.item_ty = parent.resolved_ty.item_ty
 
         super().check_typed_context(parent, dm)
 
@@ -796,6 +805,7 @@ all_attr_types: list[CheckedAttrT] = [
     ArrayBufferAttr,
     TypedArrayAttr,
     FixedArrayAttr,
+    ValueArrayAttr,
     RecordAttr,
     StsTypeAttr,
     # Function attributes

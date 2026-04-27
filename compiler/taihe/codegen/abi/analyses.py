@@ -148,14 +148,16 @@ class StructAbiInfo(AbstractAnalysis[StructDecl]):
 
 @dataclass
 class AncestorInfo:
+    anc_iface: IfaceDecl
+    cur_iface: IfaceDecl
     static_cast: str
     slots: list["AncestorSlot"] = field(default_factory=lambda: [])
 
 
 @dataclass
 class AncestorSlot:
+    info: AncestorInfo
     offset: int
-    iface: IfaceDecl
     ftbl_ptr: str
 
 
@@ -178,20 +180,24 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_infos: dict[IfaceDecl, AncestorInfo] = {}
 
         def dfs(ancestor: IfaceDecl):
-            offset = len(self.ancestor_slots)
-            ancestor_slot = AncestorSlot(
-                offset=offset,
-                iface=ancestor,
-                ftbl_ptr=f"ftbl_ptr_{offset}",
-            )
-            self.ancestor_slots.append(ancestor_slot)
             if ancestor not in self.ancestor_infos:
                 number = len(self.ancestor_infos)
                 static_cast = encode([*segments, str(number)], DeclKind.STATIC_CAST)
-                ancestor_info = AncestorInfo(static_cast=static_cast)
+                ancestor_info = AncestorInfo(
+                    anc_iface=ancestor,
+                    cur_iface=d,
+                    static_cast=static_cast,
+                )
                 self.ancestor_infos[ancestor] = ancestor_info
             else:
                 ancestor_info = self.ancestor_infos[ancestor]
+            offset = len(self.ancestor_slots)
+            ancestor_slot = AncestorSlot(
+                info=ancestor_info,
+                offset=offset,
+                ftbl_ptr=f"ftbl_ptr_{offset}",
+            )
+            self.ancestor_slots.append(ancestor_slot)
             ancestor_info.slots.append(ancestor_slot)
             for extend in ancestor.extends:
                 dfs(extend.ty.decl)

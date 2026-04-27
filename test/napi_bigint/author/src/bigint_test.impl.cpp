@@ -15,8 +15,8 @@
 // This file is a test file.
 // NOLINTBEGIN
 
-#include "bigint_test.impl.hpp"
 #include <iostream>
+#include "bigint_test.impl.hpp"
 #include "bigint_test.proj.hpp"
 
 namespace {

@@ -14,7 +14,6 @@
  */
 
 #include "bigint_new.ani.hpp"
-#include "bigint_test.ani.hpp"
 
 #if __has_include(<ani.h>)
 #include <ani.h>
@@ -32,10 +31,6 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result)
     }
     if (ANI_OK != bigint_new::ANIRegister(env)) {
         std::cerr << "Error from bigint_new::ANIRegister" << std::endl;
-        return ANI_ERROR;
-    }
-    if (ANI_OK != bigint_test::ANIRegister(env)) {
-        std::cerr << "Error from bigint_test::ANIRegister" << std::endl;
         return ANI_ERROR;
     }
     *result = ANI_VERSION_1;

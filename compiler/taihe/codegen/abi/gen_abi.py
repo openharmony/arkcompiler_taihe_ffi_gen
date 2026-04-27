@@ -276,7 +276,8 @@ class AbiIfaceDefnGenerator:
             f"}};",
         ):
             for ancestor_slot in iface_abi_info.ancestor_slots:
-                ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor_slot.iface)
+                ancestor = ancestor_slot.info.anc_iface
+                ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
                 self.target.writelns(
                     f"struct {ancestor_abi_info.ftable} const* {ancestor_slot.ftbl_ptr};",
                 )
