@@ -151,37 +151,27 @@ public:
         TH_ASSERT(try_emplace_result(std::forward<Args>(args)...), "Result has already been set");
     }
 
-    template<typename SmallConstHandler, typename... Args>
+    template<typename Handler, typename... Args>
     void emplace_handler(Args &&...args)
     {
-        static_assert(sizeof(SmallConstHandler) <= sizeof(TAsyncHandlerStorage::buffer),
-                      "Handler type is too large for small storage");
-
         TH_ASSERT(try_lock_handler(), "Handler has already been set");
-        new (&storage.buffer) SmallConstHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
-            (*reinterpret_cast<SmallConstHandler *>(&storage_ptr->buffer))(std::forward<Result>(*result_ptr));
-        };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
-            reinterpret_cast<SmallConstHandler *>(&storage_ptr->buffer)->~SmallConstHandler();
-        };
-
-        if (notify_handler_ready()) {
-            process_handler();
+        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buffer)) {
+            new (&storage.buffer) Handler(std::forward<Args>(args)...);
+            process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
+                (*reinterpret_cast<Handler *>(&storage_ptr->buffer))(std::forward<Result>(*result_ptr));
+            };
+            cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
+                reinterpret_cast<Handler *>(&storage_ptr->buffer)->~Handler();
+            };
+        } else {
+            storage.pointer = new Handler(std::forward<Args>(args)...);
+            process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
+                (*reinterpret_cast<Handler *>(storage_ptr->pointer))(std::forward<Result>(*result_ptr));
+            };
+            cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
+                delete reinterpret_cast<Handler *>(storage_ptr->pointer);
+            };
         }
-    }
-
-    template<typename LargeMutableHandler, typename... Args>
-    void new_handler(Args &&...args)
-    {
-        TH_ASSERT(try_lock_handler(), "Handler has already been set");
-        storage.pointer = new LargeMutableHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
-            (*reinterpret_cast<LargeMutableHandler *>(storage_ptr->pointer))(std::forward<Result>(*result_ptr));
-        };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
-            delete reinterpret_cast<LargeMutableHandler *>(storage_ptr->pointer);
-        };
 
         if (notify_handler_ready()) {
             process_handler();
@@ -300,11 +290,7 @@ public:
     template<typename Handler, typename... Args>
     void on_complete(Args &&...args) const
     {
-        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buffer)) {
-            m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
-        } else {
-            m_ctx->template new_handler<Handler>(std::forward<Args>(args)...);
-        }
+        m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
     }
 
     template<typename Handler>
