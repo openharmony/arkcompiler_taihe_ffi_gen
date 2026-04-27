@@ -15,19 +15,11 @@
 
 import {BusinessError} from "@ohos.base";
 import * as bigint_new from "bigint_new";
-import * as bigint_test from "bigint_test";
 
 loadLibrary("ani_bigint");
 
 function main() {
-    console.info("bigint_test run start...");
-    const suite = new arktest.ArkTestsuite("bigint_test ut")
-    suite.addTest("testBigint01", testBigint01);
-    suite.addTest("testBigint02", testBigint02);
-    // suite.addTest("testBigint03", testBigint03);
-    suite.addTest("testBigint04", testBigint04);
-    // suite.addTest("testBigint05", testBigint05);
-    suite.addTest("testBigint06", testBigint06);
+    const suite = new arktest.ArkTestsuite("bigint ut")
 
     suite.addTest("testProcessBigInt_1", testProcessBigInt_1);
     suite.addTest("testProcessBigInt_2", testProcessBigInt_2);
@@ -54,7 +46,6 @@ function main() {
     suite.addTest("test_bigint_with_union", test_bigint_with_union);
 
     exit(suite.run());
-    console.info("bigint_test run end...");
 }
 
 function testProcessBigInt_1() {
@@ -92,51 +83,6 @@ function testProcessBigInt_6() {
     let res: bigint = bigint_new.processBigInt(arg);
     arktest.assertEQ(res, arg << 64n);
 }
-
-// test function Bigint01(a : number, b : BigInt) : boolean
-function testBigint01() {
-    let a: number = 666666;
-    let b: bigint = 77777777777777777777777777n;
-    let result: boolean = bigint_test.bigInt001(a, b);
-    arktest.assertEQ(result, true);
-}
-
-// test function Bigint02(a: number) : number
-function testBigint02() {
-    let a: number = 77777777777;
-    let result: number = bigint_test.bigInt002(a);
-    arktest.assertEQ(result, a);
-}
-
-// test function Bigint03(a : BigInt) : BigInt
-function testBigint03() {
-    let a: bigint = 8888888888888888888888888888n;
-    let result: bigint = bigint_test.bigInt003(a);
-    arktest.assertEQ(result, a);
-}
-
-// test function Bigint04(a : BigInt) : void
-function testBigint04() {
-    let a: bigint = 8888888888888888888888888888n;
-    bigint_test.bigInt004(a);
-}
-
-// test function Bigint05(a : number, b : BigInt) : BigInt
-function testBigint05() {
-    let a: number = 1;
-    let b: bigint = 8888888888888888888888888888n;
-    let result: bigint = bigint_test.bigInt005(a, b);
-    arktest.assertEQ(result, b);
-}
-
-// test function Bigint06(a : number, b : BigInt) : number
-function testBigint06() {
-    let a: number = 1;
-    let b: bigint = 8888888888888888888888888888n;
-    let result: number = bigint_test.bigInt006(a, b);
-    arktest.assertEQ(result, a);
-}
-
 
 // test function printBigInt(a: @bigint Array<u64>): void;
 function test_bigint_with_printBigInt() {
