@@ -1273,7 +1273,8 @@ class CppIfaceDefnGenerator:
             f"}};",
         ):
             for ancestor_slot in iface_abi_info.ancestor_slots:
-                ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor_slot.iface)
+                ancestor = ancestor_slot.info.anc_iface
+                ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
                 self.target.writelns(
                     f".{ancestor_slot.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
                 )

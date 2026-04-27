@@ -28,6 +28,8 @@
 
 - `@fixedarray`：将 Taihe `Array<T>` 在用户侧中投影为 `FixedArray<T>`。
 
+- `@valuearray`：将 Taihe `Array<T>` 在用户侧中投影为 `ValueArray<T>`。
+
 - `@sts_type("MyType")`：将一个 `Opaque` 类型在 ArkTS 侧投影为 `MyType` 类型。如果 `MyType` 不在当前编译单元中定义，用户需要通过通过 `@!sts_inject_into_module` 注入相应的导入语句来引入 `MyType` 的定义。
 
 ## 函数/

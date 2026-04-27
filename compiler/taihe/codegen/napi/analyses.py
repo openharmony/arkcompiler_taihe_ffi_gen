@@ -482,9 +482,11 @@ class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
     def dts_type_in(self, target: DtsWriter) -> str:
         pass
 
-    @abstractmethod
     def dts_return_type_in(self, target: DtsWriter) -> str:
-        pass
+        if self.is_optional:
+            return f"({self.dts_type_in(target)} | undefined)"
+        else:
+            return self.dts_type_in(target)
 
     @abstractmethod
     def from_napi(
@@ -518,9 +520,6 @@ class NullTypeNapiInfo(TypeNapiInfo):
         return "null"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -557,9 +556,6 @@ class UndefinedTypeNapiInfo(TypeNapiInfo):
         return "undefined"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -613,9 +609,6 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         return dts_type
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -636,6 +629,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
             f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}));",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -670,9 +664,6 @@ class StringTypeNapiInfo(TypeNapiInfo):
         return "string"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -690,6 +681,7 @@ class StringTypeNapiInfo(TypeNapiInfo):
             f"taihe::string {cpp_result}({cpp_result}_abi);",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -715,9 +707,6 @@ class StructTypeNapiInfo(TypeNapiInfo):
         return struct_napi_info.dts_type_in(target)
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -731,6 +720,7 @@ class StructTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{struct_cpp_info.as_owner}>(env, {napi_value});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -760,9 +750,6 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         return iface_napi_info.dts_type_in(target)
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -776,6 +763,7 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{iface_cpp_info.as_owner}>(env, {napi_value});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -802,10 +790,6 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
     def dts_type_in(self, target: DtsWriter) -> str:
         item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
         return item_ty_napi_info.dts_type_in(target)
-
-    @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return f"{self.dts_type_in(target)} | undefined"
 
     @override
     def from_napi(
@@ -891,10 +875,6 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         else:
             return_ty_dts = "void"
         return f"(({params_ty_dts_str}) => {return_ty_dts})"
-
-    @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
 
     @override
     def from_napi(
@@ -1422,6 +1402,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                             f"return {{}};",
                         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -1595,9 +1576,6 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         return enum_napi_info.dts_type_in(target)
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -1615,6 +1593,7 @@ class EnumTypeNapiInfo(TypeNapiInfo):
             f"{enum_cpp_info.as_owner} {cpp_result} = {enum_cpp_info.as_owner}::from_value({cpp_result}_item);",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -1653,9 +1632,6 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         return "ArrayBuffer"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -1672,6 +1648,7 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -1702,9 +1679,6 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
         return f"Array<{item_ty_napi_info.dts_type_in(target)}>"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -1739,6 +1713,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {array_size});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -1814,9 +1789,6 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         return dts_type
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -1858,6 +1830,7 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {element_length});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -1894,9 +1867,6 @@ class RecordTypeNapiInfo(TypeNapiInfo):
         return f"Record<{key_dts_type}, {val_dts_type}>"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -1934,6 +1904,7 @@ class RecordTypeNapiInfo(TypeNapiInfo):
                 f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
             )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -1979,9 +1950,6 @@ class MapTypeNapiInfo(TypeNapiInfo):
         return f"Map<{key_dts_type}, {val_dts_type}>"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -2023,6 +1991,7 @@ class MapTypeNapiInfo(TypeNapiInfo):
                 f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
             )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -2069,9 +2038,6 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         return union_napi_info.dts_type_in(target)
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -2085,6 +2051,7 @@ class UnionTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{union_cpp_info.as_owner}>(env, {napi_value});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -2114,9 +2081,6 @@ class OpaqueTypeNapiInfo(TypeNapiInfo):
             return "Object"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -2127,6 +2091,7 @@ class OpaqueTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_owner} {cpp_result} = ({self.cpp_info.as_owner}){napi_value};",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -2153,9 +2118,6 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         return ty_napi_info.dts_type_in(target)
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -2170,6 +2132,7 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
             f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
@@ -2208,9 +2171,6 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         return "bigint"
 
     @override
-    def dts_return_type_in(self, target: DtsWriter) -> str:
-        return self.dts_type_in(target)
-
     def from_napi(
         self,
         target: CSourceWriter,
@@ -2226,6 +2186,7 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
             f"{self.cpp_info.as_owner} {cpp_result}(_taihe_build_num({cpp_result}_sign, {self.cpp_info.as_owner}{{{cpp_result}_words, {cpp_result}_len}}));",
         )
 
+    @override
     def into_napi(
         self,
         target: CSourceWriter,
