@@ -148,7 +148,8 @@ public:
     template<typename... Args>
     void emplace_result(Args &&...args)
     {
-        TH_ASSERT(try_emplace_result(std::forward<Args>(args)...), "Result has already been set");
+        bool ok = try_emplace_result(std::forward<Args>(args)...);
+        TH_ASSERT(ok, "Result has already been set");
     }
 
     template<typename Handler, typename... Args>
@@ -237,15 +238,31 @@ public:
     }
 
     template<typename... Args>
-    bool try_complete(Args &&...args) const
+    bool try_complete(Args &&...args) const &
     {
+        TH_ASSERT(m_ctx, "Use after move");
         return m_ctx->try_emplace_result(std::forward<Args>(args)...);
     }
 
     template<typename... Args>
-    void complete(Args &&...args) const
+    void complete(Args &&...args) const &
     {
-        m_ctx->emplace_result(std::forward<Args>(args)...);
+        TH_ASSERT(m_ctx, "Use after move");
+        return m_ctx->emplace_result(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    bool try_complete(Args &&...args) &&
+    {
+        auto moved = std::move(*this);
+        return moved.try_complete(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    void complete(Args &&...args) &&
+    {
+        auto moved = std::move(*this);
+        return moved.complete(std::forward<Args>(args)...);
     }
 };
 
@@ -288,15 +305,29 @@ public:
     }
 
     template<typename Handler, typename... Args>
-    void on_complete(Args &&...args) const
+    void on_complete(Args &&...args) const &
     {
-        m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
+        TH_ASSERT(m_ctx, "Use after move");
+        return m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
     }
 
     template<typename Handler>
-    void on_complete(Handler &&handler) const
+    void on_complete(Handler &&handler) const &
     {
-        on_complete<Handler, Handler>(std::forward<Handler>(handler));
+        return on_complete<Handler, Handler>(std::forward<Handler>(handler));
+    }
+
+    template<typename Handler, typename... Args>
+    void on_complete(Args &&...args) &&
+    {
+        auto moved = std::move(*this);
+        return moved.template on_complete<Handler, Args...>(std::forward<Args>(args)...);
+    }
+
+    template<typename Handler>
+    void on_complete(Handler &&handler) &&
+    {
+        return std::move(*this).template on_complete<Handler, Handler>(std::forward<Handler>(handler));
     }
 };
 
