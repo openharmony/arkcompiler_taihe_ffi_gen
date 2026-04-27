@@ -66,6 +66,7 @@ constexpr int32_t INDEX_RANGE_LIMIT = 10;
 ::taihe::string const ERROR_MESSAGE_SYSTEM_INIT_FAILED = "System initialization failed";
 ::taihe::string const ERROR_MESSAGE_CANT_CATCH_BAR = "can't catch error in cpp bar";
 ::taihe::string const ERROR_MESSAGE_TRY_GET_VALUE = "try get value error";
+::taihe::string const ERROR_MESSAGE_ERROR_VALUE = "error value";
 
 class FooImpl {
 public:
@@ -232,7 +233,11 @@ public:
     {
         ::taihe::expected<int32_t, ::taihe::error> res = f();
         if (res.has_value()) {
-            std::cout << "success from callcb_vi: " << res.value() << std::endl;
+            if (res.value() != RETURN_VALUE_TEST_CB_VI) {
+                return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect, ERROR_MESSAGE_ERROR_VALUE);
+            } else {
+                std::cout << "success from callcb_vi: " << res.value() << std::endl;
+            }
         } else {
             std::cout << "catch error in callcb_vi: " << res.error().message() << std::endl;
         }
