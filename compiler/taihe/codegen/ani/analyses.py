@@ -3120,7 +3120,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 )
         target.writelns(
             f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
-            f"{cpp_future}.on_complete<{cpp_handler_t}>({env}, {ani_value});",
+            f"std::move({cpp_future}).on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
     @override
@@ -3363,7 +3363,7 @@ class FutureTypeAniInfo(TypeAniInfo):
         target.writelns(
             f"ani_object {ani_after} = {{}};",
             f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Promise"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "<ctor>", ":"), &{ani_after});',
-            f"{cpp_value}.on_complete<{cpp_handler_t}>(env, {ani_after});",
+            f"std::move({cpp_value}).on_complete<{cpp_handler_t}>(env, {ani_after});",
         )
 
 
