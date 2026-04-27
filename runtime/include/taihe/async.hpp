@@ -376,11 +376,19 @@ struct std::hash<taihe::future<Result>> {
 // Utils
 
 namespace taihe {
+template<typename Result, typename Func>
+future<Result> make_future(Func &&func)
+{
+    auto [com, fut] = make_async_pair<Result>();
+    func(std::move(com));
+    return std::move(fut);
+}
+
 template<typename Result, typename... Args>
 future<Result> make_ready_future(Args &&...args)
 {
     auto [com, fut] = make_async_pair<Result>();
-    com.complete(std::forward<Args>(args)...);
+    std::move(com).complete(std::forward<Args>(args)...);
     return std::move(fut);
 }
 
@@ -388,6 +396,20 @@ template<typename Result>
 future<Result> make_ready_future(Result &&result)
 {
     return make_ready_future<Result, Result>(std::forward<Result>(result));
+}
+
+template<typename Result, typename Handler, typename... Args>
+completer<Result> make_callback_completer(Args &&...args)
+{
+    auto [com, fut] = make_async_pair<Result>();
+    std::move(fut).template on_complete<Handler, Args...>(std::forward<Args>(args)...);
+    return std::move(com);
+}
+
+template<typename Result, typename Handler>
+completer<Result> make_callback_completer(Handler &&handler)
+{
+    return make_callback_completer<Result, Handler, Handler>(std::forward<Handler>(handler));
 }
 }  // namespace taihe
 
@@ -434,8 +456,8 @@ template<typename Last, typename Next, typename Func>
 auto operator|(future<Last> old, __detail::__then_sync_adaptor<Next, Func> adaptor)
 {
     auto [com, fut] = make_async_pair<Next>();
-    old.on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
-        com.complete(func(std::forward<Last>(result)));
+    std::move(old).on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
+        std::move(com).complete(func(std::forward<Last>(result)));
     });
     return std::move(fut);
 }
@@ -444,9 +466,9 @@ template<typename Last, typename Next, typename Func>
 auto operator|(future<Last> old, __detail::__then_returns_future_adaptor<Next, Func> adaptor)
 {
     auto [com, fut] = make_async_pair<Next>();
-    old.on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
+    std::move(old).on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
         func(std::forward<Last>(result)).on_complete([com = std::move(com)](Next &&next) mutable {
-            com.complete(std::forward<Next>(next));
+            std::move(com).complete(std::forward<Next>(next));
         });
     });
     return std::move(fut);
@@ -456,7 +478,7 @@ template<typename Last, typename Next, typename Func>
 auto operator|(future<Last> old, __detail::__then_with_completer_adaptor<Next, Func> adaptor)
 {
     auto [com, fut] = make_async_pair<Next>();
-    old.on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
+    std::move(old).on_complete([func = std::forward<Func>(adaptor.func), com = std::move(com)](Last &&result) mutable {
         func(std::forward<Last>(result), std::move(com));
     });
     return std::move(fut);
@@ -469,9 +491,11 @@ future<Result> race(std::initializer_list<future<Result>> olds)
 {
     auto [com, fut] = make_async_pair<Result>();
 
+    completer<Result> shared_com(std::move(com));
+
     for (auto const &old : olds) {
-        old.on_complete([com = com](Result &&result) mutable {
-            com.try_complete(std::forward<Result>(result));
+        std::move(old).on_complete([shared_com](Result &&result) mutable {
+            std::move(shared_com).try_complete(std::forward<Result>(result));
         });
     }
 
