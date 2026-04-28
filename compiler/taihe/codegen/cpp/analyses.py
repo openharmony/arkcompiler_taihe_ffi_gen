@@ -322,22 +322,38 @@ class SetTypeCppInfo(TypeCppInfo):
 
 class CompleterTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
-        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
-        self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
-        self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
-        self.as_param = f"::taihe::completer<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.decl_headers = ["taihe/async.hpp"]
+        self.defn_headers = ["taihe/async.hpp"]
+        self.impl_headers = ["taihe/async.hpp"]
+        if isinstance(t.item_ty, NonVoidType):
+            item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+            self.decl_headers.extend(item_ty_cpp_info.decl_headers)
+            self.defn_headers.extend(item_ty_cpp_info.decl_headers)
+            self.impl_headers.extend(item_ty_cpp_info.impl_headers)
+            item_ty_cpp_name = item_ty_cpp_info.as_owner
+        else:
+            item_ty_cpp_name = "void"
+        expected_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
+        self.as_owner = f"::taihe::completer<{expected_ty_cpp_name}>"
+        self.as_param = f"::taihe::completer<{expected_ty_cpp_name}>"
 
 
 class FutureTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: FutureType) -> None:
-        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
-        self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
-        self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
-        self.as_param = f"::taihe::future<::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>>"
+        self.decl_headers = ["taihe/async.hpp"]
+        self.defn_headers = ["taihe/async.hpp"]
+        self.impl_headers = ["taihe/async.hpp"]
+        if isinstance(t.item_ty, NonVoidType):
+            item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+            self.decl_headers.extend(item_ty_cpp_info.decl_headers)
+            self.defn_headers.extend(item_ty_cpp_info.decl_headers)
+            self.impl_headers.extend(item_ty_cpp_info.impl_headers)
+            item_ty_cpp_name = item_ty_cpp_info.as_owner
+        else:
+            item_ty_cpp_name = "void"
+        expected_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
+        self.as_owner = f"::taihe::future<{expected_ty_cpp_name}>"
+        self.as_param = f"::taihe::future<{expected_ty_cpp_name}>"
 
 
 class CallbackTypeCppInfo(TypeCppInfo):
