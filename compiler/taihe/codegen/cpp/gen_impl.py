@@ -92,14 +92,14 @@ class CppMacroPackageGenerator:
         args_call = []
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if func_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-        args_tmpl.append(return_ty_cpp_name)
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        args_tmpl.append(result_ty_cpp_name)
         for param in func.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
@@ -114,8 +114,8 @@ class CppMacroPackageGenerator:
             args_call.append("abi_err")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-            result_ty_abi_name = return_ty_abi_info.as_owner
-            params_abi.append(f"{result_ty_abi_name}* abi_ret")
+            return_ty_abi_name = return_ty_abi_info.as_owner
+            params_abi.append(f"{return_ty_abi_name}* abi_ret")
             args_call.append("abi_ret")
         args_tmpl_str = ", ".join(args_tmpl)
         params_abi_str = ", ".join(params_abi)
@@ -164,14 +164,14 @@ class CppMacroIfaceGenerator:
         args_call = []
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-        args_tmpl.append(return_ty_cpp_name)
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        args_tmpl.append(result_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_abi_name = iface_abi_info.as_param
@@ -194,8 +194,8 @@ class CppMacroIfaceGenerator:
             args_call.append("abi_err")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-            result_ty_abi_name = return_ty_abi_info.as_owner
-            params_abi.append(f"{result_ty_abi_name}* abi_ret")
+            return_ty_abi_name = return_ty_abi_info.as_owner
+            params_abi.append(f"{return_ty_abi_name}* abi_ret")
             args_call.append("abi_ret")
         args_tmpl_str = ", ".join(args_tmpl)
         params_abi_str = ", ".join(params_abi)
@@ -321,15 +321,15 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
         params_cpp_str = ", ".join(params_cpp)
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if func_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         with self.target.indented(
-            f"{return_ty_cpp_name} {func_cpp_impl_info.function}({params_cpp_str}) {{",
+            f"{result_ty_cpp_name} {func_cpp_impl_info.function}({params_cpp_str}) {{",
             f"}}",
         ):
             if isinstance(return_ty := func.return_ty, IfaceType):
@@ -338,7 +338,7 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
                 self.target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
-                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {return_ty_cpp_name}>();",
+                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {result_ty_cpp_name}>();",
                 )
             else:
                 self.target.writelns(
@@ -403,15 +403,15 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
         params_cpp_str = ", ".join(params_cpp)
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_impl_info.function}({params_cpp_str}) {{",
+            f"{result_ty_cpp_name} {method_cpp_impl_info.function}({params_cpp_str}) {{",
             f"}}",
         ):
             if isinstance(return_ty := method.return_ty, IfaceType):
@@ -420,7 +420,7 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
                 self.target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
-                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {return_ty_cpp_name}>();",
+                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {result_ty_cpp_name}>();",
                 )
             else:
                 self.target.writelns(
@@ -487,15 +487,15 @@ class CppTemplateClassHeaderGenerator:
         params_cpp_str = ", ".join(params_cpp)
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         self.target.writelns(
-            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str});",
+            f"{result_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str});",
         )
 
 
@@ -535,15 +535,15 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
         params_cpp_str = ", ".join(params_cpp)
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         with self.target.indented(
-            f"{return_ty_cpp_name} {iface_cpp_impl_info.template_class}::{method_cpp_info.impl_name}({params_cpp_str}) {{",
+            f"{result_ty_cpp_name} {iface_cpp_impl_info.template_class}::{method_cpp_info.impl_name}({params_cpp_str}) {{",
             f"}}",
         ):
             if isinstance(return_ty := method.return_ty, IfaceType):
@@ -552,7 +552,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
                 self.target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
-                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {return_ty_cpp_name}>();",
+                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {result_ty_cpp_name}>();",
                 )
             else:
                 self.target.writelns(

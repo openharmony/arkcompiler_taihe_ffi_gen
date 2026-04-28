@@ -478,16 +478,16 @@ class AniPackageSourceGenerator:
                         f"return;",
                     )
             else:
-                expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-                expected_ani = "ani_expected"
+                exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+                exp_cpp = "cpp_expected"
                 self.target.writelns(
-                    f"{expected_ty_cpp_name} {expected_ani} = {method_call};",
+                    f"{exp_ty_cpp_name} {exp_cpp} = {method_call};",
                 )
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     self.target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
-                        f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
+                        f"if (not {exp_cpp}) {{ ::taihe::throw_ani_taihe_error(env, {exp_cpp}.error()); return {{}}; }}",
+                        f"{return_ty_cpp_name} {result_cpp} = std::move({exp_cpp}.value());",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.into_ani(
@@ -502,7 +502,7 @@ class AniPackageSourceGenerator:
                 else:
                     self.target.writelns(
                         f"if (::taihe::has_error()) {{ return; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return; }}",
+                        f"if (not {exp_cpp}) {{ ::taihe::throw_ani_taihe_error(env, {exp_cpp}.error()); return; }}",
                         f"return;",
                     )
 
@@ -814,10 +814,10 @@ class AniIfaceImplGenerator:
                         f"env->Function_Call_Void({function}, {args_ani_str});",
                     )
         else:
-            expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
             error_ani = "ani_err"
             with self.target.indented(
-                f"{expected_ty_cpp_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
+                f"{exp_ty_cpp_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
                 f"}}",
             ):
                 self.target.writelns(

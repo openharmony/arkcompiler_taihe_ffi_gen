@@ -2831,10 +2831,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"return;",
                     )
         else:
-            expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
             error_ani = "ani_err"
             with target.indented(
-                f"{expected_ty_cpp_name} operator()({params_cpp_str}) {{",
+                f"{exp_ty_cpp_name} operator()({params_cpp_str}) {{",
                 f"}}",
             ):
                 target.writelns(
@@ -3008,16 +3008,16 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"return {{}};",
                     )
             else:
-                expected_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-                expected_ani = "ani_expected"
+                exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+                exp_cpp = "cpp_expected"
                 target.writelns(
-                    f"{expected_ty_cpp_name} {expected_ani} = {lambda_invoke};",
+                    f"{exp_ty_cpp_name} {exp_cpp} = {lambda_invoke};",
                 )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
-                        f"{return_ty_cpp_name} {result_cpp} = std::move({expected_ani}.value());",
+                        f"if (not {exp_cpp}) {{ ::taihe::throw_ani_taihe_error(env, {exp_cpp}.error()); return {{}}; }}",
+                        f"{return_ty_cpp_name} {result_cpp} = std::move({exp_cpp}.value());",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.into_ani_boxed(
@@ -3032,7 +3032,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 else:
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not {expected_ani}) {{ ::taihe::throw_ani_taihe_error(env, {expected_ani}.error()); return {{}}; }}",
+                        f"if (not {exp_cpp}) {{ ::taihe::throw_ani_taihe_error(env, {exp_cpp}.error()); return {{}}; }}",
                         f"return {{}};",
                     )
 

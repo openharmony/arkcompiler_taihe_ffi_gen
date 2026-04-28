@@ -333,9 +333,9 @@ class CompleterTypeCppInfo(TypeCppInfo):
             item_ty_cpp_name = item_ty_cpp_info.as_owner
         else:
             item_ty_cpp_name = "void"
-        expected_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
-        self.as_owner = f"::taihe::completer<{expected_ty_cpp_name}>"
-        self.as_param = f"::taihe::completer<{expected_ty_cpp_name}>"
+        exp_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
+        self.as_owner = f"::taihe::completer<{exp_ty_cpp_name}>"
+        self.as_param = f"::taihe::completer<{exp_ty_cpp_name}>"
 
 
 class FutureTypeCppInfo(TypeCppInfo):
@@ -351,9 +351,9 @@ class FutureTypeCppInfo(TypeCppInfo):
             item_ty_cpp_name = item_ty_cpp_info.as_owner
         else:
             item_ty_cpp_name = "void"
-        expected_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
-        self.as_owner = f"::taihe::future<{expected_ty_cpp_name}>"
-        self.as_param = f"::taihe::future<{expected_ty_cpp_name}>"
+        exp_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
+        self.as_owner = f"::taihe::future<{exp_ty_cpp_name}>"
+        self.as_param = f"::taihe::future<{exp_ty_cpp_name}>"
 
 
 class CallbackTypeCppInfo(TypeCppInfo):
@@ -367,13 +367,13 @@ class CallbackTypeCppInfo(TypeCppInfo):
             self.decl_headers.extend(return_ty_cpp_info.decl_headers)
             self.defn_headers.extend(return_ty_cpp_info.decl_headers)
             self.impl_headers.extend(return_ty_cpp_info.impl_headers)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if callback_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         params_ty_cpp_name = []
         for param in t.ref.params:
             param_ty_cpp_info = TypeCppInfo.get(am, param.ty)
@@ -383,8 +383,8 @@ class CallbackTypeCppInfo(TypeCppInfo):
             param_ty_cpp_name = param_ty_cpp_info.as_param
             params_ty_cpp_name.append(f"{param_ty_cpp_name} {param.name}")
         params_fmt = ", ".join(params_ty_cpp_name)
-        self.as_owner = f"::taihe::callback<{return_ty_cpp_name}({params_fmt})>"
-        self.as_param = f"::taihe::callback_view<{return_ty_cpp_name}({params_fmt})>"
+        self.as_owner = f"::taihe::callback<{result_ty_cpp_name}({params_fmt})>"
+        self.as_param = f"::taihe::callback_view<{result_ty_cpp_name}({params_fmt})>"
 
 
 class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
