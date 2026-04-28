@@ -348,7 +348,7 @@ class StsModuleGenerator:
             f"        if (error) {{",
             f"            handler.onRejected(error);",
             f"        }} else {{",
-            f"            handler.onFulfilled(data!);",
+            f"            handler.onFulfilled(data as T);",
             f"        }}",
             f"    }};",
             f"}}",
