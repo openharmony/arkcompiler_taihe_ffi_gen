@@ -281,6 +281,7 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
             om,
             f"temp/{pkg_cpp_impl_info.source}",
             group=None,
+            is_template=True,
         )
         super().__init__(om, am, target, [])
 
@@ -359,6 +360,7 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
             om,
             f"temp/{iface_cpp_impl_info.source}",
             group=None,
+            is_template=True,
         )
         super().__init__(om, am, target, [])
 
@@ -442,6 +444,7 @@ class CppTemplateClassHeaderGenerator:
             self.om,
             f"temp/{iface_cpp_impl_info.template_header}",
             group=None,
+            is_template=True,
         )
 
     def gen_file(self):
@@ -504,6 +507,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
             om,
             f"temp/{iface_cpp_impl_info.template_source}",
             group=None,
+            is_template=True,
         )
         super().__init__(om, am, target, [])
 
