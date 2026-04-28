@@ -148,40 +148,31 @@ public:
     template<typename... Args>
     void emplace_result(Args &&...args)
     {
-        TH_ASSERT(try_emplace_result(std::forward<Args>(args)...), "Result has already been set");
+        bool ok = try_emplace_result(std::forward<Args>(args)...);
+        TH_ASSERT(ok, "Result has already been set");
     }
 
-    template<typename SmallConstHandler, typename... Args>
+    template<typename Handler, typename... Args>
     void emplace_handler(Args &&...args)
     {
-        static_assert(sizeof(SmallConstHandler) <= sizeof(TAsyncHandlerStorage::buffer),
-                      "Handler type is too large for small storage");
-
         TH_ASSERT(try_lock_handler(), "Handler has already been set");
-        new (&storage.buffer) SmallConstHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
-            (*reinterpret_cast<SmallConstHandler *>(&storage_ptr->buffer))(std::forward<Result>(*result_ptr));
-        };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
-            reinterpret_cast<SmallConstHandler *>(&storage_ptr->buffer)->~SmallConstHandler();
-        };
-
-        if (notify_handler_ready()) {
-            process_handler();
+        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buffer)) {
+            new (&storage.buffer) Handler(std::forward<Args>(args)...);
+            process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
+                (*reinterpret_cast<Handler *>(&storage_ptr->buffer))(std::forward<Result>(*result_ptr));
+            };
+            cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
+                reinterpret_cast<Handler *>(&storage_ptr->buffer)->~Handler();
+            };
+        } else {
+            storage.pointer = new Handler(std::forward<Args>(args)...);
+            process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
+                (*reinterpret_cast<Handler *>(storage_ptr->pointer))(std::forward<Result>(*result_ptr));
+            };
+            cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
+                delete reinterpret_cast<Handler *>(storage_ptr->pointer);
+            };
         }
-    }
-
-    template<typename LargeMutableHandler, typename... Args>
-    void new_handler(Args &&...args)
-    {
-        TH_ASSERT(try_lock_handler(), "Handler has already been set");
-        storage.pointer = new LargeMutableHandler(std::forward<Args>(args)...);
-        process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
-            (*reinterpret_cast<LargeMutableHandler *>(storage_ptr->pointer))(std::forward<Result>(*result_ptr));
-        };
-        cleanup_handler_ptr = [](TAsyncHandlerStorage *storage_ptr) {
-            delete reinterpret_cast<LargeMutableHandler *>(storage_ptr->pointer);
-        };
 
         if (notify_handler_ready()) {
             process_handler();
@@ -247,15 +238,31 @@ public:
     }
 
     template<typename... Args>
-    bool try_complete(Args &&...args) const
+    bool try_complete(Args &&...args) const &
     {
+        TH_ASSERT(m_ctx, "Use after move");
         return m_ctx->try_emplace_result(std::forward<Args>(args)...);
     }
 
     template<typename... Args>
-    void complete(Args &&...args) const
+    void complete(Args &&...args) const &
     {
-        m_ctx->emplace_result(std::forward<Args>(args)...);
+        TH_ASSERT(m_ctx, "Use after move");
+        return m_ctx->emplace_result(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    bool try_complete(Args &&...args) &&
+    {
+        auto moved = std::move(*this);
+        return moved.try_complete(std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    void complete(Args &&...args) &&
+    {
+        auto moved = std::move(*this);
+        return moved.complete(std::forward<Args>(args)...);
     }
 };
 
@@ -298,19 +305,29 @@ public:
     }
 
     template<typename Handler, typename... Args>
-    void on_complete(Args &&...args) const
+    void on_complete(Args &&...args) const &
     {
-        if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buffer)) {
-            m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
-        } else {
-            m_ctx->template new_handler<Handler>(std::forward<Args>(args)...);
-        }
+        TH_ASSERT(m_ctx, "Use after move");
+        return m_ctx->template emplace_handler<Handler>(std::forward<Args>(args)...);
     }
 
     template<typename Handler>
-    void on_complete(Handler &&handler) const
+    void on_complete(Handler &&handler) const &
     {
-        on_complete<Handler, Handler>(std::forward<Handler>(handler));
+        return on_complete<Handler, Handler>(std::forward<Handler>(handler));
+    }
+
+    template<typename Handler, typename... Args>
+    void on_complete(Args &&...args) &&
+    {
+        auto moved = std::move(*this);
+        return moved.template on_complete<Handler, Args...>(std::forward<Args>(args)...);
+    }
+
+    template<typename Handler>
+    void on_complete(Handler &&handler) &&
+    {
+        return std::move(*this).template on_complete<Handler, Handler>(std::forward<Handler>(handler));
     }
 };
 

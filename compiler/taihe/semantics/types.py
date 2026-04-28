@@ -505,7 +505,7 @@ class SetType(GenericType):
 
 @dataclass(frozen=True, repr=False)
 class CompleterType(GenericType):
-    item_ty: NonVoidType
+    item_ty: Type
 
     @property
     @override
@@ -522,9 +522,6 @@ class CompleterType(GenericType):
             dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
         item_ty = ref.args[0].ty
-        if not isinstance(item_ty, NonVoidType):
-            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
-            return None
         return cls(ref, item_ty)
 
     @override
@@ -534,7 +531,7 @@ class CompleterType(GenericType):
 
 @dataclass(frozen=True, repr=False)
 class FutureType(GenericType):
-    item_ty: NonVoidType
+    item_ty: Type
 
     @property
     @override
@@ -551,9 +548,6 @@ class FutureType(GenericType):
             dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
         item_ty = ref.args[0].ty
-        if not isinstance(item_ty, NonVoidType):
-            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
-            return None
         return cls(ref, item_ty)
 
     @override

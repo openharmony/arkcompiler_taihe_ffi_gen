@@ -103,6 +103,7 @@ class NapiCodeGenerator:
             self.oc,
             f"temp/{module}.napi_register.cpp",
             group=None,
+            is_template=True,
         ) as target:
             with target.indented(
                 f"napi_value Init(napi_env env, napi_value exports) {{",
