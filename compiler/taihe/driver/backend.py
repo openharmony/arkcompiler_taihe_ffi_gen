@@ -188,13 +188,11 @@ class BackendRegistry:
             AbiSourcesBackendConfig,
             CAuthorBackendConfig,
         )
-        from taihe.codegen.ani import AniBridgeBackendConfig
         from taihe.codegen.cpp import (
             CppAuthorBackendConfig,
             CppCommonHeadersBackendConfig,
             CppUserHeadersBackendConfig,
         )
-        from taihe.codegen.napi import NapiBridgeBackendConfig
         from taihe.semantics import PrettyPrintBackendConfig
 
         backends = [
@@ -206,13 +204,24 @@ class BackendRegistry:
             CppCommonHeadersBackendConfig,
             CppAuthorBackendConfig,
             CppUserHeadersBackendConfig,
-            # ani
-            AniBridgeBackendConfig,
             # pretty print
             PrettyPrintBackendConfig,
-            # napi
-            NapiBridgeBackendConfig,
         ]
+
+        # HACK: Optional backends (only register if module exists)
+        try:
+            from taihe.codegen.ani import AniBridgeBackendConfig
+
+            backends.append(AniBridgeBackendConfig)
+        except ImportError:
+            pass
+
+        try:
+            from taihe.codegen.napi import NapiBridgeBackendConfig
+
+            backends.append(NapiBridgeBackendConfig)
+        except ImportError:
+            pass
 
         for b in backends:
             self.register(b)
