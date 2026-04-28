@@ -84,14 +84,14 @@ class CppUserPackageGenerator:
         args_call.append(f"&{func_abi_info.impl_name}")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if func_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-        args_tmpl.append(return_ty_cpp_name)
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        args_tmpl.append(result_ty_cpp_name)
         for param in func.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_cpp_name = param_ty_cpp_info.as_param
@@ -107,7 +107,7 @@ class CppUserPackageGenerator:
             indent="",
         ):
             with self.target.indented(
-                f"inline {return_ty_cpp_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
+                f"inline {result_ty_cpp_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
                 f"}}",
             ):
                 self.target.writelns(
