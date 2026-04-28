@@ -13,10 +13,13 @@
  * limitations under the License.
  */
 
+// Async function with string result
+
 function futureResultWithCallback(ms: i64, result: String, set: Completer<String>);
 function futureResultReturnsPromise(ms: i64, result: String): Future<String>;
 
-// Reverse async tests
+// Reverse async function with string result
+
 interface UserType {
     fooWithCallback(ms: i64, result: String, set: Completer<String>);
     fooReturnsPromise(ms: i64, result: String): Future<String>;
@@ -24,3 +27,65 @@ interface UserType {
 
 function processUserTypeWithCallback(user: UserType, etsMs: i64, cppMs: i64, result: String, set: Completer<String>);
 function processUserTypeReturnsPromise(user: UserType, etsMs: i64, cppMs: i64, result: String): Future<String>;
+
+// Async function with void result
+
+function testVoidAsyncWithCallback(ms: i64, set: Completer<void>);
+function testVoidAsyncReturnsPromise(ms: i64): Future<void>;
+
+// Reverse async function with void result
+
+interface VoidAsyncUserType {
+    barWithCallback(set: Completer<void>);
+    barReturnsPromise(): Future<void>;
+}
+
+function testReverseVoidAsyncWithCallback(user: VoidAsyncUserType, set: Completer<void>);
+function testReverseVoidAsyncReturnsPromise(user: VoidAsyncUserType): Future<void>;
+
+// Reverse function that may return either a sync value or an async value
+
+union syncOrAsyncBool {
+    syncBool: bool;
+    asyncBool: Future<bool>;
+}
+
+interface SyncOrAsyncUserType {
+    baz(): syncOrAsyncBool;
+}
+
+function testSyncOrAsync(user: SyncOrAsyncUserType): Future<String>;
+
+// Function returns multiple async results
+
+struct DoubleAsyncResults {
+    first: Future<String>;
+    second: Future<i64>;
+}
+
+function getDoubleAsyncResults(firstResult: String, secondResult: i64): DoubleAsyncResults;
+
+function getManyAsyncResults(count: i64, result: String): Array<Future<String>>;
+
+// Future with different types of results
+
+struct ComplexAsyncResult {
+    str: String;
+    num: i64;
+    flag: bool;
+}
+
+function getComplexAsyncResult(str: String, num: i64, flag: bool): Future<ComplexAsyncResult>;
+
+union StringOrNumber {
+    str: String;
+    num: i64;
+}
+
+function getStringOrNumber(asString: bool, str: String, num: i64): Future<StringOrNumber>;
+
+function getContainer(): Future<Array<String>>;
+
+// Nested async functions
+
+function getNestedFuture(): Future<Future<String>>;
