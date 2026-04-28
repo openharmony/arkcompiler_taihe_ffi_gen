@@ -3043,10 +3043,12 @@ class CompleterTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
 
-        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        self.expected_ty_cpp_name = (
-            f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>"
-        )
+        if isinstance(self.t.item_ty, NonVoidType):
+            item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+            item_ty_cpp_name = item_ty_cpp_info.as_owner
+        else:
+            item_ty_cpp_name = "void"
+        self.exp_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
 
     @property
     @override
@@ -3060,8 +3062,11 @@ class CompleterTypeAniInfo(TypeAniInfo):
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        if isinstance(self.t.item_ty, NonVoidType):
+            item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+            item_sts_type = item_ty_ani_info.sts_type_in(target)
+        else:
+            item_sts_type = "void"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         return f"{pkg_ani_info.ns.mod.AC_type}<{item_sts_type}>"
 
@@ -3083,7 +3088,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void operator()({self.expected_ty_cpp_name} cpp_result) const {{",
+                f"void operator()({self.exp_ty_cpp_name} cpp_result) const {{",
                 f"}}",
             ):
                 target.writelns(
@@ -3095,13 +3100,19 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"if (cpp_result) {{",
                     f"}}",
                 ):
-                    item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-                    item_ty_ani_info.into_ani_boxed(
-                        target,
-                        "env",
-                        "cpp_result.value()",
-                        "ani_result",
-                    )
+                    if isinstance(self.t.item_ty, NonVoidType):
+                        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+                        item_ty_ani_info.into_ani_boxed(
+                            target,
+                            "env",
+                            "cpp_result.value()",
+                            "ani_result",
+                        )
+                    else:
+                        target.writelns(
+                            f"ani_ref ani_result = {{}};",
+                            f"env->GetUndefined(&ani_result);",
+                        )
                     target.writelns(
                         f"ani_argv[1] = ani_result;",
                         f"env->GetNull(&ani_argv[0]);",
@@ -3119,7 +3130,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), 2, ani_argv, &ani_dummy);",
                 )
         target.writelns(
-            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
+            f"auto [{cpp_after}, {cpp_future}] = ::taihe::make_async_pair<{self.exp_ty_cpp_name}>();",
             f"std::move({cpp_future}).on_complete<{cpp_handler_t}>({env}, {ani_value});",
         )
 
@@ -3169,13 +3180,18 @@ class CompleterTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.exp_ty_cpp_name}>*>(ani_context_ptr);",
             )
-            item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-            item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
-            target.writelns(
-                f"ctx->emplace_result(std::move(cpp_data));",
-            )
+            if isinstance(self.t.item_ty, NonVoidType):
+                item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+                item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
+                target.writelns(
+                    f"ctx->emplace_result(std::move(cpp_data));",
+                )
+            else:
+                target.writelns(
+                    f"ctx->emplace_result();",
+                )
 
     def gen_async_on_rejected(
         self,
@@ -3187,7 +3203,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.exp_ty_cpp_name}>*>(ani_context_ptr);",
                 f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
@@ -3201,7 +3217,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.exp_ty_cpp_name}>*>(ani_context_ptr);",
                 f"if (ctx->dec_ref()) {{ delete ctx; }}",
             )
 
@@ -3212,10 +3228,12 @@ class FutureTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
 
-        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        self.expected_ty_cpp_name = (
-            f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error>"
-        )
+        if isinstance(self.t.item_ty, NonVoidType):
+            item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+            item_ty_cpp_name = item_ty_cpp_info.as_owner
+        else:
+            item_ty_cpp_name = "void"
+        self.exp_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
 
     @property
     @override
@@ -3229,8 +3247,11 @@ class FutureTypeAniInfo(TypeAniInfo):
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        if isinstance(self.t.item_ty, NonVoidType):
+            item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+            item_sts_type = item_ty_ani_info.sts_type_in(target)
+        else:
+            item_sts_type = "void"
         return f"Promise<{item_sts_type}>"
 
     @override
@@ -3259,7 +3280,7 @@ class FutureTypeAniInfo(TypeAniInfo):
             self.gen_async_on_rejected(target, on_rejected_name)
             self.gen_async_free(target, free_name)
         target.writelns(
-            f"auto [{cpp_completer}, {cpp_after}] = ::taihe::make_async_pair<{self.expected_ty_cpp_name}>();",
+            f"auto [{cpp_completer}, {cpp_after}] = ::taihe::make_async_pair<{self.exp_ty_cpp_name}>();",
             f"ani_long {ani_on_fulfilled_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_fulfilled_name});",
             f"ani_long {ani_on_rejected_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{on_rejected_name});",
             f"ani_long {ani_free_ptr} = reinterpret_cast<ani_long>(&{cpp_scope}::{free_name});",
@@ -3278,13 +3299,18 @@ class FutureTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.exp_ty_cpp_name}>*>(ani_context_ptr);",
             )
-            item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-            item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
-            target.writelns(
-                f"ctx->emplace_result(std::move(cpp_data));",
-            )
+            if isinstance(self.t.item_ty, NonVoidType):
+                item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+                item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
+                target.writelns(
+                    f"ctx->emplace_result(std::move(cpp_data));",
+                )
+            else:
+                target.writelns(
+                    f"ctx->emplace_result();",
+                )
 
     def gen_async_on_rejected(
         self,
@@ -3296,7 +3322,7 @@ class FutureTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.exp_ty_cpp_name}>*>(ani_context_ptr);",
                 f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
@@ -3310,7 +3336,7 @@ class FutureTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.expected_ty_cpp_name}>*>(ani_context_ptr);",
+                f"auto ctx = reinterpret_cast<::taihe::async_context<{self.exp_ty_cpp_name}>*>(ani_context_ptr);",
                 f"if (ctx->dec_ref()) {{ delete ctx; }}",
             )
 
@@ -3331,7 +3357,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                 f"{cpp_handler_t}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
             with target.indented(
-                f"void operator()({self.expected_ty_cpp_name} cpp_result) {{",
+                f"void operator()({self.exp_ty_cpp_name} cpp_result) {{",
                 f"}}",
             ):
                 target.writelns(
@@ -3342,13 +3368,19 @@ class FutureTypeAniInfo(TypeAniInfo):
                     f"if (cpp_result) {{",
                     f"}}",
                 ):
-                    item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-                    item_ty_ani_info.into_ani_boxed(
-                        target,
-                        "env",
-                        "cpp_result.value()",
-                        "ani_result",
-                    )
+                    if isinstance(self.t.item_ty, NonVoidType):
+                        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+                        item_ty_ani_info.into_ani_boxed(
+                            target,
+                            "env",
+                            "cpp_result.value()",
+                            "ani_result",
+                        )
+                    else:
+                        target.writelns(
+                            f"ani_ref ani_result = {{}};",
+                            f"env->GetUndefined(&ani_result);",
+                        )
                     target.writelns(
                         f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Promise", "resolveImpl", nullptr), ani_result, false);',
                     )
