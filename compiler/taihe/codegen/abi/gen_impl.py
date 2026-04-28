@@ -182,6 +182,7 @@ class CTemplatePackageGenerator:
             self.om,
             f"temp/{pkg_c_impl_info.source}",
             group=None,
+            is_template=True,
         )
 
     def gen_package_file(self):
@@ -228,6 +229,7 @@ class CTemplateIfaceGenerator:
             self.om,
             f"temp/{iface_c_impl_info.source}",
             group=None,
+            is_template=True,
         )
 
     def gen_iface_file(self):

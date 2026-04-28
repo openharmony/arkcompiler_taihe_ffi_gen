@@ -18,6 +18,8 @@ import * as hello from "hello";
 
 loadLibrary("ani_async_types");
 
+type AsyncCallback<T> = (error: BusinessError|null, data: T|undefined) => void;
+
 async function assertAsyncError(
     task: () => Promise<Any>, expectedMessage?: string) {
     let promise = task();
@@ -105,9 +107,7 @@ async function test_with_callback_with_async_error() {
 }
 
 class UserTypeImpl implements hello.UserType {
-    fooWithCallback(
-        ms: long, result: string,
-        set: (error: BusinessError|null, data: string|undefined) => void):
+    fooWithCallback(ms: long, result: string, set: AsyncCallback<string>):
         void {
         setTimeout(() => {
             set(null, "EtsAsyncProcessed-" + result);
@@ -157,9 +157,7 @@ async function test_reverse_with_callback() {
 }
 
 class SyncErrorUserTypeImpl implements hello.UserType {
-    fooWithCallback(
-        ms: long, result: string,
-        set: (error: BusinessError|null, data: string|undefined) => void):
+    fooWithCallback(ms: long, result: string, set: AsyncCallback<string>):
         void {
         throw new BusinessError(1, "Synchronous error in fooWithCallback");
     }
@@ -193,9 +191,7 @@ async function test_reverse_with_callback_with_sync_error() {
 }
 
 class AsyncErrorUserTypeImpl implements hello.UserType {
-    fooWithCallback(
-        ms: long, result: string,
-        set: (error: BusinessError|null, data: string|undefined) => void):
+    fooWithCallback(ms: long, result: string, set: AsyncCallback<string>):
         void {
         setTimeout(() => {
             set(new BusinessError(1, "Asynchronous error in fooWithCallback"),
@@ -236,6 +232,136 @@ async function test_reverse_with_callback_with_async_error() {
     await assertAsyncError(() => x, "Asynchronous error in fooWithCallback");
 }
 
+class VoidAsyncUserTypeImpl implements hello.VoidAsyncUserType {
+    barWithCallback(set: AsyncCallback<void>): void {
+        setTimeout(() => {
+            set(null, undefined);
+        }, 100);
+    }
+    barReturnsPromise(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            setTimeout(() => {
+                resolve(undefined);
+            }, 100);
+        });
+    }
+}
+
+async function test_void_async_with_callback() {
+    let x = new Promise<void>((resolve, reject) => {
+        hello.testVoidAsyncWithCallback(100, (err: BusinessError|null) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(undefined);
+            }
+        });
+    });
+    await x;
+    arktest.assertTrue(true);
+}
+
+async function test_void_async_returns_promise() {
+    await hello.testVoidAsyncReturnsPromise(100);
+    arktest.assertTrue(true);
+}
+
+async function test_reverse_void_async_with_callback() {
+    let user = new VoidAsyncUserTypeImpl();
+    let x = new Promise<void>((resolve, reject) => {
+        hello.testReverseVoidAsyncWithCallback(
+            user, (err: BusinessError|null) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(undefined);
+                }
+            });
+    });
+    await x;
+    arktest.assertTrue(true);
+}
+
+async function test_reverse_void_async_returns_promise() {
+    let user = new VoidAsyncUserTypeImpl();
+    await hello.testReverseVoidAsyncReturnsPromise(user);
+    arktest.assertTrue(true);
+}
+
+class SyncBoolUserTypeImpl implements hello.SyncOrAsyncUserType {
+    baz(): hello.syncOrAsyncBool {
+        return true;
+    }
+}
+
+class AsyncBoolUserTypeImpl implements hello.SyncOrAsyncUserType {
+    baz(): hello.syncOrAsyncBool {
+        return new Promise<boolean>((resolve, reject) => {
+            setTimeout(() => {
+                resolve(false);
+            }, 100);
+        });
+    }
+}
+
+async function test_sync_or_async_with_sync_value() {
+    let result = await hello.testSyncOrAsync(new SyncBoolUserTypeImpl());
+    arktest.assertEQ("C++SyncBool-true", result);
+}
+
+async function test_sync_or_async_with_async_value() {
+    let result = await hello.testSyncOrAsync(new AsyncBoolUserTypeImpl());
+    arktest.assertEQ("C++AsyncBool-false", result);
+}
+
+async function test_double_async_results() {
+    let result = hello.getDoubleAsyncResults("First", (21).toLong());
+    arktest.assertEQ("C++AsyncProcessed-First", await result.first);
+    arktest.assertEQ((42).toLong(), await result.second);
+}
+
+async function test_many_async_results() {
+    let result =
+        await Promise.all(hello.getManyAsyncResults((3).toLong(), "Batch"));
+    arktest.assertEQ(3, result.length);
+    arktest.assertEQ("C++AsyncProcessed-Batch-0", result[0]);
+    arktest.assertEQ("C++AsyncProcessed-Batch-1", result[1]);
+    arktest.assertEQ("C++AsyncProcessed-Batch-2", result[2]);
+}
+
+async function test_complex_async_result() {
+    let result =
+        await hello.getComplexAsyncResult("Complex", (7).toLong(), true);
+    arktest.assertEQ("Complex", result.str);
+    arktest.assertEQ((7).toLong(), result.num);
+    arktest.assertEQ(true, result.flag);
+}
+
+async function test_string_or_number_string() {
+    let result =
+        await hello.getStringOrNumber(true, "StringValue", (9).toLong());
+    arktest.assertEQ("StringValue", result);
+}
+
+async function test_string_or_number_number() {
+    let result =
+        await hello.getStringOrNumber(false, "StringValue", (9).toLong());
+    arktest.assertEQ((9).toLong(), result);
+}
+
+async function test_container() {
+    let result = await hello.getContainer();
+    arktest.assertEQ(3, result.length);
+    arktest.assertEQ("alpha", result[0]);
+    arktest.assertEQ("beta", result[1]);
+    arktest.assertEQ("gamma", result[2]);
+}
+
+async function test_nested_future() {
+    let outer = await hello.getNestedFuture();
+    let value = await outer;
+    arktest.assertEQ("C++NestedFuture", value);
+}
 
 function main() {
     const suite = new arktest.ArkTestsuite("Hello Module Test");
@@ -271,6 +397,31 @@ function main() {
     suite.addAsyncTest(
         "test_reverse_with_callback_with_async_error",
         test_reverse_with_callback_with_async_error);
+    suite.addAsyncTest(
+        "test_void_async_with_callback", test_void_async_with_callback);
+    suite.addAsyncTest(
+        "test_void_async_returns_promise", test_void_async_returns_promise);
+    suite.addAsyncTest(
+        "test_reverse_void_async_with_callback",
+        test_reverse_void_async_with_callback);
+    suite.addAsyncTest(
+        "test_reverse_void_async_returns_promise",
+        test_reverse_void_async_returns_promise);
+    suite.addAsyncTest(
+        "test_sync_or_async_with_sync_value",
+        test_sync_or_async_with_sync_value);
+    suite.addAsyncTest(
+        "test_sync_or_async_with_async_value",
+        test_sync_or_async_with_async_value);
+    suite.addAsyncTest("test_double_async_results", test_double_async_results);
+    suite.addAsyncTest("test_many_async_results", test_many_async_results);
+    suite.addAsyncTest("test_complex_async_result", test_complex_async_result);
+    suite.addAsyncTest(
+        "test_string_or_number_string", test_string_or_number_string);
+    suite.addAsyncTest(
+        "test_string_or_number_number", test_string_or_number_number);
+    suite.addAsyncTest("test_container", test_container);
+    suite.addAsyncTest("test_nested_future", test_nested_future);
 
     exit(suite.run());
 }
