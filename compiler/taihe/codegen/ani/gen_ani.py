@@ -93,6 +93,7 @@ class AniConstructorGenerator:
             self.om,
             f"temp/ani_constructor.cpp",
             group=None,
+            is_template=True,
         )
 
     def gen_constructor(self):
