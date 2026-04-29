@@ -1077,44 +1077,20 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     def sts_type_in(self, target: ArkTsImportManager) -> str: ...
 
     @abstractmethod
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
     ): ...
 
     @abstractmethod
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
     ): ...
 
-    def from_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_value: str,
-        cpp_after: str,
-    ):
-        self.from_ani_lambda(target, f"{cpp_after}_f")
-        target.writelns(
-            f"auto {cpp_after} = {cpp_after}_f({env}, {ani_value});",
-        )
-
-    def into_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_value: str,
-        ani_after: str,
-    ):
-        self.into_ani_lambda(target, f"{ani_after}_f")
-        target.writelns(
-            f"auto {ani_after} = {ani_after}_f({env}, {cpp_value});",
-        )
-
-    def check_type_boxed_lambda(
+    def gen_check_ani_ref(
         self,
         target: CSourceWriter,
         name: str,
@@ -1131,31 +1107,18 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
                 f"return result;",
             )
 
-    def check_type_boxed(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_value: str,
-        is_field_ani: str,
-    ):
-        self.check_type_boxed_lambda(target, f"{is_field_ani}_f")
-        target.writelns(
-            f"bool {is_field_ani} = {is_field_ani}_f({env}, {ani_value});",
-        )
-
-    def into_ani_boxed_lambda(
+    def gen_into_ani_ref(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        inner = f"{name}_inner"
-        self.into_ani_lambda(target, inner)
         with target.indented(
-            f"auto {name} = [{inner}](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> ani_ref {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> ani_ref {{",
             f"}};",
         ):
+            self.gen_into_ani(target, "into_ani_value")
             target.writelns(
-                f"{self.ani_type} ani_value = {inner}(env, cpp_value);",
+                f"{self.ani_type} ani_value = into_ani_value(env, cpp_value);",
             )
             if self.ani_type.base == ANI_REF:
                 target.writelns(
@@ -1169,15 +1132,13 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
                     f"return ani_boxed;",
                 )
 
-    def from_ani_boxed_lambda(
+    def gen_from_ani_ref(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        inner = f"{name}_inner"
-        self.from_ani_lambda(target, inner)
         with target.indented(
-            f"auto {name} = [{inner}](ani_env* env, ani_ref ani_boxed) -> {self.cpp_info.as_owner} {{",
+            f"auto {name} = [](ani_env* env, ani_ref ani_boxed) -> {self.cpp_info.as_owner} {{",
             f"}};",
         ):
             if self.ani_type.base == ANI_REF:
@@ -1189,33 +1150,10 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
                     f"{self.ani_type} ani_value = {{}};",
                     f'env->Object_CallMethod_{self.ani_type.suffix}(static_cast<ani_object>(ani_boxed), TH_ANI_FIND_CLASS_METHOD(env, "{self.ets_type.boxed.desc}", "to{self.ani_type.suffix}", ":{self.ets_type.sig}"), &ani_value);',
                 )
+            self.gen_from_ani(target, "from_ani_value")
             target.writelns(
-                f"return {inner}(env, ani_value);",
+                f"return from_ani_value(env, ani_value);",
             )
-
-    def into_ani_boxed(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_value: str,
-        ani_boxed: str,
-    ):
-        self.into_ani_boxed_lambda(target, f"{ani_boxed}_f")
-        target.writelns(
-            f"ani_ref {ani_boxed} = {ani_boxed}_f({env}, {cpp_value});",
-        )
-
-    def from_ani_boxed(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_boxed: str,
-        cpp_after: str,
-    ):
-        self.from_ani_boxed_lambda(target, f"{cpp_after}_f")
-        target.writelns(
-            f"auto {cpp_after} = {cpp_after}_f({env}, {ani_boxed});",
-        )
 
     @classmethod
     @override
@@ -1247,7 +1185,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         return enum_ani_info.sts_type_in(target)
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1260,7 +1198,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1297,7 +1235,7 @@ class StructTypeAniInfo(TypeAniInfo):
         return struct_ani_info.sts_type_in(target)
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1310,7 +1248,7 @@ class StructTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1347,7 +1285,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         return union_ani_info.sts_type_in(target)
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1360,7 +1298,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1397,7 +1335,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         return iface_ani_info.sts_type_in(target)
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1410,7 +1348,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1447,7 +1385,7 @@ class NullTypeAniInfo(TypeAniInfo):
         return "null"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1461,7 +1399,7 @@ class NullTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1477,7 +1415,7 @@ class NullTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def check_type_boxed_lambda(
+    def gen_check_ani_ref(
         self,
         target: CSourceWriter,
         name: str,
@@ -1517,7 +1455,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
         return "undefined"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1531,7 +1469,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1547,7 +1485,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def check_type_boxed_lambda(
+    def gen_check_ani_ref(
         self,
         target: CSourceWriter,
         name: str,
@@ -1588,7 +1526,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         return render_ets_string(self.value)
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1602,7 +1540,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1619,19 +1557,18 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def check_type_boxed_lambda(
+    def gen_check_ani_ref(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        inner = f"{name}_inner"
-        super().check_type_boxed_lambda(target, inner)
         with target.indented(
-            f"auto {name} = [{inner}](ani_env* env, ani_ref ani_value) -> bool {{",
+            f"auto {name} = [](ani_env* env, ani_ref ani_value) -> bool {{",
             f"}};",
         ):
             target.writelns(
-                f"bool result = {inner}(env, ani_value);",
+                f"ani_boolean result = false;",
+                f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "std.core.String"), &result);',
             )
             with target.indented(
                 f"if (!result) {{",
@@ -1688,7 +1625,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
         return self.sts_type
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1702,7 +1639,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1735,7 +1672,7 @@ class StringTypeAniInfo(TypeAniInfo):
         return "string"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1756,7 +1693,7 @@ class StringTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1795,7 +1732,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
         return self.sts_type
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1809,7 +1746,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1847,7 +1784,7 @@ class OptionalTypeAniInfo(TypeAniInfo):
         return f"({item_sts_type} | undefined)"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1866,16 +1803,16 @@ class OptionalTypeAniInfo(TypeAniInfo):
                 f"if (!is_undefined) {{",
                 f"}}",
             ):
-                item_ty_ani_info.from_ani_boxed(target, "env", "ani_value", "cpp_temp")
+                item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"cpp_result.emplace(std::move(cpp_temp));",
+                    f"cpp_result.emplace(item_from_ani(env, ani_value));",
                 )
             target.writelns(
                 f"return cpp_result;",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1899,11 +1836,9 @@ class OptionalTypeAniInfo(TypeAniInfo):
                 f"else {{",
                 f"}}",
             ):
-                item_ty_ani_info.into_ani_boxed(
-                    target, "env", "(*cpp_value)", "ani_temp"
-                )
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"ani_result = ani_temp;",
+                    f"ani_result = item_into_ani(env, (*cpp_value));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -1952,7 +1887,7 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
         return f"ValueArray<{item_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -1972,7 +1907,7 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2020,7 +1955,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         return f"FixedArray<{item_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2044,16 +1979,16 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
                     f"ani_ref ani_item = {{}};",
                     f"env->FixedArray_Get_Ref(ani_value, i, reinterpret_cast<ani_ref*>(&ani_item));",
                 )
-                item_ty_ani_info.from_ani_boxed(target, "env", "ani_item", "cpp_item")
+                item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"new (&buffer[i]) {item_ty_cpp_info.as_owner}(std::move(cpp_item));",
+                    f"new (&buffer[i]) {item_ty_cpp_info.as_owner}(item_from_ani(env, ani_item));",
                 )
             target.writelns(
                 f"return {self.cpp_info.as_owner}(buffer, size);",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2074,14 +2009,9 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
                 f"for (size_t i = 0; i < size; i++) {{",
                 f"}}",
             ):
-                item_ty_ani_info.into_ani_boxed(
-                    target,
-                    "env",
-                    "cpp_value[i]",
-                    "ani_item",
-                )
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"env->FixedArray_Set_Ref(ani_result, i, ani_item);",
+                    f"env->FixedArray_Set_Ref(ani_result, i, item_into_ani(env, cpp_value[i]));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2111,7 +2041,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
         return f"Array<{item_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2135,16 +2065,16 @@ class ArrayTypeAniInfo(TypeAniInfo):
                     f"ani_ref ani_item = {{}};",
                     f"env->Array_Get(ani_value, i, &ani_item);",
                 )
-                item_ty_ani_info.from_ani_boxed(target, "env", "ani_item", "cpp_item")
+                item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"new (&buffer[i]) {item_ty_cpp_info.as_owner}(std::move(cpp_item));",
+                    f"new (&buffer[i]) {item_ty_cpp_info.as_owner}(item_from_ani(env, ani_item));",
                 )
             target.writelns(
                 f"return {self.cpp_info.as_owner}(buffer, size);",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2165,14 +2095,9 @@ class ArrayTypeAniInfo(TypeAniInfo):
                 f"for (size_t i = 0; i < size; i++) {{",
                 f"}}",
             ):
-                item_ty_ani_info.into_ani_boxed(
-                    target,
-                    "env",
-                    "cpp_value[i]",
-                    "ani_item",
-                )
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"env->Array_Set(ani_result, i, ani_item);",
+                    f"env->Array_Set(ani_result, i, item_into_ani(env, cpp_value[i]));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2205,7 +2130,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         return "ArrayBuffer"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2223,7 +2148,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2281,7 +2206,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         return self.sts_type
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2316,7 +2241,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2367,7 +2292,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         return "BigInt"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2388,7 +2313,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2440,7 +2365,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         return f"Record<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2481,17 +2406,17 @@ class RecordTypeAniInfo(TypeAniInfo):
                     f"ani_ref ani_val = {{}};",
                     f'env->Object_GetField_Ref(item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$1"), &ani_val);',
                 )
-                key_ty_ani_info.from_ani_boxed(target, "env", "ani_key", "cpp_key")
-                val_ty_ani_info.from_ani_boxed(target, "env", "ani_val", "cpp_val")
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
-                    f"cpp_result.emplace(std::move(cpp_key), std::move(cpp_val));",
+                    f"cpp_result.emplace(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
                 )
             target.writelns(
                 f"return cpp_result;",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2510,10 +2435,10 @@ class RecordTypeAniInfo(TypeAniInfo):
                 f"for (auto&& [cpp_key, cpp_val] : cpp_value) {{",
                 f"}}",
             ):
-                key_ty_ani_info.into_ani_boxed(target, "env", "cpp_key", "ani_key")
-                val_ty_ani_info.into_ani_boxed(target, "env", "cpp_val", "ani_val")
+                key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+                val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
                 target.writelns(
-                    f'env->Object_CallMethod_Void(ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "$_set", "X{{C{{std.core.BaseEnum}}C{{std.core.Numeric}}C{{std.core.String}}}}Y:"), ani_key, ani_val);',
+                    f'env->Object_CallMethod_Void(ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "$_set", "X{{C{{std.core.BaseEnum}}C{{std.core.Numeric}}C{{std.core.String}}}}Y:"), key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2545,7 +2470,7 @@ class MapTypeAniInfo(TypeAniInfo):
         return f"Map<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2586,17 +2511,17 @@ class MapTypeAniInfo(TypeAniInfo):
                     f"ani_ref ani_val = {{}};",
                     f'env->Object_GetField_Ref(item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$1"), &ani_val);',
                 )
-                key_ty_ani_info.from_ani_boxed(target, "env", "ani_key", "cpp_key")
-                val_ty_ani_info.from_ani_boxed(target, "env", "ani_val", "cpp_val")
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
-                    f"cpp_result.emplace(std::move(cpp_key), std::move(cpp_val));",
+                    f"cpp_result.emplace(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
                 )
             target.writelns(
                 f"return cpp_result;",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2615,10 +2540,10 @@ class MapTypeAniInfo(TypeAniInfo):
                 f"for (auto&& [cpp_key, cpp_val] : cpp_value) {{",
                 f"}}",
             ):
-                key_ty_ani_info.into_ani_boxed(target, "env", "cpp_key", "ani_key")
-                val_ty_ani_info.into_ani_boxed(target, "env", "cpp_val", "ani_val")
+                key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+                val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
                 target.writelns(
-                    f'env->Object_CallMethod_Ref(ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "set", "YY:C{{std.core.Map}}"), reinterpret_cast<ani_ref*>(&ani_result), ani_key, ani_val);',
+                    f'env->Object_CallMethod_Ref(ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "set", "YY:C{{std.core.Map}}"), reinterpret_cast<ani_ref*>(&ani_result), key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2643,17 +2568,17 @@ class SetTypeAniInfo(TypeAniInfo):
 
     @override
     def sts_type_in(self, target: ArkTsImportManager) -> str:
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
-        item_sts_type = item_ty_ani_info.sts_type_in(target)
-        return f"Set<{item_sts_type}>"
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        key_sts_type = key_ty_ani_info.sts_type_in(target)
+        return f"Set<{key_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -2684,21 +2609,21 @@ class SetTypeAniInfo(TypeAniInfo):
                     f"ani_ref ani_val = {{}};",
                     f'env->Object_GetField_Ref(next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_val);',
                 )
-                item_ty_ani_info.from_ani_boxed(target, "env", "ani_val", "cpp_val")
+                key_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
-                    f"cpp_result.emplace(std::move(cpp_val));",
+                    f"cpp_result.emplace(val_from_ani(env, ani_val));",
                 )
             target.writelns(
                 f"return cpp_result;",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -2711,9 +2636,9 @@ class SetTypeAniInfo(TypeAniInfo):
                 f"for (auto&& cpp_item : cpp_value) {{",
                 f"}}",
             ):
-                item_ty_ani_info.into_ani_boxed(target, "env", "cpp_item", "ani_item")
+                key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
                 target.writelns(
-                    f'env->Object_CallMethod_Ref(ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "add", "Y:C{{std.core.Set}}"), reinterpret_cast<ani_ref*>(&ani_result), ani_item);',
+                    f'env->Object_CallMethod_Ref(ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "add", "Y:C{{std.core.Set}}"), reinterpret_cast<ani_ref*>(&ani_result), key_into_ani(env, cpp_item));',
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2743,7 +2668,7 @@ class VectorTypeAniInfo(TypeAniInfo):
         return f"Array<{item_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2767,16 +2692,16 @@ class VectorTypeAniInfo(TypeAniInfo):
                     f"ani_ref ani_item = {{}};",
                     f"env->Array_Get(ani_value, i, &ani_item);",
                 )
-                item_ty_ani_info.from_ani_boxed(target, "env", "ani_item", "cpp_item")
+                item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"cpp_result.push_back(std::move(cpp_item));",
+                    f"cpp_result.push_back(item_from_ani(env, ani_item));",
                 )
             target.writelns(
                 f"return cpp_result;",
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2797,14 +2722,9 @@ class VectorTypeAniInfo(TypeAniInfo):
                 f"for (size_t i = 0; i < size; i++) {{",
                 f"}}",
             ):
-                item_ty_ani_info.into_ani_boxed(
-                    target,
-                    "env",
-                    "cpp_value[i]",
-                    "ani_item",
-                )
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"env->Array_Set(ani_result, i, ani_item);",
+                    f"env->Array_Set(ani_result, i, item_into_ani(env, cpp_value[i]));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2846,7 +2766,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         return f"(({params_str}) => {return_ty_sts_name})"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -2880,23 +2800,19 @@ class CallbackTypeAniInfo(TypeAniInfo):
     ):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.t)
         params_cpp = []
-        args_ani = []
         args_cpp = []
         for param in self.t.ref.params:
             arg_cpp = f"cpp_arg_{param.name}"
-            arg_ani = f"ani_arg_{param.name}"
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_cpp_name = param_ty_cpp_info.as_param
             params_cpp.append(f"{param_ty_cpp_name} {arg_cpp}")
             args_cpp.append(arg_cpp)
-            args_ani.append(arg_ani)
         params_cpp_str = ", ".join(params_cpp)
         if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
-        args_ani_str = ", ".join(args_ani)
         if cb_abi_info.is_noexcept:
             with target.indented(
                 f"{return_ty_cpp_name} operator()({params_cpp_str}) {{",
@@ -2906,16 +2822,13 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"::taihe::env_guard guard;",
                     f"ani_env *env = guard.get_env();",
                 )
-                for param, arg_cpp, arg_ani in zip(
-                    self.t.ref.params, args_cpp, args_ani, strict=True
-                ):
+                args_ani = []
+                for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
                     param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                    param_ty_ani_info.into_ani_boxed(
-                        target,
-                        "env",
-                        arg_cpp,
-                        arg_ani,
-                    )
+                    param_into_ani = f"into_ani_{param.name}"
+                    param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
+                    args_ani.append(f"{param_into_ani}(env, {arg_cpp})")
+                args_ani_str = ", ".join(args_ani)
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref ani_result = {{}};",
@@ -2923,14 +2836,9 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.from_ani_boxed(
-                        target,
-                        "env",
-                        "ani_result",
-                        "cpp_result",
-                    )
+                    return_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
                     target.writelns(
-                        f"return std::move(cpp_result);",
+                        f"return result_from_ani(env, ani_result);",
                     )
                 else:
                     target.writelns(
@@ -2946,16 +2854,13 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"::taihe::env_guard guard;",
                     f"ani_env *env = guard.get_env();",
                 )
-                for param, arg_cpp, arg_ani in zip(
-                    self.t.ref.params, args_cpp, args_ani, strict=True
-                ):
+                args_ani = []
+                for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
                     param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                    param_ty_ani_info.into_ani_boxed(
-                        target,
-                        "env",
-                        arg_cpp,
-                        arg_ani,
-                    )
+                    param_into_ani = f"into_ani_{param.name}"
+                    param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
+                    args_ani.append(f"{param_into_ani}(env, {arg_cpp})")
+                args_ani_str = ", ".join(args_ani)
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref ani_result = {{}};",
@@ -2970,14 +2875,9 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.from_ani_boxed(
-                        target,
-                        "env",
-                        "ani_result",
-                        "cpp_result",
-                    )
+                    return_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
                     target.writelns(
-                        f"return std::move(cpp_result);",
+                        f"return result_from_ani(env, ani_result);",
                     )
                 else:
                     target.writelns(
@@ -2985,7 +2885,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -3020,11 +2920,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 ):
                     self.gen_native_invoke(target, "invoke")
                 target.writelns(
-                    f"{self.cpp_info.as_owner} cpp_copy = std::move(cpp_value);",
                     f"ani_long ani_invoke_ptr = reinterpret_cast<ani_long>(&scope_t::invoke);",
-                    f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_copy.m_handle.vtbl_ptr);",
-                    f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_copy.m_handle.data_ptr);",
-                    f"cpp_copy.m_handle.data_ptr = nullptr;",
+                    f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_value.m_handle.vtbl_ptr);",
+                    f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_value.m_handle.data_ptr);",
+                    f"cpp_value.m_handle.data_ptr = nullptr;",
                     f'env->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION(env, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.callback_factory}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&ani_result), ani_invoke_ptr, ani_vtbl_ptr, ani_data_ptr);',
                 )
             target.writelns(
@@ -3048,10 +2947,6 @@ class CallbackTypeAniInfo(TypeAniInfo):
             params_ani.append(f"[[maybe_unused]] {param_ty_ani_name} {arg_ani}")
             args_ani.append(arg_ani)
         params_ani_str = ", ".join(params_ani)
-        vals_cpp = []
-        for param in self.t.ref.params:
-            val_cpp = f"cpp_arg_{param.name}"
-            vals_cpp.append(val_cpp)
         return_ty_ani_name = "ani_ref"
         with target.indented(
             f"static {return_ty_ani_name} {cpp_invoke_ptr}({params_ani_str}) {{",
@@ -3063,20 +2958,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
             args_cpp = []
-            for param, arg_ani, val_cpp in zip(
-                self.t.ref.params, args_ani, vals_cpp, strict=False
-            ):
+            for param, arg_ani in zip(self.t.ref.params, args_ani, strict=False):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                param_ty_ani_info.from_ani_boxed(
-                    target,
-                    "env",
-                    arg_ani,
-                    val_cpp,
-                )
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                args_cpp.append(
-                    f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
-                )
+                param_from_ani = f"from_ani_{param.name}"
+                param_ty_ani_info.gen_from_ani_ref(target, param_from_ani)
+                args_cpp.append(f"{param_from_ani}(env, {arg_ani})")
             args_cpp_str = ", ".join(args_cpp)
             lambda_invoke = f"cpp_func({args_cpp_str})"
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
@@ -3091,14 +2977,9 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.into_ani_boxed(
-                        target,
-                        "env",
-                        "cpp_result",
-                        "ani_result",
-                    )
+                    return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
                     target.writelns(
-                        f"return ani_result;",
+                        f"return result_into_ani(env, cpp_result);",
                     )
                 else:
                     target.writelns(
@@ -3118,14 +2999,9 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"{return_ty_cpp_name} cpp_result = std::move(cpp_expected.value());",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.into_ani_boxed(
-                        target,
-                        "env",
-                        "cpp_result",
-                        "ani_result",
-                    )
+                    return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
                     target.writelns(
-                        f"return ani_result;",
+                        f"return result_into_ani(env, cpp_result);",
                     )
                 else:
                     target.writelns(
@@ -3169,7 +3045,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
         return f"{pkg_ani_info.ns.mod.AC_type}<{item_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -3200,11 +3076,9 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     ):
                         if isinstance(self.t.item_ty, NonVoidType):
                             item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-                            item_ty_ani_info.into_ani_boxed(
-                                target,
-                                "env",
-                                "cpp_result.value()",
-                                "ani_result",
+                            item_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
+                            target.writelns(
+                                f"ani_ref ani_result = result_into_ani(env, cpp_result.value());",
                             )
                         else:
                             target.writelns(
@@ -3234,14 +3108,11 @@ class CompleterTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        on_fulfilled_name = "on_fulfilled"
-        on_rejected_name = "on_rejected"
-        free_name = "free"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
@@ -3251,16 +3122,15 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 f"struct scope_t {{",
                 f"}};",
             ):
-                self.gen_async_on_fulfilled(target, on_fulfilled_name)
-                self.gen_async_on_rejected(target, on_rejected_name)
-                self.gen_async_free(target, free_name)
+                self.gen_async_on_fulfilled(target, "on_fulfilled")
+                self.gen_async_on_rejected(target, "on_rejected")
+                self.gen_async_free(target, "free")
             target.writelns(
-                f"{self.cpp_info.as_owner} cpp_copy = std::move(cpp_value);",
-                f"ani_long ani_on_fulfilled_ptr = reinterpret_cast<ani_long>(&scope_t::{on_fulfilled_name});",
-                f"ani_long ani_on_rejected_ptr = reinterpret_cast<ani_long>(&scope_t::{on_rejected_name});",
-                f"ani_long ani_free_ptr = reinterpret_cast<ani_long>(&scope_t::{free_name});",
-                f"ani_long ani_context_ptr = reinterpret_cast<ani_long>(cpp_copy.m_ctx);",
-                f"cpp_copy.m_ctx = nullptr;",
+                f"ani_long ani_on_fulfilled_ptr = reinterpret_cast<ani_long>(&scope_t::on_fulfilled);",
+                f"ani_long ani_on_rejected_ptr = reinterpret_cast<ani_long>(&scope_t::on_rejected);",
+                f"ani_long ani_free_ptr = reinterpret_cast<ani_long>(&scope_t::free);",
+                f"ani_long ani_context_ptr = reinterpret_cast<ani_long>(cpp_value.m_ctx);",
+                f"cpp_value.m_ctx = nullptr;",
                 f"ani_fn_object ani_result = {{}};",
                 f'env->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION(env, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.completer_factory}", "llll:C{{std.core.Function2}}"), reinterpret_cast<ani_ref*>(&ani_result), ani_on_fulfilled_ptr, ani_on_rejected_ptr, ani_free_ptr, ani_context_ptr);',
                 f"return ani_result;",
@@ -3280,9 +3150,9 @@ class CompleterTypeAniInfo(TypeAniInfo):
             )
             if isinstance(self.t.item_ty, NonVoidType):
                 item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-                item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
+                item_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
                 target.writelns(
-                    f"ctx->emplace_result(std::move(cpp_data));",
+                    f"ctx->emplace_result(result_from_ani(env, data));",
                 )
             else:
                 target.writelns(
@@ -3351,14 +3221,11 @@ class FutureTypeAniInfo(TypeAniInfo):
         return f"Promise<{item_sts_type}>"
 
     @override
-    def from_ani_lambda(
+    def gen_from_ani(
         self,
         target: CSourceWriter,
         name: str,
     ):
-        on_fulfilled_name = "on_fulfilled"
-        on_rejected_name = "on_rejected"
-        free_name = "free"
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
@@ -3368,14 +3235,14 @@ class FutureTypeAniInfo(TypeAniInfo):
                 f"struct scope_t {{",
                 f"}};",
             ):
-                self.gen_async_on_fulfilled(target, on_fulfilled_name)
-                self.gen_async_on_rejected(target, on_rejected_name)
-                self.gen_async_free(target, free_name)
+                self.gen_async_on_fulfilled(target, "on_fulfilled")
+                self.gen_async_on_rejected(target, "on_rejected")
+                self.gen_async_free(target, "free")
             target.writelns(
                 f"auto [cpp_completer, cpp_result] = ::taihe::make_async_pair<{self.exp_ty_cpp_name}>();",
-                f"ani_long ani_on_fulfilled_ptr = reinterpret_cast<ani_long>(&scope_t::{on_fulfilled_name});",
-                f"ani_long ani_on_rejected_ptr = reinterpret_cast<ani_long>(&scope_t::{on_rejected_name});",
-                f"ani_long ani_free_ptr = reinterpret_cast<ani_long>(&scope_t::{free_name});",
+                f"ani_long ani_on_fulfilled_ptr = reinterpret_cast<ani_long>(&scope_t::on_fulfilled);",
+                f"ani_long ani_on_rejected_ptr = reinterpret_cast<ani_long>(&scope_t::on_rejected);",
+                f"ani_long ani_free_ptr = reinterpret_cast<ani_long>(&scope_t::free);",
                 f"ani_long ani_context_ptr = reinterpret_cast<ani_long>(cpp_completer.m_ctx);",
                 f"cpp_completer.m_ctx = nullptr;",
                 f'env->Function_Call_Void(TH_ANI_FIND_MODULE_FUNCTION(env, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.future_completory}", "llllC{{std.core.Promise}}:"), ani_on_fulfilled_ptr, ani_on_rejected_ptr, ani_free_ptr, ani_context_ptr, ani_value);',
@@ -3396,9 +3263,9 @@ class FutureTypeAniInfo(TypeAniInfo):
             )
             if isinstance(self.t.item_ty, NonVoidType):
                 item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-                item_ty_ani_info.from_ani_boxed(target, "env", "data", "cpp_data")
+                item_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
                 target.writelns(
-                    f"ctx->emplace_result(std::move(cpp_data));",
+                    f"ctx->emplace_result(result_from_ani(env, data));",
                 )
             else:
                 target.writelns(
@@ -3434,7 +3301,7 @@ class FutureTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def into_ani_lambda(
+    def gen_into_ani(
         self,
         target: CSourceWriter,
         name: str,
@@ -3464,11 +3331,9 @@ class FutureTypeAniInfo(TypeAniInfo):
                     ):
                         if isinstance(self.t.item_ty, NonVoidType):
                             item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
-                            item_ty_ani_info.into_ani_boxed(
-                                target,
-                                "env",
-                                "cpp_result.value()",
-                                "ani_result",
+                            item_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
+                            target.writelns(
+                                f"ani_ref ani_result = result_into_ani(env, cpp_result.value());",
                             )
                         else:
                             target.writelns(
