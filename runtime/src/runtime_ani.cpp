@@ -174,17 +174,11 @@ void throw_ani_taihe_error(ani_env *env, taihe::error const &err)
     env->ThrowError(errObj);
 }
 
-ani_error catch_ani_error(ani_env *env)
+taihe::error catch_ani_taihe_error(ani_env *env)
 {
-    ani_boolean hasErr;
-    env->ExistUnhandledError(&hasErr);
-    if (hasErr) {
-        ani_error errObj;
-        env->GetUnhandledError(&errObj);
-        env->ResetError();
-        return errObj;
-    } else {
-        return nullptr;
-    }
+    ani_error errObj;
+    env->GetUnhandledError(&errObj);
+    env->ResetError();
+    return from_ani_taihe_error(env, errObj);
 }
 }  // namespace taihe

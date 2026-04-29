@@ -2832,7 +2832,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     )
         else:
             exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-            error_ani = "ani_err"
+            status_ani = "ani_retval"
             with target.indented(
                 f"{exp_ty_cpp_name} operator()({params_cpp_str}) {{",
                 f"}}",
@@ -2854,14 +2854,14 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
                     f"ani_ref {result_ani} = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
+                    f"ani_status {status_ani} = env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
                 )
                 with target.indented(
-                    f"if (ani_error {error_ani} = ::taihe::catch_ani_error(env)) {{",
+                    f"if ({status_ani} == ANI_PENDING_ERROR) {{",
                     f"}}",
                 ):
                     target.writelns(
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, {error_ani}));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::catch_ani_taihe_error(env));",
                     )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)

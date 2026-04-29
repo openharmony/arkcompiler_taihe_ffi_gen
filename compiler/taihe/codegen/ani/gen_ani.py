@@ -800,6 +800,12 @@ class AniIfaceImplGenerator:
                         f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
                         f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
                     )
+                else:
+                    self.target.writelns(
+                        f"env->Function_Call_Void({function}, {args_ani_str});",
+                    )
+                if isinstance(return_ty := method.return_ty, NonVoidType):
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.from_ani(
                         self.target,
                         "env",
@@ -811,11 +817,11 @@ class AniIfaceImplGenerator:
                     )
                 else:
                     self.target.writelns(
-                        f"env->Function_Call_Void({function}, {args_ani_str});",
+                        f"return;",
                     )
         else:
             exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-            error_ani = "ani_err"
+            status_ani = "ani_retval"
             with self.target.indented(
                 f"{exp_ty_cpp_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
                 f"}}",
@@ -838,18 +844,18 @@ class AniIfaceImplGenerator:
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     self.target.writelns(
                         f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
-                        f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
+                        f"ani_status {status_ani} = env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
                     )
                 else:
                     self.target.writelns(
-                        f"env->Function_Call_Void({function}, {args_ani_str});",
+                        f"ani_status {status_ani} = env->Function_Call_Void({function}, {args_ani_str});",
                     )
                 with self.target.indented(
-                    f"if (ani_error {error_ani} = ::taihe::catch_ani_error(env)) {{",
+                    f"if ({status_ani} == ANI_PENDING_ERROR) {{",
                     f"}}",
                 ):
                     self.target.writelns(
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, {error_ani}));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::catch_ani_taihe_error(env));",
                     )
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
