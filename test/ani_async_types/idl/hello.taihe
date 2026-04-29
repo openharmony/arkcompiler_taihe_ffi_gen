@@ -28,20 +28,20 @@ interface UserType {
 function processUserTypeWithCallback(user: UserType, etsMs: i64, cppMs: i64, result: String, set: Completer<String>);
 function processUserTypeReturnsPromise(user: UserType, etsMs: i64, cppMs: i64, result: String): Future<String>;
 
-// Async function with void result
+// Async function with void result is not supported due to spec
 
-function testVoidAsyncWithCallback(ms: i64, set: Completer<void>);
-function testVoidAsyncReturnsPromise(ms: i64): Future<void>;
+// function testVoidAsyncWithCallback(ms: i64, set: Completer<void>);
+// function testVoidAsyncReturnsPromise(ms: i64): Future<void>;
 
 // Reverse async function with void result
 
-interface VoidAsyncUserType {
-    barWithCallback(set: Completer<void>);
-    barReturnsPromise(): Future<void>;
-}
+// interface VoidAsyncUserType {
+//     barWithCallback(set: Completer<void>);
+//     barReturnsPromise(): Future<void>;
+// }
 
-function testReverseVoidAsyncWithCallback(user: VoidAsyncUserType, set: Completer<void>);
-function testReverseVoidAsyncReturnsPromise(user: VoidAsyncUserType): Future<void>;
+// function testReverseVoidAsyncWithCallback(user: VoidAsyncUserType, set: Completer<void>);
+// function testReverseVoidAsyncReturnsPromise(user: VoidAsyncUserType): Future<void>;
 
 // Reverse function that may return either a sync value or an async value
 

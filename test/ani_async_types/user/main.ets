@@ -232,62 +232,6 @@ async function test_reverse_with_callback_with_async_error() {
     await assertAsyncError(() => x, "Asynchronous error in fooWithCallback");
 }
 
-class VoidAsyncUserTypeImpl implements hello.VoidAsyncUserType {
-    barWithCallback(set: AsyncCallback<void>): void {
-        setTimeout(() => {
-            set(null, undefined);
-        }, 100);
-    }
-    barReturnsPromise(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            setTimeout(() => {
-                resolve(undefined);
-            }, 100);
-        });
-    }
-}
-
-async function test_void_async_with_callback() {
-    let x = new Promise<void>((resolve, reject) => {
-        hello.testVoidAsyncWithCallback(100, (err: BusinessError|null) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(undefined);
-            }
-        });
-    });
-    await x;
-    arktest.assertTrue(true);
-}
-
-async function test_void_async_returns_promise() {
-    await hello.testVoidAsyncReturnsPromise(100);
-    arktest.assertTrue(true);
-}
-
-async function test_reverse_void_async_with_callback() {
-    let user = new VoidAsyncUserTypeImpl();
-    let x = new Promise<void>((resolve, reject) => {
-        hello.testReverseVoidAsyncWithCallback(
-            user, (err: BusinessError|null) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(undefined);
-                }
-            });
-    });
-    await x;
-    arktest.assertTrue(true);
-}
-
-async function test_reverse_void_async_returns_promise() {
-    let user = new VoidAsyncUserTypeImpl();
-    await hello.testReverseVoidAsyncReturnsPromise(user);
-    arktest.assertTrue(true);
-}
-
 class SyncBoolUserTypeImpl implements hello.SyncOrAsyncUserType {
     baz(): hello.syncOrAsyncBool {
         return true;
@@ -397,16 +341,6 @@ function main() {
     suite.addAsyncTest(
         "test_reverse_with_callback_with_async_error",
         test_reverse_with_callback_with_async_error);
-    suite.addAsyncTest(
-        "test_void_async_with_callback", test_void_async_with_callback);
-    suite.addAsyncTest(
-        "test_void_async_returns_promise", test_void_async_returns_promise);
-    suite.addAsyncTest(
-        "test_reverse_void_async_with_callback",
-        test_reverse_void_async_with_callback);
-    suite.addAsyncTest(
-        "test_reverse_void_async_returns_promise",
-        test_reverse_void_async_returns_promise);
     suite.addAsyncTest(
         "test_sync_or_async_with_sync_value",
         test_sync_or_async_with_sync_value);
