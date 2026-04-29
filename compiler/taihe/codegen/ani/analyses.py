@@ -1114,7 +1114,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     ):
         ani_after = f"{ani_boxed}_ani_after"
         self.into_ani(target, env, cpp_value, ani_after)
-        if isinstance(self.ets_type, EtsNonPrimitiveType):
+        if self.ani_type.base == ANI_REF:
             target.writelns(
                 f"ani_ref {ani_boxed} = {ani_after};",
             )
@@ -1132,7 +1132,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         cpp_after: str,
     ):
         ani_value = f"{cpp_after}_ani_value"
-        if isinstance(self.ets_type, EtsNonPrimitiveType):
+        if self.ani_type.base == ANI_REF:
             target.writelns(
                 f"{self.ani_type} {ani_value} = static_cast<{self.ani_type}>({ani_boxed});",
             )
