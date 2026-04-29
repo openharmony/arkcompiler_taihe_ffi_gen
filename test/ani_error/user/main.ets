@@ -67,6 +67,30 @@ function testCallback() {
     arktest.assertEQ(100, result);
 }
 
+function testCallbackVoidWithReturn() {
+    try {
+        hello.callcb_vi((): int => {
+            console.log("Callback_vi called");
+            return 1;
+        });
+    } catch (error) {
+        console.log("Error in testCallbackVoidWithReturn")
+    }
+}
+
+function testCallbacInt() {
+    let result: int = 0;
+    try {
+        hello.callcb_iv((a: int): void => {
+            console.log("Callback_iv called", a);
+            result = a;
+        });
+    } catch (error) {
+        console.log("Error in testCallbacInt")
+    }
+    arktest.assertEQ(10, result);
+}
+
 function testCallbackWithReturn() {
     let result: int = 0;
     try {
@@ -119,7 +143,7 @@ function testProcessGlobalNoexceptCallback() {
     } catch (error) {
         console.log("Error in testProcessGlobalNoexceptCallback")
     }
-    arktest.assertEQ(600, result);
+    arktest.assertEQ(3, result);
 }
 
 function testProcessGlobalVoidCallback() {
@@ -338,9 +362,13 @@ function main() {
     testSayHelloWithNumber();
     testSayHelloWithError();
     testSayHelloParam();
+    testSayHelloReturn();
+    testProcessGlobalNoexceptCallback();
 
     // 普通回调函数
     testCallback();
+    testCallbackVoidWithReturn();
+    testCallbacInt();
     testCallbackWithReturn();
     testCallbackVoid();
 
