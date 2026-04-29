@@ -21,7 +21,6 @@
 #include <thread>
 
 namespace {
-using expected_void = ::taihe::expected<void, ::taihe::error>;
 using expected_string = ::taihe::expected<::taihe::string, ::taihe::error>;
 using expected_bool = ::taihe::expected<bool, ::taihe::error>;
 using expected_i64 = ::taihe::expected<int64_t, ::taihe::error>;
@@ -135,103 +134,6 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
                 std::cerr << "[Process UserType Returns Promise] UserType method completed with error: "
                           << res.error().message() << std::endl;
                 fin.complete(taihe::unexpected<taihe::error>(res.error()));
-            }
-        });
-    }
-
-    return std::move(fut);
-}
-
-::taihe::expected<void, ::taihe::error> TestVoidAsyncWithCallback(int64_t ms, ::taihe::completer<expected_void> set)
-{
-    if (ms < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
-    }
-    std::thread([ms, set = std::move(set)]() mutable {
-        std::cout << "[Test Void Async With Callback] Waiting for " << ms << " milliseconds..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-        std::cout << "[Test Void Async With Callback] Task completed, completing future..." << std::endl;
-        set.complete();
-    }).detach();
-    return {};
-}
-
-::taihe::expected<::taihe::future<expected_void>, ::taihe::error> TestVoidAsyncReturnsPromise(int64_t ms)
-{
-    if (ms < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
-    }
-    auto [set, fut] = taihe::make_async_pair<expected_void>();
-
-    std::thread([ms, set = std::move(set)]() mutable {
-        std::cout << "[Test Void Async Returns Promise] Waiting for " << ms << " milliseconds..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-        std::cout << "[Test Void Async Returns Promise] Task completed, completing future..." << std::endl;
-        set.complete();
-    }).detach();
-
-    return std::move(fut);
-}
-
-::taihe::expected<void, ::taihe::error> TestReverseVoidAsyncWithCallback(::hello::weak::VoidAsyncUserType user,
-                                                                         ::taihe::completer<expected_void> set)
-{
-    auto [mid, tmp] = taihe::make_async_pair<expected_void>();
-
-    auto exp = user->barWithCallback(std::move(mid));
-
-    if (not exp) {
-        std::cerr << "[Test Reverse Void Async With Callback] Error calling VoidAsyncUserType method: "
-                  << exp.error().message() << std::endl;
-        set.complete(taihe::unexpected<taihe::error>(exp.error()));
-    } else {
-        std::cerr
-            << "[Test Reverse Void Async With Callback] VoidAsyncUserType method called successfully, waiting for "
-               "result..."
-            << std::endl;
-
-        tmp.on_complete([set = std::move(set)](expected_void &&res) mutable {
-            if (res) {
-                std::cout << "[Test Reverse Void Async With Callback] VoidAsyncUserType method completed successfully."
-                          << std::endl;
-                set.complete();
-            } else {
-                std::cerr << "[Test Reverse Void Async With Callback] VoidAsyncUserType method completed with error: "
-                          << res.error().message() << std::endl;
-                set.complete(taihe::unexpected<taihe::error>(res.error()));
-            }
-        });
-    }
-
-    return {};
-}
-
-::taihe::expected<::taihe::future<expected_void>, ::taihe::error> TestReverseVoidAsyncReturnsPromise(
-    ::hello::weak::VoidAsyncUserType user)
-{
-    auto exp = user->barReturnsPromise();
-
-    auto [set, fut] = taihe::make_async_pair<expected_void>();
-
-    if (not exp) {
-        std::cerr << "[Test Reverse Void Async Returns Promise] Error calling VoidAsyncUserType method: "
-                  << exp.error().message() << std::endl;
-        set.complete(taihe::unexpected<taihe::error>(exp.error()));
-    } else {
-        std::cerr << "[Test Reverse Void Async Returns Promise] VoidAsyncUserType method called successfully, "
-                     "waiting for promise to complete..."
-                  << std::endl;
-
-        exp.value().on_complete([set = std::move(set)](expected_void &&res) mutable {
-            if (res) {
-                std::cout
-                    << "[Test Reverse Void Async Returns Promise] VoidAsyncUserType method completed successfully."
-                    << std::endl;
-                set.complete();
-            } else {
-                std::cerr << "[Test Reverse Void Async Returns Promise] VoidAsyncUserType method completed with error: "
-                          << res.error().message() << std::endl;
-                set.complete(taihe::unexpected<taihe::error>(res.error()));
             }
         });
     }
@@ -376,10 +278,6 @@ TH_EXPORT_CPP_API_futureResultWithCallback(FutureResultWithCallback);
 TH_EXPORT_CPP_API_futureResultReturnsPromise(FutureResultReturnsPromise);
 TH_EXPORT_CPP_API_processUserTypeWithCallback(ProcessUserTypeWithCallback);
 TH_EXPORT_CPP_API_processUserTypeReturnsPromise(ProcessUserTypeReturnsPromise);
-TH_EXPORT_CPP_API_testVoidAsyncWithCallback(TestVoidAsyncWithCallback);
-TH_EXPORT_CPP_API_testVoidAsyncReturnsPromise(TestVoidAsyncReturnsPromise);
-TH_EXPORT_CPP_API_testReverseVoidAsyncWithCallback(TestReverseVoidAsyncWithCallback);
-TH_EXPORT_CPP_API_testReverseVoidAsyncReturnsPromise(TestReverseVoidAsyncReturnsPromise);
 TH_EXPORT_CPP_API_testSyncOrAsync(TestSyncOrAsync);
 TH_EXPORT_CPP_API_getDoubleAsyncResults(GetDoubleAsyncResults);
 TH_EXPORT_CPP_API_getManyAsyncResults(GetManyAsyncResults);
