@@ -1817,10 +1817,42 @@ class OptionalTypeAniInfo(TypeAniInfo):
         target: CSourceWriter,
         name: str,
     ):
+        with target.indented(
+            f"struct {{",
+            f"}} const {name};",
+        ):
+            self.gen_into_ani_func(target)
+
+    def gen_into_ani_func(self, target: CSourceWriter):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
-            f"}};",
+            f"{self.ani_type} operator()(ani_env* env, {self.cpp_info.as_param} cpp_value) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_ref ani_result = {{}};",
+            )
+            with target.indented(
+                f"if (!cpp_value) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"env->GetUndefined(&ani_result);",
+                )
+            with target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
+                target.writelns(
+                    f"ani_result = item_into_ani(env, *cpp_value);",
+                )
+            target.writelns(
+                f"return ani_result;",
+            )
+        with target.indented(
+            f"{self.ani_type} operator()(ani_env* env, {self.cpp_info.as_owner}&& cpp_value) const {{",
+            f"}}",
         ):
             target.writelns(
                 f"ani_ref ani_result = {{}};",
@@ -1993,10 +2025,39 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         target: CSourceWriter,
         name: str,
     ):
+        with target.indented(
+            f"struct {{",
+            f"}} const {name};",
+        ):
+            self.gen_into_ani_func(target)
+
+    def gen_into_ani_func(self, target: CSourceWriter):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
-            f"}};",
+            f"{self.ani_type} operator()(ani_env* env, {self.cpp_info.as_param} cpp_value) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"size_t size = cpp_value.size();",
+                f"ani_fixedarray_ref ani_result = {{}};",
+                f"ani_ref ani_init = {{}};",
+                f"env->GetUndefined(&ani_init);",
+                f'env->FixedArray_New_Ref(TH_ANI_FIND_CLASS(env, "{item_ty_ani_info.ets_type.boxed.desc}"), size, ani_init, &ani_result);',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
+                target.writelns(
+                    f"env->FixedArray_Set_Ref(ani_result, i, item_into_ani(env, cpp_value[i]));",
+                )
+            target.writelns(
+                f"return ani_result;",
+            )
+        with target.indented(
+            f"{self.ani_type} operator()(ani_env* env, {self.cpp_info.as_owner}&& cpp_value) const {{",
+            f"}}",
         ):
             target.writelns(
                 f"size_t size = cpp_value.size();",
@@ -2079,10 +2140,39 @@ class ArrayTypeAniInfo(TypeAniInfo):
         target: CSourceWriter,
         name: str,
     ):
+        with target.indented(
+            f"struct {{",
+            f"}} const {name};",
+        ):
+            self.gen_into_ani_func(target)
+
+    def gen_into_ani_func(self, target: CSourceWriter):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
-            f"}};",
+            f"{self.ani_type} operator()(ani_env* env, {self.cpp_info.as_param} cpp_value) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"size_t size = cpp_value.size();",
+                f"ani_array ani_result = {{}};",
+                f"ani_ref ani_init = {{}};",
+                f"env->GetUndefined(&ani_init);",
+                f"env->Array_New(size, ani_init, &ani_result);",
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
+                target.writelns(
+                    f"env->Array_Set(ani_result, i, item_into_ani(env, cpp_value[i]));",
+                )
+            target.writelns(
+                f"return ani_result;",
+            )
+        with target.indented(
+            f"{self.ani_type} operator()(ani_env* env, {self.cpp_info.as_owner}&& cpp_value) const {{",
+            f"}}",
         ):
             target.writelns(
                 f"size_t size = cpp_value.size();",

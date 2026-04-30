@@ -898,7 +898,8 @@ class AniStructDeclGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"inline {struct_ani_info.ani_type} operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const;",
+                    f"inline {struct_ani_info.ani_type} operator()(ani_env* env, {struct_cpp_info.as_owner} const& cpp_obj) const;",
+                    f"inline {struct_ani_info.ani_type} operator()(ani_env* env, {struct_cpp_info.as_owner}&& cpp_obj) const;",
                 )
 
 
@@ -971,7 +972,7 @@ class AniStructImplGenerator:
     def gen_struct_object_into_ani_func(self, struct_ani_info: StructObjectAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         with self.target.indented(
-            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const {{",
+            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} const& cpp_obj) const {{",
             f"}}",
         ):
             finals_ani = []
@@ -980,7 +981,24 @@ class AniStructImplGenerator:
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 final_into_ani = f"into_ani_{i}"
                 final_ty_ani_info.gen_into_ani(self.target, final_into_ani)
-                finals_ani.append(f"{final_into_ani}(env, std::move(cpp_obj).{'.'.join(part.name for part in parts)})")  # fmt: skip
+                finals_ani.append(f"{final_into_ani}(env, cpp_obj.{'.'.join(part.name for part in parts)})")  # fmt: skip
+            finals_ani_sum = "".join(", " + final_ani for final_ani in finals_ani)
+            self.target.writelns(
+                f"ani_object ani_obj = {{}};",
+                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){finals_ani_sum});',
+                f"return ani_obj;",
+            )
+        with self.target.indented(
+            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner}&& cpp_obj) const {{",
+            f"}}",
+        ):
+            finals_ani = []
+            for i, parts in enumerate(struct_ani_info.sorted_sts_all_fields):
+                final = parts[-1]
+                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                final_into_ani = f"into_ani_{i}"
+                final_ty_ani_info.gen_into_ani(self.target, final_into_ani)
+                finals_ani.append(f"{final_into_ani}(env, std::move(cpp_obj.{'.'.join(part.name for part in parts)}))")  # fmt: skip
             finals_ani_sum = "".join(", " + final_ani for final_ani in finals_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
@@ -1015,7 +1033,7 @@ class AniStructImplGenerator:
     def gen_struct_tuple_into_ani_func(self, struct_ani_info: StructTupleAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         with self.target.indented(
-            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const {{",
+            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} const& cpp_obj) const {{",
             f"}}",
         ):
             fields_ani = []
@@ -1023,7 +1041,23 @@ class AniStructImplGenerator:
                 field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
                 field_into_ani = f"into_ani_{field.name}"
                 field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
-                fields_ani.append(f"{field_into_ani}(env, std::move(cpp_obj).{field.name})")  # fmt: skip
+                fields_ani.append(f"{field_into_ani}(env, cpp_obj.{field.name})")  # fmt: skip
+            fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
+            self.target.writelns(
+                f"ani_object ani_obj = {{}};",
+                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{struct_ani_info.type_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "<ctor>", nullptr), &ani_obj{fields_ani_sum});',
+                f"return ani_obj;",
+            )
+        with self.target.indented(
+            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner}&& cpp_obj) const {{",
+            f"}}",
+        ):
+            fields_ani = []
+            for field in self.struct.fields:
+                field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+                field_into_ani = f"into_ani_{field.name}"
+                field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
+                fields_ani.append(f"{field_into_ani}(env, std::move(cpp_obj.{field.name}))")  # fmt: skip
             fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
@@ -1062,7 +1096,8 @@ class AniUnionDeclGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"inline {union_ani_info.ani_type} operator()(ani_env* env, {union_cpp_info.as_owner} cpp_value) const;",
+                    f"inline {union_ani_info.ani_type} operator()(ani_env* env, {union_cpp_info.as_owner} const& cpp_value) const;",
+                    f"inline {union_ani_info.ani_type} operator()(ani_env* env, {union_cpp_info.as_owner}&& cpp_value) const;",
                 )
 
 
@@ -1123,7 +1158,28 @@ class AniUnionImplGenerator:
         union_cpp_info = UnionCppInfo.get(self.am, self.union)
         union_ani_info = UnionAniInfo.get(self.am, self.union)
         with self.target.indented(
-            f"inline {union_ani_info.ani_type} taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_owner} cpp_value) const {{",
+            f"inline {union_ani_info.ani_type} taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_owner} const& cpp_value) const {{",
+            f"}}",
+        ):
+            with self.target.indented(
+                f"switch (cpp_value.get_tag()) {{",
+                f"}}",
+            ):
+                for field in self.union.fields:
+                    tag = f"{union_cpp_info.full_name}::tag_t::{field.name}"
+                    self.target.write_label(f"case {tag}:")
+                    with self.target.indented(
+                        f"{{",
+                        f"}}",
+                    ):
+                        field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+                        field_into_ani = f"into_ani_{field.name}"
+                        field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
+                        self.target.writelns(
+                            f"return {field_into_ani}(env, cpp_value.get_{field.name}_ref());",
+                        )
+        with self.target.indented(
+            f"inline {union_ani_info.ani_type} taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_owner}&& cpp_value) const {{",
             f"}}",
         ):
             with self.target.indented(
