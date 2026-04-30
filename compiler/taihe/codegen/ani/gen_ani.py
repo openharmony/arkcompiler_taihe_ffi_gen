@@ -576,7 +576,7 @@ class AniEnumImplGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"inline {enum_ani_info.ani_type} operator()(ani_env* env, {enum_cpp_info.as_owner} cpp_obj) const;",
+                    f"inline {enum_ani_info.ani_type} operator()(ani_env* env, {enum_cpp_info.as_param} cpp_obj) const;",
                 )
             self.gen_enum_from_ani_func()
             self.gen_enum_into_ani_func()
@@ -610,7 +610,7 @@ class AniEnumImplGenerator:
     def gen_enum_object_into_ani_func(self, enum_ani_info: EnumObjectAniInfo):
         enum_cpp_info = EnumCppInfo.get(self.am, self.enum)
         with self.target.indented(
-            f"inline {enum_ani_info.ani_type} taihe::into_ani_t<{enum_cpp_info.as_owner}>::operator()(ani_env* env, {enum_cpp_info.as_owner} cpp_obj) const {{",
+            f"inline {enum_ani_info.ani_type} taihe::into_ani_t<{enum_cpp_info.as_owner}>::operator()(ani_env* env, {enum_cpp_info.as_param} cpp_obj) const {{",
             f"}}",
         ):
             self.target.writelns(
@@ -634,7 +634,7 @@ class AniEnumImplGenerator:
     def gen_enum_const_into_ani_func(self, enum_ani_info: EnumConstAniInfo):
         enum_cpp_info = EnumCppInfo.get(self.am, self.enum)
         with self.target.indented(
-            f"inline {enum_ani_info.ani_type} taihe::into_ani_t<{enum_cpp_info.as_owner}>::operator()(ani_env* env, {enum_cpp_info.as_owner} cpp_obj) const {{",
+            f"inline {enum_ani_info.ani_type} taihe::into_ani_t<{enum_cpp_info.as_owner}>::operator()(ani_env* env, {enum_cpp_info.as_param} cpp_obj) const {{",
             f"}}",
         ):
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
@@ -898,7 +898,7 @@ class AniStructDeclGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"inline {struct_ani_info.ani_type} operator()(ani_env* env, {struct_cpp_info.as_owner} const& cpp_obj) const;",
+                    f"inline {struct_ani_info.ani_type} operator()(ani_env* env, {struct_cpp_info.as_param} cpp_obj) const;",
                     f"inline {struct_ani_info.ani_type} operator()(ani_env* env, {struct_cpp_info.as_owner}&& cpp_obj) const;",
                 )
 
@@ -972,7 +972,7 @@ class AniStructImplGenerator:
     def gen_struct_object_into_ani_func(self, struct_ani_info: StructObjectAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         with self.target.indented(
-            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} const& cpp_obj) const {{",
+            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_param} cpp_obj) const {{",
             f"}}",
         ):
             finals_ani = []
@@ -1033,7 +1033,7 @@ class AniStructImplGenerator:
     def gen_struct_tuple_into_ani_func(self, struct_ani_info: StructTupleAniInfo):
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         with self.target.indented(
-            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} const& cpp_obj) const {{",
+            f"inline {struct_ani_info.ani_type} taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_param} cpp_obj) const {{",
             f"}}",
         ):
             fields_ani = []
@@ -1096,7 +1096,7 @@ class AniUnionDeclGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"inline {union_ani_info.ani_type} operator()(ani_env* env, {union_cpp_info.as_owner} const& cpp_value) const;",
+                    f"inline {union_ani_info.ani_type} operator()(ani_env* env, {union_cpp_info.as_param} cpp_value) const;",
                     f"inline {union_ani_info.ani_type} operator()(ani_env* env, {union_cpp_info.as_owner}&& cpp_value) const;",
                 )
 
@@ -1158,7 +1158,7 @@ class AniUnionImplGenerator:
         union_cpp_info = UnionCppInfo.get(self.am, self.union)
         union_ani_info = UnionAniInfo.get(self.am, self.union)
         with self.target.indented(
-            f"inline {union_ani_info.ani_type} taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_owner} const& cpp_value) const {{",
+            f"inline {union_ani_info.ani_type} taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_param} cpp_value) const {{",
             f"}}",
         ):
             with self.target.indented(
