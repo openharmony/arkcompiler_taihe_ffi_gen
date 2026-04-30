@@ -343,8 +343,8 @@ class AbiIfaceImplGenerator:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
                     self.target.add_include(*param_ty_abi_info.defn_headers)
                 if isinstance(return_ty := method.return_ty, NonVoidType):
-                    param_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                    self.target.add_include(*param_ty_abi_info.defn_headers)
+                    return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+                    self.target.add_include(*return_ty_abi_info.defn_headers)
             self.gen_iface_ftable()
             for method in self.iface.methods:
                 self.gen_method(method)
