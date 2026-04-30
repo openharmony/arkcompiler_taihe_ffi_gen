@@ -449,9 +449,9 @@ class AniPackageSourceGenerator:
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_into_ani(self.target, "ani_result_f")
+                    return_ty_ani_info.gen_into_ani(self.target, "result_into_ani")
                     self.target.writelns(
-                        f"return ani_result_f(env, cpp_result);",
+                        f"return result_into_ani(env, std::move(cpp_result));",
                     )
                 else:
                     self.target.writelns(
@@ -467,18 +467,17 @@ class AniPackageSourceGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     self.target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, cpp_expected.error()); return {{}}; }}",
-                        f"{return_ty_cpp_name} cpp_result = std::move(cpp_expected.value());",
+                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, std::move(cpp_expected.error())); return {{}}; }}",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_into_ani(self.target, "ani_result_f")
+                    return_ty_ani_info.gen_into_ani(self.target, "result_into_ani")
                     self.target.writelns(
-                        f"return ani_result_f(env, cpp_result);",
+                        f"return result_into_ani(env, std::move(cpp_expected.value()));",
                     )
                 else:
                     self.target.writelns(
                         f"if (::taihe::has_error()) {{ return; }}",
-                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, cpp_expected.error()); return; }}",
+                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, std::move(cpp_expected.error())); return; }}",
                         f"return;",
                     )
 
@@ -625,21 +624,17 @@ class AniEnumImplGenerator:
     def gen_enum_const_from_ani_func(self, enum_ani_info: EnumConstAniInfo):
         enum_cpp_info = EnumCppInfo.get(self.am, self.enum)
         enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
-        enum_ty_ani_info.gen_from_ani(self.target, "cpp_value_f")
+        enum_ty_ani_info.gen_from_ani(self.target, "value_from_ani")
         self.target.writelns(
-            f"return {enum_cpp_info.full_name}::from_value(cpp_value_f(env, ani_obj));",
+            f"return {enum_cpp_info.full_name}::from_value(value_from_ani(env, ani_obj));",
         )
 
     def gen_enum_const_into_ani_func(self, enum_ani_info: EnumConstAniInfo):
         enum_cpp_info = EnumCppInfo.get(self.am, self.enum)
         enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
-        enum_ty_cpp_info = TypeCppInfo.get(self.am, self.enum.ty)
+        enum_ty_ani_info.gen_into_ani(self.target, "value_into_ani")
         self.target.writelns(
-            f"{enum_ty_cpp_info.as_owner} cpp_value = cpp_obj.get_value();",
-        )
-        enum_ty_ani_info.gen_into_ani(self.target, "ani_result_f")
-        self.target.writelns(
-            f"return ani_result_f(env, cpp_value);",
+            f"return value_into_ani(env, cpp_obj.get_value());",
         )
 
 
@@ -775,9 +770,9 @@ class AniIfaceImplGenerator:
                     )
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_from_ani(self.target, "cpp_result_f")
+                    return_ty_ani_info.gen_from_ani(self.target, "result_from_ani")
                     self.target.writelns(
-                        f"return cpp_result_f(env, ani_result);",
+                        f"return result_from_ani(env, ani_result);",
                     )
                 else:
                     self.target.writelns(
@@ -819,9 +814,9 @@ class AniIfaceImplGenerator:
                     )
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_from_ani(self.target, "cpp_result_f")
+                    return_ty_ani_info.gen_from_ani(self.target, "result_from_ani")
                     self.target.writelns(
-                        f"return cpp_result_f(env, ani_result);",
+                        f"return result_from_ani(env, ani_result);",
                     )
                 else:
                     self.target.writelns(
@@ -979,7 +974,7 @@ class AniStructImplGenerator:
             final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
             final_into_ani = f"into_ani_{i}"
             final_ty_ani_info.gen_into_ani(self.target, final_into_ani)
-            finals_ani.append(f"{final_into_ani}(env, {'.'.join(('cpp_obj', *(part.name for part in parts)))})")  # fmt: skip
+            finals_ani.append(f"{final_into_ani}(env, std::move(cpp_obj).{'.'.join(part.name for part in parts)})")  # fmt: skip
         finals_ani_sum = "".join(", " + final_ani for final_ani in finals_ani)
         self.target.writelns(
             f"ani_object ani_obj = {{}};",
@@ -1014,7 +1009,7 @@ class AniStructImplGenerator:
             field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
             field_into_ani = f"into_ani_{field.name}"
             field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
-            fields_ani.append(f"{field_into_ani}(env, cpp_obj.{field.name})")
+            fields_ani.append(f"{field_into_ani}(env, std::move(cpp_obj).{field.name})")
         fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
         self.target.writelns(
             f"ani_object ani_obj = {{}};",
@@ -1132,5 +1127,5 @@ class AniUnionImplGenerator:
                         field_into_ani = f"into_ani_{field.name}"
                         field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
                         self.target.writelns(
-                            f"return {field_into_ani}(env, cpp_value.get_{field.name}_ref());",
+                            f"return {field_into_ani}(env, std::move(cpp_value).get_{field.name}_ref());",
                         )

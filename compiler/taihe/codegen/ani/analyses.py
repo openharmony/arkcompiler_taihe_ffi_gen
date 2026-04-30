@@ -1113,12 +1113,12 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         name: str,
     ):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> ani_ref {{",
+            f"auto {name} = [](ani_env* env, auto&& cpp_value) -> ani_ref {{",
             f"}};",
         ):
             self.gen_into_ani(target, "into_ani_value")
             target.writelns(
-                f"{self.ani_type} ani_value = into_ani_value(env, cpp_value);",
+                f"{self.ani_type} ani_value = into_ani_value(env, std::forward<decltype(cpp_value)>(cpp_value));",
             )
             if self.ani_type.base == ANI_REF:
                 target.writelns(
@@ -1699,7 +1699,7 @@ class StringTypeAniInfo(TypeAniInfo):
         name: str,
     ):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -1838,7 +1838,7 @@ class OptionalTypeAniInfo(TypeAniInfo):
             ):
                 item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"ani_result = item_into_ani(env, (*cpp_value));",
+                    f"ani_result = item_into_ani(env, std::move(*cpp_value));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -1914,7 +1914,7 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
     ):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2011,7 +2011,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
             ):
                 item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"env->FixedArray_Set_Ref(ani_result, i, item_into_ani(env, cpp_value[i]));",
+                    f"env->FixedArray_Set_Ref(ani_result, i, item_into_ani(env, std::move(cpp_value[i])));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2097,7 +2097,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
             ):
                 item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"env->Array_Set(ani_result, i, item_into_ani(env, cpp_value[i]));",
+                    f"env->Array_Set(ani_result, i, item_into_ani(env, std::move(cpp_value[i])));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2155,7 +2155,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2248,7 +2248,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2321,7 +2321,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2424,7 +2424,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2529,7 +2529,7 @@ class MapTypeAniInfo(TypeAniInfo):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2625,7 +2625,7 @@ class SetTypeAniInfo(TypeAniInfo):
     ):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2708,7 +2708,7 @@ class VectorTypeAniInfo(TypeAniInfo):
     ):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -2979,7 +2979,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
                     target.writelns(
-                        f"return result_into_ani(env, cpp_result);",
+                        f"return result_into_ani(env, std::move(cpp_result));",
                     )
                 else:
                     target.writelns(
@@ -2995,18 +2995,17 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, cpp_expected.error()); return {{}}; }}",
-                        f"{return_ty_cpp_name} cpp_result = std::move(cpp_expected.value());",
+                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, std::move(cpp_expected.error())); return {{}}; }}",
                     )
                     return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                     return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
                     target.writelns(
-                        f"return result_into_ani(env, cpp_result);",
+                        f"return result_into_ani(env, std::move(cpp_expected.value()));",
                     )
                 else:
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, cpp_expected.error()); return {{}}; }}",
+                        f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, std::move(cpp_expected.error())); return {{}}; }}",
                         f"return {{}};",
                     )
 
@@ -3062,7 +3061,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"handler_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
                 )
                 with target.indented(
-                    f"void operator()({self.exp_ty_cpp_name} cpp_result) const {{",
+                    f"void operator()({self.exp_ty_cpp_name}&& cpp_result) const {{",
                     f"}}",
                 ):
                     target.writelns(
@@ -3078,7 +3077,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                             item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
                             item_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
                             target.writelns(
-                                f"ani_ref ani_result = result_into_ani(env, cpp_result.value());",
+                                f"ani_ref ani_result = result_into_ani(env, std::move(cpp_result.value()));",
                             )
                         else:
                             target.writelns(
@@ -3094,7 +3093,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                         f"}}",
                     ):
                         target.writelns(
-                            f"ani_argv[0] = ::taihe::into_ani_taihe_error(env, cpp_result.error());",
+                            f"ani_argv[0] = ::taihe::into_ani_taihe_error(env, std::move(cpp_result.error()));",
                             f"env->GetUndefined(&ani_argv[1]);",
                         )
                     target.writelns(
@@ -3318,7 +3317,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                     f"handler_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
                 )
                 with target.indented(
-                    f"void operator()({self.exp_ty_cpp_name} cpp_result) {{",
+                    f"void operator()({self.exp_ty_cpp_name}&& cpp_result) {{",
                     f"}}",
                 ):
                     target.writelns(
@@ -3333,7 +3332,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                             item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
                             item_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
                             target.writelns(
-                                f"ani_ref ani_result = result_into_ani(env, cpp_result.value());",
+                                f"ani_ref ani_result = result_into_ani(env, std::move(cpp_result.value()));",
                             )
                         else:
                             target.writelns(
@@ -3348,7 +3347,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                         f"}}",
                     ):
                         target.writelns(
-                            f"ani_error ani_err = ::taihe::into_ani_taihe_error(env, cpp_result.error());",
+                            f"ani_error ani_err = ::taihe::into_ani_taihe_error(env, std::move(cpp_result.error()));",
                             f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Promise", "rejectImpl", nullptr), ani_err, false);',
                         )
             target.writelns(
