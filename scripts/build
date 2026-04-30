@@ -44,6 +44,53 @@ if TYPE_CHECKING:
     from taihe.utils.build_metadata import BuildMetadata
 
 
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class BuildModeConfig:
+    exclude_compiler: list[str] = field(default_factory=list)
+    exclude_runtime: list[str] = field(default_factory=list)
+
+
+_BUILD_CONFIGS = {
+    "core": BuildModeConfig(
+        exclude_compiler=[
+            "taihe/codegen/ani",
+            "taihe/codegen/napi",
+            "taihe/cli/tryit.py",
+        ],
+        exclude_runtime=[
+            "src/taihe/runtime/runtime_ani.cpp",
+            "src/taihe/runtime/runtime_napi.cpp",
+            "include/taihe/platform/ani.hpp",
+        ],
+    ),
+    "sdk": BuildModeConfig(
+        exclude_runtime=["taihe/cli/tryit.py"],
+    ),
+    "full": BuildModeConfig(),
+}
+
+
+class BuildMode(Enum):
+    FULL = "full"
+    CORE = "core"
+    SDK = "sdk"
+
+    @property
+    def config(self) -> BuildModeConfig:
+        return _BUILD_CONFIGS[self.value]
+
+    @property
+    def exclude_compiler(self) -> list[str]:
+        return self.config.exclude_compiler
+
+    @property
+    def exclude_runtime(self) -> list[str]:
+        return self.config.exclude_runtime
+
+
 class Platform(Enum):
     LINUX_X86_64 = "linux-x86_64"
     WINDOWS_X86_64 = "windows-x86_64"
@@ -152,10 +199,11 @@ class PythonBundle:
 
 
 class Builder:
-    def __init__(self, pyproject_dir: Path, dist_dir: Path):
+    def __init__(self, pyproject_dir: Path, dist_dir: Path, build_mode: BuildMode):
         self.pyproject_dir = pyproject_dir
         self.dist_dir = dist_dir
         self.brand: Final = "taihe"
+        self.build_mode = build_mode
         self._has_built_compiler = False
 
     @property
@@ -183,7 +231,11 @@ class Builder:
         if self._has_built_compiler:
             return  # Only build once.
         self._has_built_compiler = True
-        subprocess.run(["uv", "build", "--wheel", "-q", "--out-dir", str(self.dist_dir)], cwd=self.pyproject_dir, check=True)
+        subprocess.run(
+            ["uv", "build", "--wheel", "-q", "--out-dir", str(self.dist_dir)],
+            cwd=self.pyproject_dir,
+            check=True,
+        )
 
     def build(self, platform: Platform):
         ### Preparation ###
@@ -205,8 +257,28 @@ class Builder:
         bundle.extract()
         bundle.install_package(self.wheel)
         bundle.create_script("taihec", "taihe.cli.compiler")
-        if platform == Platform.LINUX_X86_64:
+        if platform == Platform.LINUX_X86_64 and self.build_mode == BuildMode.FULL:
             bundle.create_script("taihe-tryit", "taihe.cli.tryit")
+
+        ### Remove excluded compiler files ###
+        for pkg in self.build_mode.exclude_compiler:
+            path = bundle.sitepkg_dir / pkg
+            if not path.exists():
+                continue
+
+            if path.is_symlink():
+                print(f"Warning: Skipping symlink {path}")
+                continue
+
+            try:
+                if path.is_dir():
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
+                print(f"Removed: {path}")
+            except Exception as e:
+                print(f"Error: Failed to remove {path}: {e}")
+                raise
 
         ### Create the taihe-napi ###
         taihe_napi_bundle = NapiTaiheBundle(bundle_root, platform)
@@ -220,6 +292,13 @@ class Builder:
             dst = r.resolve_path(dst_ctx)
             dst.parent.mkdir(parents=True, exist_ok=True)
             src.rename(dst)
+
+        ### Remove excluded runtime files ###
+        for res in self.build_mode.exclude_runtime:
+            res_path = bundle.root_dir / res
+            if res_path.exists():
+                res_path.unlink()
+
         ### Finalize ###
         (bundle.root_dir / "version.txt").write_text(self.release_note)
         create_tar(
@@ -240,6 +319,12 @@ def main():
         help="Specify the system type to build for. Can be used multiple times.",
     )
     parser.add_argument(
+        "--mode",
+        choices=[m.value for m in BuildMode],
+        default=BuildMode.FULL.value,
+        help="Build mode.",
+    )
+    parser.add_argument(
         "--output",
         "-O",
         dest="dst_dir",
@@ -249,8 +334,9 @@ def main():
     )
     args = parser.parse_args()
 
+    build_mode = BuildMode(args.mode)
     ResourceContext.initialize()
-    builder = Builder(g_repo_dir, args.dst_dir)
+    builder = Builder(g_repo_dir, args.dst_dir, build_mode)
     for p in args.system or Platform:
         builder.build(Platform(p))
 
