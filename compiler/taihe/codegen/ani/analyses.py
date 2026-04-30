@@ -2824,10 +2824,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
                 args_ani = []
                 for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
+                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
                     param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                     param_into_ani = f"into_ani_{param.name}"
                     param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
-                    args_ani.append(f"{param_into_ani}(env, {arg_cpp})")
+                    args_ani.append(f"{param_into_ani}(env, std::forward<{param_ty_cpp_info.as_param}>({arg_cpp}))")  # fmt: skip
                 args_ani_str = ", ".join(args_ani)
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
@@ -2856,10 +2857,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
                 args_ani = []
                 for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
+                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
                     param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                     param_into_ani = f"into_ani_{param.name}"
                     param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
-                    args_ani.append(f"{param_into_ani}(env, {arg_cpp})")
+                    args_ani.append(f"{param_into_ani}(env, std::forward<{param_ty_cpp_info.as_param}>({arg_cpp}))")  # fmt: skip
                 args_ani_str = ", ".join(args_ani)
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{args_ani_str}}};",
