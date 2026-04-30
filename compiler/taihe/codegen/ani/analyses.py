@@ -1345,7 +1345,7 @@ class NullTypeAniInfo(TypeAniInfo):
     @override
     def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -1403,7 +1403,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
     @override
     def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -1462,7 +1462,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
     @override
     def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -1549,7 +1549,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
     @override
     def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
@@ -1640,7 +1640,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
     @override
     def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
+            f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
         ):
             target.writelns(
