@@ -1570,14 +1570,14 @@ class CppIfaceImplGenerator:
         args_call.append(f"&{method_abi_info.wrap_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-        args_tmpl.append(return_ty_cpp_name)
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        args_tmpl.append(result_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         iface_ty_cpp_name = iface_cpp_info.as_param
         args_tmpl.append(iface_ty_cpp_name)
@@ -1592,7 +1592,7 @@ class CppIfaceImplGenerator:
         params_cpp_str = ", ".join(params_cpp)
         args_call_str = ", ".join(args_call)
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+            f"{result_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
             f"}}",
         ):
             self.target.writelns(
@@ -1605,14 +1605,14 @@ class CppIfaceImplGenerator:
         args_tmpl = ["Impl", f"&Impl::{method_cpp_info.impl_name}"]
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            result_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            result_ty_cpp_name = "void"
+            return_ty_cpp_name = "void"
         if method_abi_info.is_noexcept:
-            return_ty_cpp_name = result_ty_cpp_name
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            return_ty_cpp_name = f"::taihe::expected<{result_ty_cpp_name}, ::taihe::error>"  # fmt: skip
-        args_tmpl.append(return_ty_cpp_name)
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        args_tmpl.append(result_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         iface_cpp_name = iface_cpp_info.as_param
         args_tmpl.append(iface_cpp_name)

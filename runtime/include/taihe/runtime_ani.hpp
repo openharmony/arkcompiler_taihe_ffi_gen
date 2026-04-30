@@ -85,7 +85,7 @@ bool has_error();
 namespace taihe {
 // Internal Error handling functions
 
-ani_error catch_ani_error(ani_env *env);
+taihe::error catch_ani_taihe_error(ani_env *env);
 taihe::error from_ani_taihe_error(ani_env *env, ani_error err);
 ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err);
 void throw_ani_taihe_error(ani_env *env, taihe::error const &err);
