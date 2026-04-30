@@ -1077,24 +1077,12 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     def sts_type_in(self, target: ArkTsImportManager) -> str: ...
 
     @abstractmethod
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ): ...
+    def gen_from_ani(self, target: CSourceWriter, name: str): ...
 
     @abstractmethod
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ): ...
+    def gen_into_ani(self, target: CSourceWriter, name: str): ...
 
-    def gen_check_ani_ref(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_check_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, ani_ref ani_value) -> bool {{",
             f"}};",
@@ -1107,11 +1095,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
                 f"return result;",
             )
 
-    def gen_into_ani_ref(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, auto&& cpp_value) -> ani_ref {{",
             f"}};",
@@ -1132,11 +1116,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
                     f"return ani_boxed;",
                 )
 
-    def gen_from_ani_ref(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, ani_ref ani_boxed) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1185,11 +1165,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         return enum_ani_info.sts_type_in(target)
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.decl)
         target.add_include(enum_ani_info.impl_header)
@@ -1198,11 +1174,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.decl)
         target.add_include(enum_ani_info.impl_header)
@@ -1235,11 +1207,7 @@ class StructTypeAniInfo(TypeAniInfo):
         return struct_ani_info.sts_type_in(target)
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
         struct_cpp_info = StructCppInfo.get(self.am, self.t.decl)
         target.add_include(struct_ani_info.impl_header)
@@ -1248,11 +1216,7 @@ class StructTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
         struct_cpp_info = StructCppInfo.get(self.am, self.t.decl)
         target.add_include(struct_ani_info.impl_header)
@@ -1285,11 +1249,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         return union_ani_info.sts_type_in(target)
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
         union_cpp_info = UnionCppInfo.get(self.am, self.t.decl)
         target.add_include(union_ani_info.impl_header)
@@ -1298,11 +1258,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
         union_cpp_info = UnionCppInfo.get(self.am, self.t.decl)
         target.add_include(union_ani_info.impl_header)
@@ -1335,11 +1291,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         return iface_ani_info.sts_type_in(target)
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.t.decl)
         target.add_include(iface_ani_info.impl_header)
@@ -1348,11 +1300,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.t.decl)
         target.add_include(iface_ani_info.impl_header)
@@ -1385,11 +1333,7 @@ class NullTypeAniInfo(TypeAniInfo):
         return "null"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1399,11 +1343,7 @@ class NullTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -1415,11 +1355,7 @@ class NullTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_check_ani_ref(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_check_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, ani_ref ani_value) -> bool {{",
             f"}};",
@@ -1455,11 +1391,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
         return "undefined"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1469,11 +1401,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -1485,11 +1413,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_check_ani_ref(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_check_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, ani_ref ani_value) -> bool {{",
             f"}};",
@@ -1526,11 +1450,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         return render_ets_string(self.value)
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1540,11 +1460,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -1557,11 +1473,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_check_ani_ref(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_check_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, ani_ref ani_value) -> bool {{",
             f"}};",
@@ -1625,11 +1537,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
         return self.sts_type
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1639,11 +1547,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -1672,11 +1576,7 @@ class StringTypeAniInfo(TypeAniInfo):
         return "string"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1693,11 +1593,7 @@ class StringTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -1732,11 +1628,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
         return self.sts_type
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -1746,11 +1638,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
@@ -1784,11 +1672,7 @@ class OptionalTypeAniInfo(TypeAniInfo):
         return f"({item_sts_type} | undefined)"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
@@ -1812,11 +1696,7 @@ class OptionalTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"struct {{",
             f"}} const {name};",
@@ -1919,11 +1799,7 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
         return f"ValueArray<{item_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
@@ -1939,11 +1815,7 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
@@ -1987,11 +1859,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         return f"FixedArray<{item_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
@@ -2020,11 +1888,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"struct {{",
             f"}} const {name};",
@@ -2102,11 +1966,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
         return f"Array<{item_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         with target.indented(
@@ -2135,11 +1995,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"struct {{",
             f"}} const {name};",
@@ -2220,11 +2076,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         return "ArrayBuffer"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_param} {{",
@@ -2238,11 +2090,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
@@ -2296,11 +2144,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         return self.sts_type
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_param} {{",
@@ -2331,11 +2175,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
@@ -2382,11 +2222,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         return "BigInt"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
@@ -2403,11 +2239,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
@@ -2455,11 +2287,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         return f"Record<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
@@ -2506,11 +2334,7 @@ class RecordTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
@@ -2560,11 +2384,7 @@ class MapTypeAniInfo(TypeAniInfo):
         return f"Map<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
@@ -2611,11 +2431,7 @@ class MapTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
@@ -2663,11 +2479,7 @@ class SetTypeAniInfo(TypeAniInfo):
         return f"Set<{key_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
@@ -2708,11 +2520,7 @@ class SetTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
@@ -2758,11 +2566,7 @@ class VectorTypeAniInfo(TypeAniInfo):
         return f"Array<{item_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
@@ -2791,11 +2595,7 @@ class VectorTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
@@ -2856,11 +2656,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         return f"(({params_str}) => {return_ty_sts_name})"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -2884,10 +2680,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 f"return ::taihe::make_holder<impl_t, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_value);",
             )
 
-    def gen_invoke_operator(
-        self,
-        target: CSourceWriter,
-    ):
+    def gen_invoke_operator(self, target: CSourceWriter):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.t)
         params_cpp = []
         args_cpp = []
@@ -2977,11 +2770,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
@@ -3136,11 +2925,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
         return f"{pkg_ani_info.ns.mod.AC_type}<{item_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
             f"}};",
@@ -3199,11 +2984,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
@@ -3227,11 +3008,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 f"return ani_result;",
             )
 
-    def gen_async_on_fulfilled(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_async_on_fulfilled(self, target: CSourceWriter, name: str):
         with target.indented(
             f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref data) {{",
             f"}};",
@@ -3250,11 +3027,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                     f"ctx->emplace_result();",
                 )
 
-    def gen_async_on_rejected(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_async_on_rejected(self, target: CSourceWriter, name: str):
         with target.indented(
             f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref err) {{",
             f"}};",
@@ -3264,11 +3037,7 @@ class CompleterTypeAniInfo(TypeAniInfo):
                 f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
-    def gen_async_free(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_async_free(self, target: CSourceWriter, name: str):
         with target.indented(
             f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr) {{",
             f"}};",
@@ -3312,11 +3081,7 @@ class FutureTypeAniInfo(TypeAniInfo):
         return f"Promise<{item_sts_type}>"
 
     @override
-    def gen_from_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_from_ani(self, target: CSourceWriter, name: str):
         pkg_ani_info = PackageAniInfo.get(self.am, self.t.ref.parent_pkg)
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
@@ -3340,11 +3105,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                 f"return cpp_result;",
             )
 
-    def gen_async_on_fulfilled(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_async_on_fulfilled(self, target: CSourceWriter, name: str):
         with target.indented(
             f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref data) {{",
             f"}};",
@@ -3363,11 +3124,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                     f"ctx->emplace_result();",
                 )
 
-    def gen_async_on_rejected(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_async_on_rejected(self, target: CSourceWriter, name: str):
         with target.indented(
             f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr, ani_ref err) {{",
             f"}};",
@@ -3377,11 +3134,7 @@ class FutureTypeAniInfo(TypeAniInfo):
                 f"ctx->emplace_result(::taihe::unexpected<::taihe::error>(::taihe::from_ani_taihe_error(env, static_cast<ani_error>(err))));",
             )
 
-    def gen_async_free(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_async_free(self, target: CSourceWriter, name: str):
         with target.indented(
             f"static void {name}([[maybe_unused]] ani_env* env, ani_long ani_context_ptr) {{",
             f"}};",
@@ -3392,11 +3145,7 @@ class FutureTypeAniInfo(TypeAniInfo):
             )
 
     @override
-    def gen_into_ani(
-        self,
-        target: CSourceWriter,
-        name: str,
-    ):
+    def gen_into_ani(self, target: CSourceWriter, name: str):
         with target.indented(
             f"auto {name} = [](ani_env* env, {self.cpp_info.as_owner} cpp_value) -> {self.ani_type} {{",
             f"}};",
