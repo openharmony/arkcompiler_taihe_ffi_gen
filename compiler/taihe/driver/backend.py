@@ -194,7 +194,7 @@ class BackendRegistry:
             CppUserHeadersBackendConfig,
         )
         from taihe.semantics import PrettyPrintBackendConfig
-
+        from taihe.codegen.ohipc import OhIpcBackendConfig
         backends = [
             # abi
             AbiHeaderBackendConfig,
@@ -206,6 +206,8 @@ class BackendRegistry:
             CppUserHeadersBackendConfig,
             # pretty print
             PrettyPrintBackendConfig,
+            # ohipc
+            OhIpcBackendConfig,
         ]
 
         # HACK: Optional backends (only register if module exists)
