@@ -707,6 +707,8 @@ class IfaceThunkAniInfo(AbstractAnalysis[IfaceThunkKey]):
 
 class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.perf_id = f"{f.parent_pkg.name}.{f.parent_iface.name}.{f.name}"
+
         self.sts_reverse = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
 
     @classmethod
@@ -723,6 +725,8 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
         self.c_native_base_params: list[str] = []
         func_cpp_user_info = GlobFuncCppUserInfo.get(am, f)
         self.c_native_call = func_cpp_user_info.full_name
+
+        self.perf_id = f"{f.parent_pkg.name}.{f.name}"
 
         self.sts_reverse = f"_taihe_{f.name}_reverse"
 
@@ -742,6 +746,19 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     @override
     def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAniInfo":
         return GlobFuncAniInfo(am, f)
+
+
+class CallbackAniInfo(AbstractAnalysis[CallbackType]):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        cb_cpp_info = TypeCppInfo.get(am, t)
+        self.c_native_call = f"{cb_cpp_info.as_param}({{reinterpret_cast<{cb_cpp_info.as_param}::vtable_type*>(ani_vtbl_ptr), reinterpret_cast<DataBlockHead*>(ani_data_ptr)}})"
+
+        self.perf_id = f"({t.signature})"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, t: CallbackType) -> "CallbackAniInfo":
+        return CallbackAniInfo(am, t)
 
 
 class EnumAniInfo(AbstractAnalysis[EnumDecl]):
@@ -2713,6 +2730,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         cpp_invoke_ptr: str,
     ):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.t)
+        cb_ani_info = CallbackAniInfo.get(self.am, self.t)
         params_ani = []
         args_ani = []
         params_ani.append("[[maybe_unused]] ani_env* env")
@@ -2738,13 +2756,17 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 param_from_ani = f"from_ani_{param.name}"
                 arg_cpp = f"cpp_arg_{param.name}"
                 param_ty_ani_info.gen_from_ani_ref(target, param_from_ani)
+                param_perf_id = f"{cb_ani_info.perf_id}::param::{param.name}"
                 target.writelns(
+                    f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(param_perf_id)});",
                     f"{param_ty_cpp_name} {arg_cpp} = {param_from_ani}(env, {arg_ani});",
+                    f"TH_ANI_PERF_TRACE_END();",
                 )
                 args_cpp.append(f"std::move({arg_cpp})")
             args_cpp_str = ", ".join(args_cpp)
             # invoke native function
-            lambda_invoke = f"{self.cpp_info.as_param}({{reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_vtbl_ptr), reinterpret_cast<DataBlockHead*>(ani_data_ptr)}})({args_cpp_str})"
+            invoke_perf_id = f"{cb_ani_info.perf_id}::call"
+            invoke = cb_ani_info.c_native_call
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -2753,18 +2775,24 @@ class CallbackTypeAniInfo(TypeAniInfo):
             if cb_abi_info.is_noexcept:
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
-                        f"{return_ty_cpp_name} cpp_result = {lambda_invoke};",
+                        f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(invoke_perf_id)});",
+                        f"{return_ty_cpp_name} cpp_result = {invoke}({args_cpp_str});",
+                        f"TH_ANI_PERF_TRACE_END();",
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
                 else:
                     target.writelns(
-                        f"{lambda_invoke};",
+                        f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(invoke_perf_id)});",
+                        f"{invoke}({args_cpp_str});",
+                        f"TH_ANI_PERF_TRACE_END();",
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
             else:
                 exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
                 target.writelns(
-                    f"{exp_ty_cpp_name} cpp_expected = {lambda_invoke};",
+                    f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(invoke_perf_id)});",
+                    f"{exp_ty_cpp_name} cpp_expected = {invoke}({args_cpp_str});",
+                    f"TH_ANI_PERF_TRACE_END();",
                 )
                 if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                     target.writelns(
@@ -2781,8 +2809,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
+                encode_perf_id = f"{cb_ani_info.perf_id}::return"
                 target.writelns(
+                    f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(encode_perf_id)});",
                     f"{return_ty_ani_name} ani_result = result_into_ani(env, std::move(cpp_result));",
+                    f"TH_ANI_PERF_TRACE_END();",
                     f"return ani_result;",
                 )
             else:

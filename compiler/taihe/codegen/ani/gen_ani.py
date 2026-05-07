@@ -18,7 +18,11 @@ from taihe.codegen.abi.analyses import (
     IfaceAbiInfo,
     IfaceMethodAbiInfo,
 )
-from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
+from taihe.codegen.abi.writer import (
+    CHeaderWriter,
+    CSourceWriter,
+    render_c_string,
+)
 from taihe.codegen.ani.analyses import (
     ArkTsModuleOrNamespace,
     EnumAniInfo,
@@ -406,13 +410,14 @@ class AniPackageSourceGenerator:
     ):
         if isinstance(func, GlobFuncDecl):
             func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
         else:
             func_abi_info = IfaceMethodAbiInfo.get(self.am, func)
-        params_ani = [
-            "[[maybe_unused]] ani_env *env",
-            *func_nat_info.c_native_base_params,
-        ]
+            func_ani_info = IfaceMethodAniInfo.get(self.am, func)
+        params_ani = []
         args_ani = []
+        params_ani.append("[[maybe_unused]] ani_env *env")
+        params_ani.extend(func_nat_info.c_native_base_params)
         for param in func.params:
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             arg_ani = f"ani_arg_{param.name}"
@@ -438,13 +443,17 @@ class AniPackageSourceGenerator:
                 arg_cpp = f"cpp_arg_{param.name}"
                 param_ty_cpp_name = param_ty_cpp_info.as_owner
                 param_ty_ani_info.gen_from_ani(self.target, param_from_ani)
+                param_perf_id = f"{func_ani_info.perf_id}::param::{param.name}"
                 self.target.writelns(
+                    f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(param_perf_id)});",
                     f"{param_ty_cpp_name} {arg_cpp} = {param_from_ani}(env, {arg_ani});",
+                    f"TH_ANI_PERF_TRACE_END();",
                 )
                 args_cpp.append(f"std::move({arg_cpp})")
             args_cpp_str = ", ".join(args_cpp)
             # invoke native function
-            method_call = f"{func_nat_info.c_native_call}({args_cpp_str})"
+            invoke_perf_id = f"{func_ani_info.perf_id}::call"
+            invoke = func_nat_info.c_native_call
             if isinstance(return_ty := func.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -453,18 +462,24 @@ class AniPackageSourceGenerator:
             if func_abi_info.is_noexcept:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     self.target.writelns(
-                        f"{return_ty_cpp_name} cpp_result = {method_call};",
+                        f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(invoke_perf_id)});",
+                        f"{return_ty_cpp_name} cpp_result = {invoke}({args_cpp_str});",
+                        f"TH_ANI_PERF_TRACE_END();",
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
                 else:
                     self.target.writelns(
-                        f"{method_call};",
+                        f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(invoke_perf_id)});",
+                        f"{invoke}({args_cpp_str});",
+                        f"TH_ANI_PERF_TRACE_END();",
                         f"if (::taihe::has_error()) {{ return; }}",
                     )
             else:
                 exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
                 self.target.writelns(
-                    f"{exp_ty_cpp_name} cpp_expected = {method_call};",
+                    f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(invoke_perf_id)});",
+                    f"{exp_ty_cpp_name} cpp_expected = {invoke}({args_cpp_str});",
+                    f"TH_ANI_PERF_TRACE_END();",
                 )
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     self.target.writelns(
@@ -481,8 +496,11 @@ class AniPackageSourceGenerator:
             if isinstance(return_ty := func.return_ty, NonVoidType):
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 return_ty_ani_info.gen_into_ani(self.target, "result_into_ani")
+                encode_perf_id = f"{func_ani_info.perf_id}::return"
                 self.target.writelns(
+                    f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(encode_perf_id)});",
                     f"{return_ty_ani_name} ani_result = result_into_ani(env, std::move(cpp_result));",
+                    f"TH_ANI_PERF_TRACE_END();",
                     f"return ani_result;",
                 )
             else:

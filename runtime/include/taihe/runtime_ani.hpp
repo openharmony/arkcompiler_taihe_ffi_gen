@@ -28,6 +28,9 @@
 #include <taihe/string.hpp>
 #include <taihe/expected.hpp>
 
+#define TH_ANI_PERF_TRACE_BEGIN(perf_id)
+#define TH_ANI_PERF_TRACE_END()
+
 namespace taihe {
 // VM and Environment related functions
 
