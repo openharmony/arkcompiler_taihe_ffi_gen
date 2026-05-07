@@ -24,12 +24,33 @@
 #error "ani.h not found. Please ensure the Ani SDK is correctly installed."
 #endif
 
+#ifndef TH_ANI_ENABLE_PERF_TRACE
+#define TH_ANI_PERF_TRACE_BEGIN(perf_id)
+#define TH_ANI_PERF_TRACE_END()
+#elif __has_include(<hitrace/trace.h>)
+#include <hitrace/trace.h>
+#define TH_ANI_PERF_TRACE_BEGIN(perf_id) OH_HiTrace_StartTraceEx(HITRACE_LEVEL_DEBUG, perf_id, "")
+#define TH_ANI_PERF_TRACE_END() OH_HiTrace_FinishTraceEx(HITRACE_LEVEL_DEBUG)
+#elif __has_include("hitrace_meter.h")
+#include "hitrace_meter.h"
+#define TH_ANI_PERF_TRACE_BEGIN(perf_id) StartTraceEx(HITRACE_LEVEL_DEBUG, HITRACE_TAG_OHOS, perf_id, "")
+#define TH_ANI_PERF_TRACE_END() FinishTraceEx(HITRACE_LEVEL_DEBUG, HITRACE_TAG_OHOS)
+#else
+#define TH_ANI_USE_LOCAL_TRACE
+#define TH_ANI_PERF_TRACE_BEGIN(perf_id) ::taihe::StartTrace(perf_id)
+#define TH_ANI_PERF_TRACE_END() ::taihe::FinishTrace()
+#endif
+
 #include <taihe/object.hpp>
 #include <taihe/string.hpp>
 #include <taihe/expected.hpp>
 
-#define TH_ANI_PERF_TRACE_BEGIN(perf_id)
-#define TH_ANI_PERF_TRACE_END()
+#ifdef TH_ANI_USE_LOCAL_TRACE
+namespace taihe {
+void StartTrace(char const *perf_id);
+void FinishTrace();
+}  // namespace taihe
+#endif
 
 namespace taihe {
 // VM and Environment related functions
