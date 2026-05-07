@@ -2607,60 +2607,39 @@ class CallbackTypeAniInfo(TypeAniInfo):
         else:
             return_ty_cpp_name = "void"
         if cb_abi_info.is_noexcept:
-            with target.indented(
-                f"{return_ty_cpp_name} operator()({params_cpp_str}) {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"::taihe::env_guard guard;",
-                    f"ani_env *env = guard.get_env();",
-                )
-                args_ani = []
-                for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
-                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                    param_into_ani = f"into_ani_{param.name}"
-                    param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
-                    args_ani.append(f"{param_into_ani}(env, std::forward<{param_ty_cpp_info.as_param}>({arg_cpp}))")  # fmt: skip
-                args_ani_str = ", ".join(args_ani)
-                target.writelns(
-                    f"ani_ref ani_argv[] = {{{args_ani_str}}};",
-                    f"ani_ref ani_result = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &ani_result);",
-                )
-                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
-                    target.writelns(
-                        f"return result_from_ani(env, ani_result);",
-                    )
-                else:
-                    target.writelns(
-                        f"return;",
-                    )
+            result_ty_cpp_name = return_ty_cpp_name
         else:
-            exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-            with target.indented(
-                f"{exp_ty_cpp_name} operator()({params_cpp_str}) {{",
-                f"}}",
-            ):
+            result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
+        with target.indented(
+            f"{result_ty_cpp_name} operator()({params_cpp_str}) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env *env = guard.get_env();",
+            )
+            # parameters into ANI
+            args_ani = []
+            for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+                param_ty_cpp_name = param_ty_cpp_info.as_param
+                param_ty_ani_name = "ani_ref"
+                param_into_ani = f"into_ani_{param.name}"
+                arg_ani = f"ani_arg_{param.name}"
+                param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
                 target.writelns(
-                    f"::taihe::env_guard guard;",
-                    f"ani_env *env = guard.get_env();",
+                    f"{param_ty_ani_name} {arg_ani} = {param_into_ani}(env, std::forward<{param_ty_cpp_name}>({arg_cpp}));",
                 )
-                args_ani = []
-                for param, arg_cpp in zip(self.t.ref.params, args_cpp, strict=True):
-                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                    param_into_ani = f"into_ani_{param.name}"
-                    param_ty_ani_info.gen_into_ani_ref(target, param_into_ani)
-                    args_ani.append(f"{param_into_ani}(env, std::forward<{param_ty_cpp_info.as_param}>({arg_cpp}))")  # fmt: skip
-                args_ani_str = ", ".join(args_ani)
-                target.writelns(
-                    f"ani_ref ani_argv[] = {{{args_ani_str}}};",
-                    f"ani_ref ani_result = {{}};",
-                    f"ani_status ani_ret = env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &ani_result);",
-                )
+                args_ani.append(arg_ani)
+            args_ani_str = ", ".join(args_ani)
+            # invoke ANI function
+            target.writelns(
+                f"ani_ref ani_argv[] = {{{args_ani_str}}};",
+                f"ani_ref ani_result = {{}};",
+                f"ani_status ani_ret = env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &ani_result);",
+            )
+            if not cb_abi_info.is_noexcept:
                 with target.indented(
                     f"if (ani_ret == ANI_PENDING_ERROR) {{",
                     f"}}",
@@ -2668,11 +2647,18 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     target.writelns(
                         f"return ::taihe::unexpected<::taihe::error>(::taihe::catch_ani_taihe_error(env));",
                     )
-                if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
+            # return value from ANI
+            if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                return_ty_ani_info.gen_from_ani_ref(target, "result_from_ani")
+                target.writelns(
+                    f"{return_ty_cpp_name} cpp_result = result_from_ani(env, ani_result);",
+                    f"return std::move(cpp_result);",
+                )
+            else:
+                if cb_abi_info.is_noexcept:
                     target.writelns(
-                        f"return result_from_ani(env, ani_result);",
+                        f"return;",
                     )
                 else:
                     target.writelns(
@@ -2743,19 +2729,22 @@ class CallbackTypeAniInfo(TypeAniInfo):
             f"static {return_ty_ani_name} {cpp_invoke_ptr}({params_ani_str}) {{",
             f"}};",
         ):
-            target.writelns(
-                f"{self.cpp_info.as_param}::vtable_type* cpp_vtbl_ptr = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_vtbl_ptr);",
-                f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
-                f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
-            )
+            # parameters from ANI
             args_cpp = []
             for param, arg_ani in zip(self.t.ref.params, args_ani, strict=False):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                param_ty_cpp_name = param_ty_cpp_info.as_owner
                 param_from_ani = f"from_ani_{param.name}"
+                arg_cpp = f"cpp_arg_{param.name}"
                 param_ty_ani_info.gen_from_ani_ref(target, param_from_ani)
-                args_cpp.append(f"{param_from_ani}(env, {arg_ani})")
+                target.writelns(
+                    f"{param_ty_cpp_name} {arg_cpp} = {param_from_ani}(env, {arg_ani});",
+                )
+                args_cpp.append(f"std::move({arg_cpp})")
             args_cpp_str = ", ".join(args_cpp)
-            lambda_invoke = f"cpp_func({args_cpp_str})"
+            # invoke native function
+            lambda_invoke = f"{self.cpp_info.as_param}({{reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_vtbl_ptr), reinterpret_cast<DataBlockHead*>(ani_data_ptr)}})({args_cpp_str})"
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -2767,16 +2756,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"{return_ty_cpp_name} cpp_result = {lambda_invoke};",
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                     )
-                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
-                    target.writelns(
-                        f"return result_into_ani(env, std::move(cpp_result));",
-                    )
                 else:
                     target.writelns(
                         f"{lambda_invoke};",
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
-                        f"return {{}};",
                     )
             else:
                 exp_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
@@ -2787,18 +2770,25 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                         f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, std::move(cpp_expected.error())); return {{}}; }}",
-                    )
-                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                    return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
-                    target.writelns(
-                        f"return result_into_ani(env, std::move(cpp_expected.value()));",
+                        f"{return_ty_cpp_name} cpp_result = std::move(cpp_expected.value());",
                     )
                 else:
                     target.writelns(
                         f"if (::taihe::has_error()) {{ return {{}}; }}",
                         f"if (not cpp_expected) {{ ::taihe::throw_ani_taihe_error(env, std::move(cpp_expected.error())); return {{}}; }}",
-                        f"return {{}};",
                     )
+            # return value into ANI
+            if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
+                return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                return_ty_ani_info.gen_into_ani_ref(target, "result_into_ani")
+                target.writelns(
+                    f"{return_ty_ani_name} ani_result = result_into_ani(env, std::move(cpp_result));",
+                    f"return ani_result;",
+                )
+            else:
+                target.writelns(
+                    f"return {{}};",
+                )
 
 
 class CompleterTypeAniInfo(TypeAniInfo):
