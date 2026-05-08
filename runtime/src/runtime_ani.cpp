@@ -18,6 +18,46 @@
 
 #include <iostream>
 
+#ifdef TH_ANI_USE_LOCAL_TRACE
+#include <chrono>
+#include <vector>
+
+namespace {
+thread_local std::vector<std::pair<char const *, std::chrono::steady_clock::time_point>> ani_perf_trace_stack;
+
+void StartTraceLog(char const *perf_id)
+{
+    std::cerr << "[" << perf_id << "] Perf Trace Begin" << std::endl;
+}
+
+void FinishTraceLog(char const *perf_id, std::chrono::microseconds duration)
+{
+    std::cerr << "[" << perf_id << "] Perf Trace End, duration = " << duration.count() << "us" << std::endl;
+}
+}  // namespace
+
+namespace taihe {
+void StartTrace(char const *perf_id)
+{
+    StartTraceLog(perf_id);
+    auto begin = std::chrono::steady_clock::now();
+    ani_perf_trace_stack.emplace_back(perf_id, begin);
+}
+
+void FinishTrace()
+{
+    if (ani_perf_trace_stack.empty()) {
+        return;
+    }
+    auto [perf_id, begin] = ani_perf_trace_stack.back();
+    ani_perf_trace_stack.pop_back();
+    auto end = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
+    FinishTraceLog(perf_id, duration);
+}
+}  // namespace taihe
+#endif
+
 namespace taihe {
 ani_vm *global_vm = nullptr;
 

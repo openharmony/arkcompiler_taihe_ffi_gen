@@ -94,12 +94,38 @@ public:
 {
     return taihe::make_holder<MyInterfaceImpl, ::callbackTest::MyInterface>();
 }
+
+using CallbackVoid = ::taihe::callback<::taihe::expected<void, ::taihe::error>()>;
+
+::taihe::expected<CallbackVoid, ::taihe::error> GetCallbackVoid()
+{
+    taihe::string captured = "captured variable";
+    return taihe::as_holder<CallbackVoid>([captured]() -> ::taihe::expected<void, ::taihe::error> {
+        std::cout << "callback void called, captured: " << captured << std::endl;
+        return {};
+    });
+}
+
+using CallbackString = ::taihe::callback<::taihe::expected<taihe::string, ::taihe::error>()>;
+
+::taihe::expected<CallbackString, ::taihe::error> GetCallbackString()
+{
+    taihe::string captured = "captured variable";
+    return taihe::as_holder<CallbackString>([captured]() -> ::taihe::expected<taihe::string, ::taihe::error> {
+        std::cout << "callback string called, captured: " << captured << std::endl;
+        return "callback result: " + captured;
+    });
+}
 }  // namespace
 
+// Since these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_TestCbV(TestCbV);
 TH_EXPORT_CPP_API_TestCbI(TestCbI);
 TH_EXPORT_CPP_API_TestCbS(TestCbS);
 TH_EXPORT_CPP_API_TestCbRs(TestCbRs);
 TH_EXPORT_CPP_API_TestCbStruct(TestCbStruct);
 TH_EXPORT_CPP_API_GetInterface(GetInterface);
+TH_EXPORT_CPP_API_GetCallbackVoid(GetCallbackVoid);
+TH_EXPORT_CPP_API_GetCallbackString(GetCallbackString);
 // NOLINTEND

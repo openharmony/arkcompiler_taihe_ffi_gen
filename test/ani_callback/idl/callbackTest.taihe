@@ -38,3 +38,5 @@ interface MyInterface {
 }
 function GetInterface(): MyInterface;
 
+function GetCallbackVoid(): () => void;
+function GetCallbackString(): () => String;
