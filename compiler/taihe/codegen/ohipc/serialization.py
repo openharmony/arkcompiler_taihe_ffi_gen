@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from taihe.codegen.ohipc.analyses import (
+    TypeCppInfo,
+    fixed_array_size,
+    namespace_scope_for_cpp,
+    strip_leading_interface_i,
+)
 from taihe.semantics.types import (
     ArrayType,
     EnumType,
@@ -26,12 +32,6 @@ from taihe.semantics.types import (
     UnitType,
     VectorType,
     VoidType,
-)
-from taihe.codegen.ohipc.analyses import (
-    TypeCppInfo,
-    fixed_array_size,
-    namespace_scope_for_cpp,
-    strip_leading_interface_i,
 )
 from taihe.utils.analyses import AnalysisManager
 
@@ -111,7 +111,7 @@ class OhIpcSerializer:
 
         # HarmonyOS IPC NDK has no dedicated parcel API for void/unit.
         # For this type family we intentionally emit no parcel operation.
-        if isinstance(ty, (UnitType, VoidType)):
+        if isinstance(ty, UnitType | VoidType):
             return ""
 
         if isinstance(ty, ScalarType):
@@ -230,7 +230,11 @@ class OhIpcSerializer:
             )
             lines.append(f"{indent}for (const auto& {item_name} : {var_name}) {{")
             inner_ty = ty.val_ty
-            lines.extend(self.generate_write_code(parcel_name, item_name, inner_ty, indent + "    ", level + 1).splitlines())
+            lines.extend(
+                self.generate_write_code(
+                    parcel_name, item_name, inner_ty, indent + "    ", level + 1
+                ).splitlines()
+            )
             lines.append(f"{indent}}}")
         elif isinstance(ty, ArrayType):
             fixed_size = fixed_array_size(ty)
@@ -243,10 +247,18 @@ class OhIpcSerializer:
                     indent,
                 )
             )
-            lines.append(f"{indent}for (int32_t {self._get_loop_var_name('i', level)} = 0; {self._get_loop_var_name('i', level)} < {size_var}; ++{self._get_loop_var_name('i', level)}) {{")
+            lines.append(
+                f"{indent}for (int32_t {self._get_loop_var_name('i', level)} = 0; {self._get_loop_var_name('i', level)} < {size_var}; ++{self._get_loop_var_name('i', level)}) {{"
+            )
             inner_ty = ty.item_ty
-            lines.append(f"{indent}    {self.get_cpp_type(inner_ty)} {item_name} = {var_name}[{self._get_loop_var_name('i', level)}];")
-            lines.extend(self.generate_write_code(parcel_name, item_name, inner_ty, indent + "    ", level + 1).splitlines())
+            lines.append(
+                f"{indent}    {self.get_cpp_type(inner_ty)} {item_name} = {var_name}[{self._get_loop_var_name('i', level)}];"
+            )
+            lines.extend(
+                self.generate_write_code(
+                    parcel_name, item_name, inner_ty, indent + "    ", level + 1
+                ).splitlines()
+            )
             lines.append(f"{indent}}}")
         elif isinstance(ty, SetType):
             item_name = self._get_loop_var_name("item", level)
@@ -258,7 +270,11 @@ class OhIpcSerializer:
                 )
             )
             lines.append(f"{indent}for (const auto& {item_name} : {var_name}) {{")
-            lines.extend(self.generate_write_code(parcel_name, item_name, ty.key_ty, indent + "    ", level + 1).splitlines())
+            lines.extend(
+                self.generate_write_code(
+                    parcel_name, item_name, ty.key_ty, indent + "    ", level + 1
+                ).splitlines()
+            )
             lines.append(f"{indent}}}")
         elif isinstance(ty, MapType):
             key_name = self._get_loop_var_name("key", level)
@@ -274,8 +290,16 @@ class OhIpcSerializer:
             lines.append(f"{indent}for (const auto& {entry_name} : {var_name}) {{")
             lines.append(f"{indent}    auto {key_name} = {entry_name}.first;")
             lines.append(f"{indent}    auto {value_name} = {entry_name}.second;")
-            lines.extend(self.generate_write_code(parcel_name, key_name, ty.key_ty, indent + "    ", level + 1).splitlines())
-            lines.extend(self.generate_write_code(parcel_name, value_name, ty.val_ty, indent + "    ", level + 1).splitlines())
+            lines.extend(
+                self.generate_write_code(
+                    parcel_name, key_name, ty.key_ty, indent + "    ", level + 1
+                ).splitlines()
+            )
+            lines.extend(
+                self.generate_write_code(
+                    parcel_name, value_name, ty.val_ty, indent + "    ", level + 1
+                ).splitlines()
+            )
             lines.append(f"{indent}}}")
         elif isinstance(ty, StructType):
             lines.extend(
@@ -306,7 +330,7 @@ class OhIpcSerializer:
 
         # HarmonyOS IPC NDK has no dedicated parcel API for void/unit.
         # For this type family we intentionally emit no parcel operation.
-        if isinstance(ty, (UnitType, VoidType)):
+        if isinstance(ty, UnitType | VoidType):
             return ""
 
         if isinstance(ty, ScalarType):
@@ -323,7 +347,9 @@ class OhIpcSerializer:
                 ScalarKinds.F32: ("OH_IPCParcel_ReadFloat", "float", False),
                 ScalarKinds.F64: ("OH_IPCParcel_ReadDouble", "double", False),
             }
-            method, temp_type, is_bool = kind_map.get(ty.kind, ("OH_IPCParcel_ReadInt32", "int32_t", False))
+            method, temp_type, is_bool = kind_map.get(
+                ty.kind, ("OH_IPCParcel_ReadInt32", "int32_t", False)
+            )
             temp_name = f"{var_name}Value"
             lines.append(f"{indent}{temp_type} {temp_name} = 0;")
             lines.extend(
@@ -339,15 +365,23 @@ class OhIpcSerializer:
                 lines.append(f"{indent}{decl_prefix}{var_name} = {temp_name};")
         elif isinstance(ty, StringType):
             tmp_name = f"{var_name}Raw"
-            lines.append(f"{indent}const char* {tmp_name} = OH_IPCParcel_ReadString({parcel_name});")
+            lines.append(
+                f"{indent}const char* {tmp_name} = OH_IPCParcel_ReadString({parcel_name});"
+            )
             lines.extend(self._guard_return(f"{tmp_name} == nullptr", read_err, indent))
             lines.append(f"{indent}{decl_prefix}{var_name} = {tmp_name};")
         elif isinstance(ty, IfaceType):
             proxy_var = f"{var_name}Proxy"
-            lines.append(f"{indent}OHIPCRemoteProxy* {proxy_var} = OH_IPCParcel_ReadRemoteProxy({parcel_name});")
-            lines.extend(self._guard_return(f"{proxy_var} == nullptr", read_err, indent))
+            lines.append(
+                f"{indent}OHIPCRemoteProxy* {proxy_var} = OH_IPCParcel_ReadRemoteProxy({parcel_name});"
+            )
+            lines.extend(
+                self._guard_return(f"{proxy_var} == nullptr", read_err, indent)
+            )
             if iface_as_object:
-                obj_decl_prefix = f"{self._qualified_proxy_name(ty.decl)} " if is_decl else ""
+                obj_decl_prefix = (
+                    f"{self._qualified_proxy_name(ty.decl)} " if is_decl else ""
+                )
                 lines.append(
                     f"{indent}{obj_decl_prefix}{var_name} = {self._qualified_proxy_name(ty.decl)}({proxy_var});"
                 )
@@ -365,7 +399,9 @@ class OhIpcSerializer:
                     indent,
                 )
             )
-            lines.append(f"{indent}{decl_prefix}{var_name} = ({self.get_cpp_type(ty)}){tmp_name};")
+            lines.append(
+                f"{indent}{decl_prefix}{var_name} = ({self.get_cpp_type(ty)}){tmp_name};"
+            )
         elif isinstance(ty, VectorType):
             sz_name = self._get_loop_var_name("sz", level)
             i_name = self._get_loop_var_name("i", level)
@@ -382,9 +418,20 @@ class OhIpcSerializer:
                     indent,
                 )
             )
-            lines.append(f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{")
+            lines.append(
+                f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{"
+            )
             inner_ty = ty.val_ty
-            lines.extend(self.generate_read_code(parcel_name, item_name, inner_ty, indent + "    ", is_decl=True, level=level + 1).splitlines())
+            lines.extend(
+                self.generate_read_code(
+                    parcel_name,
+                    item_name,
+                    inner_ty,
+                    indent + "    ",
+                    is_decl=True,
+                    level=level + 1,
+                ).splitlines()
+            )
             lines.append(f"{indent}    {var_name}.push_back({item_name});")
             lines.append(f"{indent}}}")
         elif isinstance(ty, ArrayType):
@@ -409,13 +456,28 @@ class OhIpcSerializer:
                 )
             )
             if is_decl:
-                lines.append(f"{indent}{array_cpp_type} {var_name} = {self.empty_array_expr(ty)};")
+                lines.append(
+                    f"{indent}{array_cpp_type} {var_name} = {self.empty_array_expr(ty)};"
+                )
             else:
                 lines.append(f"{indent}{var_name} = {self.empty_array_expr(ty)};")
-            lines.append(f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{")
+            lines.append(
+                f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{"
+            )
             inner_ty = ty.item_ty
-            lines.extend(self.generate_read_code(parcel_name, item_name, inner_ty, indent + "    ", is_decl=True, level=level + 1).splitlines())
-            lines.append(f"{indent}    {var_name}[static_cast<size_t>({i_name})] = {item_name};")
+            lines.extend(
+                self.generate_read_code(
+                    parcel_name,
+                    item_name,
+                    inner_ty,
+                    indent + "    ",
+                    is_decl=True,
+                    level=level + 1,
+                ).splitlines()
+            )
+            lines.append(
+                f"{indent}    {var_name}[static_cast<size_t>({i_name})] = {item_name};"
+            )
             lines.append(f"{indent}}}")
             if size_output_param:
                 lines.append(f"{indent}{size_output_param} = {fixed_size};")
@@ -435,8 +497,19 @@ class OhIpcSerializer:
                     indent,
                 )
             )
-            lines.append(f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{")
-            lines.extend(self.generate_read_code(parcel_name, item_name, ty.key_ty, indent + "    ", is_decl=True, level=level + 1).splitlines())
+            lines.append(
+                f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{"
+            )
+            lines.extend(
+                self.generate_read_code(
+                    parcel_name,
+                    item_name,
+                    ty.key_ty,
+                    indent + "    ",
+                    is_decl=True,
+                    level=level + 1,
+                ).splitlines()
+            )
             lines.append(f"{indent}    {var_name}.insert({item_name});")
             lines.append(f"{indent}}}")
         elif isinstance(ty, MapType):
@@ -456,9 +529,29 @@ class OhIpcSerializer:
                     indent,
                 )
             )
-            lines.append(f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{")
-            lines.extend(self.generate_read_code(parcel_name, key_name, ty.key_ty, indent + "    ", is_decl=True, level=level + 1).splitlines())
-            lines.extend(self.generate_read_code(parcel_name, value_name, ty.val_ty, indent + "    ", is_decl=True, level=level + 1).splitlines())
+            lines.append(
+                f"{indent}for (int32_t {i_name} = 0; {i_name} < {sz_name}; ++{i_name}) {{"
+            )
+            lines.extend(
+                self.generate_read_code(
+                    parcel_name,
+                    key_name,
+                    ty.key_ty,
+                    indent + "    ",
+                    is_decl=True,
+                    level=level + 1,
+                ).splitlines()
+            )
+            lines.extend(
+                self.generate_read_code(
+                    parcel_name,
+                    value_name,
+                    ty.val_ty,
+                    indent + "    ",
+                    is_decl=True,
+                    level=level + 1,
+                ).splitlines()
+            )
             lines.append(f"{indent}    {var_name}.erase({key_name});")
             lines.append(f"{indent}    {var_name}.emplace({key_name}, {value_name});")
             lines.append(f"{indent}}}")

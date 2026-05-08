@@ -13,14 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
+from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from taihe.codegen.ohipc.analyses import fixed_array_size, package_name_to_file_stem
+from taihe.codegen.ohipc.serialization import OhIpcSerializer
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.driver.options import AbstractConfigOption
-from taihe.codegen.ohipc.analyses import fixed_array_size, type_name_to_file_stem
+from taihe.semantics.types import ScalarType
 from taihe.utils.exceptions import AdhocError, AdhocNote
+from taihe.utils.outputs import BasicOutputManager
 from taihe.utils.sources import SourceFile
 
 if TYPE_CHECKING:
@@ -33,10 +38,10 @@ if TYPE_CHECKING:
 class OhIpcCommonFileOption(AbstractConfigOption):
     NAME = "ohipc:ipc-common"
 
-    paths: list[Path] = field(default_factory=list)
+    paths: list[Path] = dataclass_field(default_factory=list)
 
     @classmethod
-    def parse(cls, value: str | None, dm: "DiagnosticsManager"):
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
         if value is None:
             return cls(paths=[])
         raw_items = [item.strip() for item in value.split(";") if item.strip()]
@@ -47,68 +52,53 @@ class OhIpcCommonFileOption(AbstractConfigOption):
 class OhIpcBackendConfig(BackendConfig):
     NAME = "ohipc-gen"
 
-    ipc_common_paths: list[Path] = field(default_factory=list)
+    ipc_common_paths: list[Path] = dataclass_field(default_factory=list)
 
     @classmethod
-    def register(cls, option_registry: "OptionRegistry"):
+    def register_options_to(cls, option_registry: "OptionRegistry"):
         option_registry.register(OhIpcCommonFileOption)
 
     @classmethod
-    def create(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
         ipc_common_opt = options.get(OhIpcCommonFileOption)
-        return OhIpcBackendConfig(
+        return cls(
             ipc_common_paths=ipc_common_opt.paths if ipc_common_opt else [],
         )
 
-    def construct(self, instance: "CompilerInstance"):
+    def build(self, instance: "CompilerInstance"):
         from taihe.codegen.ohipc.gen_interface import InterfaceGenerator
+        from taihe.codegen.ohipc.gen_json import JsonGenerator
         from taihe.codegen.ohipc.gen_proxy import ProxyGenerator
         from taihe.codegen.ohipc.gen_stub import StubGenerator
-        from taihe.codegen.ohipc.gen_json import JsonGenerator
 
         class OhIpcBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance", config: OhIpcBackendConfig):
                 self._ci = ci
                 self._config = config
-                self._ipc_common_path_set = set(config.ipc_common_paths or [])
+                self._ipc_common_pkg_names = {
+                    SourceFile(path.resolve()).pkg_name
+                    for path in (config.ipc_common_paths or [])
+                }
 
-            def inject(self):
-                existing_source_paths = {
-                    source.path.resolve()
+            def add_sources(self):
+                existing_source_ids = {
+                    source.source_identifier
                     for source in self._ci.source_manager.sources
-                    if isinstance(source, SourceFile)
                 }
 
                 for ipc_common_path in self._config.ipc_common_paths:
-                    resolved_path = ipc_common_path.resolve()
-                    if resolved_path in existing_source_paths:
+                    source = SourceFile(ipc_common_path.resolve())
+                    if source.source_identifier in existing_source_ids:
                         continue
-                    self._ci.source_manager.add_source(SourceFile(resolved_path))
-                    existing_source_paths.add(resolved_path)
+                    self._ci.source_manager.add_source(source)
+                    existing_source_ids.add(source.source_identifier)
 
-            def _is_ipc_common_decl(self, decl) -> bool:
-                """Check if a declaration (struct or enum) is from ipc-common file."""
-                if not self._ipc_common_path_set or decl.loc is None:
-                    return False
-                source = decl.loc.file
-                if not isinstance(source, SourceFile):
-                    return False
-                return source.path.resolve() in self._ipc_common_path_set
-
-            def _is_ipc_common_struct(self, struct_decl) -> bool:
-                if not self._ipc_common_path_set or struct_decl.loc is None:
-                    return False
-                source = struct_decl.loc.file
-                if not isinstance(source, SourceFile):
-                    return False
-                return source.path.resolve() in self._ipc_common_path_set
+            def _is_ipc_common_pkg(self, pkg) -> bool:
+                return pkg.name in self._ipc_common_pkg_names
 
             @staticmethod
-            def _ipc_common_bundle_name(ipc_common: Path) -> str:
-                stem = ipc_common.stem
-                if stem.startswith("I") and len(stem) > 1:
-                    stem = stem[1:]
-                return type_name_to_file_stem(stem)
+            def _ipc_common_bundle_name(pkg_name: str) -> str:
+                return package_name_to_file_stem(pkg_name)
 
             @staticmethod
             def _main_service_iface_pkg(pg):
@@ -124,7 +114,7 @@ class OhIpcBackendConfig(BackendConfig):
                 from taihe.semantics.declarations import EnumDecl, IfaceDecl, StructDecl
 
                 type_kinds = (IfaceDecl, StructDecl, EnumDecl)
-                seen: dict[str, object] = {}
+                seen: dict[str, IfaceDecl | StructDecl | EnumDecl] = {}
 
                 for pkg in pg.iterate():
                     for decl in [*pkg.interfaces, *pkg.structs, *pkg.enums]:
@@ -179,8 +169,8 @@ class OhIpcBackendConfig(BackendConfig):
                         ensure_fixed_array(ty.key_ty)
                         return
                     if isinstance(ty, StructType):
-                        for field in ty.decl.fields:
-                            ensure_fixed_array(field.ty)
+                        for struct_field in ty.decl.fields:
+                            ensure_fixed_array(struct_field.ty)
 
                 for pkg in pg.iterate():
                     for iface in pkg.interfaces:
@@ -191,19 +181,18 @@ class OhIpcBackendConfig(BackendConfig):
                                 ensure_fixed_array(param.ty)
                     for struct in pkg.structs:
                         assert isinstance(struct, StructDecl)
-                        for field in struct.fields:
-                            ensure_fixed_array(field.ty)
+                        for struct_field in struct.fields:
+                            ensure_fixed_array(struct_field.ty)
 
-            def register(self):
+            def setup(self):
                 from taihe.codegen.ohipc.attribute import all_attr_types
 
                 self._ci.attribute_registry.register(*all_attr_types)
 
             def validate(self):
+                from taihe.codegen.ohipc.analyses import MethodOhIpcInfo
                 from taihe.semantics.declarations import GenericTypeRefDecl
                 from taihe.semantics.types import VoidType
-
-                from taihe.codegen.ohipc.analyses import MethodOhIpcInfo
 
                 def has_list_type_ref(ty_ref) -> bool:
                     if isinstance(ty_ref, GenericTypeRefDecl):
@@ -240,11 +229,11 @@ class OhIpcBackendConfig(BackendConfig):
                                         f"Parameter '{param.name}' in method '{method.name}' of interface '{iface.name}' has List type."
                                     )
                     for struct in pkg.structs:
-                        for field in struct.fields:
-                            if has_list_type_ref(field.ty_ref):
+                        for struct_field in struct.fields:
+                            if has_list_type_ref(struct_field.ty_ref):
                                 raise ValueError(
                                     f"List type is not supported in OHIPC backend. "
-                                    f"Field '{field.name}' in struct '{struct.name}' has List type."
+                                    f"Field '{struct_field.name}' in struct '{struct.name}' has List type."
                                 )
 
                 self._validate_generated_type_names(pg)
@@ -252,67 +241,14 @@ class OhIpcBackendConfig(BackendConfig):
 
             def generate(self):
                 import os
-                import shutil
                 import tempfile
-                from pathlib import Path
-
-                # Auto-create output directory and clean previous artifacts
-                output_dir = self._ci.output_manager.dst_dir
-                if output_dir.exists():
-                    # Clean all files and subdirectories in output dir
-                    for item in output_dir.iterdir():
-                        try:
-                            if item.is_file():
-                                item.unlink()
-                            elif item.is_dir():
-                                shutil.rmtree(item)
-                        except PermissionError:
-                            self._ci.diagnostics_manager.emit(
-                                AdhocError(
-                                    f"Permission denied while cleaning output directory: {item}. "
-                                    f"Please check file permissions or close any processes using these files.",
-                                    loc=None,
-                                )
-                            )
-                            raise
-                        except OSError as e:
-                            self._ci.diagnostics_manager.emit(
-                                AdhocError(
-                                    f"Failed to clean output directory item: {item}. Error: {e}",
-                                    loc=None,
-                                )
-                            )
-                            raise
-                else:
-                    try:
-                        # Create output directory if it doesn't exist
-                        output_dir.mkdir(parents=True, exist_ok=True)
-                    except PermissionError:
-                        self._ci.diagnostics_manager.emit(
-                            AdhocError(
-                                f"Permission denied while creating output directory: {output_dir}. "
-                                f"Please check directory permissions.",
-                                loc=None,
-                            )
-                        )
-                        raise
-                    except OSError as e:
-                        self._ci.diagnostics_manager.emit(
-                            AdhocError(
-                                f"Failed to create output directory: {output_dir}. Error: {e}",
-                                loc=None,
-                            )
-                        )
-                        raise
 
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
                 main_iface_pkg = self._main_service_iface_pkg(pg)
 
-                iface_gen = InterfaceGenerator(
-                    om, am, self._config.ipc_common_paths or []
-                )
+                iface_gen = InterfaceGenerator(om, am, self._ipc_common_pkg_names)
                 proxy_gen = ProxyGenerator(om, am)
                 stub_gen = StubGenerator(om, am)
                 json_gen = JsonGenerator(om, am)
@@ -330,75 +266,38 @@ class OhIpcBackendConfig(BackendConfig):
                         proxy_gen.generate(iface)
                         stub_gen.generate(iface)
 
-                    common_structs_by_source = {}
-                    regular_structs = []
-                    for struct_decl in pkg.structs:
-                        if self._is_ipc_common_struct(struct_decl):
-                            source = struct_decl.loc.file
-                            src_path = source.path.resolve()
-                            common_structs_by_source.setdefault(src_path, []).append(
-                                struct_decl
-                            )
-                        else:
-                            regular_structs.append(struct_decl)
+                    if self._is_ipc_common_pkg(pkg):
+                        bundle_name = self._ipc_common_bundle_name(pkg.name)
+                        common_structs = list(pkg.structs)
+                        common_enums = list(pkg.enums)
 
-                    # Generate headers for regular structs in the package
-                    for struct_decl in regular_structs:
-                        iface_gen.generate_struct(struct_decl)
-                        iface_gen.generate_struct_source(struct_decl)
-
-                    # Generate headers for regular enums in the package
-                    for enum_decl in pkg.enums:
-                        if not self._is_ipc_common_decl(enum_decl):
-                            iface_gen.generate_enum(enum_decl)
-
-                    # Generate common bundles (structs + enums together)
-                    common_decls_by_source = {}
-                    # Collect common structs
-                    for struct_decl in pkg.structs:
-                        if self._is_ipc_common_struct(struct_decl):
-                            source = struct_decl.loc.file
-                            src_path = source.path.resolve()
-                            if src_path not in common_decls_by_source:
-                                common_decls_by_source[src_path] = {
-                                    "structs": [],
-                                    "enums": [],
-                                }
-                            common_decls_by_source[src_path]["structs"].append(
-                                struct_decl
-                            )
-
-                    # Collect common enums
-                    for enum_decl in pkg.enums:
-                        if self._is_ipc_common_decl(enum_decl):
-                            source = enum_decl.loc.file
-                            src_path = source.path.resolve()
-                            if src_path not in common_decls_by_source:
-                                common_decls_by_source[src_path] = {
-                                    "structs": [],
-                                    "enums": [],
-                                }
-                            common_decls_by_source[src_path]["enums"].append(enum_decl)
-
-                    # Generate bundles for each source file
-                    for common_path, decls in common_decls_by_source.items():
-                        bundle_name = self._ipc_common_bundle_name(common_path)
-                        # Generate struct bundle first (includes .h and .cpp)
-                        if decls["structs"]:
+                        if common_structs:
                             if main_iface_pkg is not None:
                                 iface_gen.generate_struct_bundle(
-                                    bundle_name, decls["structs"], main_iface_pkg
+                                    bundle_name, common_structs, main_iface_pkg
                                 )
                             else:
                                 iface_gen.generate_struct_bundle(
-                                    bundle_name, decls["structs"]
+                                    bundle_name, common_structs
                                 )
 
-                        # If there are enums, append them to the header file
-                        if decls["enums"]:
-                            header_file = self._ci.output_manager.dst_dir.joinpath(
-                                f"{bundle_name}.h"
-                            )
+                        if common_enums:
+                            if not common_structs:
+                                if main_iface_pkg is not None:
+                                    iface_gen.generate_enum_bundle(
+                                        bundle_name, common_enums, main_iface_pkg
+                                    )
+                                else:
+                                    iface_gen.generate_enum_bundle(
+                                        bundle_name, common_enums
+                                    )
+                                continue
+
+                            if not isinstance(om, BasicOutputManager):
+                                raise ValueError(
+                                    "OHIPC backend requires BasicOutputManager for incremental header updates."
+                                )
+                            header_file = om.dst_dir.joinpath(f"{bundle_name}.h")
                             if header_file.exists():
                                 temp_file_path: Path | None = None
                                 try:
@@ -429,28 +328,19 @@ class OhIpcBackendConfig(BackendConfig):
 
                                     if insert_pos != -1:
                                         # Generate enum content (without namespace wrappers)
-                                        from io import StringIO
-
                                         enum_buffer = StringIO()
+                                        serializer = OhIpcSerializer(
+                                            self._ci.analysis_manager
+                                        )
 
-                                        for enum_decl in decls["enums"]:
+                                        for enum_decl in common_enums:
                                             underlying_type = "int32_t"
-                                            if enum_decl.ty is not None:
-                                                from taihe.semantics.types import ScalarType
-
-                                                if isinstance(enum_decl.ty, ScalarType):
-                                                    from taihe.codegen.ohipc.serialization import (
-                                                        OhIpcSerializer,
+                                            if isinstance(enum_decl.ty, ScalarType):
+                                                underlying_type = (
+                                                    serializer.get_cpp_type(
+                                                        enum_decl.ty
                                                     )
-
-                                                    serializer = OhIpcSerializer(
-                                                        self._ci.analysis_manager
-                                                    )
-                                                    underlying_type = (
-                                                        serializer.get_cpp_type(
-                                                            enum_decl.ty
-                                                        )
-                                                    )
+                                                )
 
                                             enum_buffer.write(
                                                 f"enum class {enum_decl.name} : {underlying_type} {{\n"
@@ -506,5 +396,15 @@ class OhIpcBackendConfig(BackendConfig):
                                         )
                                     )
                                     raise
+                        continue
+
+                    # Generate headers for regular structs in the package
+                    for struct_decl in pkg.structs:
+                        iface_gen.generate_struct(struct_decl)
+                        iface_gen.generate_struct_source(struct_decl)
+
+                    # Generate headers for regular enums in the package
+                    for enum_decl in pkg.enums:
+                        iface_gen.generate_enum(enum_decl)
 
         return OhIpcBackendImpl(instance, self)

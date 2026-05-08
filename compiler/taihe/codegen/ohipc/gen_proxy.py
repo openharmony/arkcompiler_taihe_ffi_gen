@@ -83,7 +83,6 @@ class ProxyGenerator:
                 else:
                     result.append(line)  # Keep as is if can't split nicely
         return "\n".join(result)
-        self.serializer = OhIpcSerializer(am)
 
     @staticmethod
     def _iface_file_stem(iface: IfaceDecl) -> str:
@@ -237,7 +236,7 @@ class ProxyGenerator:
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
         current_year = datetime.now().year
 
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             f.write(f"""/*
  * Copyright (c) {current_year} Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the \"License\");
@@ -310,14 +309,14 @@ class ProxyGenerator:
             if namespace:
                 f.write("\n")
             self._write_namespace_close(f, namespace)
-            f.write("\n#endif // {guard}\n".format(guard=guard))
+            f.write(f"\n#endif // {guard}\n")
 
     def _generate_source(self, iface: IfaceDecl, info: IfaceOhIpcInfo):
         filename = f"{self._proxy_file_stem(info)}.cpp"
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
         current_year = datetime.now().year
 
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             f.write(f"""/*
  * Copyright (c) {current_year} Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the \"License\");
@@ -539,9 +538,7 @@ class ProxyGenerator:
                     f"OH_IPCParcel_ReadInt32({parcel_reply_var}.get(), &errCode) != OH_IPC_SUCCESS",
                     "OH_IPC_PARCEL_READ_ERROR",
                 )
-                self._write_if_return(
-                    f, "    ", "errCode != OH_IPC_SUCCESS", "errCode"
-                )
+                self._write_if_return(f, "    ", "errCode != OH_IPC_SUCCESS", "errCode")
                 f.write("\n")
                 f.write("    return OH_IPC_SUCCESS;\n")
                 f.write("}\n\n")

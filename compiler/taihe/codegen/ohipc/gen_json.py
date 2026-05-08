@@ -15,22 +15,7 @@
 
 import json
 from pathlib import Path
-from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputManager
-from taihe.semantics.declarations import EnumDecl, IfaceDecl, PackageGroup, StructDecl
-from taihe.semantics.types import (
-    ArrayType,
-    EnumType,
-    IfaceType,
-    MapType,
-    ScalarType,
-    SetType,
-    StringType,
-    StructType,
-    UnitType,
-    VectorType,
-    VoidType,
-)
+
 from taihe.codegen.ohipc.analyses import (
     IfaceOhIpcInfo,
     MethodOhIpcInfo,
@@ -48,6 +33,22 @@ from taihe.codegen.ohipc.typelib_schema import (
     TypeLibStruct,
     TypeLibStructField,
 )
+from taihe.semantics.declarations import EnumDecl, IfaceDecl, PackageGroup, StructDecl
+from taihe.semantics.types import (
+    ArrayType,
+    EnumType,
+    IfaceType,
+    MapType,
+    ScalarType,
+    SetType,
+    StringType,
+    StructType,
+    UnitType,
+    VectorType,
+    VoidType,
+)
+from taihe.utils.analyses import AnalysisManager
+from taihe.utils.outputs import BasicOutputManager, OutputManager
 
 
 class JsonGenerator:
@@ -58,10 +59,10 @@ class JsonGenerator:
         self._taihe_version = self._load_taihe_version()
 
     def _load_taihe_version(self) -> str:
-        """Load taihe version from taihe_version.json"""
+        """Load taihe version from taihe_version.json."""
         version_file = Path(__file__).parent / "taihe_version.json"
         try:
-            with open(version_file, "r", encoding="utf-8") as f:
+            with open(version_file, encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("version", "")
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
@@ -75,15 +76,14 @@ class JsonGenerator:
     @staticmethod
     def _decl_sort_key(
         decl: EnumDecl | StructDecl | IfaceDecl,
-    ) -> tuple[str, str, int, int, str]:
+    ) -> tuple[str, int, int, str]:
         loc = decl.loc
         if loc is None:
-            return (decl.parent_pkg.name, "", 0, 0, decl.name)
+            return (decl.parent_pkg.name, 0, 0, decl.name)
 
         start = loc.span.start if loc.span is not None else None
         return (
             decl.parent_pkg.name,
-            loc.file.source_identifier,
             start.row if start is not None else 0,
             start.col if start is not None else 0,
             decl.name,
@@ -112,7 +112,7 @@ class JsonGenerator:
             return ty.kind.symbol
         if isinstance(ty, StringType):
             return "String"
-        if isinstance(ty, (VoidType, UnitType)):
+        if isinstance(ty, VoidType | UnitType):
             return "void"
         if isinstance(ty, EnumType):
             return ty.decl.name
@@ -168,7 +168,7 @@ class JsonGenerator:
             return TypeInfo(type=type_name)
 
     def _is_valid_map_key_type(self, ty) -> bool:
-        return isinstance(ty, (ScalarType, StringType, EnumType))
+        return isinstance(ty, ScalarType | StringType | EnumType)
 
     def _validate_type(self, ty, location: str) -> None:
         if isinstance(ty, MapType):
@@ -357,12 +357,19 @@ class JsonGenerator:
 
         primary_filename = self._typelib_filename_for_iface_name(main_iface.name)
         primary_schema = self._build_schema(pg)
-        with self.om.open(primary_filename, "w") as f:
+        with self.om.open(primary_filename) as f:
             json.dump(primary_schema.to_dict(), f, indent=2)
+
+        if not isinstance(self.om, BasicOutputManager):
+            raise ValueError(
+                "OHIPC backend requires BasicOutputManager to clean stale typelib files."
+            )
 
         for iface in self._sorted_iface_decls(pg):
             if iface is main_iface:
                 continue
-            stale_typelib = self.om.dst_dir / self._typelib_filename_for_iface_name(iface.name)
+            stale_typelib = self.om.dst_dir / self._typelib_filename_for_iface_name(
+                iface.name
+            )
             if stale_typelib.exists():
                 stale_typelib.unlink()

@@ -193,8 +193,9 @@ class BackendRegistry:
             CppCommonHeadersBackendConfig,
             CppUserHeadersBackendConfig,
         )
-        from taihe.semantics import PrettyPrintBackendConfig
         from taihe.codegen.ohipc import OhIpcBackendConfig
+        from taihe.semantics import PrettyPrintBackendConfig
+
         backends = [
             # abi
             AbiHeaderBackendConfig,

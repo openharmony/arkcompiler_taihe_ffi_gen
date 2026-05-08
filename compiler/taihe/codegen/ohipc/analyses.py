@@ -15,6 +15,7 @@
 
 import re
 from collections.abc import Hashable
+
 from typing_extensions import override
 
 from taihe.semantics.declarations import IfaceDecl, IfaceMethodDecl, PackageDecl
@@ -53,9 +54,13 @@ def type_name_to_file_stem(name: str) -> str:
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
+def package_name_to_file_stem(name: str) -> str:
+    return "_".join(type_name_to_file_stem(segment) for segment in name.split("."))
+
+
 def resolved_codegen_package_name(pkg: PackageDecl) -> str | None:
     # Try to get @!namespace attribute (standard Taihe IDL format)
-    from taihe.codegen.ani.attributes import NamespaceAttr
+    from taihe.codegen.ohipc.attribute import NamespaceAttr
 
     ns_attr = NamespaceAttr.get(pkg)
     if ns_attr is not None:
@@ -143,7 +148,7 @@ class TypeCppInfo(AbstractAnalysis[Hashable]):
             return StructTypeCppInfo(am, ty)
         if isinstance(ty, EnumType):
             return EnumTypeCppInfo(am, ty)
-        if isinstance(ty, (UnitType, VoidType)):
+        if isinstance(ty, UnitType | VoidType):
             return UnitTypeCppInfo(am, ty)
         return TypeCppInfo("int32_t")
 
@@ -277,7 +282,7 @@ class IfaceOhIpcInfo(AbstractAnalysis[IfaceDecl]):
 
         version_file = Path(__file__).parent / "taihe_version.json"
         try:
-            with open(version_file, "r", encoding="utf-8") as f:
+            with open(version_file, encoding="utf-8") as f:
                 data = json.load(f)
                 self.taihe_version = data.get("version", "")
         except (FileNotFoundError, json.JSONDecodeError, KeyError):

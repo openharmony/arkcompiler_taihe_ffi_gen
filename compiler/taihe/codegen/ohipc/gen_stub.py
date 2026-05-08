@@ -20,6 +20,7 @@ from taihe.codegen.ohipc.analyses import (
     MethodOhIpcInfo,
     header_guard_for,
     namespace_scope_for_cpp,
+    strip_leading_interface_i,
     type_name_to_file_stem,
 )
 from taihe.codegen.ohipc.serialization import OhIpcSerializer
@@ -33,7 +34,7 @@ from taihe.semantics.types import (
     VectorType,
 )
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputManager
+from taihe.utils.outputs import BasicOutputManager, OutputManager
 
 
 class StubGenerator:
@@ -83,7 +84,6 @@ class StubGenerator:
                 else:
                     result.append(line)  # Keep as is if can't split nicely
         return "\n".join(result)
-        self.serializer = OhIpcSerializer(am)
 
     @staticmethod
     def _iface_file_stem(iface: IfaceDecl) -> str:
@@ -232,16 +232,12 @@ class StubGenerator:
         f.write(f"{indent}}}\n")
 
     def _collect_proxy_headers(self, ty, headers: set[str]):
-        from taihe.semantics.declarations import IfaceDecl
         from taihe.semantics.types import CallbackType
 
         if isinstance(ty, CallbackType):
-            self._collect_proxy_headers(ty.signature.return_ty, headers)
-            for param in ty.signature.params:
+            self._collect_proxy_headers(ty.ref.return_ty, headers)
+            for param in ty.ref.params:
                 self._collect_proxy_headers(param.ty, headers)
-            return
-        if hasattr(ty, "decl") and isinstance(ty.decl, IfaceDecl):
-            headers.add(f"{type_name_to_file_stem(ty.decl.name)}_proxy.h")
             return
         if isinstance(ty, IfaceType):
             headers.add(f"{type_name_to_file_stem(ty.decl.name)}_proxy.h")
@@ -312,7 +308,7 @@ class StubGenerator:
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
         current_year = datetime.now().year
 
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             f.write(f"""/*
  * Copyright (c) {current_year} Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the \"License\");
@@ -430,7 +426,7 @@ class StubGenerator:
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
         current_year = datetime.now().year
 
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             f.write(f"""/*
  * Copyright (c) {current_year} Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the \"License\");
@@ -466,20 +462,17 @@ class StubGenerator:
             if info.is_main_service:
                 # Add typeLibInfo constant with minified .typelib.json content
                 import json
-                from pathlib import Path
 
-                # Use the same naming convention as JsonGenerator
-                def strip_interface_prefix(name: str) -> str:
-                    if len(name) > 1 and name.startswith("I") and name[1].isupper():
-                        return name[1:]
-                    return name
-
-                iface_base = strip_interface_prefix(iface.name).lower()
-                typelib_json_file = Path(self.om.dst_dir) / f"{iface_base}.typelib.json"
+                iface_base = strip_leading_interface_i(iface.name).lower()
+                if not isinstance(self.om, BasicOutputManager):
+                    raise ValueError(
+                        "OHIPC backend requires BasicOutputManager to read generated typelib files."
+                    )
+                typelib_json_file = self.om.dst_dir / f"{iface_base}.typelib.json"
                 typelib_info_data = ""
                 try:
                     if typelib_json_file.exists():
-                        with open(typelib_json_file, "r", encoding="utf-8") as json_f:
+                        with open(typelib_json_file, encoding="utf-8") as json_f:
                             # Parse JSON and re-serialize without formatting (minified)
                             json_obj = json.load(json_f)
                             minified_json = json.dumps(
@@ -499,32 +492,17 @@ class StubGenerator:
 
             self._write_namespace_open(f, namespace)
 
-            # Determine which stub creation function to use based on interface type
-            from taihe.codegen.ohipc.attribute import CallbackAttribute
-
-            is_callback = CallbackAttribute.get(iface) is not None
-            stub_create_func = (
-                "OH_IPCRemoteStub_Create" if is_callback else "OH_IPCRemoteStub_Create"
-            )
-
             f.write(f"{info.stub_name}::{info.stub_name}()\n")
-            f.write(f"    : remote_stub_({stub_create_func}(\n")
+            f.write("    : remote_stub_(OH_IPCRemoteStub_Create(\n")
             f.write(f"          {iface.name}::GetDescriptor(),\n")
             f.write(f"          &{info.stub_name}::OnRemoteRequest,\n")
             f.write("          nullptr,\n")
             f.write("          this))\n")
             f.write("{\n}\n\n")
 
-            # Determine which stub destroy function to use based on interface type
-            stub_destroy_func = (
-                "OH_IPCRemoteStub_Destroy"
-                if is_callback
-                else "OH_IPCRemoteStub_Destroy"
-            )
-
             f.write(f"{info.stub_name}::~{info.stub_name}()\n{{\n")
             f.write("    if (remote_stub_ != nullptr) {\n")
-            f.write(f"        {stub_destroy_func}(remote_stub_);\n")
+            f.write("        OH_IPCRemoteStub_Destroy(remote_stub_);\n")
             f.write("        remote_stub_ = nullptr;\n")
             f.write("    }\n")
             f.write("}\n\n")
@@ -632,7 +610,9 @@ class StubGenerator:
                             + "\n"
                         )
                     else:
-                        initializer = " = nullptr" if self._is_iface_type(param.ty) else ""
+                        initializer = (
+                            " = nullptr" if self._is_iface_type(param.ty) else ""
+                        )
                         f.write(
                             f"    {self.serializer.get_cpp_type(param.ty)} {param.name}{initializer};\n"
                         )
@@ -686,7 +666,7 @@ class StubGenerator:
                                 "reply", result_name, method.return_ty, "    "
                             )
                         )
-                            + "\n"
+                        + "\n"
                     )
                     if self._is_iface_type(method.return_ty):
                         f.write(f"    delete {result_name};\n")
@@ -768,7 +748,9 @@ class StubGenerator:
             if info.is_main_service:
                 f.write(f"ErrCode {info.stub_name}::GetTypeLibInfo(int32_t fd)\n")
                 f.write("{\n")
-                f.write("    if (typeLibInfo == nullptr || strlen(typeLibInfo) == 0) {\n")
+                f.write(
+                    "    if (typeLibInfo == nullptr || strlen(typeLibInfo) == 0) {\n"
+                )
                 f.write("        close(fd);\n")
                 f.write("        return OH_IPC_INNER_ERROR;\n")
                 f.write("    }\n")
