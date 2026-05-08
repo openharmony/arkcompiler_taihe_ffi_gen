@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from datetime import datetime
-from pathlib import Path
 
 from taihe.codegen.ohipc.analyses import (
     IfaceOhIpcInfo,
@@ -22,10 +21,17 @@ from taihe.codegen.ohipc.analyses import (
     header_guard_for,
     interface_descriptor_for_cpp,
     namespace_scope_for_cpp,
+    package_name_to_file_stem,
     type_name_to_file_stem,
 )
 from taihe.codegen.ohipc.serialization import OhIpcSerializer
-from taihe.semantics.declarations import EnumDecl, IfaceDecl, PackageDecl, StructDecl
+from taihe.semantics.declarations import (
+    EnumDecl,
+    IfaceDecl,
+    PackageDecl,
+    PackageLevelDecl,
+    StructDecl,
+)
 from taihe.semantics.types import (
     ArrayType,
     EnumType,
@@ -63,34 +69,17 @@ class InterfaceGenerator:
         self,
         om: OutputManager,
         am: AnalysisManager,
-        ipc_common: list[Path] | None = None,
+        ipc_common_pkg_names: set[str] | None = None,
     ):
         self.om = om
         self.am = am
         self.serializer = OhIpcSerializer(am)
-        self.ipc_common_paths = {path.resolve() for path in (ipc_common or [])}
+        self.ipc_common_pkg_names = set(ipc_common_pkg_names or ())
 
-    def _is_ipc_common_struct(self, struct_decl: StructDecl) -> bool:
-        if not self.ipc_common_paths or struct_decl.loc is None:
-            return False
-        source = struct_decl.loc.file
-        return (
-            hasattr(source, "path")
-            and Path(source.path).resolve() in self.ipc_common_paths
-        )
-
-    @staticmethod
-    def _ipc_common_bundle_header_by_path(ipc_common: Path) -> str:
-        stem = ipc_common.stem
-        if stem.startswith("I") and len(stem) > 1:
-            stem = stem[1:]
-        return f"{type_name_to_file_stem(stem)}.h"
-
-    def _ipc_common_bundle_header(self, struct_decl: StructDecl) -> str | None:
-        if not self._is_ipc_common_struct(struct_decl):
+    def _ipc_common_bundle_header(self, decl: PackageLevelDecl) -> str | None:
+        if decl.parent_pkg.name not in self.ipc_common_pkg_names:
             return None
-        source = struct_decl.loc.file
-        return self._ipc_common_bundle_header_by_path(Path(source.path).resolve())
+        return f"{package_name_to_file_stem(decl.parent_pkg.name)}.h"
 
     @staticmethod
     def _iface_file_stem(iface: IfaceDecl) -> str:
@@ -115,22 +104,22 @@ class InterfaceGenerator:
     def generate(self, iface: IfaceDecl):
         info = IfaceOhIpcInfo.get(self.am, iface)
         filename = f"{self._iface_file_stem(iface)}.h"
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             self._write_header(f, iface, info)
 
     def generate_struct(self, struct_decl: StructDecl):
         filename = f"{self._struct_file_stem(struct_decl)}.h"
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             self._write_struct_header(f, struct_decl)
 
     def generate_struct_source(self, struct_decl: StructDecl):
         filename = f"{self._struct_file_stem(struct_decl)}.cpp"
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             self._write_struct_source(f, struct_decl)
 
     def generate_enum(self, enum_decl: EnumDecl):
         filename = f"{self._enum_file_stem(enum_decl)}.h"
-        with self.om.open(filename, "w") as f:
+        with self.om.open(filename) as f:
             self._write_enum_header(f, enum_decl)
 
     def generate_enum_bundle(
@@ -139,7 +128,7 @@ class InterfaceGenerator:
         enum_decls: list[EnumDecl],
         override_pkg: PackageDecl | None = None,
     ):
-        with self.om.open(f"{bundle_name}.h", "w") as f:
+        with self.om.open(f"{bundle_name}.h") as f:
             self._write_enum_bundle_header(f, bundle_name, enum_decls, override_pkg)
 
     def generate_struct_bundle(
@@ -148,9 +137,9 @@ class InterfaceGenerator:
         struct_decls: list[StructDecl],
         override_pkg: PackageDecl | None = None,
     ):
-        with self.om.open(f"{bundle_name}.h", "w") as f:
+        with self.om.open(f"{bundle_name}.h") as f:
             self._write_struct_bundle_header(f, bundle_name, struct_decls, override_pkg)
-        with self.om.open(f"{bundle_name}.cpp", "w") as f:
+        with self.om.open(f"{bundle_name}.cpp") as f:
             self._write_struct_bundle_source(f, bundle_name, struct_decls, override_pkg)
 
     def _collect_type_headers(self, ty, headers: set[str]):
@@ -333,7 +322,7 @@ class InterfaceGenerator:
 
     @staticmethod
     def _needs_field_scope(ty) -> bool:
-        return isinstance(ty, (VectorType, ArrayType, SetType, MapType))
+        return isinstance(ty, VectorType | ArrayType | SetType | MapType)
 
     def _write_struct_header(self, f, struct_decl: StructDecl):
         guard = header_guard_for(struct_decl.name, struct_decl.parent_pkg)

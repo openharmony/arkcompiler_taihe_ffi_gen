@@ -16,13 +16,27 @@
 from dataclasses import dataclass
 
 from taihe.semantics.attributes import AttributeGroupTag, CheckedAttrT, TypedAttribute
-from taihe.semantics.declarations import IfaceDecl, IfaceMethodDecl, ParamDecl, TypeRefDecl
+from taihe.semantics.declarations import (
+    IfaceDecl,
+    IfaceMethodDecl,
+    PackageDecl,
+    ParamDecl,
+    TypeRefDecl,
+)
 from taihe.semantics.types import ArrayType
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import AdhocError
 
-
 MAIN_INTERFACE_GROUP = AttributeGroupTag()
+
+
+@dataclass
+class NamespaceAttr(TypedAttribute[PackageDecl]):
+    NAME = "namespace"
+    TARGETS = (PackageDecl,)
+
+    module: str
+    namespace: str | None = None
 
 
 @dataclass
@@ -129,10 +143,6 @@ class SizeAttribute(TypedAttribute[TypeRefDecl]):
             )
 
         super().check_typed_context(parent, dm)
-
-
-# Import NamespaceAttr from ANI backend for standard Taihe IDL format
-from taihe.codegen.ani.attributes import NamespaceAttr
 
 
 all_attr_types: list[CheckedAttrT] = [

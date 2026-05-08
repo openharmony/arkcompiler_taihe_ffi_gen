@@ -15,6 +15,8 @@
 
 from dataclasses import dataclass, field
 
+JsonValue = str | int | float | bool | None | dict[str, "JsonValue"] | list["JsonValue"]
+
 
 @dataclass
 class TypeInfo:
@@ -92,9 +94,9 @@ class TypeLibSchema:
     interfaces: list[TypeLibInterface] = field(default_factory=list)
     copyright: str = ""
 
-    def to_dict(self):
-        def _type_info_dict(type_info: TypeInfo):
-            result = {"type": type_info.type}
+    def to_dict(self) -> dict[str, JsonValue]:
+        def _type_info_dict(type_info: TypeInfo) -> dict[str, JsonValue]:
+            result: dict[str, JsonValue] = {"type": type_info.type}
             if type_info.size is not None:
                 result["size"] = type_info.size
             if type_info.key_type is not None:
@@ -117,7 +119,7 @@ class TypeLibSchema:
                 result["val_type"] = _type_info_dict(type_info.val_type)
             return result
 
-        result = {
+        result: dict[str, JsonValue] = {
             "version": self.version,
             "taihe_version": self.taihe_version,
             "enums": [
