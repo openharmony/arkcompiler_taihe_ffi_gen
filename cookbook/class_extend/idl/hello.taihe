@@ -100,14 +100,14 @@ export class UnifiedData {
     hasType(type: string): boolean {
         return this.inner.hasType(type);
     }
-    addRecord(a: UnifiedRecord) {
+    addRecord(a: UnifiedRecord): void {
         this.inner.addRecord(a.inner_u);
     }
     getRecords(): Array<UnifiedRecord> {
         let res_th: UnifiedRecord_th[] = this.inner.getRecords();
-        let res: UnifiedRecord[] = new Array<UnifiedRecord>(res_th.length);
-        for(let i = 0; i < res.length; i++) {
-            res[i] = new UnifiedRecord(res_th[i]);
+        let res: UnifiedRecord[] = [];
+        for(let i = 0; i < res_th.length; i++) {
+            res.push(new UnifiedRecord(res_th[i]));
         }
         return res;
     }
