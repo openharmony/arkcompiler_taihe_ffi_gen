@@ -439,7 +439,7 @@ class AniPackageSourceGenerator:
             for param, arg_ani in zip(func.params, args_ani, strict=True):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                 param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                param_from_ani = f"from_ani_{param.name}"
+                param_from_ani = f"arg_{param.name}_from_ani"
                 arg_cpp = f"cpp_arg_{param.name}"
                 param_ty_cpp_name = param_ty_cpp_info.as_owner
                 param_ty_ani_info.gen_from_ani(self.target, param_from_ani)
@@ -792,7 +792,7 @@ class AniIfaceImplGenerator:
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                 param_ty_cpp_name = param_ty_cpp_info.as_param
                 param_ty_ani_name = param_ty_ani_info.ani_type
-                param_into_ani = f"into_ani_{param.name}"
+                param_into_ani = f"arg_{param.name}_into_ani"
                 arg_ani = f"ani_arg_{param.name}"
                 param_ty_ani_info.gen_into_ani(self.target, param_into_ani)
                 self.target.writelns(
@@ -969,7 +969,7 @@ class AniStructImplGenerator:
                     self.target.writelns(
                         f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{final_ani}));',
                     )
-                final_from_ani = f"from_ani_{i}"
+                final_from_ani = f"field_{i}_from_ani"
                 final_ty_ani_info.gen_from_ani(self.target, final_from_ani)
                 finals_cpp.append(f"{final_from_ani}(env, {final_ani})")
             finals_cpp_str = ", ".join(final_cpp for final_cpp in finals_cpp)
@@ -987,7 +987,7 @@ class AniStructImplGenerator:
             for i, parts in enumerate(struct_ani_info.sorted_sts_all_fields):
                 final = parts[-1]
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
-                final_into_ani = f"into_ani_{i}"
+                final_into_ani = f"field_{i}_into_ani"
                 final_ty_ani_info.gen_into_ani(self.target, final_into_ani)
                 finals_ani.append(f"{final_into_ani}(env, cpp_obj.{'.'.join(part.name for part in parts)})")  # fmt: skip
             finals_ani_sum = "".join(", " + final_ani for final_ani in finals_ani)
@@ -1011,7 +1011,7 @@ class AniStructImplGenerator:
                     f"ani_ref {field_ani} = {{}};",
                     f'env->Object_GetField_Ref(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "${i}"), &{field_ani});',
                 )
-                field_from_ani = f"from_ani_{field.name}"
+                field_from_ani = f"field_{field.name}_from_ani"
                 field_ty_ani_info.gen_from_ani_ref(self.target, field_from_ani)
                 fields_cpp.append(f"{field_from_ani}(env, {field_ani})")
             fields_cpp_str = ", ".join(
@@ -1030,7 +1030,7 @@ class AniStructImplGenerator:
             fields_ani = []
             for field in self.struct.fields:
                 field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
-                field_into_ani = f"into_ani_{field.name}"
+                field_into_ani = f"field_{field.name}_into_ani"
                 field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
                 fields_ani.append(f"{field_into_ani}(env, cpp_obj.{field.name})")  # fmt: skip
             fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
@@ -1119,7 +1119,7 @@ class AniUnionImplGenerator:
                     f"if ({final_check_type}(env, ani_value)) {{",
                     f"}}",
                 ):
-                    final_from_ani = f"from_ani_{i}"
+                    final_from_ani = f"field_{i}_from_ani"
                     final_ty_ani_info.gen_from_ani_ref(self.target, final_from_ani)
                     self.target.writelns(
                         f"return {union_cpp_info.full_name}({static_tags_str}, {final_from_ani}(env, ani_value));",
@@ -1147,7 +1147,7 @@ class AniUnionImplGenerator:
                         f"}}",
                     ):
                         field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
-                        field_into_ani = f"into_ani_{field.name}"
+                        field_into_ani = f"field_{field.name}_into_ani"
                         field_ty_ani_info.gen_into_ani_ref(self.target, field_into_ani)
                         self.target.writelns(
                             f"return {field_into_ani}(env, cpp_value.get_{field.name}_ref());",
