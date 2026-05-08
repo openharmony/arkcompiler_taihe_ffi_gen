@@ -195,7 +195,7 @@ class BackendRegistry:
         )
         from taihe.semantics import PrettyPrintBackendConfig
 
-        backends = [
+        backends: list[BackendConfigT] = [
             # abi
             AbiHeaderBackendConfig,
             AbiSourcesBackendConfig,
