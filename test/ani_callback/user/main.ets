@@ -82,6 +82,17 @@ function test_int_enum_return_value() {
     arktest.assertEQ(result.toString(), "123");
 }
 
+function test_get_callback_void() {
+    let cb = lib.getCallbackVoid();
+    cb();
+}
+
+function test_get_callback_string() {
+    let cb = lib.getCallbackString();
+    let result = cb();
+    arktest.assertEQ(result, "callback result: captured variable");
+}
+
 function main() {
     console.log("##############start#############");
     const suite = new arktest.ArkTestsuite("Callback Tests");
@@ -95,5 +106,9 @@ function main() {
     suite.addTest("test int string return value", test_int_string_return_value);
     suite.addTest("test int bool return value", test_int_bool_return_value);
     suite.addTest("test int enum return value", test_int_enum_return_value);
+
+    suite.addTest("test get callback void", test_get_callback_void);
+    suite.addTest("test get callback string", test_get_callback_string);
+
     exit(suite.run());
 }

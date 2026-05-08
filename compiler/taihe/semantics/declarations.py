@@ -18,7 +18,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, cast
 
 from typing_extensions import deprecated, override
 
@@ -108,11 +108,6 @@ class Decl(ABC):
     def description(self) -> str:
         """Human-readable description of this declaration."""
 
-    @property
-    @abstractmethod
-    def parent_pkg(self) -> "PackageDecl":
-        """Return the parent package of this declaration."""
-
     @abstractmethod
     def accept(self, v: "DeclVisitor[_R]") -> _R:
         """Accept a visitor to visit this declaration."""
@@ -124,9 +119,19 @@ class Decl(ABC):
         return cast(list[_A], self.attributes.get(t, []))
 
 
-class NamedDecl(Decl, ABC):
+class ParentDecl(Decl, ABC):
+    """Represents a declaration with a parent declaration."""
+
+    @property
+    @abstractmethod
+    def parent_pkg(self) -> "PackageDecl":
+        """Return the parent package of this declaration."""
+
+
+class NamedDecl(ParentDecl):
     """Represents a declaration with a name."""
 
+    KIND: ClassVar[str]
     name: str
 
     def __init__(
@@ -138,38 +143,43 @@ class NamedDecl(Decl, ABC):
         super().__init__(loc=loc)
         self.name = name
 
+    @property
+    @override
+    def description(self) -> str:
+        return f"{self.KIND} {self.name}"
+
 
 ############################
 # Declarations with Parent #
 ############################
 
 
-_P = TypeVar("_P", bound=Decl)
+_P = TypeVar("_P", bound=ParentDecl)
 
 
-class DeclWithParent(Decl, Generic[_P], ABC):
+class AnonymousDeclWithParent(ParentDecl, Generic[_P]):
     _node_parent: _P | None = None
 
     @property
-    @override
     def parent_pkg(self) -> "PackageDecl":
         assert self._node_parent
         return self._node_parent.parent_pkg
 
     def set_parent(self, parent: _P):
+        assert self._node_parent is None
         self._node_parent = parent
 
 
-class NamedDeclWithParent(NamedDecl, Generic[_P], ABC):
+class NamedDeclWithParent(NamedDecl, Generic[_P]):
     _node_parent: _P | None = None
 
     @property
-    @override
     def parent_pkg(self) -> "PackageDecl":
         assert self._node_parent
         return self._node_parent.parent_pkg
 
     def set_parent(self, parent: _P):
+        assert self._node_parent is None
         self._node_parent = parent
 
 
@@ -178,7 +188,7 @@ class NamedDeclWithParent(NamedDecl, Generic[_P], ABC):
 ###################
 
 
-class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
+class TypeRefDecl(AnonymousDeclWithParent["TypeHolderDecl"]):
     """Repersents a reference to a `Type`.
 
     Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
@@ -209,13 +219,6 @@ class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
         loc: SourceLocation | None,
     ):
         super().__init__(loc=loc)
-
-    @property
-    @override
-    def description(self) -> str:
-        if (fmt := self.format(TaiheFormatter())) is not None:
-            return f"explicit type reference ({fmt})"
-        return "implicit type reference"
 
     @property
     def parent_type_holder(self) -> "TypeHolderDecl":
@@ -254,6 +257,11 @@ class ImplicitTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc=loc)
 
+    @property
+    @override
+    def description(self) -> str:
+        return "implicit type reference"
+
     def format(self, fmt: TaiheFormatter) -> None:
         return None
 
@@ -275,6 +283,11 @@ class ExplicitTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc=loc)
 
+    @property
+    @override
+    def description(self) -> str:
+        return self.format(TaiheFormatter())
+
     def format(self, fmt: TaiheFormatter) -> str:
         return fmt.get_type_ref(self)
 
@@ -282,7 +295,7 @@ class ExplicitTypeRefDecl(TypeRefDecl):
     def accept(self, v: "ExplicitTypeRefVisitor[_R]") -> _R: ...
 
 
-class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
+class GenericArgDecl(AnonymousDeclWithParent["GenericTypeRefDecl"]):
     ty_ref: ExplicitTypeRefDecl
 
     def __init__(
@@ -322,6 +335,8 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
 
 
 class ParamDecl(NamedDeclWithParent["CallableDecl"]):
+    KIND: ClassVar[str] = "parameter"
+
     ty_ref: ExplicitTypeRefDecl
 
     def __init__(
@@ -334,11 +349,6 @@ class ParamDecl(NamedDeclWithParent["CallableDecl"]):
         super().__init__(name, loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"parameter {self.name}"
 
     @property
     def parent_func(self) -> "CallableDecl":
@@ -417,8 +427,8 @@ class GenericTypeRefDecl(ExplicitTypeRefDecl):
         return self._args
 
     def add_arg(self, a: GenericArgDecl):
-        self._args.append(a)
         a.set_parent(self)
+        self._args.append(a)
 
     @override
     def accept(self, v: "GenericTypeRefVisitor[_R]") -> _R:
@@ -470,7 +480,7 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
 #####################
 
 
-class PackageRefDecl(DeclWithParent["PackageImportDecl | DeclarationRefDecl"]):
+class PackageRefDecl(Decl):
     symbol: str
 
     is_resolved: bool = False
@@ -494,14 +504,14 @@ class PackageRefDecl(DeclWithParent["PackageImportDecl | DeclarationRefDecl"]):
     @property
     @override
     def description(self) -> str:
-        return f"package reference {self.symbol}"
+        return f"package reference of {self.symbol}"
 
     @override
     def accept(self, v: "PackageRefVisitor[_R]") -> _R:
         return v.visit_package_ref(self)
 
 
-class DeclarationRefDecl(DeclWithParent["DeclarationImportDecl"]):
+class DeclarationRefDecl(Decl):
     symbol: str
 
     pkg_ref: PackageRefDecl
@@ -525,12 +535,11 @@ class DeclarationRefDecl(DeclWithParent["DeclarationImportDecl"]):
         super().__init__(loc=loc)
         self.symbol = symbol
         self.pkg_ref = pkg_ref
-        self.pkg_ref.set_parent(self)
 
     @property
     @override
     def description(self) -> str:
-        return f"type reference {self.symbol}"
+        return f"declaration reference of {self.symbol}"
 
     @override
     def accept(self, v: "DeclarationRefVisitor[_R]") -> _R:
@@ -542,7 +551,7 @@ class DeclarationRefDecl(DeclWithParent["DeclarationImportDecl"]):
 #######################
 
 
-class ImportDecl(NamedDeclWithParent["PackageDecl"], ABC):
+class ImportDecl(NamedDeclWithParent["PackageDecl"]):
     """Represents a package or declaration import.
 
     Invariant: the `name` field in base class `Decl` always represents actual name of imports.
@@ -575,6 +584,8 @@ class ImportDecl(NamedDeclWithParent["PackageDecl"], ABC):
 
 
 class PackageImportDecl(ImportDecl):
+    KIND: ClassVar[str] = "package import"
+
     pkg_ref: PackageRefDecl
 
     def __init__(
@@ -589,12 +600,6 @@ class PackageImportDecl(ImportDecl):
             loc=loc or pkg_ref.loc,
         )
         self.pkg_ref = pkg_ref
-        self.pkg_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"package import {self.name}"
 
     def is_alias(self) -> bool:
         return self.name != self.pkg_ref.symbol
@@ -605,6 +610,8 @@ class PackageImportDecl(ImportDecl):
 
 
 class DeclarationImportDecl(ImportDecl):
+    KIND: ClassVar[str] = "declaration import"
+
     decl_ref: DeclarationRefDecl
 
     def __init__(
@@ -619,12 +626,6 @@ class DeclarationImportDecl(ImportDecl):
             loc=loc or decl_ref.loc,
         )
         self.decl_ref = decl_ref
-        self.decl_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"declaration import {self.name}"
 
     def is_alias(self) -> bool:
         return self.name != self.decl_ref.symbol
@@ -680,6 +681,8 @@ TypedValue = (
 
 
 class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
+    KIND: ClassVar[str] = "enum item"
+
     raw_value: int | float | str | bool | None
     typed_value_or_none: TypedValue | None = None
 
@@ -692,11 +695,6 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
     ):
         super().__init__(name, loc=loc)
         self.raw_value = value
-
-    @property
-    @override
-    def description(self):
-        return f"enum item {self.name}"
 
     @property
     def parent_enum(self) -> "EnumDecl":
@@ -714,6 +712,8 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
 
 
 class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
+    KIND: ClassVar[str] = "union field"
+
     ty_ref: TypeRefDecl
 
     def __init__(
@@ -726,11 +726,6 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         super().__init__(name, loc=loc)
         self.ty_ref = ty_ref or ImplicitTypeRefDecl(loc=loc)
         self.ty_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"union field {self.name}"
 
     @property
     def parent_union(self) -> "UnionDecl":
@@ -754,6 +749,8 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
 
 
 class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
+    KIND: ClassVar[str] = "struct field"
+
     ty_ref: ExplicitTypeRefDecl
 
     def __init__(
@@ -766,11 +763,6 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         super().__init__(name, loc=loc)
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"struct field {self.name}"
 
     @property
     def parent_struct(self) -> "StructDecl":
@@ -793,7 +785,7 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         return v.visit_struct_field(self)
 
 
-class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
+class IfaceExtendDecl(AnonymousDeclWithParent["IfaceDecl"]):
     ty_ref: ExplicitTypeRefDecl
 
     def __init__(
@@ -833,6 +825,8 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
 
 
 class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
+    KIND: ClassVar[str] = "interface method"
+
     return_ty_ref: TypeRefDecl
     _param_dict: dict[str, ParamDecl]
 
@@ -847,11 +841,6 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         self._param_dict = {}
         self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc=loc)
         self.return_ty_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"interface method {self.name}"
 
     @property
     def parent_iface(self) -> "IfaceDecl":
@@ -888,7 +877,7 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 ##############################
 
 
-class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
+class PackageLevelDecl(NamedDeclWithParent["PackageDecl"]):
     @property
     def full_name(self):
         return f"{self.parent_pkg.name}.{self.name}"
@@ -898,6 +887,8 @@ class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
 
 
 class GlobFuncDecl(PackageLevelDecl):
+    KIND: ClassVar[str] = "global function"
+
     return_ty_ref: TypeRefDecl
     _param_dict: dict[str, ParamDecl]
 
@@ -912,11 +903,6 @@ class GlobFuncDecl(PackageLevelDecl):
         self._param_dict = {}
         self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc=loc)
         self.return_ty_ref.set_parent(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"function {self.name}"
 
     @property
     def params(self) -> Sequence[ParamDecl]:
@@ -958,6 +944,8 @@ class TypeDecl(PackageLevelDecl, ABC):
 
 
 class EnumDecl(TypeDecl):
+    KIND: ClassVar[str] = "enum"
+
     ty_ref: ExplicitTypeRefDecl
     _item_dict: dict[str, EnumItemDecl]
 
@@ -972,11 +960,6 @@ class EnumDecl(TypeDecl):
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
         self._item_dict = {}
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"enum {self.name}"
 
     @property
     def items(self) -> Sequence[EnumItemDecl]:
@@ -1008,6 +991,8 @@ class EnumDecl(TypeDecl):
 
 
 class UnionDecl(TypeDecl):
+    KIND: ClassVar[str] = "union"
+
     _field_dict: dict[str, UnionFieldDecl]
 
     def __init__(
@@ -1018,11 +1003,6 @@ class UnionDecl(TypeDecl):
     ):
         super().__init__(name, loc=loc)
         self._field_dict = {}
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"union {self.name}"
 
     @property
     def fields(self) -> Sequence[UnionFieldDecl]:
@@ -1043,6 +1023,8 @@ class UnionDecl(TypeDecl):
 
 
 class StructDecl(TypeDecl):
+    KIND: ClassVar[str] = "struct"
+
     _field_dict: dict[str, StructFieldDecl]
 
     def __init__(
@@ -1053,11 +1035,6 @@ class StructDecl(TypeDecl):
     ):
         super().__init__(name, loc=loc)
         self._field_dict = {}
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"struct {self.name}"
 
     @property
     def fields(self) -> Sequence[StructFieldDecl]:
@@ -1078,6 +1055,8 @@ class StructDecl(TypeDecl):
 
 
 class IfaceDecl(TypeDecl):
+    KIND: ClassVar[str] = "interface"
+
     _extend_list: list[IfaceExtendDecl]
     _method_dict: dict[str, IfaceMethodDecl]
 
@@ -1092,11 +1071,6 @@ class IfaceDecl(TypeDecl):
         self._method_dict = {}
 
     @property
-    @override
-    def description(self) -> str:
-        return f"interface {self.name}"
-
-    @property
     def extends(self) -> Sequence[IfaceExtendDecl]:
         return list(self._extend_list)
 
@@ -1105,8 +1079,8 @@ class IfaceDecl(TypeDecl):
         return list(self._method_dict.values())
 
     def add_extend(self, p: IfaceExtendDecl):
-        self._extend_list.append(p)
         p.set_parent(self)
+        self._extend_list.append(p)
 
     def add_method(self, f: IfaceMethodDecl):
         if (prev := self._method_dict.setdefault(f.name, f)) != f:
@@ -1142,6 +1116,8 @@ TypeHolderDecl = (
 
 class PackageDecl(NamedDecl):
     """A collection of named identities sharing the same scope."""
+
+    KIND: ClassVar[str] = "package"
 
     _node_parent: "PackageGroup | None" = None
 
@@ -1182,11 +1158,6 @@ class PackageDecl(NamedDecl):
         self._interfaces = []
 
         self.is_stdlib = is_stdlib
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"package {self.name}"
 
     @property
     @override

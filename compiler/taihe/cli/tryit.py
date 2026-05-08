@@ -369,7 +369,7 @@ class StsBuildSystem(BuildSystem):
 
     @property
     def author_compile_flags(self) -> list[str]:
-        return ["-DTAIHE_USE_ANI_RUNTIME"]
+        return ["-DTAIHE_USE_ANI_RUNTIME", "-DTH_ANI_ENABLE_PERF_TRACE"]
 
     @property
     def user_backend_names(self) -> list[str]:
