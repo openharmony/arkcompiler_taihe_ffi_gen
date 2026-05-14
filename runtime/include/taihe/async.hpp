@@ -155,7 +155,8 @@ public:
     template<typename Handler, typename... Args>
     void emplace_handler(Args &&...args)
     {
-        TH_ASSERT(try_lock_handler(), "Handler has already been set");
+        bool ok = try_lock_handler();
+        TH_ASSERT(ok, "Handler has already been set");
         if constexpr (sizeof(Handler) <= sizeof(TAsyncHandlerStorage::buffer)) {
             new (&storage.buffer) Handler(std::forward<Args>(args)...);
             process_handler_ptr = [](TAsyncHandlerStorage *storage_ptr, Result *result_ptr) {
