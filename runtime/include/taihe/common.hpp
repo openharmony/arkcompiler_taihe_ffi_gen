@@ -26,13 +26,10 @@
 #ifdef __EXCEPTIONS
 #define TH_THROW(error_type, message) throw error_type(message)
 #else
-#define TH_THROW(error_type, message)                                    \
-    do {                                                                 \
-        fprintf(stderr,                                                  \
-                "%s: %s, \nfunction: %s, "                               \
-                "file: %s, line %d.\n",                                  \
-                #error_type, message, __FUNCTION__, __FILE__, __LINE__); \
-        abort();                                                         \
+#define TH_THROW(error_type, message)                      \
+    do {                                                   \
+        fprintf(stderr, "%s: %s\n", #error_type, message); \
+        abort();                                           \
     } while (0)
 #endif
 
