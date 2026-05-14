@@ -193,7 +193,6 @@ class BackendRegistry:
             CppCommonHeadersBackendConfig,
             CppUserHeadersBackendConfig,
         )
-        from taihe.codegen.ohipc import OhIpcBackendConfig
         from taihe.semantics import PrettyPrintBackendConfig
 
         backends: list[BackendConfigT] = [
@@ -207,8 +206,6 @@ class BackendRegistry:
             CppUserHeadersBackendConfig,
             # pretty print
             PrettyPrintBackendConfig,
-            # ohipc
-            OhIpcBackendConfig,
         ]
 
         # HACK: Optional backends (only register if module exists)
@@ -223,6 +220,13 @@ class BackendRegistry:
             from taihe.codegen.napi import NapiBridgeBackendConfig
 
             backends.append(NapiBridgeBackendConfig)
+        except ImportError:
+            pass
+
+        try:
+            from taihe.codegen.ohipc import OhIpcBackendConfig
+
+            backends.append(OhIpcBackendConfig)
         except ImportError:
             pass
 
