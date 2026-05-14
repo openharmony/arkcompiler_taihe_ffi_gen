@@ -69,6 +69,11 @@ _BUILD_CONFIGS = {
     "sdk": BuildModeConfig(
         exclude_runtime=["taihe/cli/tryit.py"],
     ),
+    "lite": BuildModeConfig(
+        exclude_compiler=[
+            "taihe/codegen/ohipc",
+        ],
+    ),
     "full": BuildModeConfig(),
 }
 
@@ -77,6 +82,7 @@ class BuildMode(Enum):
     FULL = "full"
     CORE = "core"
     SDK = "sdk"
+    LITE = "lite"
 
     @property
     def config(self) -> BuildModeConfig:
@@ -257,7 +263,7 @@ class Builder:
         bundle.extract()
         bundle.install_package(self.wheel)
         bundle.create_script("taihec", "taihe.cli.compiler")
-        if platform == Platform.LINUX_X86_64 and self.build_mode == BuildMode.FULL:
+        if platform == Platform.LINUX_X86_64 and self.build_mode != BuildMode.CORE and self.build_mode != BuildMode.SDK:
             bundle.create_script("taihe-tryit", "taihe.cli.tryit")
 
         ### Remove excluded compiler files ###
