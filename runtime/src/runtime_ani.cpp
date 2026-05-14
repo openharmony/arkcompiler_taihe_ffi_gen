@@ -16,8 +16,6 @@
 #include <taihe/expected.hpp>
 #include <taihe/runtime_ani.hpp>
 
-#include <iostream>
-
 #ifdef TH_ANI_USE_LOCAL_TRACE
 #include <chrono>
 #include <vector>
@@ -27,12 +25,12 @@ thread_local std::vector<std::pair<char const *, std::chrono::steady_clock::time
 
 void StartTraceLog(char const *perf_id)
 {
-    std::cerr << "[" << perf_id << "] Perf Trace Begin" << std::endl;
+    fprintf(stderr, "[TRACE] [%s] Start\n", perf_id);
 }
 
-void FinishTraceLog(char const *perf_id, std::chrono::microseconds duration)
+void FinishTraceLog(char const *perf_id, std::chrono::nanoseconds duration)
 {
-    std::cerr << "[" << perf_id << "] Perf Trace End, duration = " << duration.count() << "us" << std::endl;
+    fprintf(stderr, "[TRACE] [%s] End, duration = %lldns\n", perf_id, static_cast<long long>(duration.count()));
 }
 }  // namespace
 
@@ -52,7 +50,7 @@ void FinishTrace()
     auto [perf_id, begin] = ani_perf_trace_stack.back();
     ani_perf_trace_stack.pop_back();
     auto end = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
     FinishTraceLog(perf_id, duration);
 }
 }  // namespace taihe
@@ -78,25 +76,31 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
     ani_class errCls;
     char const *className = "std.core.Error";
     if (ANI_OK != env->FindClass(className, &errCls)) {
-        std::cerr << "Not found '" << className << std::endl;
+        TH_ANI_LOG_ERROR("Class not found: %s", className);
         return nullptr;
     }
 
     ani_method errCtor;
     if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "C{std.core.String}C{std.core.ErrorOptions}:", &errCtor)) {
-        std::cerr << "Get Ctor Failed '" << className << "'" << std::endl;
+        TH_ANI_LOG_ERROR("Constructor not found: %s", className);
         return nullptr;
     }
 
     ani_string errMsg {};
-    env->String_NewUTF8(msg.c_str(), msg.size(), &errMsg);
+    if (ANI_OK != env->String_NewUTF8(msg.c_str(), msg.size(), &errMsg)) {
+        TH_ANI_LOG_ERROR("Failed to create error message string");
+        return nullptr;
+    }
 
     ani_ref undefined;
-    env->GetUndefined(&undefined);
+    if (ANI_OK != env->GetUndefined(&undefined)) {
+        TH_ANI_LOG_ERROR("Failed to get undefined value");
+        return nullptr;
+    }
 
     ani_error errObj;
     if (ANI_OK != env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&errObj), errMsg, undefined)) {
-        std::cerr << "Create Object Failed '" << className << "'" << std::endl;
+        TH_ANI_LOG_ERROR("Create Object Failed: %s", className);
         return nullptr;
     }
     return errObj;
@@ -107,13 +111,13 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
     ani_class errCls;
     char const *className = "@ohos.base.BusinessError";
     if (ANI_OK != env->FindClass(className, &errCls)) {
-        std::cerr << "Not found '" << className << std::endl;
+        TH_ANI_LOG_ERROR("Class not found: %s", className);
         return nullptr;
     }
 
     ani_method errCtor;
     if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "iC{std.core.Error}:", &errCtor)) {
-        std::cerr << "Get Ctor Failed '" << className << "'" << std::endl;
+        TH_ANI_LOG_ERROR("Constructor not found: %s", className);
         return nullptr;
     }
 
@@ -122,7 +126,7 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
 
     ani_error businessErrObj;
     if (ANI_OK != env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&businessErrObj), errCode, errObj)) {
-        std::cerr << "Create Object Failed '" << className << "'" << std::endl;
+        TH_ANI_LOG_ERROR("Create Object Failed: %s", className);
         return nullptr;
     }
     return businessErrObj;

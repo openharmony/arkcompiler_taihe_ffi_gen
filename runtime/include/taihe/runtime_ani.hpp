@@ -24,6 +24,74 @@
 #error "ani.h not found. Please ensure the Ani SDK is correctly installed."
 #endif
 
+#if __has_include("hilog/log.h")
+#include "hilog/log.h"
+#define TH_ANI_LOG_DOMAIN 0x3200
+#define TH_ANI_LOG_TAG "Taihe"
+#define TH_ANI_LOG_DEBUG(fmt, ...) \
+    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_DEBUG, fmt, ##__VA_ARGS__)
+#define TH_ANI_LOG_INFO(fmt, ...) \
+    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_INFO, fmt, ##__VA_ARGS__)
+#define TH_ANI_LOG_WARN(fmt, ...) \
+    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_WARN, fmt, ##__VA_ARGS__)
+#define TH_ANI_LOG_ERROR(fmt, ...) \
+    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_ERROR, fmt, ##__VA_ARGS__)
+#define TH_ANI_LOG_FATAL(fmt, ...) \
+    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_FATAL, fmt, ##__VA_ARGS__)
+#else
+#define TH_ANI_LOG_LEVEL_DEBUG 3
+#define TH_ANI_LOG_LEVEL_INFO 4
+#define TH_ANI_LOG_LEVEL_WARN 5
+#define TH_ANI_LOG_LEVEL_ERROR 6
+#define TH_ANI_LOG_LEVEL_FATAL 7
+#ifndef TH_ANI_LOG_LEVEL
+#define TH_ANI_LOG_LEVEL TH_ANI_LOG_LEVEL_DEBUG
+#endif
+#if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_DEBUG
+#define TH_ANI_LOG_DEBUG(fmt, ...) fprintf(stderr, "[DEBUG] " fmt "\n", ##__VA_ARGS__)
+#else
+#define TH_ANI_LOG_DEBUG(fmt, ...)
+#endif
+#if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_INFO
+#define TH_ANI_LOG_INFO(fmt, ...) fprintf(stderr, "[INFO] " fmt "\n", ##__VA_ARGS__)
+#else
+#define TH_ANI_LOG_INFO(fmt, ...)
+#endif
+#if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_WARN
+#define TH_ANI_LOG_WARN(fmt, ...) fprintf(stderr, "[WARN] " fmt "\n", ##__VA_ARGS__)
+#else
+#define TH_ANI_LOG_WARN(fmt, ...)
+#endif
+#if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_ERROR
+#define TH_ANI_LOG_ERROR(fmt, ...) fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__)
+#else
+#define TH_ANI_LOG_ERROR(fmt, ...)
+#endif
+#if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_FATAL
+#define TH_ANI_LOG_FATAL(fmt, ...) fprintf(stderr, "[FATAL] " fmt "\n", ##__VA_ARGS__)
+#else
+#define TH_ANI_LOG_FATAL(fmt, ...)
+#endif
+#endif
+
+#define TH_ANI_ASSERT(cond, msg, ...)                                  \
+    do {                                                               \
+        if (!(cond)) {                                                 \
+            TH_ANI_LOG_FATAL("Assertion failed: " msg, ##__VA_ARGS__); \
+            std::abort();                                              \
+        }                                                              \
+    } while (0)
+
+#ifndef TH_ANI_ENABLE_CHECKED_CALL
+#define TH_ANI_CHECKED_CALL(env, func, ...) env->func(__VA_ARGS__)
+#else
+#define TH_ANI_CHECKED_CALL(env, func, ...)                                                  \
+    do {                                                                                     \
+        ani_status status = env->func(__VA_ARGS__);                                          \
+        TH_ANI_ASSERT(status == ANI_OK, "ANI call " #func " failed with status %d", status); \
+    } while (0)
+#endif
+
 #ifndef TH_ANI_ENABLE_PERF_TRACE
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id)
 #define TH_ANI_PERF_TRACE_END()
