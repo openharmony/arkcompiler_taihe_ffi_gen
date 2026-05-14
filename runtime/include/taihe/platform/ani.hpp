@@ -47,7 +47,7 @@ protected:
 public:
     sref_guard(ani_env *env, ani_ref val)
     {
-        env->GlobalReference_Create(val, &ref);
+        TH_ANI_CHECKED_CALL(env, GlobalReference_Create, val, &ref);
     }
 
     ~sref_guard()
@@ -72,14 +72,14 @@ protected:
 public:
     dref_guard(ani_env *env, ani_ref val)
     {
-        env->GlobalReference_Create(val, &ref);
+        TH_ANI_CHECKED_CALL(env, GlobalReference_Create, val, &ref);
     }
 
     ~dref_guard()
     {
         env_guard guard;
         ani_env *env = guard.get_env();
-        env->GlobalReference_Delete(ref);
+        TH_ANI_CHECKED_CALL(env, GlobalReference_Delete, ref);
     }
 
     dref_guard(dref_guard const &) = delete;
@@ -124,7 +124,7 @@ inline __attribute__((noinline)) ani_module ani_find_module(ani_env *env, char c
 {
     ani_module mod;
     if (ANI_OK != env->FindModule(descriptor, &mod)) {
-        std::cerr << "Module not found: " << descriptor << std::endl;
+        TH_ANI_LOG_ERROR("Module not found: %s", descriptor);
         return nullptr;
     }
     return mod;
@@ -134,7 +134,7 @@ inline __attribute__((noinline)) ani_namespace ani_find_namespace(ani_env *env, 
 {
     ani_namespace ns;
     if (ANI_OK != env->FindNamespace(descriptor, &ns)) {
-        std::cerr << "Namespace not found: " << descriptor << std::endl;
+        TH_ANI_LOG_ERROR("Namespace not found: %s", descriptor);
         return nullptr;
     }
     return ns;
@@ -144,7 +144,7 @@ inline __attribute__((noinline)) ani_class ani_find_class(ani_env *env, char con
 {
     ani_class cls;
     if (ANI_OK != env->FindClass(descriptor, &cls)) {
-        std::cerr << "Class not found: " << descriptor << std::endl;
+        TH_ANI_LOG_ERROR("Class not found: %s", descriptor);
         return nullptr;
     }
     return cls;
@@ -154,7 +154,7 @@ inline __attribute__((noinline)) ani_enum ani_find_enum(ani_env *env, char const
 {
     ani_enum enm;
     if (ANI_OK != env->FindEnum(descriptor, &enm)) {
-        std::cerr << "Enum not found: " << descriptor << std::endl;
+        TH_ANI_LOG_ERROR("Enum not found: %s", descriptor);
         return nullptr;
     }
     return enm;
@@ -168,9 +168,7 @@ inline __attribute__((noinline)) ani_function ani_find_module_function(ani_env *
         return nullptr;
     }
     if (ANI_OK != env->Module_FindFunction(mod, name, signature, &fn)) {
-        std::cerr << "Function not found: " << name << " with signature: " << (signature ? signature : "<nullptr>")
-                  << std::endl;
-
+        TH_ANI_LOG_ERROR("Function not found: %s with signature: %s", name, (signature ? signature : "<nullptr>"));
         return nullptr;
     }
     return fn;
@@ -184,8 +182,7 @@ inline __attribute__((noinline)) ani_function ani_find_namespace_function(ani_en
         return nullptr;
     }
     if (ANI_OK != env->Namespace_FindFunction(ns, name, signature, &fn)) {
-        std::cerr << "Function not found: " << name << " with signature: " << (signature ? signature : "<nullptr>")
-                  << std::endl;
+        TH_ANI_LOG_ERROR("Function not found: %s with signature: %s", name, (signature ? signature : "<nullptr>"));
         return nullptr;
     }
     return fn;
@@ -199,8 +196,7 @@ inline __attribute__((noinline)) ani_method ani_find_class_method(ani_env *env, 
         return nullptr;
     }
     if (ANI_OK != env->Class_FindMethod(cls, name, signature, &mtd)) {
-        std::cerr << "Method not found: " << name << " with signature: " << (signature ? signature : "<nullptr>")
-                  << std::endl;
+        TH_ANI_LOG_ERROR("Method not found: %s with signature: %s", name, (signature ? signature : "<nullptr>"));
         return nullptr;
     }
     return mtd;
@@ -214,8 +210,7 @@ inline __attribute__((noinline)) ani_static_method ani_find_class_static_method(
         return nullptr;
     }
     if (ANI_OK != env->Class_FindStaticMethod(cls, name, signature, &mtd)) {
-        std::cerr << "Static method not found: " << name << " with signature: " << (signature ? signature : "<nullptr>")
-                  << std::endl;
+        TH_ANI_LOG_ERROR("Static method not found: %s with signature: %s", name, (signature ? signature : "<nullptr>"));
         return nullptr;
     }
     return mtd;
@@ -225,7 +220,7 @@ inline __attribute__((noinline)) ani_variable ani_find_module_variable(ani_env *
 {
     ani_variable var;
     if (ANI_OK != env->Module_FindVariable(mod, name, &var)) {
-        std::cerr << "Variable not found: " << name << std::endl;
+        TH_ANI_LOG_ERROR("Variable not found: %s", name);
         return nullptr;
     }
     return var;
@@ -239,7 +234,7 @@ inline __attribute__((noinline)) ani_variable ani_find_namespace_variable(ani_en
         return nullptr;
     }
     if (ANI_OK != env->Namespace_FindVariable(ns, name, &var)) {
-        std::cerr << "Variable not found: " << name << std::endl;
+        TH_ANI_LOG_ERROR("Variable not found: %s", name);
         return nullptr;
     }
     return var;
@@ -252,7 +247,7 @@ inline __attribute__((noinline)) ani_field ani_find_class_field(ani_env *env, an
         return nullptr;
     }
     if (ANI_OK != env->Class_FindField(cls, name, &fld)) {
-        std::cerr << "Field not found: " << name << std::endl;
+        TH_ANI_LOG_ERROR("Field not found: %s", name);
         return nullptr;
     }
     return fld;
@@ -266,7 +261,7 @@ inline __attribute__((noinline)) ani_static_field ani_find_class_static_field(an
         return nullptr;
     }
     if (ANI_OK != env->Class_FindStaticField(cls, name, &fld)) {
-        std::cerr << "Static field not found: " << name << std::endl;
+        TH_ANI_LOG_ERROR("Static field not found: %s", name);
         return nullptr;
     }
     return fld;
