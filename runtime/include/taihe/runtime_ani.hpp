@@ -24,20 +24,20 @@
 #error "ani.h not found. Please ensure the Ani SDK is correctly installed."
 #endif
 
-#if __has_include("hilog/log.h")
+#if __has_include("hilog/log.h") && defined(TH_ANI_USE_HILOG)
 #include "hilog/log.h"
 #define TH_ANI_LOG_DOMAIN 0x3200
 #define TH_ANI_LOG_TAG "Taihe"
 #define TH_ANI_LOG_DEBUG(fmt, ...) \
-    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_DEBUG, fmt, ##__VA_ARGS__)
+    (void)OH_LOG_Print(LOG_APP, LOG_DEBUG, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, fmt, ##__VA_ARGS__)
 #define TH_ANI_LOG_INFO(fmt, ...) \
-    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_INFO, fmt, ##__VA_ARGS__)
+    (void)OH_LOG_Print(LOG_APP, LOG_INFO, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, fmt, ##__VA_ARGS__)
 #define TH_ANI_LOG_WARN(fmt, ...) \
-    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_WARN, fmt, ##__VA_ARGS__)
+    (void)OH_LOG_Print(LOG_APP, LOG_WARN, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, fmt, ##__VA_ARGS__)
 #define TH_ANI_LOG_ERROR(fmt, ...) \
-    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_ERROR, fmt, ##__VA_ARGS__)
+    (void)OH_LOG_Print(LOG_APP, LOG_ERROR, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, fmt, ##__VA_ARGS__)
 #define TH_ANI_LOG_FATAL(fmt, ...) \
-    (void)OH_LOG_Print(LOG_APP, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, LOG_FATAL, fmt, ##__VA_ARGS__)
+    (void)OH_LOG_Print(LOG_APP, LOG_FATAL, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, fmt, ##__VA_ARGS__)
 #else
 #define TH_ANI_LOG_LEVEL_DEBUG 3
 #define TH_ANI_LOG_LEVEL_INFO 4
@@ -48,27 +48,27 @@
 #define TH_ANI_LOG_LEVEL TH_ANI_LOG_LEVEL_DEBUG
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_DEBUG
-#define TH_ANI_LOG_DEBUG(fmt, ...) fprintf(stderr, "[DEBUG] " fmt "\n", ##__VA_ARGS__)
+#define TH_ANI_LOG_DEBUG(fmt, ...) (void)fprintf(stderr, "[DEBUG] " fmt "\n", ##__VA_ARGS__)
 #else
 #define TH_ANI_LOG_DEBUG(fmt, ...)
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_INFO
-#define TH_ANI_LOG_INFO(fmt, ...) fprintf(stderr, "[INFO] " fmt "\n", ##__VA_ARGS__)
+#define TH_ANI_LOG_INFO(fmt, ...) (void)fprintf(stderr, "[INFO] " fmt "\n", ##__VA_ARGS__)
 #else
 #define TH_ANI_LOG_INFO(fmt, ...)
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_WARN
-#define TH_ANI_LOG_WARN(fmt, ...) fprintf(stderr, "[WARN] " fmt "\n", ##__VA_ARGS__)
+#define TH_ANI_LOG_WARN(fmt, ...) (void)fprintf(stderr, "[WARN] " fmt "\n", ##__VA_ARGS__)
 #else
 #define TH_ANI_LOG_WARN(fmt, ...)
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_ERROR
-#define TH_ANI_LOG_ERROR(fmt, ...) fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__)
+#define TH_ANI_LOG_ERROR(fmt, ...) (void)fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__)
 #else
 #define TH_ANI_LOG_ERROR(fmt, ...)
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_FATAL
-#define TH_ANI_LOG_FATAL(fmt, ...) fprintf(stderr, "[FATAL] " fmt "\n", ##__VA_ARGS__)
+#define TH_ANI_LOG_FATAL(fmt, ...) (void)fprintf(stderr, "[FATAL] " fmt "\n", ##__VA_ARGS__)
 #else
 #define TH_ANI_LOG_FATAL(fmt, ...)
 #endif
