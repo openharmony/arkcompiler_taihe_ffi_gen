@@ -100,7 +100,7 @@ export class UnifiedData {
     hasType(type: string): boolean {
         return this.inner.hasType(type);
     }
-    addRecord(a: UnifiedRecord) {
+    addRecord(a: UnifiedRecord): void {
         this.inner.addRecord(a.inner_u);
     }
     getRecords(): Array<UnifiedRecord> {
