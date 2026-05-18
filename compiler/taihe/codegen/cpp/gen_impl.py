@@ -338,7 +338,7 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
                 self.target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
-                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {result_ty_cpp_name}>();",
+                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {return_ty_cpp_name}>();",
                 )
             else:
                 self.target.writelns(
@@ -420,7 +420,7 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
                 self.target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
-                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {result_ty_cpp_name}>();",
+                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {return_ty_cpp_name}>();",
                 )
             else:
                 self.target.writelns(
@@ -552,7 +552,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
                 self.target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
-                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {result_ty_cpp_name}>();",
+                    f"return {self.make_holder}<{ret_cpp_impl_info.template_class}, {return_ty_cpp_name}>();",
                 )
             else:
                 self.target.writelns(
