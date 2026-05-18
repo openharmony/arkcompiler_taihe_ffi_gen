@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
-
-from taihe.codegen.ohipc.analyses import (
+from taihe.codegen.modobj.analyses import (
     IfaceOhIpcInfo,
     MethodOhIpcInfo,
     header_guard_for,
@@ -24,7 +22,7 @@ from taihe.codegen.ohipc.analyses import (
     package_name_to_file_stem,
     type_name_to_file_stem,
 )
-from taihe.codegen.ohipc.serialization import OhIpcSerializer
+from taihe.codegen.modobj.serialization import OhIpcSerializer
 from taihe.semantics.declarations import (
     EnumDecl,
     IfaceDecl,
@@ -136,9 +134,16 @@ class InterfaceGenerator:
         bundle_name: str,
         struct_decls: list[StructDecl],
         override_pkg: PackageDecl | None = None,
+        enum_decls: list[EnumDecl] | None = None,
     ):
         with self.om.open(f"{bundle_name}.h") as f:
-            self._write_struct_bundle_header(f, bundle_name, struct_decls, override_pkg)
+            self._write_struct_bundle_header(
+                f,
+                bundle_name,
+                struct_decls,
+                override_pkg,
+                enum_decls,
+            )
         with self.om.open(f"{bundle_name}.cpp") as f:
             self._write_struct_bundle_source(f, bundle_name, struct_decls, override_pkg)
 
@@ -324,26 +329,32 @@ class InterfaceGenerator:
     def _needs_field_scope(ty) -> bool:
         return isinstance(ty, VectorType | ArrayType | SetType | MapType)
 
+    def _enum_underlying_type(self, enum_decl: EnumDecl) -> str:
+        underlying_type = "int32_t"
+        if enum_decl.ty is None:
+            return underlying_type
+
+        from taihe.semantics.types import ScalarType
+
+        if isinstance(enum_decl.ty, ScalarType):
+            underlying_type = self.serializer.get_cpp_type(enum_decl.ty)
+        return underlying_type
+
+    def _write_enum_declaration(self, f, enum_decl: EnumDecl):
+        underlying_type = self._enum_underlying_type(enum_decl)
+        f.write(f"enum class {enum_decl.name} : {underlying_type} {{\n")
+        for item in enum_decl.items:
+            value_str = str(item.raw_value) if item.raw_value is not None else ""
+            if value_str:
+                f.write(f"    {item.name} = {value_str},\n")
+            else:
+                f.write(f"    {item.name},\n")
+        f.write("};\n\n")
+
     def _write_struct_header(self, f, struct_decl: StructDecl):
         guard = header_guard_for(struct_decl.name, struct_decl.parent_pkg)
         namespace = namespace_scope_for_cpp(struct_decl.parent_pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+        f.write(f"""#ifndef {guard}
 #define {guard}
 
 #include <IPCKit/ipc_kit.h>
@@ -378,23 +389,7 @@ class InterfaceGenerator:
 
     def _write_struct_source(self, f, struct_decl: StructDecl):
         namespace = namespace_scope_for_cpp(struct_decl.parent_pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#include "{self._struct_file_stem(struct_decl)}.h"
+        f.write(f"""#include "{self._struct_file_stem(struct_decl)}.h"
 """)
         for header in self._struct_proxy_headers(struct_decl):
             f.write(f'#include "{header}"\n')
@@ -443,28 +438,13 @@ class InterfaceGenerator:
         bundle_name: str,
         struct_decls: list[StructDecl],
         override_pkg: PackageDecl | None = None,
+        enum_decls: list[EnumDecl] | None = None,
     ):
         # Use override package if provided (from main service interface), otherwise use struct's own package
         pkg = override_pkg if override_pkg is not None else struct_decls[0].parent_pkg
         guard = header_guard_for(bundle_name, pkg)
         namespace = namespace_scope_for_cpp(pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+        f.write(f"""#ifndef {guard}
 #define {guard}
 
 #include <IPCKit/ipc_kit.h>
@@ -486,6 +466,8 @@ class InterfaceGenerator:
                 f.write(f'#include "{header}"\n')
         f.write("\n")
         self._write_namespace_open(f, namespace)
+        for enum_decl in enum_decls or []:
+            self._write_enum_declaration(f, enum_decl)
         for struct_decl in struct_decls:
             f.write(f"struct {struct_decl.name} {{\n")
             for field in struct_decl.fields:
@@ -512,23 +494,7 @@ class InterfaceGenerator:
         # Use override package if provided (from main service interface), otherwise use struct's own package
         pkg = override_pkg if override_pkg is not None else struct_decls[0].parent_pkg
         namespace = namespace_scope_for_cpp(pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#include "{bundle_name}.h"
+        f.write(f"""#include "{bundle_name}.h"
 """)
         proxy_headers: set[str] = set()
         for struct_decl in struct_decls:
@@ -578,45 +544,14 @@ class InterfaceGenerator:
     def _write_enum_header(self, f, enum_decl: EnumDecl):
         guard = header_guard_for(enum_decl.name, enum_decl.parent_pkg)
         namespace = namespace_scope_for_cpp(enum_decl.parent_pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+        f.write(f"""#ifndef {guard}
 #define {guard}
 
 #include <cstdint>
 
 """)
         self._write_namespace_open(f, namespace)
-        # Get the underlying type (default to int32_t if not specified)
-        underlying_type = "int32_t"
-        if enum_decl.ty is not None:
-            from taihe.semantics.types import ScalarType
-
-            if isinstance(enum_decl.ty, ScalarType):
-                underlying_type = self.serializer.get_cpp_type(enum_decl.ty)
-
-        f.write(f"enum class {enum_decl.name} : {underlying_type} {{\n")
-        for item in enum_decl.items:
-            value_str = str(item.raw_value) if item.raw_value is not None else ""
-            if value_str:
-                f.write(f"    {item.name} = {value_str},\n")
-            else:
-                f.write(f"    {item.name},\n")
-        f.write("};\n\n")
+        self._write_enum_declaration(f, enum_decl)
         self._write_namespace_close(f, namespace)
         f.write(f"\n#endif // {guard}\n")
 
@@ -631,23 +566,7 @@ class InterfaceGenerator:
         pkg = override_pkg if override_pkg is not None else enum_decls[0].parent_pkg
         guard = header_guard_for(bundle_name, pkg)
         namespace = namespace_scope_for_cpp(pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+        f.write(f"""#ifndef {guard}
 #define {guard}
 
 #include <cstdint>
@@ -655,45 +574,14 @@ class InterfaceGenerator:
 """)
         self._write_namespace_open(f, namespace)
         for enum_decl in enum_decls:
-            # Get the underlying type (default to int32_t if not specified)
-            underlying_type = "int32_t"
-            if enum_decl.ty is not None:
-                from taihe.semantics.types import ScalarType
-
-                if isinstance(enum_decl.ty, ScalarType):
-                    underlying_type = self.serializer.get_cpp_type(enum_decl.ty)
-
-            f.write(f"enum class {enum_decl.name} : {underlying_type} {{\n")
-            for item in enum_decl.items:
-                value_str = str(item.raw_value) if item.raw_value is not None else ""
-                if value_str:
-                    f.write(f"    {item.name} = {value_str},\n")
-                else:
-                    f.write(f"    {item.name},\n")
-            f.write("};\n\n")
+            self._write_enum_declaration(f, enum_decl)
         self._write_namespace_close(f, namespace)
         f.write(f"\n#endif // {guard}\n")
 
     def _write_header(self, f, iface: IfaceDecl, info: IfaceOhIpcInfo):
         guard = header_guard_for(iface.name, iface.parent_pkg)
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
-        current_year = datetime.now().year
-        f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+        f.write(f"""#ifndef {guard}
 #define {guard}
 
 #include <IPCKit/ipc_kit.h>
@@ -719,6 +607,15 @@ class InterfaceGenerator:
         f.write(
             f'    static const char* GetDescriptor() {{ return "{descriptor}"; }}\n\n'
         )
+        self._write_method_declaration(
+            f,
+            "    ",
+            "virtual ErrCode",
+            "WriteRemoteObject",
+            ["OHIPCParcel* parcel"],
+            " const = 0;",
+        )
+        f.write("\n")
         f.write("    enum class IpcCode : uint32_t {\n")
         for method in iface.methods:
             m_info = MethodOhIpcInfo.get(self.am, method)

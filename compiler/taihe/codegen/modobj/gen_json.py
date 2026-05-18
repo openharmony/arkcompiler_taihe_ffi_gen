@@ -16,13 +16,13 @@
 import json
 from pathlib import Path
 
-from taihe.codegen.ohipc.analyses import (
+from taihe.codegen.modobj.analyses import (
     IfaceOhIpcInfo,
     MethodOhIpcInfo,
     fixed_array_size,
     interface_descriptor_for_cpp,
 )
-from taihe.codegen.ohipc.typelib_schema import (
+from taihe.codegen.modobj.typelib_schema import (
     TypeInfo,
     TypeLibEnum,
     TypeLibEnumValue,
@@ -222,7 +222,7 @@ class JsonGenerator:
         return name
 
     def _pick_primary_iface(self, pg: PackageGroup) -> str:
-        from taihe.codegen.ohipc.attribute import MainServiceAttribute
+        from taihe.codegen.modobj.attribute import MainServiceAttribute
 
         first_iface_name = ""
 
@@ -235,7 +235,7 @@ class JsonGenerator:
         return first_iface_name
 
     def _main_iface(self, pg: PackageGroup) -> IfaceDecl | None:
-        from taihe.codegen.ohipc.attribute import MainServiceAttribute
+        from taihe.codegen.modobj.attribute import MainServiceAttribute
 
         for iface in self._sorted_iface_decls(pg):
             if MainServiceAttribute.get(iface) is not None:
@@ -299,7 +299,7 @@ class JsonGenerator:
         )
         for iface in iface_decls:
             iface_info = IfaceOhIpcInfo.get(self.am, iface)
-            from taihe.codegen.ohipc.attribute import (
+            from taihe.codegen.modobj.attribute import (
                 CallbackAttribute,
                 MainServiceAttribute,
             )

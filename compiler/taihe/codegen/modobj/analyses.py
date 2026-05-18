@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import re
-from collections.abc import Hashable
 
 from typing_extensions import override
 
@@ -29,6 +28,7 @@ from taihe.semantics.types import (
     SetType,
     StringType,
     StructType,
+    Type,
     UnitType,
     VectorType,
     VoidType,
@@ -60,7 +60,7 @@ def package_name_to_file_stem(name: str) -> str:
 
 def resolved_codegen_package_name(pkg: PackageDecl) -> str | None:
     # Try to get @!namespace attribute (standard Taihe IDL format)
-    from taihe.codegen.ohipc.attribute import NamespaceAttr
+    from taihe.codegen.modobj.attribute import NamespaceAttr
 
     ns_attr = NamespaceAttr.get(pkg)
     if ns_attr is not None:
@@ -113,7 +113,7 @@ def qualified_decl_name_for_cpp(decl) -> str:
 
 
 def fixed_array_size(t: ArrayType) -> int:
-    from taihe.codegen.ohipc.attribute import SizeAttribute
+    from taihe.codegen.modobj.attribute import SizeAttribute
 
     if attr := SizeAttribute.get(t.ref):
         return attr.size
@@ -122,7 +122,7 @@ def fixed_array_size(t: ArrayType) -> int:
     )
 
 
-class TypeCppInfo(AbstractAnalysis[Hashable]):
+class TypeCppInfo(AbstractAnalysis[Type]):
     def __init__(self, as_owner: str, as_param: str | None = None) -> None:
         self.as_owner = as_owner
         self.as_param = as_owner if as_param is None else as_param
@@ -180,7 +180,7 @@ class StringTypeCppInfo(TypeCppInfo):
 class IfaceTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType) -> None:
         owner = f"{qualified_decl_name_for_cpp(t.decl)}*"
-        super().__init__(owner, f"const {qualified_decl_name_for_cpp(t.decl)}&")
+        super().__init__(owner, f"{qualified_decl_name_for_cpp(t.decl)}&")
 
 
 class ArrayTypeCppInfo(TypeCppInfo):
@@ -216,7 +216,7 @@ class SetTypeCppInfo(TypeCppInfo):
 class StructTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StructType) -> None:
         owner = qualified_decl_name_for_cpp(t.decl)
-        super().__init__(owner, f"const {owner}&")
+        super().__init__(owner, f"{owner}&")
 
 
 class EnumTypeCppInfo(TypeCppInfo):
@@ -236,7 +236,7 @@ class MethodOhIpcInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.is_oneway = False
 
         # Check explicit backend attributes attached on OHIDL declarations.
-        from taihe.codegen.ohipc.attribute import IpcCodeAttribute, OnewayAttribute
+        from taihe.codegen.modobj.attribute import IpcCodeAttribute, OnewayAttribute
 
         if attr := IpcCodeAttribute.get(m):
             self.ipc_code = attr.code
@@ -269,7 +269,7 @@ class IfaceOhIpcInfo(AbstractAnalysis[IfaceDecl]):
         self.stub_name = f"{base_name}Stub"
 
         self.version = "1"
-        from taihe.codegen.ohipc.attribute import MainServiceAttribute
+        from taihe.codegen.modobj.attribute import MainServiceAttribute
 
         self.is_main_service = False
         if attr := MainServiceAttribute.get(d):
@@ -292,7 +292,7 @@ class IfaceOhIpcInfo(AbstractAnalysis[IfaceDecl]):
         current_code = 1001
         for method in d.methods:
             info = MethodOhIpcInfo.get(am, method)
-            from taihe.codegen.ohipc.attribute import IpcCodeAttribute
+            from taihe.codegen.modobj.attribute import IpcCodeAttribute
 
             if IpcCodeAttribute.get(method) is None:
                 info.ipc_code = current_code
