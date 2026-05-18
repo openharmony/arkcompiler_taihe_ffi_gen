@@ -224,9 +224,9 @@ class BackendRegistry:
             pass
 
         try:
-            from taihe.codegen.ohipc import OhIpcBackendConfig
+            from taihe.codegen.modobj import ModObjIpcBackendConfig
 
-            backends.append(OhIpcBackendConfig)
+            backends.append(ModObjIpcBackendConfig)
         except ImportError:
             pass
 

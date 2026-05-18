@@ -15,17 +15,12 @@
 
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
-from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from taihe.codegen.ohipc.analyses import fixed_array_size, package_name_to_file_stem
-from taihe.codegen.ohipc.serialization import OhIpcSerializer
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.driver.options import AbstractConfigOption
-from taihe.semantics.types import ScalarType
 from taihe.utils.exceptions import AdhocError, AdhocNote
-from taihe.utils.outputs import BasicOutputManager
 from taihe.utils.sources import SourceFile
 
 if TYPE_CHECKING:
@@ -36,7 +31,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class OhIpcCommonFileOption(AbstractConfigOption):
-    NAME = "ohipc:ipc-common"
+    NAME = "modobj:ipc-common"
 
     paths: list[Path] = dataclass_field(default_factory=list)
 
@@ -49,8 +44,8 @@ class OhIpcCommonFileOption(AbstractConfigOption):
 
 
 @dataclass
-class OhIpcBackendConfig(BackendConfig):
-    NAME = "ohipc-gen"
+class ModObjIpcBackendConfig(BackendConfig):
+    NAME = "modobj-ipc"
 
     ipc_common_paths: list[Path] = dataclass_field(default_factory=list)
 
@@ -66,13 +61,13 @@ class OhIpcBackendConfig(BackendConfig):
         )
 
     def build(self, instance: "CompilerInstance"):
-        from taihe.codegen.ohipc.gen_interface import InterfaceGenerator
-        from taihe.codegen.ohipc.gen_json import JsonGenerator
-        from taihe.codegen.ohipc.gen_proxy import ProxyGenerator
-        from taihe.codegen.ohipc.gen_stub import StubGenerator
+        from taihe.codegen.modobj.gen_interface import InterfaceGenerator
+        from taihe.codegen.modobj.gen_json import JsonGenerator
+        from taihe.codegen.modobj.gen_proxy import ProxyGenerator
+        from taihe.codegen.modobj.gen_stub import StubGenerator
 
         class OhIpcBackendImpl(Backend):
-            def __init__(self, ci: "CompilerInstance", config: OhIpcBackendConfig):
+            def __init__(self, ci: "CompilerInstance", config: ModObjIpcBackendConfig):
                 self._ci = ci
                 self._config = config
                 self._ipc_common_pkg_names = {
@@ -98,11 +93,13 @@ class OhIpcBackendConfig(BackendConfig):
 
             @staticmethod
             def _ipc_common_bundle_name(pkg_name: str) -> str:
+                from taihe.codegen.modobj.analyses import package_name_to_file_stem
+
                 return package_name_to_file_stem(pkg_name)
 
             @staticmethod
             def _main_service_iface_pkg(pg):
-                from taihe.codegen.ohipc.attribute import MainServiceAttribute
+                from taihe.codegen.modobj.attribute import MainServiceAttribute
 
                 for pkg in pg.iterate():
                     for iface in pkg.interfaces:
@@ -126,7 +123,7 @@ class OhIpcBackendConfig(BackendConfig):
 
                             err = AdhocError(
                                 (
-                                    "OHIPC generation does not allow interface/enum/struct declarations "
+                                    "MODOBJIPC generation does not allow interface/enum/struct declarations "
                                     f"with the same name: {decl.description!r}."
                                 ),
                                 loc=decl.loc,
@@ -152,6 +149,8 @@ class OhIpcBackendConfig(BackendConfig):
                 )
 
                 def ensure_fixed_array(ty) -> None:
+                    from taihe.codegen.modobj.analyses import fixed_array_size
+
                     if ty is None:
                         return
                     if isinstance(ty, ArrayType):
@@ -185,12 +184,13 @@ class OhIpcBackendConfig(BackendConfig):
                             ensure_fixed_array(struct_field.ty)
 
             def setup(self):
-                from taihe.codegen.ohipc.attribute import all_attr_types
+                from taihe.codegen.modobj.attribute import all_attr_types
 
                 self._ci.attribute_registry.register(*all_attr_types)
 
             def validate(self):
-                from taihe.codegen.ohipc.analyses import MethodOhIpcInfo
+                from taihe.codegen.modobj.analyses import MethodOhIpcInfo
+                from taihe.codegen.modobj.attribute import MainServiceAttribute
                 from taihe.semantics.declarations import GenericTypeRefDecl
                 from taihe.semantics.types import VoidType
 
@@ -203,6 +203,53 @@ class OhIpcBackendConfig(BackendConfig):
 
                 pg = self._ci.package_group
 
+                # Validate that there is exactly one main service interface in non-ipc-common packages
+                main_service_ifaces = []
+                ipc_common_main_services = []
+
+                for pkg in pg.iterate():
+                    for iface in pkg.interfaces:
+                        if MainServiceAttribute.get(iface) is not None:
+                            if self._is_ipc_common_pkg(pkg):
+                                # ipc-common packages are not allowed to have main_service
+                                ipc_common_main_services.append(iface)
+                            else:
+                                main_service_ifaces.append(iface)
+
+                # Check if any ipc-common package has main_service
+                if ipc_common_main_services:
+                    err = AdhocError(
+                        f"MODOBJIPC backend does not allow @main_service attribute in ipc-common packages, but found {len(ipc_common_main_services)}."
+                    )
+                    err.notes = lambda: [
+                        AdhocNote(
+                            f"main service interface '{iface.name}' in ipc-common package '{iface.parent_pkg.name}' declared here",
+                            loc=iface.loc,
+                        )
+                        for iface in ipc_common_main_services
+                    ]
+                    self._ci.diagnostics_manager.emit(err)
+                    return
+
+                # Validate main interface files have exactly one main_service
+                if len(main_service_ifaces) == 0:
+                    raise ValueError(
+                        "MODOBJIPC backend requires exactly one interface with @main_service attribute in main interface files (non-ipc-common), but found none."
+                    )
+                elif len(main_service_ifaces) > 1:
+                    err = AdhocError(
+                        f"MODOBJIPC backend requires exactly one interface with @main_service attribute in main interface files (non-ipc-common), but found {len(main_service_ifaces)}."
+                    )
+                    err.notes = lambda: [
+                        AdhocNote(
+                            f"main service interface '{iface.name}' declared here",
+                            loc=iface.loc,
+                        )
+                        for iface in main_service_ifaces
+                    ]
+                    self._ci.diagnostics_manager.emit(err)
+                    return
+
                 for pkg in pg.iterate():
                     for iface in pkg.interfaces:
                         for method in iface.methods:
@@ -213,26 +260,26 @@ class OhIpcBackendConfig(BackendConfig):
                                 method.return_ty, VoidType
                             ):
                                 raise ValueError(
-                                    "OHIPC backend requires oneway methods to return void. "
+                                    "MODOBJIPC backend requires oneway methods to return void. "
                                     f"Method '{method.name}' in interface '{iface.name}' "
                                     f"returns '{method.return_ty.signature}'."
                                 )
                             if has_list_type_ref(method.return_ty_ref):
                                 raise ValueError(
-                                    f"List type is not supported in OHIPC backend. "
+                                    f"List type is not supported in MODOBJIPC backend. "
                                     f"Method '{method.name}' in interface '{iface.name}' has List return type."
                                 )
                             for param in method.params:
                                 if has_list_type_ref(param.ty_ref):
                                     raise ValueError(
-                                        f"List type is not supported in OHIPC backend. "
+                                        f"List type is not supported in MODOBJIPC backend. "
                                         f"Parameter '{param.name}' in method '{method.name}' of interface '{iface.name}' has List type."
                                     )
                     for struct in pkg.structs:
                         for struct_field in struct.fields:
                             if has_list_type_ref(struct_field.ty_ref):
                                 raise ValueError(
-                                    f"List type is not supported in OHIPC backend. "
+                                    f"List type is not supported in MODOBJIPC backend. "
                                     f"Field '{struct_field.name}' in struct '{struct.name}' has List type."
                                 )
 
@@ -240,9 +287,6 @@ class OhIpcBackendConfig(BackendConfig):
                 self._validate_fixed_array_types(pg)
 
             def generate(self):
-                import os
-                import tempfile
-
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
@@ -274,128 +318,27 @@ class OhIpcBackendConfig(BackendConfig):
                         if common_structs:
                             if main_iface_pkg is not None:
                                 iface_gen.generate_struct_bundle(
-                                    bundle_name, common_structs, main_iface_pkg
+                                    bundle_name,
+                                    common_structs,
+                                    main_iface_pkg,
+                                    common_enums,
                                 )
                             else:
                                 iface_gen.generate_struct_bundle(
-                                    bundle_name, common_structs
+                                    bundle_name,
+                                    common_structs,
+                                    enum_decls=common_enums,
                                 )
 
-                        if common_enums:
-                            if not common_structs:
-                                if main_iface_pkg is not None:
-                                    iface_gen.generate_enum_bundle(
-                                        bundle_name, common_enums, main_iface_pkg
-                                    )
-                                else:
-                                    iface_gen.generate_enum_bundle(
-                                        bundle_name, common_enums
-                                    )
-                                continue
-
-                            if not isinstance(om, BasicOutputManager):
-                                raise ValueError(
-                                    "OHIPC backend requires BasicOutputManager for incremental header updates."
+                        elif common_enums:
+                            if main_iface_pkg is not None:
+                                iface_gen.generate_enum_bundle(
+                                    bundle_name, common_enums, main_iface_pkg
                                 )
-                            header_file = om.dst_dir.joinpath(f"{bundle_name}.h")
-                            if header_file.exists():
-                                temp_file_path: Path | None = None
-                                try:
-                                    content = header_file.read_text(encoding="utf-8")
-
-                                    # Find the position before the innermost namespace closes
-                                    lines = content.split("\n")
-
-                                    # Find all namespace close positions
-                                    namespace_close_positions = []
-                                    for i, line in enumerate(lines):
-                                        if line.strip().startswith("} // namespace"):
-                                            namespace_close_positions.append(i)
-
-                                    # Determine insert position
-                                    if namespace_close_positions:
-                                        # Insert before the FIRST namespace close (innermost)
-                                        insert_pos = namespace_close_positions[0]
-                                    else:
-                                        # No namespace, insert before #endif
-                                        for i, line in enumerate(lines):
-                                            if line.strip().startswith("#endif"):
-                                                insert_pos = i
-                                                break
-                                        else:
-                                            # No #endif found, append to end
-                                            insert_pos = len(lines)
-
-                                    if insert_pos != -1:
-                                        # Generate enum content (without namespace wrappers)
-                                        enum_buffer = StringIO()
-                                        serializer = OhIpcSerializer(
-                                            self._ci.analysis_manager
-                                        )
-
-                                        for enum_decl in common_enums:
-                                            underlying_type = "int32_t"
-                                            if isinstance(enum_decl.ty, ScalarType):
-                                                underlying_type = (
-                                                    serializer.get_cpp_type(
-                                                        enum_decl.ty
-                                                    )
-                                                )
-
-                                            enum_buffer.write(
-                                                f"enum class {enum_decl.name} : {underlying_type} {{\n"
-                                            )
-                                            for item in enum_decl.items:
-                                                value_str = (
-                                                    str(item.raw_value)
-                                                    if item.raw_value is not None
-                                                    else ""
-                                                )
-                                                if value_str:
-                                                    enum_buffer.write(
-                                                        f"    {item.name} = {value_str},\n"
-                                                    )
-                                                else:
-                                                    enum_buffer.write(
-                                                        f"    {item.name},\n"
-                                                    )
-                                            enum_buffer.write("};\n\n")
-
-                                        # Insert enum content before the first namespace close
-                                        enum_content = enum_buffer.getvalue()
-                                        new_lines = (
-                                            lines[:insert_pos]
-                                            + enum_content.split("\n")
-                                            + [""]
-                                            + lines[insert_pos:]
-                                        )
-                                        new_content = "\n".join(new_lines)
-
-                                        with tempfile.NamedTemporaryFile(
-                                            mode="w",
-                                            encoding="utf-8",
-                                            dir=header_file.parent,
-                                            delete=False,
-                                        ) as temp_file:
-                                            temp_file.write(new_content)
-                                            temp_file.flush()
-                                            os.fsync(temp_file.fileno())
-                                            temp_file_path = Path(temp_file.name)
-
-                                        temp_file_path.replace(header_file)
-                                except OSError as e:
-                                    if (
-                                        temp_file_path is not None
-                                        and temp_file_path.exists()
-                                    ):
-                                        temp_file_path.unlink(missing_ok=True)
-                                    self._ci.diagnostics_manager.emit(
-                                        AdhocError(
-                                            f"Failed to update generated header file: {header_file}. Error: {e}",
-                                            loc=None,
-                                        )
-                                    )
-                                    raise
+                            else:
+                                iface_gen.generate_enum_bundle(
+                                    bundle_name, common_enums
+                                )
                         continue
 
                     # Generate headers for regular structs in the package
