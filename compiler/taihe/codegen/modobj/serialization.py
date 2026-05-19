@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from taihe.codegen.ohipc.analyses import (
+from taihe.codegen.modobj.analyses import (
     TypeCppInfo,
     fixed_array_size,
     namespace_scope_for_cpp,
@@ -145,72 +145,28 @@ class OhIpcSerializer:
                 )
             )
         elif isinstance(ty, IfaceType):
-            if self.is_proxy:
-                proxy_type = self._qualified_proxy_name(ty.decl)
-                if not iface_by_ref:
-                    lines.extend(
-                        self._guard_return(
-                            f"{var_name} == nullptr",
-                            check_err,
-                            indent,
-                        )
-                    )
-                iface_obj = (
-                    f"static_cast<const {proxy_type}&>({var_name})"
-                    if iface_by_ref
-                    else f"*{var_name}"
-                )
-                lines.append(
-                    f"{indent}auto* {var_name}Proxy = {iface_obj}.GetRemoteProxy();"
-                )
+            if not iface_by_ref:
                 lines.extend(
                     self._guard_return(
-                        f"{var_name}Proxy == nullptr",
+                        f"{var_name} == nullptr",
                         check_err,
                         indent,
                     )
                 )
-                lines.extend(
-                    self._guard_return(
-                        f"OH_IPCParcel_WriteRemoteProxy({parcel_name}, {var_name}Proxy) != {success}",
-                        write_err,
-                        indent,
-                    )
+            write_expr = (
+                f"{var_name}.WriteRemoteObject({parcel_name})"
+                if iface_by_ref
+                else f"{var_name}->WriteRemoteObject({parcel_name})"
+            )
+            write_status = f"{var_name}WriteStatus"
+            lines.append(f"{indent}ErrCode {write_status} = {write_expr};")
+            lines.extend(
+                self._guard_return(
+                    f"{write_status} != {success}",
+                    write_status,
+                    indent,
                 )
-            else:
-                stub_type = self._qualified_stub_name(ty.decl)
-                if not iface_by_ref:
-                    lines.extend(
-                        self._guard_return(
-                            f"{var_name} == nullptr",
-                            check_err,
-                            indent,
-                        )
-                    )
-                if iface_by_ref:
-                    iface_obj = f"static_cast<const {stub_type}&>({var_name})"
-                    lines.append(
-                        f"{indent}auto* {var_name}Stub = {iface_obj}.GetRemoteStub();"
-                    )
-                else:
-                    lines.append(
-                        f"{indent}auto* {var_name}Stub = "
-                        f"static_cast<{stub_type}*>({var_name})->GetRemoteStub();"
-                    )
-                lines.extend(
-                    self._guard_return(
-                        f"{var_name}Stub == nullptr",
-                        check_err,
-                        indent,
-                    )
-                )
-                lines.extend(
-                    self._guard_return(
-                        f"OH_IPCParcel_WriteRemoteStub({parcel_name}, {var_name}Stub) != {success}",
-                        write_err,
-                        indent,
-                    )
-                )
+            )
         elif isinstance(ty, EnumType):
             lines.extend(
                 self._guard_return(
