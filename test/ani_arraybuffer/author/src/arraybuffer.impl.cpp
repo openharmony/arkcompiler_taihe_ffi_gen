@@ -263,6 +263,14 @@ int8_t SumArrayI8(array_view<int8_t> nums)
 
     return result;
 }
+
+::taihe::expected<void, ::taihe::error> ModifyArrayBuffer(::taihe::array_view<uint8_t> nums)
+{
+    for (size_t i = 0; i < nums.size(); i++) {
+        nums[i] = ~nums[i];
+    }
+    return {};
+}
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
@@ -292,4 +300,5 @@ TH_EXPORT_CPP_API_DoubleBufferToInt16Array(DoubleBufferToInt16Array);
 TH_EXPORT_CPP_API_DoubleBufferToInt32Array(DoubleBufferToInt32Array);
 TH_EXPORT_CPP_API_DoubleBufferToUint16Array(DoubleBufferToUint16Array);
 TH_EXPORT_CPP_API_DoubleBufferToUint32Array(DoubleBufferToUint32Array);
+TH_EXPORT_CPP_API_ModifyArrayBuffer(ModifyArrayBuffer);
 // NOLINTEND
