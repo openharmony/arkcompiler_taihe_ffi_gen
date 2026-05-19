@@ -128,8 +128,16 @@ ani_vm *get_vm();
 
 inline ani_env *get_env()
 {
+    ani_vm *vm = get_vm();
+    if (vm == nullptr) {
+        TH_ANI_LOG_ERROR("ANI VM is not set");
+        return nullptr;
+    }
     ani_env *env = nullptr;
-    get_vm()->GetEnv(ANI_VERSION_1, &env);
+    ani_status status = vm->GetEnv(ANI_VERSION_1, &env);
+    if (status != ANI_OK) {
+        TH_ANI_LOG_ERROR("Failed to get ANI environment, status: %d", status);
+    }
     return env;
 }
 
@@ -140,16 +148,32 @@ class env_guard {
 public:
     env_guard()
     {
-        is_temporary = get_vm()->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
+        ani_vm *vm = get_vm();
+        if (vm == nullptr) {
+            TH_ANI_LOG_ERROR("ANI VM is not set");
+            return;
+        }
+        is_temporary = vm->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
         if (is_temporary) {
-            get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
+            ani_status status = vm->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
+            if (status != ANI_OK) {
+                TH_ANI_LOG_ERROR("Failed to attach current thread to ANI VM, status: %d", status);
+            }
         }
     }
 
     ~env_guard()
     {
+        ani_vm *vm = get_vm();
+        if (vm == nullptr) {
+            TH_ANI_LOG_ERROR("ANI VM is not set");
+            return;
+        }
         if (is_temporary) {
-            get_vm()->DetachCurrentThread();
+            ani_status status = vm->DetachCurrentThread();
+            if (status != ANI_OK) {
+                TH_ANI_LOG_ERROR("Failed to detach current thread from ANI VM, status: %d", status);
+            }
         }
     }
 
