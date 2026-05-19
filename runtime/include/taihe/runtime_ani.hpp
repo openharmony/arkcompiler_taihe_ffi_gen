@@ -25,6 +25,9 @@
 #endif
 
 #if __has_include("hilog/log.h") && defined(TH_ANI_USE_HILOG)
+#ifdef HIVIEWDFX_HILOG_C_H  // SDK scenario
+#define OH_LOG_Print HiLogPrint
+#endif
 #include "hilog/log.h"
 #define TH_ANI_LOG_DOMAIN 0x3200
 #define TH_ANI_LOG_TAG "Taihe"
@@ -95,11 +98,11 @@
 #ifndef TH_ANI_ENABLE_PERF_TRACE
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id)
 #define TH_ANI_PERF_TRACE_END()
-#elif __has_include(<hitrace/trace.h>)
+#elif __has_include(<hitrace/trace.h>)  // Third-party scenario
 #include <hitrace/trace.h>
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) OH_HiTrace_StartTraceEx(HITRACE_LEVEL_DEBUG, perf_id, "")
 #define TH_ANI_PERF_TRACE_END() OH_HiTrace_FinishTraceEx(HITRACE_LEVEL_DEBUG)
-#elif __has_include("hitrace_meter.h")
+#elif __has_include("hitrace_meter.h")  // SDK scenario
 #include "hitrace_meter.h"
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) StartTraceEx(HITRACE_LEVEL_DEBUG, HITRACE_TAG_OHOS, perf_id, "")
 #define TH_ANI_PERF_TRACE_END() FinishTraceEx(HITRACE_LEVEL_DEBUG, HITRACE_TAG_OHOS)
