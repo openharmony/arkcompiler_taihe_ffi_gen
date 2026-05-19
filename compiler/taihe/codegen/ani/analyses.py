@@ -2753,18 +2753,16 @@ class CallbackTypeAniInfo(TypeAniInfo):
             args_cpp = []
             for param, arg_ani in zip(self.t.ref.params, args_ani, strict=False):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                param_ty_cpp_name = param_ty_cpp_info.as_owner
                 param_from_ani = f"param_{param.name}_from_ani"
                 arg_cpp = f"cpp_arg_{param.name}"
                 param_ty_ani_info.gen_from_ani_ref(target, param_from_ani)
                 param_perf_id = f"{cb_ani_info.perf_id}::param::{param.name}"
                 target.writelns(
                     f"TH_ANI_PERF_TRACE_BEGIN({render_c_string(param_perf_id)});",
-                    f"{param_ty_cpp_name} {arg_cpp} = {param_from_ani}(env, {arg_ani});",
+                    f"auto&& {arg_cpp} = {param_from_ani}(env, {arg_ani});",
                     f"TH_ANI_PERF_TRACE_END();",
                 )
-                args_cpp.append(f"std::move({arg_cpp})")
+                args_cpp.append(f"std::forward<decltype({arg_cpp})>({arg_cpp})")
             args_cpp_str = ", ".join(args_cpp)
             # invoke native function
             invoke_perf_id = f"{cb_ani_info.perf_id}::call"
