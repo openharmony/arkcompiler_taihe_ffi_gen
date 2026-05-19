@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
-
-from taihe.codegen.ohipc.analyses import (
+from taihe.codegen.modobj.analyses import (
     IfaceOhIpcInfo,
     MethodOhIpcInfo,
     header_guard_for,
@@ -23,12 +21,13 @@ from taihe.codegen.ohipc.analyses import (
     strip_leading_interface_i,
     type_name_to_file_stem,
 )
-from taihe.codegen.ohipc.serialization import OhIpcSerializer
+from taihe.codegen.modobj.serialization import OhIpcSerializer
 from taihe.semantics.declarations import IfaceDecl
 from taihe.semantics.types import (
     ArrayType,
     IfaceType,
     MapType,
+    ScalarType,
     SetType,
     StructType,
     VectorType,
@@ -95,8 +94,24 @@ class StubGenerator:
 
     def generate(self, iface: IfaceDecl):
         info = IfaceOhIpcInfo.get(self.am, iface)
-        self._generate_header(iface, info)
-        self._generate_source(iface, info)
+        # Determine interface type
+        from taihe.codegen.modobj.attribute import (
+            CallbackAttribute,
+            MainServiceAttribute,
+        )
+
+        is_main = MainServiceAttribute.get(iface) is not None
+        is_callback = CallbackAttribute.get(iface) is not None
+
+        if is_main:
+            interface_type = 1  # mainService
+        elif is_callback:
+            interface_type = 2  # callback
+        else:
+            interface_type = 0  # normal
+
+        self._generate_header(iface, info, interface_type)
+        self._generate_source(iface, info, interface_type)
 
     @staticmethod
     def _param_mode(param) -> str:
@@ -156,9 +171,11 @@ class StubGenerator:
         return candidate
 
     @staticmethod
-    def _write_cpp_signature(f, ret_type: str, scope_name: str, params: list[str]):
+    def _write_cpp_signature(
+        f, ret_type: str, scope_name: str, params: list[str], suffix: str = ""
+    ):
         prefix = f"{ret_type} {scope_name}("
-        one_line = prefix + ", ".join(params) + ")"
+        one_line = prefix + ", ".join(params) + ")" + suffix
         if len(one_line) <= StubGenerator.MAX_LINE_LENGTH:
             f.write(one_line + "\n")
             return
@@ -167,7 +184,7 @@ class StubGenerator:
         indent = "    "
         current = indent
         for idx, param in enumerate(params):
-            frag = param + (")" if idx == len(params) - 1 else ",")
+            frag = param + (")" + suffix if idx == len(params) - 1 else ",")
             separator = "" if current == indent else " "
             candidate = current + separator + frag
             if len(candidate) <= StubGenerator.MAX_LINE_LENGTH:
@@ -266,76 +283,47 @@ class StubGenerator:
         for method in iface.methods:
             for param in method.params:
                 self._collect_proxy_headers(param.ty, headers)
-            self._collect_proxy_headers(method.return_ty, headers)
         headers.discard(f"{self._stub_file_stem(info)}.h")
         return sorted(headers)
-
-    def _collect_stub_headers(self, ty, headers: set[str]):
-        if isinstance(ty, IfaceType):
-            headers.add(f"{type_name_to_file_stem(ty.decl.name)}_stub.h")
-            return
-        if isinstance(ty, VectorType):
-            self._collect_stub_headers(ty.val_ty, headers)
-            return
-        if isinstance(ty, ArrayType):
-            self._collect_stub_headers(ty.item_ty, headers)
-            return
-        if isinstance(ty, MapType):
-            self._collect_stub_headers(ty.key_ty, headers)
-            self._collect_stub_headers(ty.val_ty, headers)
-            return
-        if isinstance(ty, SetType):
-            self._collect_stub_headers(ty.key_ty, headers)
-            return
-        if isinstance(ty, StructType):
-            for field in ty.decl.fields:
-                self._collect_stub_headers(field.ty, headers)
 
     def _source_headers(self, iface: IfaceDecl, info: IfaceOhIpcInfo) -> list[str]:
-        headers: set[str] = set()
-        for method in iface.methods:
-            for param in method.params:
-                self._collect_proxy_headers(param.ty, headers)
-                self._collect_stub_headers(param.ty, headers)
-            self._collect_proxy_headers(method.return_ty, headers)
-            self._collect_stub_headers(method.return_ty, headers)
-        headers.discard(f"{self._stub_file_stem(info)}.h")
-        return sorted(headers)
+        return self._source_proxy_headers(iface, info)
 
-    def _generate_header(self, iface: IfaceDecl, info: IfaceOhIpcInfo):
+    def _generate_header(
+        self, iface: IfaceDecl, info: IfaceOhIpcInfo, interface_type: int
+    ):
         filename = f"{self._stub_file_stem(info)}.h"
         guard = header_guard_for(info.stub_name, iface.parent_pkg)
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
-        current_year = datetime.now().year
 
         with self.om.open(filename) as f:
-            f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+            f.write(f"""#ifndef {guard}
 #define {guard}
 
-#include \"{self._iface_file_stem(iface)}.h\"
-
 """)
+            # Add system headers first for non-callback interfaces
+            if interface_type != 2:  # Not callback
+                f.write(
+                    "#include <AbilityKit/ability_runtime/modular_object_extension_context.h>\n"
+                )
+            f.write(f'#include "{self._iface_file_stem(iface)}.h"\n')
+            f.write("\n")
             self._write_namespace_open(f, namespace)
             f.write(f"class {info.stub_name} : public {iface.name} {{\npublic:\n")
-            f.write(f"    {info.stub_name}();\n")
+            # Generate constructor based on interface type
+            if interface_type == 2:  # callback
+                f.write(f"    {info.stub_name}();\n")
+            else:  # normal or mainService
+                f.write(
+                    f"    explicit {info.stub_name}(OH_AbilityRuntime_ModObjExtensionContextHandle context);\n"
+                )
             f.write(f"    ~{info.stub_name}() override;\n\n")
+            f.write("    OHIPCRemoteStub* GetRemoteStub() const\n")
+            f.write("    {\n")
+            f.write("        return remoteStub_;\n")
+            f.write("    }\n\n")
             f.write(
-                "    OHIPCRemoteStub* GetRemoteStub() const\n    {\n        return remote_stub_;\n    }\n\n"
+                "    ErrCode WriteRemoteObject(OHIPCParcel* parcel) const override;\n\n"
             )
             f.write("    static int32_t OnRemoteRequest(\n")
             f.write("        uint32_t code,\n")
@@ -416,33 +404,24 @@ class StubGenerator:
             )
 
             f.write("\nprivate:\n")
-            f.write("    OHIPCRemoteStub* remote_stub_ = nullptr;\n")
+            f.write("    OHIPCRemoteStub* remoteStub_ = nullptr;\n")
+            # Add context member for non-callback interfaces
+            if interface_type != 2:  # Not callback
+                f.write(
+                    "    OH_AbilityRuntime_ModObjExtensionContextHandle context_;\n"
+                )
             f.write("};\n\n")
             self._write_namespace_close(f, namespace)
             f.write(f"\n#endif // {guard}\n")
 
-    def _generate_source(self, iface: IfaceDecl, info: IfaceOhIpcInfo):
+    def _generate_source(
+        self, iface: IfaceDecl, info: IfaceOhIpcInfo, interface_type: int
+    ):
         filename = f"{self._stub_file_stem(info)}.cpp"
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
-        current_year = datetime.now().year
 
         with self.om.open(filename) as f:
-            f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#include <cstdlib>
+            f.write(f"""#include <cstdlib>
 #include <cstring>
 #include <unistd.h>
 
@@ -492,19 +471,64 @@ class StubGenerator:
 
             self._write_namespace_open(f, namespace)
 
-            f.write(f"{info.stub_name}::{info.stub_name}()\n")
-            f.write("    : remote_stub_(OH_IPCRemoteStub_Create(\n")
-            f.write(f"          {iface.name}::GetDescriptor(),\n")
-            f.write(f"          &{info.stub_name}::OnRemoteRequest,\n")
-            f.write("          nullptr,\n")
-            f.write("          this))\n")
-            f.write("{\n}\n\n")
+            # Generate constructor based on interface type
+            if interface_type == 2:  # callback - use OH_IPCRemoteStub_Create
+                f.write(f"{info.stub_name}::{info.stub_name}()\n")
+                f.write("    : remoteStub_(OH_IPCRemoteStub_Create(\n")
+                f.write(f"          {iface.name}::GetDescriptor(),\n")
+                f.write(f"          &{info.stub_name}::OnRemoteRequest,\n")
+                f.write("          nullptr,\n")
+                f.write("          this))\n")
+                f.write("{\n}\n\n")
+            else:  # normal or mainService - use OH_AbilityRuntime_ModObjExtensionContext_CreateIPCRemoteStub
+                f.write(
+                    f"{info.stub_name}::{info.stub_name}(OH_AbilityRuntime_ModObjExtensionContextHandle context)\n"
+                )
+                f.write("    : context_(context),\n")
+                f.write(
+                    "      remoteStub_(OH_AbilityRuntime_ModObjExtensionContext_CreateIPCRemoteStub(\n"
+                )
+                f.write("          context,\n")
+                f.write(f"          {iface.name}::GetDescriptor(),\n")
+                f.write(f"          &{info.stub_name}::OnRemoteRequest,\n")
+                f.write("          nullptr,\n")
+                f.write("          this))\n")
+                f.write("{\n}\n\n")
 
             f.write(f"{info.stub_name}::~{info.stub_name}()\n{{\n")
-            f.write("    if (remote_stub_ != nullptr) {\n")
-            f.write("        OH_IPCRemoteStub_Destroy(remote_stub_);\n")
-            f.write("        remote_stub_ = nullptr;\n")
+            f.write("    if (remoteStub_ != nullptr) {\n")
+            # Generate destructor based on interface type
+            if interface_type == 2:  # callback - use OH_IPCRemoteStub_Destroy
+                f.write("        OH_IPCRemoteStub_Destroy(remoteStub_);\n")
+            else:  # normal or mainService - use OH_AbilityRuntime_ModObjExtensionContext_DestroyIPCRemoteStub
+                f.write(
+                    "        OH_AbilityRuntime_ModObjExtensionContext_DestroyIPCRemoteStub(context_, remoteStub_);\n"
+                )
+            f.write("        remoteStub_ = nullptr;\n")
             f.write("    }\n")
+            f.write("}\n\n")
+
+            self._write_cpp_signature(
+                f,
+                "ErrCode",
+                f"{info.stub_name}::WriteRemoteObject",
+                ["OHIPCParcel* parcel"],
+                " const",
+            )
+            f.write("{\n")
+            self._write_if_return(
+                f,
+                "    ",
+                "parcel == nullptr || remoteStub_ == nullptr",
+                "OH_IPC_CHECK_PARAM_ERROR",
+            )
+            self._write_if_return(
+                f,
+                "    ",
+                "OH_IPCParcel_WriteRemoteStub(parcel, remoteStub_) != OH_IPC_SUCCESS",
+                "OH_IPC_PARCEL_WRITE_ERROR",
+            )
+            f.write("    return OH_IPC_SUCCESS;\n")
             f.write("}\n\n")
 
             self._write_cpp_signature(
@@ -623,7 +647,11 @@ class StubGenerator:
                         )
                     elif self._is_iface_type(method.return_ty):
                         f.write(f"    {ret_type} {result_name} = nullptr;\n")
+                    elif isinstance(method.return_ty, ScalarType):
+                        # Initialize scalar types to zero
+                        f.write(f"    {ret_type} {result_name} = 0;\n")
                     else:
+                        # For other types (string, struct, etc.), use default constructor
                         f.write(f"    {ret_type} {result_name};\n")
                 # Build call arguments, using renamed variables if necessary
                 call_args = []
@@ -638,9 +666,6 @@ class StubGenerator:
                     "    ",
                     "OH_IPCParcel_WriteInt32(reply, errCode) != OH_IPC_SUCCESS",
                     "OH_IPC_PARCEL_WRITE_ERROR",
-                )
-                self._write_if_return(
-                    f, "    ", "errCode != OH_IPC_SUCCESS", "OH_IPC_SUCCESS"
                 )
                 has_output = False
                 for param in method.params:
@@ -668,8 +693,6 @@ class StubGenerator:
                         )
                         + "\n"
                     )
-                    if self._is_iface_type(method.return_ty):
-                        f.write(f"    delete {result_name};\n")
                 if has_output:
                     f.write("\n")
                 f.write("    return OH_IPC_SUCCESS;\n")

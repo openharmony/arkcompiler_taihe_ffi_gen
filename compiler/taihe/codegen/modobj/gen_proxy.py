@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
-
-from taihe.codegen.ohipc.analyses import (
+from taihe.codegen.modobj.analyses import (
     IfaceOhIpcInfo,
     MethodOhIpcInfo,
     header_guard_for,
     namespace_scope_for_cpp,
     type_name_to_file_stem,
 )
-from taihe.codegen.ohipc.serialization import OhIpcSerializer
+from taihe.codegen.modobj.serialization import OhIpcSerializer
 from taihe.semantics.declarations import IfaceDecl
 from taihe.semantics.types import (
     ArrayType,
@@ -145,9 +143,11 @@ class ProxyGenerator:
         return candidate
 
     @staticmethod
-    def _write_cpp_signature(f, ret_type: str, scope_name: str, params: list[str]):
+    def _write_cpp_signature(
+        f, ret_type: str, scope_name: str, params: list[str], suffix: str = ""
+    ):
         prefix = f"{ret_type} {scope_name}("
-        one_line = prefix + ", ".join(params) + ")"
+        one_line = prefix + ", ".join(params) + ")" + suffix
         if len(one_line) <= ProxyGenerator.MAX_LINE_LENGTH:
             f.write(one_line + "\n")
             return
@@ -156,7 +156,7 @@ class ProxyGenerator:
         indent = "    "
         current = indent
         for idx, param in enumerate(params):
-            frag = param + (")" if idx == len(params) - 1 else ",")
+            frag = param + (")" + suffix if idx == len(params) - 1 else ",")
             separator = "" if current == indent else " "
             candidate = current + separator + frag
             if len(candidate) <= ProxyGenerator.MAX_LINE_LENGTH:
@@ -224,8 +224,6 @@ class ProxyGenerator:
     ) -> list[str]:
         headers: set[str] = set()
         for method in iface.methods:
-            for param in method.params:
-                self._collect_proxy_headers(param.ty, headers)
             self._collect_proxy_headers(method.return_ty, headers)
         headers.discard(f"{self._proxy_file_stem(info)}.h")
         return sorted(headers)
@@ -234,25 +232,9 @@ class ProxyGenerator:
         filename = f"{self._proxy_file_stem(info)}.h"
         guard = header_guard_for(info.proxy_name, iface.parent_pkg)
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
-        current_year = datetime.now().year
 
         with self.om.open(filename) as f:
-            f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef {guard}
+            f.write(f"""#ifndef {guard}
 #define {guard}
 
 #include \"{self._iface_file_stem(iface)}.h\"
@@ -261,11 +243,15 @@ class ProxyGenerator:
             self._write_namespace_open(f, namespace)
             f.write(f"class {info.proxy_name} : public {iface.name} {{\npublic:\n")
             f.write(
-                f"    explicit {info.proxy_name}(OHIPCRemoteProxy* remote) : remote_(remote) {{}}\n"
+                f"    explicit {info.proxy_name}(OHIPCRemoteProxy* remote) : remoteProxy_(remote) {{}}\n"
             )
             f.write(f"    ~{info.proxy_name}() override = default;\n\n")
+            f.write("    OHIPCRemoteProxy* GetRemoteProxy() const\n")
+            f.write("    {\n")
+            f.write("        return remoteProxy_;\n")
+            f.write("    }\n\n")
             f.write(
-                "    OHIPCRemoteProxy* GetRemoteProxy() const\n    {\n        return remote_;\n    }\n\n"
+                "    ErrCode WriteRemoteObject(OHIPCParcel* parcel) const override;\n\n"
             )
             for method in iface.methods:
                 self._write_method_declaration(
@@ -304,7 +290,7 @@ class ProxyGenerator:
             )
 
             f.write("\nprivate:\n")
-            f.write("    OHIPCRemoteProxy* remote_ = nullptr;\n")
+            f.write("    OHIPCRemoteProxy* remoteProxy_ = nullptr;\n")
             f.write("};\n")
             if namespace:
                 f.write("\n")
@@ -314,25 +300,9 @@ class ProxyGenerator:
     def _generate_source(self, iface: IfaceDecl, info: IfaceOhIpcInfo):
         filename = f"{self._proxy_file_stem(info)}.cpp"
         namespace = namespace_scope_for_cpp(iface.parent_pkg)
-        current_year = datetime.now().year
 
         with self.om.open(filename) as f:
-            f.write(f"""/*
- * Copyright (c) {current_year} Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the \"License\");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an \"AS IS\" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#include \"{self._proxy_file_stem(info)}.h\"
+            f.write(f"""#include \"{self._proxy_file_stem(info)}.h\"
 """)
             for header in self._source_proxy_headers(iface, info):
                 f.write(f'#include "{header}"\n')
@@ -347,6 +317,29 @@ class ProxyGenerator:
             f.write("    }\n")
             f.write("};\n")
             f.write("} // namespace\n\n")
+
+            self._write_cpp_signature(
+                f,
+                "ErrCode",
+                f"{info.proxy_name}::WriteRemoteObject",
+                ["OHIPCParcel* parcel"],
+                " const",
+            )
+            f.write("{\n")
+            self._write_if_return(
+                f,
+                "    ",
+                "parcel == nullptr || remoteProxy_ == nullptr",
+                "OH_IPC_CHECK_PARAM_ERROR",
+            )
+            self._write_if_return(
+                f,
+                "    ",
+                "OH_IPCParcel_WriteRemoteProxy(parcel, remoteProxy_) != OH_IPC_SUCCESS",
+                "OH_IPC_PARCEL_WRITE_ERROR",
+            )
+            f.write("    return OH_IPC_SUCCESS;\n")
+            f.write("}\n\n")
 
             for method in iface.methods:
                 m_info = MethodOhIpcInfo.get(self.am, method)
@@ -368,7 +361,7 @@ class ProxyGenerator:
                 )
                 f.write("{\n")
                 self._write_if_return(
-                    f, "    ", "remote_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
+                    f, "    ", "remoteProxy_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
                 )
                 f.write("\n")
                 # Use unique names to avoid conflict with method parameters
@@ -417,7 +410,7 @@ class ProxyGenerator:
                 f.write("\n")
                 f.write(f"    OH_IPC_MessageOption option = {{ {request_mode}, 0 }};\n")
                 f.write("    int32_t transportErr = OH_IPCRemoteProxy_SendRequest(\n")
-                f.write("        remote_,\n")
+                f.write("        remoteProxy_,\n")
                 f.write(
                     f"        static_cast<uint32_t>({iface.name}::IpcCode::{m_info.command_name}),\n"
                 )
@@ -439,7 +432,6 @@ class ProxyGenerator:
                     f"OH_IPCParcel_ReadInt32({parcel_reply_var}.get(), &errCode) != OH_IPC_SUCCESS",
                     "OH_IPC_PARCEL_READ_ERROR",
                 )
-                self._write_if_return(f, "    ", "errCode != OH_IPC_SUCCESS", "errCode")
                 f.write("\n")
                 for param in method.params:
                     if self._param_mode(param) == "out":
@@ -466,7 +458,7 @@ class ProxyGenerator:
                         )
                         + "\n"
                     )
-                f.write("\n    return OH_IPC_SUCCESS;\n")
+                f.write("\n    return errCode;\n")
                 f.write("}\n\n")
 
             if info.is_main_service:
@@ -478,7 +470,7 @@ class ProxyGenerator:
                 )
                 f.write("{\n")
                 self._write_if_return(
-                    f, "    ", "remote_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
+                    f, "    ", "remoteProxy_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
                 )
                 f.write("\n")
                 parcel_data_var = "parcelData"
@@ -515,12 +507,11 @@ class ProxyGenerator:
                 )
                 f.write("        return OH_IPC_PARCEL_WRITE_ERROR;\n")
                 f.write("    }\n")
-                f.write("\n")
                 f.write(
                     "    OH_IPC_MessageOption option = { OH_IPC_REQUEST_MODE_SYNC, 0 };\n"
                 )
                 f.write("    int32_t transportErr = OH_IPCRemoteProxy_SendRequest(\n")
-                f.write("        remote_,\n")
+                f.write("        remoteProxy_,\n")
                 f.write(
                     f"        static_cast<uint32_t>({iface.name}::IpcCode::COMMAND_GET_TYPE_LIB_INFO),\n"
                 )
@@ -538,9 +529,8 @@ class ProxyGenerator:
                     f"OH_IPCParcel_ReadInt32({parcel_reply_var}.get(), &errCode) != OH_IPC_SUCCESS",
                     "OH_IPC_PARCEL_READ_ERROR",
                 )
-                self._write_if_return(f, "    ", "errCode != OH_IPC_SUCCESS", "errCode")
                 f.write("\n")
-                f.write("    return OH_IPC_SUCCESS;\n")
+                f.write("    return errCode;\n")
                 f.write("}\n\n")
 
             self._write_cpp_signature(
@@ -551,7 +541,7 @@ class ProxyGenerator:
             )
             f.write("{\n")
             self._write_if_return(
-                f, "    ", "remote_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
+                f, "    ", "remoteProxy_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
             )
             f.write("\n")
             parcel_data_var = "parcelData"
@@ -581,7 +571,7 @@ class ProxyGenerator:
                 "    OH_IPC_MessageOption option = { OH_IPC_REQUEST_MODE_SYNC, 0 };\n"
             )
             f.write("    int32_t transportErr = OH_IPCRemoteProxy_SendRequest(\n")
-            f.write("        remote_,\n")
+            f.write("        remoteProxy_,\n")
             f.write(
                 f"        static_cast<uint32_t>({iface.name}::IpcCode::COMMAND_GET_VERSION),\n"
             )
@@ -599,7 +589,6 @@ class ProxyGenerator:
                 f"OH_IPCParcel_ReadInt32({parcel_reply_var}.get(), &errCode) != OH_IPC_SUCCESS",
                 "OH_IPC_PARCEL_READ_ERROR",
             )
-            self._write_if_return(f, "    ", "errCode != OH_IPC_SUCCESS", "errCode")
             f.write("\n")
             f.write(
                 "    const char* versionStr = OH_IPCParcel_ReadString(parcelReply.get());\n"
@@ -609,7 +598,7 @@ class ProxyGenerator:
             f.write("    }\n")
             f.write("    result = versionStr;\n")
             f.write("\n")
-            f.write("    return OH_IPC_SUCCESS;\n")
+            f.write("    return errCode;\n")
             f.write("}\n\n")
 
             self._write_cpp_signature(
@@ -620,7 +609,7 @@ class ProxyGenerator:
             )
             f.write("{\n")
             self._write_if_return(
-                f, "    ", "remote_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
+                f, "    ", "remoteProxy_ == nullptr", "OH_IPC_CHECK_PARAM_ERROR"
             )
             f.write("\n")
             parcel_data_var = "parcelData"
@@ -650,7 +639,7 @@ class ProxyGenerator:
                 "    OH_IPC_MessageOption option = { OH_IPC_REQUEST_MODE_SYNC, 0 };\n"
             )
             f.write("    int32_t transportErr = OH_IPCRemoteProxy_SendRequest(\n")
-            f.write("        remote_,\n")
+            f.write("        remoteProxy_,\n")
             f.write(
                 f"        static_cast<uint32_t>({iface.name}::IpcCode::COMMAND_GET_TAIHE_VERSION),\n"
             )
@@ -668,7 +657,6 @@ class ProxyGenerator:
                 f"OH_IPCParcel_ReadInt32({parcel_reply_var}.get(), &errCode) != OH_IPC_SUCCESS",
                 "OH_IPC_PARCEL_READ_ERROR",
             )
-            self._write_if_return(f, "    ", "errCode != OH_IPC_SUCCESS", "errCode")
             f.write("\n")
             f.write(
                 "    const char* versionStr = OH_IPCParcel_ReadString(parcelReply.get());\n"
@@ -678,7 +666,7 @@ class ProxyGenerator:
             f.write("    }\n")
             f.write("    result = versionStr;\n")
             f.write("\n")
-            f.write("    return OH_IPC_SUCCESS;\n")
+            f.write("    return errCode;\n")
             f.write("}\n\n")
 
             self._write_namespace_close(f, namespace)
