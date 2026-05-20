@@ -782,3 +782,21 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
     def visit_package_group(self, g: "PackageGroup") -> None:
         for i in g.iterate(include_stdlib=True):
             i.accept(self)
+
+
+class RecursiveTypeVisitor(RecursiveDeclVisitor, TypeVisitor[None]):
+    """A visitor that recursively traverses all types and their sub-types.
+
+    This class is useful for full-tree traversal scenarios.
+    """
+
+    @override
+    def visit_type(self, t: "Type") -> None:
+        pass
+
+    @override
+    def visit_type_ref(self, d: "TypeRefDecl"):
+        super().visit_type_ref(d)
+        resolved_ty = d.resolved_ty_or_none
+        if resolved_ty is not None:
+            resolved_ty.accept(self)
