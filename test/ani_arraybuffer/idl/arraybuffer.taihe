@@ -89,3 +89,5 @@ export function doubleUint32Array(uint32Array: Uint32Array): Uint32Array  {
     return new Uint32Array(result);
 }
 """)
+
+function ModifyArrayBuffer(nums: @arraybuffer Array<u8>): void;

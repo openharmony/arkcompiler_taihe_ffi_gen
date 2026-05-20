@@ -623,6 +623,96 @@ function test_bar_with_union() {
     arktest.assertEQ(f64Arr.toString(), f64Expected.toString());
 }
 
+function test_modifyInt8Array() {
+    let arr = new Int8Array([-2, -1, 0, 1, 2]);
+    let arrCopy = new Int8Array(arr);
+    bar.modifyInt8Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1);
+    }
+}
+
+function test_modifyInt16Array() {
+    let arr = new Int16Array([-20, -10, 0, 10, 20]);
+    let arrCopy = new Int16Array(arr);
+    bar.modifyInt16Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1);
+    }
+}
+
+function test_modifyInt32Array() {
+    let arr = new Int32Array([-200, -100, 0, 100, 200]);
+    let arrCopy = new Int32Array(arr);
+    bar.modifyInt32Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1);
+    }
+}
+
+function test_modifyInt64Array() {
+    let arr = new BigInt64Array([-2000n, -1000n, 0n, 1000n, 2000n]);
+    let arrCopy = new BigInt64Array(arr);
+    bar.modifyInt64Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1n);
+    }
+}
+
+function test_modifyUint8Array() {
+    let arr = new Uint8Array([0, 1, 2, 3, 4]);
+    let arrCopy = new Uint8Array(arr);
+    bar.modifyUint8Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1);
+    }
+}
+
+function test_modifyUint16Array() {
+    let arr = new Uint16Array([0, 10, 20, 30, 40]);
+    let arrCopy = new Uint16Array(arr);
+    bar.modifyUint16Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1);
+    }
+}
+
+function test_modifyUint32Array() {
+    let arr = new Uint32Array([0, 100, 200, 300, 400]);
+    let arrCopy = new Uint32Array(arr);
+    bar.modifyUint32Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1);
+    }
+}
+
+function test_modifyUint64Array() {
+    let arr = new BigUint64Array([0n, 1000n, 2000n, 3000n, 4000n]);
+    let arrCopy = new BigUint64Array(arr);
+    bar.modifyUint64Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], arrCopy[i] + 1n);
+    }
+}
+
+function test_modifyFloat32Array() {
+    let arr = new Float32Array([0.0, 1.0, 2.0, 3.0, 4.0]);
+    let arrCopy = new Float32Array(arr);
+    bar.modifyFloat32Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], -arrCopy[i]);
+    }
+}
+
+function test_modifyFloat64Array() {
+    let arr = new Float64Array([0.0, 1.0, 2.0, 3.0, 4.0]);
+    let arrCopy = new Float64Array(arr);
+    bar.modifyFloat64Array(arr);
+    for (let i = 0; i < arr.length; i++) {
+        arktest.assertEQ(arr[i], -arrCopy[i]);
+    }
+}
+
 function main() {
     const suite = new arktest.ArkTestsuite("ani_typedarray ut")
     suite.addTest("checkUint8Array", checkUint8Array);
@@ -773,6 +863,17 @@ function main() {
     suite.addTest(
         "test_bar_with_setupStructAndPrint", test_bar_with_setupStructAndPrint);
     suite.addTest("test_bar_with_union", test_bar_with_union);
+
+    suite.addTest("test_modifyInt8Array", test_modifyInt8Array);
+    suite.addTest("test_modifyInt16Array", test_modifyInt16Array);
+    suite.addTest("test_modifyInt32Array", test_modifyInt32Array);
+    suite.addTest("test_modifyInt64Array", test_modifyInt64Array);
+    suite.addTest("test_modifyUint8Array", test_modifyUint8Array);
+    suite.addTest("test_modifyUint16Array", test_modifyUint16Array);
+    suite.addTest("test_modifyUint32Array", test_modifyUint32Array);
+    suite.addTest("test_modifyUint64Array", test_modifyUint64Array);
+    suite.addTest("test_modifyFloat32Array", test_modifyFloat32Array);
+    suite.addTest("test_modifyFloat64Array", test_modifyFloat64Array);
 
     exit(suite.run());
 }

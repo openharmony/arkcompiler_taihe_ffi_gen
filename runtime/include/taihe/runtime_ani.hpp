@@ -25,6 +25,9 @@
 #endif
 
 #if __has_include("hilog/log.h") && defined(TH_ANI_USE_HILOG)
+#ifdef HIVIEWDFX_HILOG_C_H  // SDK scenario
+#define OH_LOG_Print HiLogPrint
+#endif
 #include "hilog/log.h"
 #define TH_ANI_LOG_DOMAIN 0x3200
 #define TH_ANI_LOG_TAG "Taihe"
@@ -95,11 +98,11 @@
 #ifndef TH_ANI_ENABLE_PERF_TRACE
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id)
 #define TH_ANI_PERF_TRACE_END()
-#elif __has_include(<hitrace/trace.h>)
+#elif __has_include(<hitrace/trace.h>)  // Third-party scenario
 #include <hitrace/trace.h>
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) OH_HiTrace_StartTraceEx(HITRACE_LEVEL_DEBUG, perf_id, "")
 #define TH_ANI_PERF_TRACE_END() OH_HiTrace_FinishTraceEx(HITRACE_LEVEL_DEBUG)
-#elif __has_include("hitrace_meter.h")
+#elif __has_include("hitrace_meter.h")  // SDK scenario
 #include "hitrace_meter.h"
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) StartTraceEx(HITRACE_LEVEL_DEBUG, HITRACE_TAG_OHOS, perf_id, "")
 #define TH_ANI_PERF_TRACE_END() FinishTraceEx(HITRACE_LEVEL_DEBUG, HITRACE_TAG_OHOS)
@@ -126,32 +129,15 @@ namespace taihe {
 void set_vm(ani_vm *vm);
 ani_vm *get_vm();
 
-inline ani_env *get_env()
-{
-    ani_env *env = nullptr;
-    get_vm()->GetEnv(ANI_VERSION_1, &env);
-    return env;
-}
+ani_env *get_env();
 
 class env_guard {
     ani_env *env = nullptr;
     bool is_temporary;
 
 public:
-    env_guard()
-    {
-        is_temporary = get_vm()->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
-        if (is_temporary) {
-            get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
-        }
-    }
-
-    ~env_guard()
-    {
-        if (is_temporary) {
-            get_vm()->DetachCurrentThread();
-        }
-    }
+    env_guard();
+    ~env_guard();
 
     env_guard(env_guard const &) = delete;
     env_guard &operator=(env_guard const &) = delete;

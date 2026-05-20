@@ -985,6 +985,85 @@ void PrintArray(std::string const &name, Iterator begin, Iterator end)
     return {};
 }
 
+::taihe::expected<void, ::taihe::error> ModifyInt8Array(::taihe::array_view<int8_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyInt16Array(::taihe::array_view<int16_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyInt32Array(::taihe::array_view<int32_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyInt64Array(::taihe::array_view<int64_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyUint8Array(::taihe::array_view<uint8_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyUint16Array(::taihe::array_view<uint16_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyUint32Array(::taihe::array_view<uint32_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyUint64Array(::taihe::array_view<uint64_t> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i]++;
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyFloat32Array(::taihe::array_view<float> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i] = -arr[i];
+    }
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> ModifyFloat64Array(::taihe::array_view<double> arr)
+{
+    for (size_t i = 0; i < arr.size(); ++i) {
+        arr[i] = -arr[i];
+    }
+    return {};
+}
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
@@ -1012,4 +1091,14 @@ TH_EXPORT_CPP_API_GetTypedArrInfo(GetTypedArrInfo);
 TH_EXPORT_CPP_API_SetupStructAndPrint(SetupStructAndPrint);
 TH_EXPORT_CPP_API_MakeMyUnion(MakeMyUnion);
 TH_EXPORT_CPP_API_ShowMyUnion(ShowMyUnion);
+TH_EXPORT_CPP_API_ModifyInt8Array(ModifyInt8Array);
+TH_EXPORT_CPP_API_ModifyInt16Array(ModifyInt16Array);
+TH_EXPORT_CPP_API_ModifyInt32Array(ModifyInt32Array);
+TH_EXPORT_CPP_API_ModifyInt64Array(ModifyInt64Array);
+TH_EXPORT_CPP_API_ModifyUint8Array(ModifyUint8Array);
+TH_EXPORT_CPP_API_ModifyUint16Array(ModifyUint16Array);
+TH_EXPORT_CPP_API_ModifyUint32Array(ModifyUint32Array);
+TH_EXPORT_CPP_API_ModifyUint64Array(ModifyUint64Array);
+TH_EXPORT_CPP_API_ModifyFloat32Array(ModifyFloat32Array);
+TH_EXPORT_CPP_API_ModifyFloat64Array(ModifyFloat64Array);
 // NOLINTEND
