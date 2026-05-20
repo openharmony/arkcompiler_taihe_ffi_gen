@@ -2116,7 +2116,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
                 f"ani_ref byte_offset = {{}};",
                 f"TH_ANI_CHECKED_CALL(env, GetUndefined, &byte_offset);",
                 f"ani_object ani_result = {{}};",
-                f'TH_ANI_CHECKED_CALL(env, Object_New, TH_ANI_FIND_CLASS(env, "{self.ets_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{self.ets_desc}", "<ctor>", "C{{std.core.ArrayBuffer}}C{{std.core.Double}}C{{std.core.Double}}:"), &ani_result, arrbuf, byte_length, byte_offset);',
+                f'TH_ANI_CHECKED_CALL(env, Object_New, TH_ANI_FIND_CLASS(env, "{self.ets_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{self.ets_desc}", "<ctor>", "C{{std.core.ArrayBuffer}}C{{std.core.Int}}C{{std.core.Int}}:"), &ani_result, arrbuf, byte_length, byte_offset);',
                 f"return ani_result;",
             )
 
