@@ -340,6 +340,20 @@ function uint32Array_inout() {
     }
 }
 
+function arraybuffer_modify() {
+    let numbers: byte[] = [1, 2, 3, 4, 5];
+    let arrbuf: ArrayBuffer = new ArrayBuffer(numbers.length);
+    for (let i = 0; i < numbers.length; i++) {
+        arrbuf.set(i, numbers[i]);
+    }
+    arraybuffer.ModifyArrayBuffer(arrbuf);
+    console.log("After ModifyArrayBuffer:");
+    for (let i = 0; i < arrbuf.getByteLength(); i++) {
+        console.log(`Byte at index ${i}: ${arrbuf.at(i)}`);
+        arktest.assertEQ(arrbuf.at(i), ~numbers[i])
+    }
+}
+
 function main() {
     const suite = new arktest.ArkTestsuite("arraybuffer testcase")
 
@@ -381,5 +395,8 @@ function main() {
     suite.addTest("uint8Array_inout", uint8Array_inout)
     suite.addTest("uint16Array_inout", uint16Array_inout)
     suite.addTest("uint32Array_inout", uint32Array_inout)
+
+    suite.addTest("arraybuffer_modify", arraybuffer_modify)
+
     exit(suite.run())
 }

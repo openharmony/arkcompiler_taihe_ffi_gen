@@ -150,3 +150,16 @@ union MyUnion {
 }
 function MakeMyUnion(n: i32): MyUnion;
 function ShowMyUnion(u: MyUnion): void;
+
+function ModifyInt8Array(arr: @typedarray Array<i8>): void;
+function ModifyInt16Array(arr: @typedarray Array<i16>): void;
+function ModifyInt32Array(arr: @typedarray Array<i32>): void;
+function ModifyInt64Array(arr: @typedarray Array<i64>): void;
+
+function ModifyUint8Array(arr: @typedarray Array<u8>): void;
+function ModifyUint16Array(arr: @typedarray Array<u16>): void;
+function ModifyUint32Array(arr: @typedarray Array<u32>): void;
+function ModifyUint64Array(arr: @typedarray Array<u64>): void;
+
+function ModifyFloat32Array(arr: @typedarray Array<f32>): void;
+function ModifyFloat64Array(arr: @typedarray Array<f64>): void;
