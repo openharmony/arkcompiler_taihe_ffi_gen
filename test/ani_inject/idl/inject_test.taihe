@@ -22,7 +22,7 @@ interface Foo {
 }
 
 @ctor("Foo")
-function MakeFooWithThis(@sts_this thiz: Opaque): Foo;
+function MakeFooWithThis(): Foo;
 
 struct RGB {
     @!sts_inject_into_interface("""color: string;""")
