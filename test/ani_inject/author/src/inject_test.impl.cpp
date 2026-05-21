@@ -34,9 +34,8 @@ public:
     }
 };
 
-::taihe::expected<::inject_test::Foo, ::taihe::error> MakeFooWithThis(uintptr_t thiz)
+::taihe::expected<::inject_test::Foo, ::taihe::error> MakeFooWithThis()
 {
-    std::cout << thiz << std::endl;
     return make_holder<Foo, ::inject_test::Foo>();
 }
 
