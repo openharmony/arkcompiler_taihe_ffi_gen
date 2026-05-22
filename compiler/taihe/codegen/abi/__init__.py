@@ -17,11 +17,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.semantics.declarations import PackageGroup
+from taihe.semantics.types import CallbackType
+from taihe.semantics.visitor import RecursiveDeclVisitor
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
     from taihe.driver.options import OptionRegistry, OptionStore
+    from taihe.semantics.declarations import (
+        GlobFuncDecl,
+        IfaceMethodDecl,
+        PackageGroup,
+        TypeRefDecl,
+    )
     from taihe.utils.diagnostics import DiagnosticsManager
 
 
@@ -89,31 +96,21 @@ class AbiSourcesBackendConfig(BackendConfig):
                     self._apply_noexcept_all()
 
             def _apply_noexcept_all(self):
-                from taihe.semantics.declarations import (
-                    GlobFuncDecl,
-                    IfaceMethodDecl,
-                    TypeRefDecl,
-                )
-                from taihe.semantics.types import (
-                    CallbackType,
-                )
-                from taihe.semantics.visitor import RecursiveDeclVisitor
-
                 class NoexceptCallbackVisitor(RecursiveDeclVisitor):
                     def __init__(self):
                         super().__init__()
 
-                    def visit_glob_func(self, d: GlobFuncDecl) -> None:
+                    def visit_glob_func(self, d: "GlobFuncDecl") -> None:
                         if NoexceptAttr.get(d) is None:
                             d.add_attribute(NoexceptAttr(loc=d.loc))
                         super().visit_glob_func(d)
 
-                    def visit_iface_method(self, d: IfaceMethodDecl) -> None:
+                    def visit_iface_method(self, d: "IfaceMethodDecl") -> None:
                         if NoexceptAttr.get(d) is None:
                             d.add_attribute(NoexceptAttr(loc=d.loc))
                         super().visit_iface_method(d)
 
-                    def visit_type_ref(self, d: TypeRefDecl) -> None:
+                    def visit_type_ref(self, d: "TypeRefDecl") -> None:
                         if (
                             isinstance(d.resolved_ty, CallbackType)
                             and NoexceptAttr.get(d) is None
@@ -121,7 +118,7 @@ class AbiSourcesBackendConfig(BackendConfig):
                             d.add_attribute(NoexceptAttr(loc=d.loc))
                         super().visit_type_ref(d)
 
-                    def visit_package_group(self, g: PackageGroup) -> None:
+                    def visit_package_group(self, g: "PackageGroup") -> None:
                         for i in g.iterate():  # not including stdlib
                             i.accept(self)
 

@@ -200,11 +200,12 @@ class ConsoleDiagnosticsManager(DiagnosticsManager):
             self._color_filter_fn = _discard
 
     @override
-    def _emit_impl(self, diag: DiagBase) -> None:
+    def _emit_impl(self, diag: DiagBase, flush: bool = True) -> None:
         self._render(diag)
         for n in diag.notes():
-            self._render(n)
-        self._flush()
+            self._emit_impl(n, flush=False)
+        if flush:
+            self._flush()
 
     def _write(self, s: str):
         self._out.write(s)

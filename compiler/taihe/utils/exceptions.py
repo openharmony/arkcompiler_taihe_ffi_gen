@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from enum import Enum
 from json import dumps
 from types import UnionType
@@ -549,35 +550,55 @@ class InvalidPackageNameError(DiagError):
 
 @dataclass
 class AdhocNote(DiagNote):
-    msg: str
+    _msg: str
+    _notes: list[DiagNote] = field(default_factory=lambda: [])
 
     @override
     def describe(self) -> str:
-        return self.msg
+        return self._msg
+
+    @override
+    def notes(self) -> Iterable[DiagNote]:
+        yield from self._notes
 
 
 @dataclass
 class AdhocWarn(DiagWarn):
-    msg: str
+    _msg: str
+    _notes: list[DiagNote] = field(default_factory=lambda: [])
 
     @override
     def describe(self) -> str:
-        return self.msg
+        return self._msg
+
+    @override
+    def notes(self) -> Iterable[DiagNote]:
+        yield from self._notes
 
 
 @dataclass
 class AdhocError(DiagError):
-    msg: str
+    _msg: str
+    _notes: list[DiagNote] = field(default_factory=lambda: [])
 
     @override
     def describe(self) -> str:
-        return self.msg
+        return self._msg
+
+    @override
+    def notes(self) -> Iterable[DiagNote]:
+        yield from self._notes
 
 
 @dataclass
 class AdhocFatalError(DiagFatalError):
-    msg: str
+    _msg: str
+    _notes: list[DiagNote] = field(default_factory=lambda: [])
 
     @override
     def describe(self) -> str:
-        return self.msg
+        return self._msg
+
+    @override
+    def notes(self) -> Iterable[DiagNote]:
+        yield from self._notes
