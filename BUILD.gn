@@ -19,8 +19,13 @@ action("build_taihe") {
   args = [
     "--output",
     rebase_path("$target_out_dir/dist"),
+    "--strip_version",
   ]
   outputs = [
+    "$target_out_dir/dist/taihe-linux-x86_64.tar.gz",
+    "$target_out_dir/dist/taihe-darwin-arm64.tar.gz",
+    "$target_out_dir/dist/taihe-darwin-x86_64.tar.gz",
+    "$target_out_dir/dist/taihe-windows-x86_64.tar.gz",
     "$target_out_dir/dist/taihe-linux-x86_64/version.txt",
     "$target_out_dir/dist/taihe-darwin-arm64/version.txt",
     "$target_out_dir/dist/taihe-darwin-x86_64/version.txt",
@@ -28,8 +33,14 @@ action("build_taihe") {
   ]
 }
 
-static_library("build_taihe_wrapper") {
-  sources = []
+ohos_copy("build_taihe_wrapper") {
+  sources = [
+    "$target_out_dir/dist/taihe-linux-x86_64.tar.gz",
+    "$target_out_dir/dist/taihe-darwin-arm64.tar.gz",
+    "$target_out_dir/dist/taihe-darwin-x86_64.tar.gz",
+    "$target_out_dir/dist/taihe-windows-x86_64.tar.gz"
+  ]
+  outputs = [ "$target_out_dir/taihe_repo/{{source_file_part}}" ]
   deps = [ ":build_taihe" ]
 }
 
