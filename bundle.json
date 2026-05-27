@@ -21,6 +21,11 @@
                     "name": "//arkcompiler/taihe_ffi_gen:build_taihe_wrapper"
                 }
             ]
-        }
+        },
+        "adapted_system_type": [
+            "standard",
+            "mini",
+            "small"
+        ]
     }
 }
