@@ -29,6 +29,21 @@
 namespace {
 using ExpectedString = ::taihe::expected<::taihe::string, ::taihe::error>;
 
+constexpr std::size_t FIRST_INDEX = 0;
+constexpr std::size_t UTF16_HEX_WIDTH = 4;
+constexpr std::size_t UTF8_TEXT_SIZE = 6;
+constexpr std::size_t SAMPLE_SUBSTR_OFFSET = 1;
+constexpr std::size_t UTF8_SUBSTR_SIZE = 3;
+constexpr std::size_t ONE_CODE_UNIT = 1;
+constexpr std::size_t TWO_CODE_UNITS = 2;
+constexpr std::size_t FOUR_CODE_UNITS = 4;
+constexpr std::size_t FIVE_CODE_UNITS = 5;
+constexpr std::size_t CONVERTED_UTF16_SIZE = 8;
+constexpr std::size_t THIRD_CHAR_INDEX = 2;
+
+constexpr int POSITIVE_TO_STRING_VALUE = 42;
+constexpr int NEGATIVE_TO_STRING_VALUE = -7;
+
 void Require(bool condition, char const *message)
 {
     if (!condition) {
@@ -40,11 +55,11 @@ std::string FormatUtf16(std::u16string_view value)
 {
     std::ostringstream out;
     out << "size=" << value.size() << ", units=[";
-    for (std::size_t index = 0; index < value.size(); ++index) {
-        if (index != 0) {
+    for (std::size_t index = FIRST_INDEX; index < value.size(); ++index) {
+        if (index != FIRST_INDEX) {
             out << ", ";
         }
-        out << "0x" << std::uppercase << std::hex << std::setw(4) << std::setfill('0')
+        out << "0x" << std::uppercase << std::hex << std::setw(UTF16_HEX_WIDTH) << std::setfill('0')
             << static_cast<uint32_t>(value[index]);
     }
     out << "]";
@@ -69,11 +84,12 @@ ExpectedString CommonStringTest()
     try {
         ::taihe::string text("abcdef");
         Require(!text.empty(), "UTF-8 string should not be empty");
-        Require(text.size() == 6, "UTF-8 string size should be measured in bytes");
+        Require(text.size() == UTF8_TEXT_SIZE, "UTF-8 string size should be measured in bytes");
         Require(text.front() == 'a', "UTF-8 string front() returned unexpected character");
         Require(text.back() == 'f', "UTF-8 string back() returned unexpected character");
-        Require(text[2] == 'c', "UTF-8 string operator[] returned unexpected character");
-        Require(std::string_view(text.substr(1, 3)) == "bcd", "UTF-8 string substr() returned unexpected value");
+        Require(text[THIRD_CHAR_INDEX] == 'c', "UTF-8 string operator[] returned unexpected character");
+        Require(std::string_view(text.substr(SAMPLE_SUBSTR_OFFSET, UTF8_SUBSTR_SIZE)) == "bcd",
+                "UTF-8 string substr() returned unexpected value");
 
         ::taihe::string appended("ab");
         appended += "cd";
@@ -103,21 +119,22 @@ ExpectedString CommonStringTest()
         Require(utf16Text.size() == utf16Source.size(), "UTF-16 string size should be measured in code units");
         Require(utf16Text.front() == u'a', "UTF-16 string front() returned unexpected character");
         Require(utf16Text.back() == u'\u597D', "UTF-16 string back() returned unexpected character");
-        Require(utf16Text[2] == u'\u4F60', "UTF-16 string operator[] returned unexpected character");
-        RequireUtf16Equal(std::u16string_view(utf16Text.substr(1, 2)).substr(0, 2),
-                          std::u16string_view(utf16Source).substr(1, 2),
+        Require(utf16Text[THIRD_CHAR_INDEX] == u'\u4F60', "UTF-16 string operator[] returned unexpected character");
+        RequireUtf16Equal(std::u16string_view(utf16Text.substr(SAMPLE_SUBSTR_OFFSET, TWO_CODE_UNITS))
+                              .substr(FIRST_INDEX, TWO_CODE_UNITS),
+                          std::u16string_view(utf16Source).substr(SAMPLE_SUBSTR_OFFSET, TWO_CODE_UNITS),
                           "UTF-16 string substr() returned unexpected value");
 
-        ::taihe::u16string utf16Appended(std::u16string_view(u"ab", 2));
-        utf16Appended += ::taihe::u16string_view(std::u16string_view(u"cd", 2));
-        RequireUtf16Equal(std::u16string_view(utf16Appended), std::u16string_view(u"abcd", 4),
+        ::taihe::u16string utf16Appended(std::u16string_view(u"ab", TWO_CODE_UNITS));
+        utf16Appended += ::taihe::u16string_view(std::u16string_view(u"cd", TWO_CODE_UNITS));
+        RequireUtf16Equal(std::u16string_view(utf16Appended), std::u16string_view(u"abcd", FOUR_CODE_UNITS),
                           "UTF-16 string operator+= returned unexpected value");
         ::taihe::u16string utf16Concatenated = ::taihe::concat({
-            ::taihe::u16string_view(std::u16string_view(u"ta", 2)),
-            ::taihe::u16string_view(std::u16string_view(u"i", 1)),
-            ::taihe::u16string_view(std::u16string_view(u"he", 2)),
+            ::taihe::u16string_view(std::u16string_view(u"ta", TWO_CODE_UNITS)),
+            ::taihe::u16string_view(std::u16string_view(u"i", ONE_CODE_UNIT)),
+            ::taihe::u16string_view(std::u16string_view(u"he", TWO_CODE_UNITS)),
         });
-        RequireUtf16Equal(std::u16string_view(utf16Concatenated), std::u16string_view(u"taihe", 5),
+        RequireUtf16Equal(std::u16string_view(utf16Concatenated), std::u16string_view(u"taihe", FIVE_CODE_UNITS),
                           "UTF-16 string concat() returned unexpected value");
 
         ::taihe::common_string utf16Common(utf16Source);
@@ -132,16 +149,19 @@ ExpectedString CommonStringTest()
         std::u16string expectedConvertedUtf16 {u'h', u'e', u'l', u'l', u'o', u' ', u'\u4F60', u'\u597D'};
         ::taihe::common_string utf8Common(utf8Source);
         ::taihe::u16string convertedUtf16(utf8Common);
-        RequireUtf16Equal(std::u16string_view(convertedUtf16).substr(0, expectedConvertedUtf16.size()),
+        RequireUtf16Equal(std::u16string_view(convertedUtf16).substr(FIRST_INDEX, expectedConvertedUtf16.size()),
                           std::u16string_view(expectedConvertedUtf16), "UTF-8 to UTF-16 conversion content mismatch");
-        Require(convertedUtf16.size() == 8, "UTF-8 to UTF-16 conversion should preserve code-unit length");
+        Require(convertedUtf16.size() == CONVERTED_UTF16_SIZE,
+                "UTF-8 to UTF-16 conversion should preserve code-unit length");
 
         ::taihe::common_string movedUtf16Common(std::move(convertedUtf16));
         ::taihe::string convertedUtf8(movedUtf16Common);
         Require(std::string_view(convertedUtf8) == utf8Source, "UTF-16 to UTF-8 conversion should round trip");
 
-        Require(std::string_view(::taihe::to_string(42)) == "42", "to_string(int) returned unexpected value");
-        Require(std::string_view(::taihe::to_string(-7)) == "-7", "to_string(negative int) returned unexpected value");
+        Require(std::string_view(::taihe::to_string(POSITIVE_TO_STRING_VALUE)) == "42",
+                "to_string(int) returned unexpected value");
+        Require(std::string_view(::taihe::to_string(NEGATIVE_TO_STRING_VALUE)) == "-7",
+                "to_string(negative int) returned unexpected value");
 
         return ::taihe::string("common string test passed");
     } catch (std::exception const &error) {
