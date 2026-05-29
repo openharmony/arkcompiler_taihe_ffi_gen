@@ -17,6 +17,70 @@
 
 #include <algorithm>
 
+namespace {
+
+constexpr size_t UTF8_FAST_BLOCK_SIZE = 16;
+constexpr size_t UTF8_FAST_WORD_SIZE = 8;
+constexpr size_t UTF16_FAST_BLOCK_SIZE = 4;
+
+constexpr size_t UTF8_ONE_BYTE_COUNT = 1;
+constexpr size_t UTF8_TWO_BYTE_COUNT = 2;
+constexpr size_t UTF8_THREE_BYTE_COUNT = 3;
+constexpr size_t UTF8_FOUR_BYTE_COUNT = 4;
+
+constexpr size_t UTF16_ONE_UNIT_COUNT = 1;
+constexpr size_t UTF16_TWO_UNIT_COUNT = 2;
+
+constexpr size_t UTF8_CONTINUATION_BYTE_OFFSET = 1;
+constexpr size_t UTF8_THREE_BYTE_LAST_OFFSET = 2;
+constexpr size_t UTF8_FOUR_BYTE_LAST_OFFSET = 3;
+
+constexpr size_t UTF16_TRAIL_SURROGATE_OFFSET = 1;
+
+constexpr uint8_t UTF8_NON_ASCII_MIN = 0b10000000;
+constexpr uint8_t UTF8_TWO_BYTE_PREFIX_MASK = 0b11100000;
+constexpr uint8_t UTF8_TWO_BYTE_PREFIX = 0b11000000;
+constexpr uint8_t UTF8_THREE_BYTE_PREFIX_MASK = 0b11110000;
+constexpr uint8_t UTF8_THREE_BYTE_PREFIX = 0b11100000;
+constexpr uint8_t UTF8_FOUR_BYTE_PREFIX_MASK = 0b11111000;
+constexpr uint8_t UTF8_FOUR_BYTE_PREFIX = 0b11110000;
+constexpr uint8_t UTF8_CONTINUATION_MASK = 0b11000000;
+constexpr uint8_t UTF8_CONTINUATION_PREFIX = 0b10000000;
+constexpr uint8_t UTF8_PAYLOAD_MASK = 0b00111111;
+constexpr uint8_t UTF8_TWO_BYTE_PAYLOAD_MASK = 0b00011111;
+constexpr uint8_t UTF8_THREE_BYTE_PAYLOAD_MASK = 0b00001111;
+constexpr uint8_t UTF8_FOUR_BYTE_PAYLOAD_MASK = 0b00000111;
+
+constexpr uint32_t UTF8_TWO_BYTE_MIN = 0x80;
+constexpr uint32_t UTF8_TWO_BYTE_MAX = 0x7ff;
+constexpr uint32_t UTF8_THREE_BYTE_MIN = 0x800;
+constexpr uint32_t UTF8_THREE_BYTE_MAX = 0xffff;
+constexpr uint32_t UTF8_FOUR_BYTE_MIN = 0x10000;
+constexpr uint32_t UTF8_FOUR_BYTE_MAX = 0x10ffff;
+constexpr uint32_t UTF16_SURROGATE_HIGH_START = 0xd800;
+constexpr uint32_t UTF16_SURROGATE_LOW_START = 0xdc00;
+constexpr uint32_t UTF16_SURROGATE_LOW_END = 0xdfff;
+constexpr uint32_t UTF16_SURROGATE_MASK = 0x3ff;
+
+constexpr uint32_t UTF8_SHIFT_1 = 6;
+constexpr uint32_t UTF8_SHIFT_2 = 12;
+constexpr uint32_t UTF8_SHIFT_3 = 18;
+constexpr uint32_t UTF16_SURROGATE_SHIFT = 10;
+
+constexpr uint16_t UNICODE_REPLACEMENT_CHAR = 0xfffd;
+constexpr uint8_t UTF8_REPLACEMENT_BYTE_1 = 0xef;
+constexpr uint8_t UTF8_REPLACEMENT_BYTE_2 = 0xbf;
+constexpr uint8_t UTF8_REPLACEMENT_BYTE_3 = 0xbd;
+
+constexpr uint64_t UTF8_FAST_ASCII_MASK = 0x8080808080808080;
+constexpr uint64_t UTF16_FAST_ASCII_MASK = 0xff80ff80ff80ff80;
+constexpr uint16_t UTF16_NON_ASCII_MASK = 0xff80;
+constexpr uint16_t UTF16_THREE_BYTE_MASK = 0xf800;
+
+constexpr size_t UTF16_CODE_UNIT_SIZE = sizeof(uint16_t);
+
+}  // namespace
+
 uint32_t tstr_encoding(struct TString tstr)
 {
     return (tstr.flags & TSTRING_ENCODING_MASK);
@@ -27,7 +91,9 @@ char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity)
     size_t char_size = sizeof(char);
     size_t bytes_required = sizeof(struct TStringInfo) + capacity * char_size;
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
-    if (!sh) return nullptr;
+    if (!sh) {
+        return nullptr;
+    }
 
     tref_init(&sh->count, 1);
     sh->drop = nullptr;
@@ -47,7 +113,9 @@ uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity)
     size_t char_size = sizeof(uint16_t);
     size_t bytes_required = sizeof(struct TStringInfo) + char_size * capacity;
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
-    if (!sh) return nullptr;
+    if (!sh) {
+        return nullptr;
+    }
 
     tref_init(&sh->count, 1);
     sh->drop = nullptr;
@@ -168,7 +236,7 @@ struct TString tstr_dup(struct TString orig)
     std::copy(orig.ptr, orig.ptr + orig.length, buffer);
     if (orig.flags & TSTRING_UTF16) {
         uint16_t *dst = reinterpret_cast<uint16_t *>(buffer);
-        dst[orig.length / 2] = u'\0';
+        dst[orig.length / UTF16_CODE_UNIT_SIZE] = u'\0';
     } else {
         buffer[orig.length] = '\0';
     }
@@ -200,57 +268,64 @@ void tstr_drop(struct TString tstr)
 inline size_t utf8_to_utf16_required(char const *src, size_t len)
 {
     uint8_t const *data = reinterpret_cast<uint8_t const *>(src);
-    size_t pos = 0, units = 0;
+    size_t pos = 0;
+    size_t units = 0;
 
     while (pos < len) {
-        if (pos + 16 <= len) {
-            uint64_t v1, v2;
-            std::copy(data + pos, data + pos + 8, reinterpret_cast<uint8_t *>(&v1));
-            std::copy(data + pos + 8, data + pos + 16, reinterpret_cast<uint8_t *>(&v2));
+        if (pos + UTF8_FAST_BLOCK_SIZE <= len) {
+            uint64_t v1;
+            uint64_t v2;
+            std::copy(data + pos, data + pos + UTF8_FAST_WORD_SIZE, reinterpret_cast<uint8_t *>(&v1));
+            std::copy(data + pos + UTF8_FAST_WORD_SIZE, data + pos + UTF8_FAST_BLOCK_SIZE,
+                      reinterpret_cast<uint8_t *>(&v2));
             uint64_t v = v1 | v2;
-            if ((v & 0x8080808080808080) == 0) {
-                units += 16;
-                pos += 16;
+            if ((v & UTF8_FAST_ASCII_MASK) == 0) {
+                units += UTF8_FAST_BLOCK_SIZE;
+                pos += UTF8_FAST_BLOCK_SIZE;
                 continue;
             }
         }
 
         uint8_t leading_byte = data[pos];
-        if (leading_byte < 0b10000000) {
+        if (leading_byte < UTF8_NON_ASCII_MIN) {
             // ASCII
-            units += 1;
+            units += UTF16_ONE_UNIT_COUNT;
             pos++;
-        } else if ((leading_byte & 0b11100000) == 0b11000000) {
+        } else if ((leading_byte & UTF8_TWO_BYTE_PREFIX_MASK) == UTF8_TWO_BYTE_PREFIX) {
             // 2 字节 UTF-8
-            if (pos + 1 >= len || (data[pos + 1] & 0b11000000) != 0b10000000) {
-                units += 1;
+            if (pos + UTF8_CONTINUATION_BYTE_OFFSET >= len ||
+                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                units += UTF16_ONE_UNIT_COUNT;
                 pos++;
                 continue;
             }
-            units += 1;
-            pos += 2;
-        } else if ((leading_byte & 0b11110000) == 0b11100000) {
+            units += UTF16_ONE_UNIT_COUNT;
+            pos += UTF8_TWO_BYTE_COUNT;
+        } else if ((leading_byte & UTF8_THREE_BYTE_PREFIX_MASK) == UTF8_THREE_BYTE_PREFIX) {
             // 3 字节 UTF-8
-            if (pos + 2 >= len || (data[pos + 1] & 0b11000000) != 0b10000000 ||
-                (data[pos + 2] & 0b11000000) != 0b10000000) {
-                units += 1;
+            if (pos + UTF8_THREE_BYTE_LAST_OFFSET >= len ||
+                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                units += UTF16_ONE_UNIT_COUNT;
                 pos++;
                 continue;
             }
-            units += 1;
-            pos += 3;
-        } else if ((leading_byte & 0b11111000) == 0b11110000) {
+            units += UTF16_ONE_UNIT_COUNT;
+            pos += UTF8_THREE_BYTE_COUNT;
+        } else if ((leading_byte & UTF8_FOUR_BYTE_PREFIX_MASK) == UTF8_FOUR_BYTE_PREFIX) {
             // 4 字节 UTF-8
-            if (pos + 3 >= len || (data[pos + 1] & 0b11000000) != 0b10000000 ||
-                (data[pos + 2] & 0b11000000) != 0b10000000 || (data[pos + 3] & 0b11000000) != 0b10000000) {
-                units += 1;
+            if (pos + UTF8_FOUR_BYTE_LAST_OFFSET >= len ||
+                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (data[pos + UTF8_FOUR_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                units += UTF16_ONE_UNIT_COUNT;
                 pos++;
                 continue;
             }
-            units += 2;
-            pos += 4;
+            units += UTF16_TWO_UNIT_COUNT;
+            pos += UTF8_FOUR_BYTE_COUNT;
         } else {
-            units += 1;
+            units += UTF16_ONE_UNIT_COUNT;
             pos++;
         }
     }
@@ -264,13 +339,15 @@ inline size_t utf8_to_utf16(char const *input, size_t len, uint16_t *output)
     uint16_t *start {output};
 
     while (pos < len) {
-        if (pos + 16 <= len) {
-            uint64_t v1, v2;
-            std::copy(data + pos, data + pos + 8, reinterpret_cast<uint8_t *>(&v1));
-            std::copy(data + pos + 8, data + pos + 16, reinterpret_cast<uint8_t *>(&v2));
+        if (pos + UTF8_FAST_BLOCK_SIZE <= len) {
+            uint64_t v1;
+            uint64_t v2;
+            std::copy(data + pos, data + pos + UTF8_FAST_WORD_SIZE, reinterpret_cast<uint8_t *>(&v1));
+            std::copy(data + pos + UTF8_FAST_WORD_SIZE, data + pos + UTF8_FAST_BLOCK_SIZE,
+                      reinterpret_cast<uint8_t *>(&v2));
             uint64_t v {v1 | v2};
-            if ((v & 0x8080808080808080) == 0) {
-                size_t final_pos = pos + 16;
+            if ((v & UTF8_FAST_ASCII_MASK) == 0) {
+                size_t final_pos = pos + UTF8_FAST_BLOCK_SIZE;
                 while (pos < final_pos) {
                     *output++ = uint16_t(input[pos]);
                     pos++;
@@ -280,57 +357,66 @@ inline size_t utf8_to_utf16(char const *input, size_t len, uint16_t *output)
         }
 
         uint8_t leading_byte = data[pos];
-        if (leading_byte < 0b10000000) {
+        if (leading_byte < UTF8_NON_ASCII_MIN) {
             // ASCII
             *output++ = uint16_t(leading_byte);
             pos++;
-        } else if ((leading_byte & 0b11100000) == 0b11000000) {
+        } else if ((leading_byte & UTF8_TWO_BYTE_PREFIX_MASK) == UTF8_TWO_BYTE_PREFIX) {
             // 2 字节 UTF-8
-            if (pos + 1 >= len || (data[pos + 1] & 0b11000000) != 0b10000000) {
-                *output++ = 0xFFFD;
+            if (pos + UTF8_CONTINUATION_BYTE_OFFSET >= len ||
+                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                *output++ = UNICODE_REPLACEMENT_CHAR;
                 pos++;
                 continue;
             }
-            uint32_t code_point = (leading_byte & 0b00011111) << 6 | (data[pos + 1] & 0b00111111);
-            if (code_point < 0x80 || 0x7ff < code_point) {
+            uint32_t code_point = (leading_byte & UTF8_TWO_BYTE_PAYLOAD_MASK) << UTF8_SHIFT_1 |
+                                  (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_PAYLOAD_MASK);
+            if (code_point < UTF8_TWO_BYTE_MIN || UTF8_TWO_BYTE_MAX < code_point) {
                 return 0;
             }
             *output++ = uint16_t(code_point);
-            pos += 2;
-        } else if ((leading_byte & 0b11110000) == 0b11100000) {
+            pos += UTF8_TWO_BYTE_COUNT;
+        } else if ((leading_byte & UTF8_THREE_BYTE_PREFIX_MASK) == UTF8_THREE_BYTE_PREFIX) {
             // 3 字节 UTF-8
-            if (pos + 2 >= len || (data[pos + 1] & 0b11000000) != 0b10000000 ||
-                (data[pos + 2] & 0b11000000) != 0b10000000) {
-                *output++ = 0xFFFD;
+            if (pos + UTF8_THREE_BYTE_LAST_OFFSET >= len ||
+                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                *output++ = UNICODE_REPLACEMENT_CHAR;
                 pos++;
                 continue;
             }
-            uint32_t code_point =
-                (leading_byte & 0b00001111) << 12 | (data[pos + 1] & 0b00111111) << 6 | (data[pos + 2] & 0b00111111);
-            if (code_point < 0x800 || 0xffff < code_point || (0xd7ff < code_point && code_point < 0xe000)) {
+            uint32_t code_point = (leading_byte & UTF8_THREE_BYTE_PAYLOAD_MASK) << UTF8_SHIFT_2 |
+                                  (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_1 |
+                                  (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_PAYLOAD_MASK);
+            if (code_point < UTF8_THREE_BYTE_MIN || UTF8_THREE_BYTE_MAX < code_point ||
+                (UTF16_SURROGATE_HIGH_START <= code_point && code_point <= UTF16_SURROGATE_LOW_END)) {
                 return 0;
             }
             *output++ = uint16_t(code_point);
-            pos += 3;
-        } else if ((leading_byte & 0b11111000) == 0b11110000) {
+            pos += UTF8_THREE_BYTE_COUNT;
+        } else if ((leading_byte & UTF8_FOUR_BYTE_PREFIX_MASK) == UTF8_FOUR_BYTE_PREFIX) {
             // 4 字节 UTF-8
-            if (pos + 3 >= len || (data[pos + 1] & 0b11000000) != 0b10000000 ||
-                (data[pos + 2] & 0b11000000) != 0b10000000 || (data[pos + 3] & 0b11000000) != 0b10000000) {
-                *output++ = 0xFFFD;
+            if (pos + UTF8_FOUR_BYTE_LAST_OFFSET >= len ||
+                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (data[pos + UTF8_FOUR_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                *output++ = UNICODE_REPLACEMENT_CHAR;
                 pos++;
                 continue;
             }
-            uint32_t code_point = (leading_byte & 0b00000111) << 18 | (data[pos + 1] & 0b00111111) << 12 |
-                                  (data[pos + 2] & 0b00111111) << 6 | (data[pos + 3] & 0b00111111);
-            if (code_point <= 0xffff || 0x10ffff < code_point) {
+            uint32_t code_point = (leading_byte & UTF8_FOUR_BYTE_PAYLOAD_MASK) << UTF8_SHIFT_3 |
+                                  (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_2 |
+                                  (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_1 |
+                                  (data[pos + UTF8_FOUR_BYTE_LAST_OFFSET] & UTF8_PAYLOAD_MASK);
+            if (code_point < UTF8_FOUR_BYTE_MIN || UTF8_FOUR_BYTE_MAX < code_point) {
                 return 0;
             }
-            code_point -= 0x10000;
-            uint16_t high_surrogate = uint16_t(0xD800 + (code_point >> 10));
-            uint16_t low_surrogate = uint16_t(0xDC00 + (code_point & 0x3FF));
+            code_point -= UTF8_FOUR_BYTE_MIN;
+            uint16_t high_surrogate = uint16_t(UTF16_SURROGATE_HIGH_START + (code_point >> UTF16_SURROGATE_SHIFT));
+            uint16_t low_surrogate = uint16_t(UTF16_SURROGATE_LOW_START + (code_point & UTF16_SURROGATE_MASK));
             *output++ = high_surrogate;
             *output++ = low_surrogate;
-            pos += 4;
+            pos += UTF8_FOUR_BYTE_COUNT;
         } else {
             return 0;
         }
@@ -341,42 +427,43 @@ inline size_t utf8_to_utf16(char const *input, size_t len, uint16_t *output)
 inline size_t utf16_to_utf8_required(uint16_t const *src, size_t len)
 {
     uint16_t const *data = src;
-    size_t pos = 0, units = 0;
+    size_t pos = 0;
+    size_t units = 0;
     while (pos < len) {
-        if (pos + 4 <= len) {
+        if (pos + UTF16_FAST_BLOCK_SIZE <= len) {
             uint64_t v;
-            std::copy(data + pos, data + pos + 4, reinterpret_cast<uint8_t *>(&v));
-            if ((v & 0xFF80FF80FF80FF80) == 0) {
-                units += 4;
-                pos += 4;
+            std::copy(data + pos, data + pos + UTF16_FAST_BLOCK_SIZE, reinterpret_cast<uint8_t *>(&v));
+            if ((v & UTF16_FAST_ASCII_MASK) == 0) {
+                units += UTF16_FAST_BLOCK_SIZE;
+                pos += UTF16_FAST_BLOCK_SIZE;
                 continue;
             }
         }
         uint16_t word = data[pos];
-        if ((word & 0xFF80) == 0) {
-            units += 1;
+        if ((word & UTF16_NON_ASCII_MASK) == 0) {
+            units += UTF8_ONE_BYTE_COUNT;
             pos++;
-        } else if ((word & 0xF800) == 0) {
-            units += 2;
+        } else if ((word & UTF16_THREE_BYTE_MASK) == 0) {
+            units += UTF8_TWO_BYTE_COUNT;
             pos++;
-        } else if ((word & 0xF800) != 0xD800) {
-            units += 3;
+        } else if ((word & UTF16_THREE_BYTE_MASK) != UTF16_SURROGATE_HIGH_START) {
+            units += UTF8_THREE_BYTE_COUNT;
             pos++;
         } else {
             // must be a surrogate pair
-            uint16_t diff = uint16_t(word - 0xD800);
-            if (pos + 1 >= len || diff > 0x3FF) {
-                units += 3;
+            uint16_t diff = uint16_t(word - UTF16_SURROGATE_HIGH_START);
+            if (pos + UTF16_TRAIL_SURROGATE_OFFSET >= len || diff > UTF16_SURROGATE_MASK) {
+                units += UTF8_THREE_BYTE_COUNT;
                 pos++;
                 continue;
             }
-            if (uint16_t(data[pos + 1] - 0xDC00) > 0x3FF) {
-                units += 3;
+            if (uint16_t(data[pos + UTF16_TRAIL_SURROGATE_OFFSET] - UTF16_SURROGATE_LOW_START) > UTF16_SURROGATE_MASK) {
+                units += UTF8_THREE_BYTE_COUNT;
                 pos++;
                 continue;
             }
-            units += 4;
-            pos += 2;
+            units += UTF8_FOUR_BYTE_COUNT;
+            pos += UTF16_TWO_UNIT_COUNT;
         }
     }
     return units;
@@ -388,11 +475,11 @@ inline size_t utf16_to_utf8(uint16_t const *input, size_t len, char *output)
     size_t pos = 0;
     char *start {output};
     while (pos < len) {
-        if (pos + 4 <= len) {
+        if (pos + UTF16_FAST_BLOCK_SIZE <= len) {
             uint64_t v;
-            std::copy(data + pos, data + pos + 4, reinterpret_cast<uint8_t *>(&v));
-            if ((v & 0xFF80FF80FF80FF80) == 0) {
-                size_t final_pos = pos + 4;
+            std::copy(data + pos, data + pos + UTF16_FAST_BLOCK_SIZE, reinterpret_cast<uint8_t *>(&v));
+            if ((v & UTF16_FAST_ASCII_MASK) == 0) {
+                size_t final_pos = pos + UTF16_FAST_BLOCK_SIZE;
                 while (pos < final_pos) {
                     *output++ = char(input[pos]);
                     pos++;
@@ -401,44 +488,44 @@ inline size_t utf16_to_utf8(uint16_t const *input, size_t len, char *output)
             }
         }
         uint16_t word = data[pos];
-        if ((word & 0xFF80) == 0) {
+        if ((word & UTF16_NON_ASCII_MASK) == 0) {
             *output++ = char(word);
             pos++;
-        } else if ((word & 0xF800) == 0) {
-            *output++ = char((word >> 6) | 0b11000000);
-            *output++ = char((word & 0b111111) | 0b10000000);
+        } else if ((word & UTF16_THREE_BYTE_MASK) == 0) {
+            *output++ = char((word >> UTF8_SHIFT_1) | UTF8_TWO_BYTE_PREFIX);
+            *output++ = char((word & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
             pos++;
-        } else if ((word & 0xF800) != 0xD800) {
-            *output++ = char((word >> 12) | 0b11100000);
-            *output++ = char(((word >> 6) & 0b111111) | 0b10000000);
-            *output++ = char((word & 0b111111) | 0b10000000);
+        } else if ((word & UTF16_THREE_BYTE_MASK) != UTF16_SURROGATE_HIGH_START) {
+            *output++ = char((word >> UTF8_SHIFT_2) | UTF8_THREE_BYTE_PREFIX);
+            *output++ = char(((word >> UTF8_SHIFT_1) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
+            *output++ = char((word & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
             pos++;
         } else {
             // must be a surrogate pair
-            uint16_t diff = uint16_t(word - 0xD800);
-            if (pos + 1 >= len || diff > 0x3FF) {
-                *output++ = char(0xEF);
-                *output++ = char(0xBF);
-                *output++ = char(0xBD);
+            uint16_t diff = uint16_t(word - UTF16_SURROGATE_HIGH_START);
+            if (pos + UTF16_TRAIL_SURROGATE_OFFSET >= len || diff > UTF16_SURROGATE_MASK) {
+                *output++ = char(UTF8_REPLACEMENT_BYTE_1);
+                *output++ = char(UTF8_REPLACEMENT_BYTE_2);
+                *output++ = char(UTF8_REPLACEMENT_BYTE_3);
                 pos++;
                 continue;
             }
-            uint16_t next_word = data[pos + 1];
-            uint16_t diff2 = uint16_t(next_word - 0xDC00);
-            if (diff2 > 0x3FF) {
-                *output++ = char(0xEF);
-                *output++ = char(0xBF);
-                *output++ = char(0xBD);
+            uint16_t next_word = data[pos + UTF16_TRAIL_SURROGATE_OFFSET];
+            uint16_t diff2 = uint16_t(next_word - UTF16_SURROGATE_LOW_START);
+            if (diff2 > UTF16_SURROGATE_MASK) {
+                *output++ = char(UTF8_REPLACEMENT_BYTE_1);
+                *output++ = char(UTF8_REPLACEMENT_BYTE_2);
+                *output++ = char(UTF8_REPLACEMENT_BYTE_3);
                 pos++;
                 continue;
             }
 
-            uint32_t value = (diff << 10) + diff2 + 0x10000;
-            *output++ = char((value >> 18) | 0b11110000);
-            *output++ = char(((value >> 12) & 0b111111) | 0b10000000);
-            *output++ = char(((value >> 6) & 0b111111) | 0b10000000);
-            *output++ = char((value & 0b111111) | 0b10000000);
-            pos += 2;
+            uint32_t value = (diff << UTF16_SURROGATE_SHIFT) + diff2 + UTF8_FOUR_BYTE_MIN;
+            *output++ = char((value >> UTF8_SHIFT_3) | UTF8_FOUR_BYTE_PREFIX);
+            *output++ = char(((value >> UTF8_SHIFT_2) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
+            *output++ = char(((value >> UTF8_SHIFT_1) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
+            *output++ = char((value & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
+            pos += UTF16_TWO_UNIT_COUNT;
         }
     }
     return output - start;
@@ -461,7 +548,7 @@ struct TString tstr_utf8_to_utf16(struct TString utf8_str)
     size_t used_len = utf8_to_utf16(src, len, dst);
     dst[used_len] = u'\0';
     result.flags = TSTRING_UTF16;
-    result.length = used_len * 2;
+    result.length = used_len * UTF16_CODE_UNIT_SIZE;
     return result;
 }
 
@@ -470,7 +557,7 @@ struct TString tstr_utf16_to_utf8(struct TString utf16_str)
     if (tstr_encoding(utf16_str) == TSTRING_UTF8) return tstr_dup(utf16_str);
 
     uint16_t const *src = reinterpret_cast<uint16_t const *>(tstr_buf(utf16_str));
-    size_t len = utf16_str.length / 2;
+    size_t len = utf16_str.length / UTF16_CODE_UNIT_SIZE;
 
     size_t needed = utf16_to_utf8_required(src, len);
 
@@ -508,7 +595,7 @@ struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list)
     for (size_t i = 0; i < count; ++i) {
         len += tstr_list[i].length;
     }
-    size_t unit_code_len = len / 2;
+    size_t unit_code_len = len / UTF16_CODE_UNIT_SIZE;
     struct TString tstr;
     uint16_t *buf = tstr_initialize_utf16(&tstr, unit_code_len + 1);
     for (size_t i = 0; i < count; ++i) {
@@ -532,7 +619,7 @@ struct TString tstr_substr(struct TString tstr, size_t pos, size_t len)
 
 struct TString tstr_substr_utf16(struct TString tstr, size_t pos, size_t len)
 {
-    size_t unit_code_len = tstr.length / 2;
+    size_t unit_code_len = tstr.length / UTF16_CODE_UNIT_SIZE;
     if (pos > unit_code_len) {
         len = 0;
     } else if (pos + len > unit_code_len) {

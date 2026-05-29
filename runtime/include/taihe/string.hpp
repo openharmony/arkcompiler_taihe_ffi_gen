@@ -505,7 +505,7 @@ struct u16string_view {
 
     operator std::u16string_view() const noexcept
     {
-        return {reinterpret_cast<char16_t const *>(tstr_buf(m_handle)), tstr_len(m_handle) / 2};
+        return {reinterpret_cast<char16_t const *>(tstr_buf(m_handle)), tstr_len(m_handle) / sizeof(uint16_t)};
     }
 
     // methods
@@ -524,7 +524,7 @@ struct u16string_view {
 
     size_type size() const noexcept
     {
-        return tstr_len(m_handle) / 2;
+        return tstr_len(m_handle) / sizeof(uint16_t);
     }
 
     const_reference front() const
