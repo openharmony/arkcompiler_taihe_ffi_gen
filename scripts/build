@@ -34,7 +34,6 @@ sys.path.insert(0, str(g_compiler_dir))
 from taihe.utils.resources import (
     BUILTIN_RESOURCES,
     DeploymentMode,
-    TaiheNapiBuild,
     PythonBuild,
     ResourceContext,
 )
@@ -127,22 +126,6 @@ def create_tar(in_dir: Path, out_tgz: Path, rename_root: str, timestamp: float):
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise
-
-
-class NapiTaiheBundle:
-    """A prebuilt taihe-napi with bundled packages."""
-
-    def __init__(self, root_dir: Path, platform: Platform):
-        self.platform = platform
-        self.root_dir = root_dir.absolute()
-        self.napi_taihe_dir = self.root_dir / "napi_taihe"
-
-    def extract(self):
-        self.napi_taihe_dir.mkdir(parents=True, exist_ok=True)
-        TaiheNapiBuild.resolve().extract_to(
-            self.napi_taihe_dir,
-            system=self.platform.value,
-        )
 
 
 class PythonBundle:
@@ -285,10 +268,6 @@ class Builder:
             except Exception as e:
                 print(f"Error: Failed to remove {path}: {e}")
                 raise
-
-        ### Create the taihe-napi ###
-        taihe_napi_bundle = NapiTaiheBundle(bundle_root, platform)
-        taihe_napi_bundle.extract()
 
         ### Move resources ###
         src_ctx = ResourceContext(DeploymentMode.PKG, bundle.sitepkg_dir / "taihe/data")
