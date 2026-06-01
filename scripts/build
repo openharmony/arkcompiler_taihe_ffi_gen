@@ -226,16 +226,22 @@ class Builder:
             check=True,
         )
 
-    def build(self, platform: Platform):
+    def build(self, platform: Platform, strip_version: bool):
         ### Preparation ###
         self.rebuild_compiler()
         dist_prefix = f"{self.brand}-{platform.value}"  # taihe-linux-x86_64
         bundle_root = self.dist_dir / dist_prefix  # repo/dist/taihe-linux-x86_64
         # bundle_out = repo/dist/taihe-linux-x86_64-0.35.0-20250701.tar.gz # adapt to pre built download scripts
-        bundle_out = (
-            self.dist_dir
-            / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tar.gz"
-        )
+        if strip_version:
+            bundle_out = (
+                self.dist_dir
+                / f"{dist_prefix}.tar.gz"
+            )
+        else:
+            bundle_out = (
+                self.dist_dir
+                / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tar.gz"
+            )
 
         # Clean up previous build ###
         shutil.rmtree(bundle_root, ignore_errors=True)
@@ -292,6 +298,13 @@ class Builder:
             rename_root=self.brand,
             timestamp=self.metadata.build_time_utc,
         )
+        
+        
+def clean_directory(directory: Path) -> None:
+    if not directory.exists():
+        return
+    shutil.rmtree(directory)
+    directory.mkdir(parents=True, exist_ok=True)
 
 
 def main():
@@ -317,13 +330,20 @@ def main():
         default=g_repo_dir / "dist",
         help="directory for build files",
     )
+    parser.add_argument(
+        '--strip_version',
+        action='store_true',
+        help='Strip version number and date from the output package name, producing a generic package.'
+    )
     args = parser.parse_args()
+    
+    clean_directory(args.dst_dir)
 
     build_mode = BuildMode(args.mode)
     ResourceContext.initialize()
     builder = Builder(g_repo_dir, args.dst_dir, build_mode)
     for p in args.system or Platform:
-        builder.build(Platform(p))
+        builder.build(Platform(p), args.strip_version)
 
 
 if __name__ == "__main__":
