@@ -1103,7 +1103,7 @@ class AniUnionImplGenerator:
             f"inline {union_cpp_info.as_owner} taihe::from_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_ani_info.ani_type} ani_value) const {{",
             f"}}",
         ):
-            for i, parts in enumerate(union_ani_info.sts_all_fields):
+            for i, parts in enumerate(union_ani_info.sorted_sts_all_fields):
                 final = parts[-1]
                 static_tags = []
                 for part in parts:
