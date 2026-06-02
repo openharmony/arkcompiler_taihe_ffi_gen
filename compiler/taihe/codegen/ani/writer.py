@@ -146,7 +146,7 @@ class ArkTsImportManager:
         yield ""
         for alias, type_path in self.typealias_dict.items():
             type_name = ".".join(type_path)
-            yield f"type {alias} = {type_name};"
+            yield f"export type {alias} = {type_name};"
 
     def get_type(
         self,
