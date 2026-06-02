@@ -57,10 +57,40 @@ TH_INLINE const char *tstr_buf(struct TString tstr)
     return tstr.ptr;
 }
 
+TH_INLINE const uint16_t *tstr_buf_utf16(struct TString tstr)
+{
+    return reinterpret_cast<uint16_t const *>(tstr.ptr);
+}
+
 // Returns the length of the TString.
 TH_INLINE size_t tstr_len(struct TString tstr)
 {
     return tstr.length;
+}
+
+TH_INLINE size_t tstr_len_utf16(struct TString tstr)
+{
+    return tstr.length / sizeof(uint16_t);
+}
+
+TH_INLINE uint32_t tstr_empty(struct TString tstr)
+{
+    return tstr.length == 0;
+}
+
+TH_INLINE uint32_t tstr_encoding(struct TString tstr)
+{
+    return tstr.flags & TSTRING_ENCODING_MASK;
+}
+
+TH_INLINE void tstr_set_len(struct TString *tstr_ptr, size_t len)
+{
+    tstr_ptr->length = len;
+}
+
+TH_INLINE void tstr_set_len_utf16(struct TString *tstr_ptr, size_t len)
+{
+    tstr_ptr->length = len * sizeof(uint16_t);
 }
 
 // Allocates memory and initializes a UTF8 encoding TString with a given
@@ -204,20 +234,6 @@ TH_EXPORT struct TString tstr_concat(size_t count, struct TString const *tstr_li
 // - The returned TString is just a view of the original string and does not own
 //   the memory, so it should not be freed.
 TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos, size_t len);
-
-// Retrieves the encoding type of a TString.
-//
-// # Parameters
-// - `tstr`: The TString whose encoding type is to be retrieved.
-//
-// # Returns
-// - A `uint32_t` value representing the encoding of the TString.
-//   user can compare with TSTRING_UTF8 / TSTRING_UTF16
-//   Possible values typically correspond to UTF-8, UTF-16, or UTF-32.
-//
-// # Notes
-// - This function does not modify the TString.
-TH_EXPORT uint32_t tstr_encoding(struct TString tstr);
 
 // Converts a UTF8-encoded TString object into a UTF16-encoded TString.
 //

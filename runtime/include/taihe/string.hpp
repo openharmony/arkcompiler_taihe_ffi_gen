@@ -41,13 +41,6 @@ struct u16string;
 enum class string_encoding { utf8, utf16, unknown };
 
 struct common_string_view {
-    using value_type = char;
-    using size_type = std::size_t;
-    using const_reference = value_type const &;
-    using const_pointer = value_type const *;
-    using const_iterator = const_pointer;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
     explicit common_string_view(struct TString handle) : m_handle(handle)
     {
     }
@@ -56,11 +49,11 @@ struct common_string_view {
     {
     }
 
-    common_string_view(char const *value TH_NONNULL, size_type size) : common_string_view(tstr_new_ref(value, size))
+    common_string_view(char const *value TH_NONNULL, std::size_t size) : common_string_view(tstr_new_ref(value, size))
     {
     }
 
-    common_string_view(char16_t const *value TH_NONNULL, size_type size)
+    common_string_view(char16_t const *value TH_NONNULL, std::size_t size)
         : common_string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
@@ -92,7 +85,7 @@ struct common_string_view {
     // methods
     bool empty() const noexcept
     {
-        return tstr_len(m_handle) == 0;
+        return tstr_empty(m_handle);
     }
 
     bool is_utf8() const noexcept
@@ -108,7 +101,7 @@ struct common_string_view {
     [[nodiscard]]
     string_encoding encoding() const noexcept
     {
-        switch (tstr_encoding(m_handle) & TSTRING_ENCODING_MASK) {
+        switch (tstr_encoding(m_handle)) {
             case TSTRING_UTF8:
                 return string_encoding::utf8;
 
@@ -137,11 +130,11 @@ struct common_string : public common_string_view {
     {
     }
 
-    common_string(char const *value TH_NONNULL, size_type size) : common_string(tstr_new(value, size))
+    common_string(char const *value TH_NONNULL, std::size_t size) : common_string(tstr_new(value, size))
     {
     }
 
-    common_string(char16_t const *value TH_NONNULL, size_type size)
+    common_string(char16_t const *value TH_NONNULL, std::size_t size)
         : common_string(tstr_new_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
@@ -272,7 +265,7 @@ struct string_view {
 
     bool empty() const noexcept
     {
-        return tstr_len(m_handle) == 0;
+        return tstr_empty(m_handle);
     }
 
     size_type size() const noexcept
@@ -409,19 +402,18 @@ struct string : public string_view {
         }
 
         TH_THROW(std::invalid_argument, "unknown encoding in common_string");
-
-#if defined(__GNUC__) || defined(__clang__)
-        __builtin_unreachable();
-#elif defined(_MSC_VER)
-        __assume(false);
-#endif
     }
 
-    explicit string(common_string other) : string_view(move_as_utf8_handle(std::move(other)))
+    explicit string(common_string other) : string(move_as_utf8_handle(std::move(other)))
     {
     }
 
     // Implicit upcast
+    operator common_string_view() const & noexcept
+    {
+        return common_string_view(m_handle);
+    }
+
     operator common_string() const & noexcept
     {
         return common_string(tstr_dup(m_handle));
@@ -431,7 +423,6 @@ struct string : public string_view {
     {
         common_string str = common_string(m_handle);
         m_handle.pstrinfo = nullptr;
-        m_handle.ptr = nullptr;
         return str;
     }
 
@@ -466,7 +457,7 @@ struct u16string_view {
     }
 
     u16string_view(char16_t const *value TH_NONNULL, size_type size)
-        : u16string_view(tstr_new_utf16(reinterpret_cast<uint16_t const *>(value), size))
+        : u16string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
 
@@ -505,7 +496,7 @@ struct u16string_view {
 
     operator std::u16string_view() const noexcept
     {
-        return {reinterpret_cast<char16_t const *>(tstr_buf(m_handle)), tstr_len(m_handle) / sizeof(uint16_t)};
+        return {reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle)), tstr_len_utf16(m_handle)};
     }
 
     // methods
@@ -514,17 +505,17 @@ struct u16string_view {
         if (pos >= size()) {
             TH_THROW(std::out_of_range, "Index out of range");
         }
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle))[pos];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[pos];
     }
 
     bool empty() const noexcept
     {
-        return tstr_len(m_handle) == 0;
+        return tstr_empty(m_handle);
     }
 
     size_type size() const noexcept
     {
-        return tstr_len(m_handle) / sizeof(uint16_t);
+        return tstr_len_utf16(m_handle);
     }
 
     const_reference front() const
@@ -532,7 +523,7 @@ struct u16string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle))[0];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[0];
     }
 
     const_reference back() const
@@ -540,22 +531,22 @@ struct u16string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle))[size() - 1];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[size() - 1];
     }
 
     const_pointer c_str() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle));
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle));
     }
 
     const_pointer data() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle));
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle));
     }
 
     const_iterator begin() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle));
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle));
     }
 
     const_iterator cbegin() const noexcept
@@ -565,7 +556,7 @@ struct u16string_view {
 
     const_iterator end() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf(m_handle)) + tstr_len(m_handle);
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle)) + tstr_len_utf16(m_handle);
     }
 
     const_iterator cend() const noexcept
@@ -653,29 +644,27 @@ struct u16string : public u16string_view {
         }
 
         TH_THROW(std::invalid_argument, "unknown encoding in common_string");
-
-#if defined(__GNUC__) || defined(__clang__)
-        __builtin_unreachable();
-#elif defined(_MSC_VER)
-        __assume(false);
-#endif
     }
 
-    explicit u16string(common_string other) : u16string_view(move_as_utf16_handle(std::move(other)))
+    explicit u16string(common_string other) : u16string(move_as_utf16_handle(std::move(other)))
     {
     }
 
     // Implicit upcast
+    operator common_string_view() const & noexcept
+    {
+        return common_string_view(m_handle);
+    }
+
     operator common_string() const & noexcept
     {
-        return common_string(m_handle);
+        return common_string(tstr_dup(m_handle));
     }
 
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
         m_handle.pstrinfo = nullptr;
-        m_handle.ptr = nullptr;
         return str;
     }
 
