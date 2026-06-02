@@ -45,6 +45,7 @@ namespace {
     int32_t const case1Key = 1;
     int32_t const case2Key = 2;
     int32_t const case3Key = 3;
+    int32_t const case4Key = 4;
 
     int32_t const case1Value = 100;
     float const case2Value = 0.5f;
@@ -56,8 +57,10 @@ namespace {
             return Union::make_fValue(case2Value);
         case case3Key:
             return Union::make_sValue("Hello from C++!");
+        case case4Key:
+            return Union::make_nValue();
         default:
-            return Union::make_empty();
+            return Union::make_uValue();
     }
 }
 
@@ -69,8 +72,12 @@ namespace {
         std::cout << "F " << *fPtr << std::endl;
     } else if (auto sPtr = u.get_sValue_ptr()) {
         std::cout << "S " << *sPtr << std::endl;
+    } else if (u.holds_nValue()) {
+        std::cout << "N" << std::endl;
+    } else if (u.holds_uValue()) {
+        std::cout << "U" << std::endl;
     } else {
-        std::cout << "E" << std::endl;
+        return taihe::unexpected<taihe::error>("Invalid union state");
     }
     return {};
 }

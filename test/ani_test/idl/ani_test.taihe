@@ -23,10 +23,11 @@ function makeData(): Data;
 function showData(s: Data): void;
 
 union Union {
-    empty: unit;
     iValue: i32;
     fValue: f32;
     sValue: String;
+    nValue: @null unit;
+    uValue: @undefined unit;
 }
 
 function makeUnion(v: i32): Union;

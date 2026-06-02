@@ -38,15 +38,13 @@ function test_data_struct() {
 
 function test_union() {
     // Test showUnion with different types
-    ani_test.showUnion(null);
     ani_test.showUnion((1).toInt());
     ani_test.showUnion(2.0f);
     ani_test.showUnion("Hello from STS!");
+    ani_test.showUnion(null);
+    ani_test.showUnion(undefined);
 
     // Test makeUnion returns expected values
-    const union0 = ani_test.makeUnion(0);
-    arktest.assertEQ(union0, null);
-
     const union1 = ani_test.makeUnion(1);
     arktest.assertEQ(union1, 100);
 
@@ -55,6 +53,12 @@ function test_union() {
 
     const union3 = ani_test.makeUnion(3);
     arktest.assertEQ(union3, "Hello from C++!");
+
+    const union4 = ani_test.makeUnion(4);
+    arktest.assertEQ(union4, null);
+
+    const union0 = ani_test.makeUnion(0);
+    arktest.assertEQ(union0, undefined);
 }
 
 function test_optional() {
