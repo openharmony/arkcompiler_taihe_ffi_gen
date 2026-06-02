@@ -124,7 +124,7 @@ from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
-@dataclass
+@dataclass(frozen=True)
 class ArkTsOutDir(AbstractAnalysis[PackageGroup]):
     module_prefix: str | None = None
     path_prefix: str | None = None
@@ -138,7 +138,7 @@ class ArkTsOutDir(AbstractAnalysis[PackageGroup]):
 # Ani Runtime Types
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsType(ABC):
     @property
     @abstractmethod
@@ -149,7 +149,7 @@ class EtsType(ABC):
     def boxed(self) -> "EtsNonPrimitiveType": ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsPrimitiveType(EtsType):
     _desc_boxed: str
     _sig: str
@@ -163,7 +163,7 @@ class EtsPrimitiveType(EtsType):
         return EtsClassType(self._desc_boxed)
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsNonPrimitiveType(EtsType, ABC):
     @property
     @abstractmethod
@@ -177,13 +177,13 @@ class EtsNonPrimitiveType(EtsType, ABC):
     def as_union_members(self) -> Iterable["EtsUnionMemberType"]: ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsUnionMemberType(EtsNonPrimitiveType, ABC):
     def as_union_members(self) -> Iterable["EtsUnionMemberType"]:
         yield self
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsUnionType(EtsNonPrimitiveType):
     _members: list["EtsUnionMemberType"]
 
@@ -213,7 +213,7 @@ class EtsUnionType(EtsNonPrimitiveType):
         yield from self._members
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsUndefinedType(EtsNonPrimitiveType):
     @property
     def sig(self) -> str:
@@ -227,7 +227,7 @@ class EtsUndefinedType(EtsNonPrimitiveType):
         yield from ()
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsValueArrayType(EtsUnionMemberType):
     _element: EtsPrimitiveType
 
@@ -240,7 +240,7 @@ class EtsValueArrayType(EtsUnionMemberType):
         return self.sig
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsFixedArrayType(EtsUnionMemberType):
     _element: EtsNonPrimitiveType
 
@@ -253,7 +253,7 @@ class EtsFixedArrayType(EtsUnionMemberType):
         return self.sig
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsClassType(EtsUnionMemberType):
     _desc: str
 
@@ -266,7 +266,7 @@ class EtsClassType(EtsUnionMemberType):
         return self._desc
 
 
-@dataclass
+@dataclass(frozen=True)
 class EtsEnumType(EtsUnionMemberType):
     _desc: str
 
@@ -282,7 +282,7 @@ class EtsEnumType(EtsUnionMemberType):
 # Ani Types
 
 
-@dataclass(repr=False)
+@dataclass(frozen=True, repr=False)
 class AniType:
     hint: str
     base: "AniBaseType"
@@ -295,7 +295,7 @@ class AniType:
         return self.base.hint.capitalize()
 
 
-@dataclass(repr=False)
+@dataclass(frozen=True, repr=False)
 class AniBaseType(AniType):
     def __init__(self, hint: str):
         super().__init__(hint, self)
@@ -328,7 +328,7 @@ ANI_FIXEDARRAY_LONG = AniType(hint="fixedarray_long", base=ANI_REF)
 # Ani Scopes
 
 
-@dataclass(repr=False)
+@dataclass(frozen=True, repr=False)
 class AniScope:
     hint: str
 
@@ -839,6 +839,14 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
                 )
             else:
                 self.sts_all_fields.append([field])
+
+        self.sorted_sts_all_fields = sorted(
+            self.sts_all_fields,
+            key=lambda parts: {
+                EtsUndefinedType(): 0,
+                EtsClassType("std.core.Null"): 1,
+            }.get(TypeAniInfo.get(am, parts[-1].ty).ets_type.boxed, 2),
+        )
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
