@@ -23,6 +23,7 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Final
 from pathlib import Path
+import platform
 
 # Directory for ".git"
 g_repo_dir = Path(__file__).parent.parent
@@ -106,19 +107,34 @@ class Platform(Enum):
         return self.value.startswith("windows-")
 
 
-def create_tar(in_dir: Path, out_tgz: Path, rename_root: str, timestamp: float):
+def create_tar(strip_version: bool, in_dir: Path, out_tgz: Path, rename_root: str, timestamp: float):
     out_tgz.unlink(missing_ok=True)
     try:
-        tar_cmd = ["tar", "--create", "--gzip", "--format=gnu", "--file", out_tgz]
-        # Ensure consistent user name.
-        tar_cmd += ["--owner=0", "--group=0", "--numeric-owner"]
-        # Ensure consistent ordering and timestamp (2024-01-01)
-        tar_cmd += ["--sort=name", f"--mtime=@{timestamp}"]
-        # Rename the root directory.
-        tar_cmd += [f"--transform=s#^{in_dir.name}#{rename_root}#"]
-        # Pass the root dir now.
-        tar_cmd += ["-C", in_dir.parent, in_dir.name]
-        subprocess.run(tar_cmd, check=True, capture_output=True, text=True)
+        if strip_version:
+            if platform.system() == 'Darwin':
+                tar_cmd = ["tar", "--create", "--gzip", "--file", out_tgz]
+                # Rename the root directory.
+                tar_cmd += ["-s", f"/^{in_dir.name}/{rename_root}/"]
+                # Pass the root dir now.
+                tar_cmd += ["-C", in_dir.parent, in_dir.name]
+            else:
+                tar_cmd = ["tar", "--create", "--gzip", "--file", str(out_tgz)]
+                # Rename the root directory.
+                tar_cmd += ["--transform", f"s/^{in_dir.name}/{rename_root}/"]
+                # Pass the root dir now.
+                tar_cmd += ["-C", str(in_dir.parent), in_dir.name]
+            subprocess.run(tar_cmd, check=True, capture_output=True, text=True)
+        else:
+            tar_cmd = ["tar", "--create", "--gzip", "--format=gnu", "--file", out_tgz]
+            # Ensure consistent user name.
+            tar_cmd += ["--owner=0", "--group=0", "--numeric-owner"]
+            # Ensure consistent ordering and timestamp (2024-01-01)
+            tar_cmd += ["--sort=name", f"--mtime=@{timestamp}"]
+            # Rename the root directory.
+            tar_cmd += [f"--transform=s#^{in_dir.name}#{rename_root}#"]
+            # Pass the root dir now.
+            tar_cmd += ["-C", in_dir.parent, in_dir.name]
+            subprocess.run(tar_cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
         print(f"Error creating package: {e}")
         print(f"Command output: {e.stderr}")
@@ -293,6 +309,7 @@ class Builder:
         ### Finalize ###
         (bundle.root_dir / "version.txt").write_text(self.release_note)
         create_tar(
+            strip_version,
             bundle_root,
             bundle_out,
             rename_root=self.brand,
