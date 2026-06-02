@@ -466,7 +466,7 @@ struct u16string_view {
     }
 
     u16string_view(char16_t const *value TH_NONNULL, size_type size)
-        : u16string_view(tstr_new_utf16(reinterpret_cast<uint16_t const *>(value), size))
+        : u16string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
 
@@ -668,7 +668,7 @@ struct u16string : public u16string_view {
     // Implicit upcast
     operator common_string() const & noexcept
     {
-        return common_string(m_handle);
+        return common_string(tstr_dup(m_handle));
     }
 
     operator common_string() && noexcept
