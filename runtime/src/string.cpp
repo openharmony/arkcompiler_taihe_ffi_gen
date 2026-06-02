@@ -77,19 +77,21 @@ constexpr uint64_t UTF16_FAST_ASCII_MASK = 0xff80ff80ff80ff80;
 constexpr uint16_t UTF16_NON_ASCII_MASK = 0xff80;
 constexpr uint16_t UTF16_THREE_BYTE_MASK = 0xf800;
 
-constexpr size_t UTF16_CODE_UNIT_SIZE = sizeof(uint16_t);
-
 }  // namespace
 
-uint32_t tstr_encoding(struct TString tstr)
+TString tstr_new_invalid()
 {
-    return (tstr.flags & TSTRING_ENCODING_MASK);
+    struct TString tstr;
+    tstr.flags = 0;
+    tstr.length = 0;
+    tstr.pstrinfo = nullptr;
+    tstr.ptr = nullptr;
+    return tstr;
 }
 
 char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity)
 {
-    size_t char_size = sizeof(char);
-    size_t bytes_required = sizeof(struct TStringInfo) + capacity * char_size;
+    size_t bytes_required = sizeof(struct TStringInfo) + capacity;
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
     if (!sh) {
         return nullptr;
@@ -110,8 +112,7 @@ char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity)
 
 uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity)
 {
-    size_t char_size = sizeof(uint16_t);
-    size_t bytes_required = sizeof(struct TStringInfo) + char_size * capacity;
+    size_t bytes_required = sizeof(struct TStringInfo) + capacity * sizeof(uint16_t);
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
     if (!sh) {
         return nullptr;
@@ -126,6 +127,7 @@ uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity)
     tstr_ptr->flags = TSTRING_UTF16;
     tstr_ptr->pstrinfo = sh;
     tstr_ptr->ptr = buffer;
+
     return reinterpret_cast<uint16_t *>(buffer);
 }
 
@@ -135,7 +137,7 @@ struct TString tstr_new(char const *value TH_NONNULL, size_t len)
     char *buf = tstr_initialize(&tstr, len + 1);
     buf = std::copy(value, value + len, buf);
     *buf = '\0';
-    tstr.length = len;
+    tstr_set_len(&tstr, len);
     return tstr;
 }
 
@@ -143,9 +145,9 @@ struct TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
 {
     struct TString tstr;
     uint16_t *buf = tstr_initialize_utf16(&tstr, len + 1);
-    std::copy(value, value + len, buf);
-    buf[len] = u'\0';
-    tstr.length = len * sizeof(uint16_t);
+    buf = std::copy(value, value + len, buf);
+    *buf = u'\0';
+    tstr_set_len_utf16(&tstr, len);
     return tstr;
 }
 
@@ -153,7 +155,7 @@ struct TString tstr_new_ref(char const *buf TH_NONNULL, size_t len)
 {
     struct TString tstr;
     tstr.flags = TSTRING_REF | TSTRING_UTF8;
-    tstr.length = len;
+    tstr_set_len(&tstr, len);
     tstr.pstrinfo = nullptr;
     tstr.ptr = buf;
     return tstr;
@@ -163,7 +165,7 @@ struct TString tstr_new_ref_utf16(uint16_t const *buf TH_NONNULL, size_t len)
 {
     struct TString tstr;
     tstr.flags = TSTRING_REF | TSTRING_UTF16;
-    tstr.length = len * sizeof(uint16_t);
+    tstr_set_len_utf16(&tstr, len);
     tstr.pstrinfo = nullptr;
     tstr.ptr = reinterpret_cast<char const *>(buf);
     return tstr;
@@ -174,18 +176,14 @@ struct TString tstr_new_from_external(char const *buf TH_NONNULL, size_t len, vo
     struct TString tstr;
     struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
     if (!info) {
-        tstr.flags = 0;
-        tstr.length = 0;
-        tstr.pstrinfo = nullptr;
-        tstr.ptr = nullptr;
-        return tstr;
+        return tstr_new_invalid();
     }
     tref_init(&info->count, 1);
     info->drop = drop;
     info->external_obj = external_obj;
 
     tstr.flags = TSTRING_UTF8 | TSTRING_EXT;
-    tstr.length = len;
+    tstr_set_len(&tstr, len);
     tstr.pstrinfo = info;
     tstr.ptr = buf;
 
@@ -198,18 +196,14 @@ struct TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size
     struct TString tstr;
     struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
     if (!info) {
-        tstr.flags = 0;
-        tstr.length = 0;
-        tstr.pstrinfo = nullptr;
-        tstr.ptr = nullptr;
-        return tstr;
+        return tstr_new_invalid();
     }
     tref_init(&info->count, 1);
     info->drop = drop;
     info->external_obj = external_obj;
 
     tstr.flags = TSTRING_UTF16 | TSTRING_EXT;
-    tstr.length = len * sizeof(uint16_t);
+    tstr_set_len_utf16(&tstr, len);
     tstr.pstrinfo = info;
     tstr.ptr = reinterpret_cast<char const *>(buf);
 
@@ -224,28 +218,14 @@ struct TString tstr_dup(struct TString orig)
         tref_inc(&orig.pstrinfo->count);
         return orig;
     }
-    struct TString tstr;
-    size_t char_size = (orig.flags & TSTRING_UTF16) ? 2 : 1;
-    size_t bytes_required = sizeof(struct TStringInfo) + orig.length + char_size;
-    struct TStringInfo *newSh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
-    tref_init(&newSh->count, 1);
-    newSh->external_obj = nullptr;
-    newSh->drop = nullptr;
 
-    char *buffer = reinterpret_cast<char *>(newSh + 1);
-    std::copy(orig.ptr, orig.ptr + orig.length, buffer);
-    if (orig.flags & TSTRING_UTF16) {
-        uint16_t *dst = reinterpret_cast<uint16_t *>(buffer);
-        dst[orig.length / UTF16_CODE_UNIT_SIZE] = u'\0';
+    if (tstr_encoding(orig) == TSTRING_UTF8) {
+        return tstr_new(tstr_buf(orig), tstr_len(orig));
+    } else if (tstr_encoding(orig) == TSTRING_UTF16) {
+        return tstr_new_utf16(tstr_buf_utf16(orig), tstr_len_utf16(orig));
     } else {
-        buffer[orig.length] = '\0';
+        return tstr_new_invalid();
     }
-
-    tstr.flags = orig.flags & TSTRING_ENCODING_MASK;
-    tstr.length = orig.length;
-    tstr.pstrinfo = newSh;
-    tstr.ptr = buffer;
-    return tstr;
 }
 
 void tstr_drop(struct TString tstr)
@@ -536,19 +516,21 @@ struct TString tstr_utf8_to_utf16(struct TString utf8_str)
     if (tstr_encoding(utf8_str) == TSTRING_UTF16) return tstr_dup(utf8_str);
 
     char const *src = tstr_buf(utf8_str);
-    size_t len = utf8_str.length;
+    size_t len = tstr_len(utf8_str);
 
     size_t needed = utf8_to_utf16_required(src, len);
 
     struct TString result;
     uint16_t *dst = tstr_initialize_utf16(&result, (needed + 1));
 
-    if (!dst) return (struct TString) {.flags = TSTRING_UTF16, .length = 0, .pstrinfo = nullptr, .ptr = nullptr};
+    if (!dst) {
+        return tstr_new_invalid();
+    }
 
     size_t used_len = utf8_to_utf16(src, len, dst);
     dst[used_len] = u'\0';
     result.flags = TSTRING_UTF16;
-    result.length = used_len * UTF16_CODE_UNIT_SIZE;
+    tstr_set_len_utf16(&result, used_len);
     return result;
 }
 
@@ -556,20 +538,22 @@ struct TString tstr_utf16_to_utf8(struct TString utf16_str)
 {
     if (tstr_encoding(utf16_str) == TSTRING_UTF8) return tstr_dup(utf16_str);
 
-    uint16_t const *src = reinterpret_cast<uint16_t const *>(tstr_buf(utf16_str));
-    size_t len = utf16_str.length / UTF16_CODE_UNIT_SIZE;
+    uint16_t const *src = tstr_buf_utf16(utf16_str);
+    size_t len = tstr_len_utf16(utf16_str);
 
     size_t needed = utf16_to_utf8_required(src, len);
 
     struct TString result;
     char *dst = tstr_initialize(&result, (needed + 1));
 
-    if (!dst) return (struct TString) {.flags = TSTRING_UTF8, .length = 0, .pstrinfo = nullptr, .ptr = nullptr};
+    if (!dst) {
+        return tstr_new_invalid();
+    }
 
     size_t used_len = utf16_to_utf8(src, len, dst);
     dst[used_len] = '\0';
     result.flags = TSTRING_UTF8;
-    result.length = used_len;
+    tstr_set_len(&result, used_len);
     return result;
 }
 
@@ -577,15 +561,15 @@ struct TString tstr_concat(size_t count, struct TString const *tstr_list)
 {
     size_t len = 0;
     for (size_t i = 0; i < count; ++i) {
-        len += tstr_list[i].length;
+        len += tstr_len(tstr_list[i]);
     }
     struct TString tstr;
     char *buf = tstr_initialize(&tstr, len + 1);
     for (size_t i = 0; i < count; ++i) {
-        buf = std::copy(tstr_list[i].ptr, tstr_list[i].ptr + tstr_list[i].length, buf);
+        buf = std::copy(tstr_buf(tstr_list[i]), tstr_buf(tstr_list[i]) + tstr_len(tstr_list[i]), buf);
     }
     *buf = '\0';
-    tstr.length = len;
+    tstr_set_len(&tstr, len);
     return tstr;
 }
 
@@ -593,37 +577,36 @@ struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list)
 {
     size_t len = 0;
     for (size_t i = 0; i < count; ++i) {
-        len += tstr_list[i].length;
+        len += tstr_len_utf16(tstr_list[i]);
     }
-    size_t unit_code_len = len / UTF16_CODE_UNIT_SIZE;
     struct TString tstr;
-    uint16_t *buf = tstr_initialize_utf16(&tstr, unit_code_len + 1);
+    uint16_t *buf = tstr_initialize_utf16(&tstr, len + 1);
     for (size_t i = 0; i < count; ++i) {
-        buf = std::copy(reinterpret_cast<uint16_t const *>(tstr_list[i].ptr),
-                        reinterpret_cast<uint16_t const *>(tstr_list[i].ptr + tstr_list[i].length), buf);
+        buf = std::copy(tstr_buf_utf16(tstr_list[i]), tstr_buf_utf16(tstr_list[i]) + tstr_len_utf16(tstr_list[i]), buf);
     }
     *buf = u'\0';
-    tstr.length = len;
+    tstr_set_len_utf16(&tstr, len);
     return tstr;
 }
 
 struct TString tstr_substr(struct TString tstr, size_t pos, size_t len)
 {
-    if (pos > tstr.length) {
+    size_t orig_len = tstr_len(tstr);
+    if (pos > orig_len) {
         len = 0;
-    } else if (pos + len > tstr.length) {
-        len = tstr.length - pos;
+    } else if (pos + len > orig_len) {
+        len = orig_len - pos;
     }
-    return tstr_new_ref(tstr.ptr + pos, len);
+    return tstr_new_ref(tstr_buf(tstr) + pos, len);
 }
 
 struct TString tstr_substr_utf16(struct TString tstr, size_t pos, size_t len)
 {
-    size_t unit_code_len = tstr.length / UTF16_CODE_UNIT_SIZE;
-    if (pos > unit_code_len) {
+    size_t orig_len = tstr_len_utf16(tstr);
+    if (pos > orig_len) {
         len = 0;
-    } else if (pos + len > unit_code_len) {
-        len = unit_code_len - pos;
+    } else if (pos + len > orig_len) {
+        len = orig_len - pos;
     }
-    return tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(tstr.ptr) + pos, len);
+    return tstr_new_ref_utf16(tstr_buf_utf16(tstr) + pos, len);
 }
