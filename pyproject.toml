@@ -32,7 +32,7 @@ dev = [
 ]
 
 [[tool.uv.index]]
-url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/"
+url = "https://repo.huaweicloud.com/repository/pypi/simple/"
 default = true
 
 ### Build System ###
