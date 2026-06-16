@@ -71,7 +71,6 @@ class CppMacroPackageGenerator:
     def gen_package_file(self):
         pkg_abi_info = PackageAbiInfo.get(self.am, self.pkg)
         with self.target:
-            self.target.add_include("taihe/common.hpp")
             self.target.add_include("taihe/invoke.hpp")
             self.target.add_include(pkg_abi_info.header)
             for func in self.pkg.functions:
@@ -81,6 +80,9 @@ class CppMacroPackageGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_cpp_info.impl_headers)
+                func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+                if not func_abi_info.is_noexcept:
+                    self.target.add_include("taihe/expected.hpp", "taihe/error.hpp")
                 self.gen_func(func)
 
     def gen_func(self, func: GlobFuncDecl):
@@ -143,7 +145,6 @@ class CppMacroIfaceGenerator:
     def gen_iface_file(self):
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
-            self.target.add_include("taihe/common.hpp")
             self.target.add_include("taihe/invoke.hpp")
             self.target.add_include(iface_cpp_info.impl_header)
             for method in self.iface.methods:
@@ -153,6 +154,9 @@ class CppMacroIfaceGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_cpp_info.impl_headers)
+                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                if not method_abi_info.is_noexcept:
+                    self.target.add_include("taihe/expected.hpp", "taihe/error.hpp")
                 self.gen_method(method)
 
     def gen_method(self, method: IfaceMethodDecl):
@@ -459,6 +463,9 @@ class CppTemplateClassHeaderGenerator:
                     if isinstance(return_ty := method.return_ty, NonVoidType):
                         return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                         self.target.add_include(*return_ty_cpp_info.impl_headers)
+                    method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                    if not method_abi_info.is_noexcept:
+                        self.target.add_include("taihe/expected.hpp", "taihe/error.hpp")
             self.gen_iface_template_class()
 
     def gen_iface_template_class(self):

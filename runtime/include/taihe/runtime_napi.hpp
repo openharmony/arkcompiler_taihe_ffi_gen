@@ -27,7 +27,7 @@
 #include <sstream>
 
 #include <taihe/string.hpp>
-#include <taihe/expected.hpp>
+#include <taihe/error.hpp>
 
 namespace taihe {
 void set_env(napi_env env);

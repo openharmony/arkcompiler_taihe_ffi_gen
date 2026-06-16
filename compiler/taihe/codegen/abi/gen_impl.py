@@ -64,7 +64,8 @@ class CMacroPackageGenerator:
     def gen_package_file(self):
         pkg_abi_info = PackageAbiInfo.get(self.am, self.pkg)
         with self.target:
-            self.target.add_include("taihe/common.h", pkg_abi_info.header)
+            self.target.add_include("taihe/common.h")
+            self.target.add_include(pkg_abi_info.header)
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
@@ -72,6 +73,9 @@ class CMacroPackageGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_abi_info.impl_headers)
+                func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+                if not func_abi_info.is_noexcept:
+                    self.target.add_include("taihe/error.abi.h")
                 self.gen_func(func)
 
     def gen_func(self, func: GlobFuncDecl):
@@ -118,7 +122,8 @@ class CMacroIfaceGenerator:
     def gen_iface_file(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
-            self.target.add_include("taihe/common.h", iface_abi_info.impl_header)
+            self.target.add_include("taihe/common.h")
+            self.target.add_include(iface_abi_info.impl_header)
             for method in self.iface.methods:
                 for param in method.params:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
@@ -126,6 +131,9 @@ class CMacroIfaceGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_abi_info.impl_headers)
+                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                if not method_abi_info.is_noexcept:
+                    self.target.add_include("taihe/error.abi.h")
                 self.gen_method(method)
 
     def gen_method(self, method: IfaceMethodDecl):

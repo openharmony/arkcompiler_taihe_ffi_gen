@@ -333,6 +333,9 @@ class CompleterTypeCppInfo(TypeCppInfo):
             item_ty_cpp_name = item_ty_cpp_info.as_owner
         else:
             item_ty_cpp_name = "void"
+        self.decl_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
+        self.defn_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
+        self.impl_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
         exp_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
         self.as_owner = f"::taihe::completer<{exp_ty_cpp_name}>"
         self.as_param = f"::taihe::completer<{exp_ty_cpp_name}>"
@@ -351,6 +354,9 @@ class FutureTypeCppInfo(TypeCppInfo):
             item_ty_cpp_name = item_ty_cpp_info.as_owner
         else:
             item_ty_cpp_name = "void"
+        self.decl_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
+        self.defn_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
+        self.impl_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
         exp_ty_cpp_name = f"::taihe::expected<{item_ty_cpp_name}, ::taihe::error>"
         self.as_owner = f"::taihe::future<{exp_ty_cpp_name}>"
         self.as_param = f"::taihe::future<{exp_ty_cpp_name}>"
@@ -373,6 +379,9 @@ class CallbackTypeCppInfo(TypeCppInfo):
         if callback_abi_info.is_noexcept:
             result_ty_cpp_name = return_ty_cpp_name
         else:
+            self.decl_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
+            self.defn_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
+            self.impl_headers.extend(["taihe/expected.hpp", "taihe/error.hpp"])
             result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         params_ty_cpp_name = []
         for param in t.ref.params:

@@ -18,8 +18,9 @@
 #ifndef FOO_DERIVEDMETHODCLASS_IMPL_HPP
 #define FOO_DERIVEDMETHODCLASS_IMPL_HPP
 
-#include "taihe/string.hpp"
+#include <taihe/string.hpp>
 #include <taihe/expected.hpp>
+#include <taihe/error.hpp>
 
 class DerivedMethodClassImpl {
 public:

@@ -15,10 +15,13 @@
 // This file is a test file.
 // NOLINTBEGIN
 
-#include "hello.impl.hpp"
 #include <cstdint>
 #include <iostream>
+
 #include <taihe/expected.hpp>
+#include <taihe/error.hpp>
+
+#include "hello.impl.hpp"
 #include "hello.proj.hpp"
 
 namespace {

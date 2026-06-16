@@ -25,10 +25,10 @@
 #endif
 
 #if __has_include("hilog/log.h") && defined(TH_ANI_USE_HILOG)
+#include "hilog/log.h"
 #ifdef HIVIEWDFX_HILOG_C_H  // SDK scenario
 #define OH_LOG_Print HiLogPrint
 #endif
-#include "hilog/log.h"
 #define TH_ANI_LOG_DOMAIN 0x3200
 #define TH_ANI_LOG_TAG "Taihe"
 #define TH_ANI_LOG_DEBUG(fmt, ...) \
@@ -112,9 +112,8 @@
 #define TH_ANI_PERF_TRACE_END() ::taihe::FinishTrace()
 #endif
 
-#include <taihe/object.hpp>
 #include <taihe/string.hpp>
-#include <taihe/expected.hpp>
+#include <taihe/error.hpp>
 
 #ifdef TH_ANI_USE_LOCAL_TRACE
 namespace taihe {
