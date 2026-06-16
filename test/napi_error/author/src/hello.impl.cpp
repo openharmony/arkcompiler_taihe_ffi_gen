@@ -14,10 +14,12 @@
  */
 // This file is a test file.
 // NOLINTBEGIN
+#include <iostream>
+
+#include <taihe/expected.hpp>
+#include <taihe/error.hpp>
 
 #include "hello.impl.hpp"
-#include <iostream>
-#include <taihe/expected.hpp>
 #include "hello.proj.hpp"
 
 namespace {

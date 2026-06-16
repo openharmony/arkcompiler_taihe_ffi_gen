@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#include <taihe/expected.hpp>
 #include <taihe/runtime_ani.hpp>
 
 #ifdef TH_ANI_USE_LOCAL_TRACE

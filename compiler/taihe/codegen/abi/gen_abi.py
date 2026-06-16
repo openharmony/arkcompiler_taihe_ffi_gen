@@ -336,7 +336,6 @@ class AbiIfaceImplGenerator:
     def gen_iface_impl_file(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
-            self.target.add_include("taihe/error.abi.h")
             self.target.add_include(iface_abi_info.defn_header)
             for method in self.iface.methods:
                 for param in method.params:
@@ -345,6 +344,9 @@ class AbiIfaceImplGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_abi_info.defn_headers)
+                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                if not method_abi_info.is_noexcept:
+                    self.target.add_include("taihe/error.abi.h")
             self.gen_iface_ftable()
             for method in self.iface.methods:
                 self.gen_method(method)
@@ -356,8 +358,8 @@ class AbiIfaceImplGenerator:
                 self.target.add_include(ancestor_abi_info.impl_header)
             for method in self.iface.methods:
                 for param in method.params:
-                    return_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-                    self.target.add_include(*return_ty_abi_info.impl_headers)
+                    param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+                    self.target.add_include(*param_ty_abi_info.impl_headers)
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_abi_info.impl_headers)
@@ -492,6 +494,9 @@ class AbiPackageHeaderGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_abi_info.impl_headers)
+                func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+                if not func_abi_info.is_noexcept:
+                    self.target.add_include("taihe/error.abi.h")
                 self.gen_func(func)
 
     def gen_func(self, func: GlobFuncDecl):

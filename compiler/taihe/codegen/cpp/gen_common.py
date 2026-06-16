@@ -1536,6 +1536,9 @@ class CppIfaceImplGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_cpp_info.defn_headers)
+                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                if not method_abi_info.is_noexcept:
+                    self.target.add_include("taihe/expected.hpp", "taihe/error.hpp")
             self.gen_iface_virtual_type_impl()
             self.gen_iface_ftbl_impl()
             for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
@@ -1545,8 +1548,8 @@ class CppIfaceImplGenerator:
                 self.target.add_include(ancestor_cpp_info.impl_header)
             for method in self.iface.methods:
                 for param in method.params:
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    self.target.add_include(*return_ty_cpp_info.impl_headers)
+                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                    self.target.add_include(*param_ty_cpp_info.impl_headers)
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_cpp_info.impl_headers)

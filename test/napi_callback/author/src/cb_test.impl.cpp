@@ -15,12 +15,15 @@
 // This file is a test file.
 // NOLINTBEGIN
 
-#include "cb_test.impl.hpp"
 #include <iostream>
+
+#include <taihe/callback.hpp>
+#include <taihe/expected.hpp>
+#include <taihe/error.hpp>
+#include <taihe/string.hpp>
+
+#include "cb_test.impl.hpp"
 #include "cb_test.proj.hpp"
-#include "taihe/callback.hpp"
-#include "taihe/expected.hpp"
-#include "taihe/string.hpp"
 
 namespace {
 ::taihe::expected<void, ::taihe::error> test_cb_v(::taihe::callback_view<::taihe::expected<void, ::taihe::error>()> f)

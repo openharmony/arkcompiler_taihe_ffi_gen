@@ -63,7 +63,6 @@ class CppUserPackageGenerator:
             # types
             self.target.add_include(pkg_cpp_info.header)
             # functions
-            self.target.add_include("taihe/common.hpp")
             self.target.add_include("taihe/invoke.hpp")
             self.target.add_include(pkg_abi_info.header)
             for func in self.pkg.functions:
@@ -73,6 +72,9 @@ class CppUserPackageGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     self.target.add_include(*return_ty_cpp_info.impl_headers)
+                func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+                if not func_abi_info.is_noexcept:
+                    self.target.add_include("taihe/expected.hpp", "taihe/error.hpp")
                 self.gen_func(func)
 
     def gen_func(self, func: GlobFuncDecl):
