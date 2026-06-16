@@ -53,30 +53,34 @@
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_DEBUG
 #define TH_ANI_LOG_DEBUG(fmt, ...) (void)fprintf(stderr, "[DEBUG] " fmt "\n", ##__VA_ARGS__)
 #else
-#define TH_ANI_LOG_DEBUG(fmt, ...)
+#define TH_ANI_LOG_DEBUG(fmt, ...) (void)0
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_INFO
 #define TH_ANI_LOG_INFO(fmt, ...) (void)fprintf(stderr, "[INFO] " fmt "\n", ##__VA_ARGS__)
 #else
-#define TH_ANI_LOG_INFO(fmt, ...)
+#define TH_ANI_LOG_INFO(fmt, ...) (void)0
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_WARN
 #define TH_ANI_LOG_WARN(fmt, ...) (void)fprintf(stderr, "[WARN] " fmt "\n", ##__VA_ARGS__)
 #else
-#define TH_ANI_LOG_WARN(fmt, ...)
+#define TH_ANI_LOG_WARN(fmt, ...) (void)0
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_ERROR
 #define TH_ANI_LOG_ERROR(fmt, ...) (void)fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__)
 #else
-#define TH_ANI_LOG_ERROR(fmt, ...)
+#define TH_ANI_LOG_ERROR(fmt, ...) (void)0
 #endif
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_FATAL
 #define TH_ANI_LOG_FATAL(fmt, ...) (void)fprintf(stderr, "[FATAL] " fmt "\n", ##__VA_ARGS__)
 #else
-#define TH_ANI_LOG_FATAL(fmt, ...)
+#define TH_ANI_LOG_FATAL(fmt, ...) (void)0
 #endif
 #endif
 
+#ifndef TH_ANI_ENABLE_CHECKED_CALL
+#define TH_ANI_ASSERT(cond, msg, ...) (void)0
+#define TH_ANI_CHECKED_CALL(env, func, ...) (void)(env)->func(__VA_ARGS__)
+#else
 #define TH_ANI_ASSERT(cond, msg, ...)                                  \
     do {                                                               \
         if (!(cond)) {                                                 \
@@ -84,10 +88,6 @@
             std::abort();                                              \
         }                                                              \
     } while (0)
-
-#ifndef TH_ANI_ENABLE_CHECKED_CALL
-#define TH_ANI_CHECKED_CALL(env, func, ...) env->func(__VA_ARGS__)
-#else
 #define TH_ANI_CHECKED_CALL(env, func, ...)                                                  \
     do {                                                                                     \
         ani_status status = env->func(__VA_ARGS__);                                          \
@@ -96,8 +96,8 @@
 #endif
 
 #ifndef TH_ANI_ENABLE_PERF_TRACE
-#define TH_ANI_PERF_TRACE_BEGIN(perf_id)
-#define TH_ANI_PERF_TRACE_END()
+#define TH_ANI_PERF_TRACE_BEGIN(perf_id) (void)0
+#define TH_ANI_PERF_TRACE_END() (void)0
 #elif __has_include(<hitrace/trace.h>)  // Third-party scenario
 #include <hitrace/trace.h>
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) OH_HiTrace_StartTraceEx(HITRACE_LEVEL_DEBUG, perf_id, "")
