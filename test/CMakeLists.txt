@@ -59,6 +59,8 @@ add_subdirectory(ani_tuple)
 add_subdirectory(ani_typedarray)
 add_subdirectory(ani_union)
 
+# add_subdirectory(ani_debug)
+
 # add_subdirectory(ani_huks)
 # add_subdirectory(ani_image)
 

@@ -1125,7 +1125,7 @@ class AniUnionImplGenerator:
                         f"return {union_cpp_info.full_name}({static_tags_str}, {final_from_ani}(env, ani_value));",
                     )
             self.target.writelns(
-                f"__builtin_unreachable();",
+                f'TH_ANI_ASSERT(false, "Invalid ANI value for type {union_ani_info.sts_type}");',
             )
 
     def gen_union_into_ani_func(self):

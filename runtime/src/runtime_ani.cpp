@@ -75,6 +75,7 @@ ani_env *get_env()
         TH_ANI_LOG_ERROR("ANI VM is not set");
         return nullptr;
     }
+
     ani_env *env = nullptr;
     ani_status status = vm->GetEnv(ANI_VERSION_1, &env);
     if (status != ANI_OK) {
@@ -90,12 +91,18 @@ env_guard::env_guard()
         TH_ANI_LOG_ERROR("ANI VM is not set");
         return;
     }
+
     is_temporary = vm->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
     if (is_temporary) {
         ani_status status = vm->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
         if (status != ANI_OK) {
             TH_ANI_LOG_ERROR("Failed to attach current thread to ANI VM, status: %d", status);
         }
+    }
+
+    ani_status temp = env->CreateLocalScope(4096);
+    if (temp != ANI_OK) {
+        TH_ANI_LOG_ERROR("Failed to create local scope for ANI environment, status: %d", temp);
     }
 }
 
@@ -106,6 +113,12 @@ env_guard::~env_guard()
         TH_ANI_LOG_ERROR("ANI VM is not set");
         return;
     }
+
+    ani_status temp = env->DestroyLocalScope();
+    if (temp != ANI_OK) {
+        TH_ANI_LOG_ERROR("Failed to destroy local scope for ANI environment, status: %d", temp);
+    }
+
     if (is_temporary) {
         ani_status status = vm->DetachCurrentThread();
         if (status != ANI_OK) {
