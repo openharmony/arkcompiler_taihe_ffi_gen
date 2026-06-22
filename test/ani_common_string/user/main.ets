@@ -24,6 +24,16 @@ function check_string_convert() {
     arktest.assertEQ(output, "aaa")
 }
 
+function check_u8_string() {
+    let output: string = stringTest.taiheU8StrTest();
+    arktest.assertEQ(output, "Taihe UTF-8 string test passed")
+}
+
+function check_u16_string() {
+    let output: string = stringTest.taiheU16StrTest();
+    arktest.assertEQ(output, "Taihe UTF-16 string test passed")
+}
+
 function check_common_string() {
     let output: string = stringTest.commonStringTest();
     arktest.assertEQ(output, "common string test passed")
@@ -32,6 +42,8 @@ function check_common_string() {
 function main() {
     const suite = new arktest.ArkTestsuite("common string ut")
     suite.addTest("check string convert", check_string_convert)
+    suite.addTest("check taihe::string func", check_u8_string)
+    suite.addTest("check taihe::u16string func", check_u16_string)
     suite.addTest("check common string", check_common_string)
     exit(suite.run())
 }

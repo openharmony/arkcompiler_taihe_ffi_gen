@@ -14,4 +14,6 @@
  */
 
 function StringTest(input: String): String;
+function TaiheU8StrTest(): String;
+function TaiheU16StrTest(): String;
 function CommonStringTest(): String;
