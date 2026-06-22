@@ -79,7 +79,7 @@ ani_env *get_env()
     ani_env *env = nullptr;
     ani_status status = vm->GetEnv(ANI_VERSION_1, &env);
     if (status != ANI_OK) {
-        TH_ANI_LOG_ERROR("Failed to get ANI environment, status: %d", status);
+        TH_ANI_LOG_ERROR("Failed to get ANI environment, status: " TH_ANI_LOG_FMT_INT, status);
     }
     return env;
 }
@@ -96,13 +96,13 @@ env_guard::env_guard()
     if (is_temporary) {
         ani_status status = vm->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
         if (status != ANI_OK) {
-            TH_ANI_LOG_ERROR("Failed to attach current thread to ANI VM, status: %d", status);
+            TH_ANI_LOG_ERROR("Failed to attach current thread to ANI VM, status: " TH_ANI_LOG_FMT_INT, status);
         }
     }
 
     ani_status temp = env->CreateLocalScope(4096);
     if (temp != ANI_OK) {
-        TH_ANI_LOG_ERROR("Failed to create local scope for ANI environment, status: %d", temp);
+        TH_ANI_LOG_ERROR("Failed to create local scope for ANI environment, status: " TH_ANI_LOG_FMT_INT, temp);
     }
 }
 
@@ -116,13 +116,13 @@ env_guard::~env_guard()
 
     ani_status temp = env->DestroyLocalScope();
     if (temp != ANI_OK) {
-        TH_ANI_LOG_ERROR("Failed to destroy local scope for ANI environment, status: %d", temp);
+        TH_ANI_LOG_ERROR("Failed to destroy local scope for ANI environment, status: " TH_ANI_LOG_FMT_INT, temp);
     }
 
     if (is_temporary) {
         ani_status status = vm->DetachCurrentThread();
         if (status != ANI_OK) {
-            TH_ANI_LOG_ERROR("Failed to detach current thread from ANI VM, status: %d", status);
+            TH_ANI_LOG_ERROR("Failed to detach current thread from ANI VM, status: " TH_ANI_LOG_FMT_INT, status);
         }
     }
 }
@@ -134,13 +134,13 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
     ani_class errCls;
     char const *className = "std.core.Error";
     if (ANI_OK != env->FindClass(className, &errCls)) {
-        TH_ANI_LOG_ERROR("Class not found: %s", className);
+        TH_ANI_LOG_ERROR("Class not found: " TH_ANI_LOG_FMT_STR, className);
         return nullptr;
     }
 
     ani_method errCtor;
     if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "C{std.core.String}C{std.core.ErrorOptions}:", &errCtor)) {
-        TH_ANI_LOG_ERROR("Constructor not found: %s", className);
+        TH_ANI_LOG_ERROR("Constructor not found: " TH_ANI_LOG_FMT_STR, className);
         return nullptr;
     }
 
@@ -158,7 +158,7 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
 
     ani_error errObj;
     if (ANI_OK != env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&errObj), errMsg, undefined)) {
-        TH_ANI_LOG_ERROR("Create Object Failed: %s", className);
+        TH_ANI_LOG_ERROR("Create Object Failed: " TH_ANI_LOG_FMT_STR, className);
         return nullptr;
     }
     return errObj;
@@ -169,13 +169,13 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
     ani_class errCls;
     char const *className = "@ohos.base.BusinessError";
     if (ANI_OK != env->FindClass(className, &errCls)) {
-        TH_ANI_LOG_ERROR("Class not found: %s", className);
+        TH_ANI_LOG_ERROR("Class not found: " TH_ANI_LOG_FMT_STR, className);
         return nullptr;
     }
 
     ani_method errCtor;
     if (ANI_OK != env->Class_FindMethod(errCls, "<ctor>", "iC{std.core.Error}:", &errCtor)) {
-        TH_ANI_LOG_ERROR("Constructor not found: %s", className);
+        TH_ANI_LOG_ERROR("Constructor not found: " TH_ANI_LOG_FMT_STR, className);
         return nullptr;
     }
 
@@ -184,7 +184,7 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
 
     ani_error businessErrObj;
     if (ANI_OK != env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&businessErrObj), errCode, errObj)) {
-        TH_ANI_LOG_ERROR("Create Object Failed: %s", className);
+        TH_ANI_LOG_ERROR("Create Object Failed: " TH_ANI_LOG_FMT_STR, className);
         return nullptr;
     }
     return businessErrObj;

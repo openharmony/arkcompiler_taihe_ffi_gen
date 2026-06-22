@@ -2672,7 +2672,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                         f"return ::taihe::unexpected<::taihe::error>(::taihe::catch_ani_taihe_error(env));",
                     )
             target.writelns(
-                f'TH_ANI_ASSERT(ani_ret == ANI_OK, "{cb_ani_info.perf_id} failed with status %d", ani_ret);',
+                f'TH_ANI_ASSERT(ani_ret == ANI_OK, "{cb_ani_info.perf_id} failed with status " TH_ANI_LOG_FMT_INT, ani_ret);',
             )
             # return value from ANI
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
