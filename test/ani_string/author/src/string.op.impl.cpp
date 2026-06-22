@@ -123,6 +123,21 @@ public:
     return to_string(a);
 }
 
+::taihe::expected<double, ::taihe::error> ToF64(string_view a)
+{
+    return std::stod(a.c_str());
+}
+
+::taihe::expected<string, ::taihe::error> FromF64(double a)
+{
+    return to_string(a);
+}
+
+::taihe::expected<string, ::taihe::error> FromBool(bool a)
+{
+    return to_string(a);
+}
+
 ::taihe::expected<string, ::taihe::error> concatString2(string_view s, int32_t n, array_view<string> sArr, bool b,
                                                         array_view<uint8_t> buffer)
 {
@@ -152,5 +167,8 @@ TH_EXPORT_CPP_API_from_i32(from_i32);
 TH_EXPORT_CPP_API_makePlayStringIface(makePlayStringIface);
 TH_EXPORT_CPP_API_to_f32(to_f32);
 TH_EXPORT_CPP_API_from_f32(from_f32);
+TH_EXPORT_CPP_API_to_f64(ToF64);
+TH_EXPORT_CPP_API_from_f64(FromF64);
+TH_EXPORT_CPP_API_from_bool(FromBool);
 TH_EXPORT_CPP_API_concatString2(concatString2);
 // NOLINTEND
