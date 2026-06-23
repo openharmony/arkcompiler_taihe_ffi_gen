@@ -61,6 +61,23 @@ function from_f32() {
     arktest.assertEQ(str, "123.123")
 }
 
+function to_f64() {
+    let num = StringOp.to_f64("123.123");
+    arktest.assertEQ((num - 123.123) > -1e-6 || (num - 123.123) < 1e-6, true)
+}
+
+function from_f64() {
+    let str = StringOp.from_f64(123.123);
+    arktest.assertEQ(str, "123.123")
+}
+
+function from_bool() {
+    let trueStr = StringOp.from_bool(true);
+    arktest.assertEQ(trueStr, "true")
+    let falseStr = StringOp.from_bool(false);
+    arktest.assertEQ(falseStr, "false")
+}
+
 function input() {
     let str = StringIo.input();
     arktest.assertEQ(str, "input")
@@ -113,6 +130,9 @@ function main() {
     suite.addTest("from_i32", from_i32)
     suite.addTest("to_f32", to_f32)
     suite.addTest("from_f32", from_f32)
+    suite.addTest("to_f64", to_f64)
+    suite.addTest("from_f64", from_f64)
+    suite.addTest("from_bool", from_bool)
     suite.addTest("input", input)
     suite.addTest("println", println)
     suite.addTest("print", print)
