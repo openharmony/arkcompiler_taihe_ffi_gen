@@ -72,32 +72,21 @@ if (sdk_build_arkts) {
     deps = [ ":build_taihe" ]
   }
 
-  if (current_toolchain == "//build/toolchain/mac:clang_x64") {
-    ohos_copy("copy_taihe_tools") {
-      sources = [ "//arkcompiler/taihe_ffi_gen/LICENSE" ]
-      outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
-      module_source_dir = target_out_dir + "/$target_name"
-      module_install_name = ""
-      part_name = "taihe_ffi_gen"
-      subsystem_name = "arkcompiler"
+  ohos_copy("copy_taihe_tools") {
+    deps = [ ":copy_taihe_out" ]
+    if (current_toolchain == "//build/toolchain/linux:clang_x64") {
+      sources = [ "$target_out_dir/tmp_taihe/taihe-linux-x86_64" ]
+    } else if (current_toolchain == "//build/toolchain/mingw:mingw_x86_64") {
+      sources = [ "$target_out_dir/tmp_taihe/taihe-windows-x86_64" ]
+    } else if (current_toolchain == "//build/toolchain/mac:clang_arm64") {
+      sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-arm64" ]
+    } else if (current_toolchain == "//build/toolchain/mac:clang_x64") {
+      sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-x86_64" ]
     }
-  } else {
-    ohos_copy("copy_taihe_tools") {
-      deps = [ ":copy_taihe_out" ]
-      if (current_toolchain == "//build/toolchain/linux:clang_x64") {
-        sources = [ "$target_out_dir/tmp_taihe/taihe-linux-x86_64" ]
-      } else if (current_toolchain == "//build/toolchain/mingw:mingw_x86_64") {
-        sources = [ "$target_out_dir/tmp_taihe/taihe-windows-x86_64" ]
-      } else if (current_toolchain == "//build/toolchain/mac:clang_arm64") {
-        sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-arm64" ]
-      } else if (current_toolchain == "//build/toolchain/mac:clang_x64") {
-        sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-x86_64" ]
-      }
-      outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
-      module_source_dir = target_out_dir + "/$target_name"
-      module_install_name = ""
-      part_name = "taihe_ffi_gen"
-      subsystem_name = "arkcompiler"
-    }
+    outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
+    module_source_dir = target_out_dir + "/$target_name"
+    module_install_name = ""
+    part_name = "taihe_ffi_gen"
+    subsystem_name = "arkcompiler"
   }
 }

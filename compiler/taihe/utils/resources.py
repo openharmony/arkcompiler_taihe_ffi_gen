@@ -16,6 +16,7 @@
 """Tools for tracking resources."""
 
 import logging
+import os
 import shutil
 import subprocess
 import tarfile
@@ -653,7 +654,8 @@ class Antlr(CachedResource):
 
     def run_tool(self, args: list[str]):
         subprocess.check_call(
-            ["java", "-cp", str(self.base_path), "org.antlr.v4.Tool", *args], env={}
+            ["java", "-cp", str(self.base_path), "org.antlr.v4.Tool", *args],
+            env=os.environ.copy(),
         )
 
 
