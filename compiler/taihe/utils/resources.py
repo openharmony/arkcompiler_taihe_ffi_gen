@@ -16,7 +16,6 @@
 """Tools for tracking resources."""
 
 import logging
-import os
 import shutil
 import subprocess
 import tarfile
@@ -653,10 +652,14 @@ class Antlr(CachedResource):
         fetch_url(f"{self.MAVEN_REMOTE}/{self.MAVEN_PATH}", self.base_path)
 
     def run_tool(self, args: list[str]):
-        subprocess.check_call(
-            ["java", "-cp", str(self.base_path), "org.antlr.v4.Tool", *args],
-            env=os.environ.copy(),
-        )
+        try:
+            subprocess.check_call(
+                ["java", "-cp", str(self.base_path), "org.antlr.v4.Tool", *args]
+            )
+        except subprocess.CalledProcessError:
+            subprocess.check_call(
+                ["java", "-cp", str(self.base_path), "org.antlr.v4.Tool", *args], env={}
+            )
 
 
 BUILTIN_RESOURCES: Sequence[ResourceT] = [
