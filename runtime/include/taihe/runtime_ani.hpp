@@ -31,6 +31,8 @@
 #endif
 #define TH_ANI_LOG_DOMAIN 0x3200
 #define TH_ANI_LOG_TAG "Taihe"
+#define TH_ANI_LOG_FMT_INT "%{public}d"
+#define TH_ANI_LOG_FMT_STR "%{public}s"
 #define TH_ANI_LOG_DEBUG(fmt, ...) \
     (void)OH_LOG_Print(LOG_APP, LOG_DEBUG, TH_ANI_LOG_DOMAIN, TH_ANI_LOG_TAG, fmt, ##__VA_ARGS__)
 #define TH_ANI_LOG_INFO(fmt, ...) \
@@ -50,6 +52,8 @@
 #ifndef TH_ANI_LOG_LEVEL
 #define TH_ANI_LOG_LEVEL TH_ANI_LOG_LEVEL_DEBUG
 #endif
+#define TH_ANI_LOG_FMT_INT "%d"
+#define TH_ANI_LOG_FMT_STR "%s"
 #if TH_ANI_LOG_LEVEL <= TH_ANI_LOG_LEVEL_DEBUG
 #define TH_ANI_LOG_DEBUG(fmt, ...) (void)fprintf(stderr, "[DEBUG] " fmt "\n", ##__VA_ARGS__)
 #else
@@ -88,10 +92,10 @@
             std::abort();                                              \
         }                                                              \
     } while (0)
-#define TH_ANI_CHECKED_CALL(env, func, ...)                                                  \
-    do {                                                                                     \
-        ani_status status = env->func(__VA_ARGS__);                                          \
-        TH_ANI_ASSERT(status == ANI_OK, "ANI call " #func " failed with status %d", status); \
+#define TH_ANI_CHECKED_CALL(env, func, ...)                                                                   \
+    do {                                                                                                      \
+        ani_status status = env->func(__VA_ARGS__);                                                           \
+        TH_ANI_ASSERT(status == ANI_OK, "ANI call " #func " failed with status " TH_ANI_LOG_FMT_INT, status); \
     } while (0)
 #endif
 

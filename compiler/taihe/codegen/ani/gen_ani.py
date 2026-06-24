@@ -237,7 +237,7 @@ class AniPackageSourceGenerator:
                         f"}}",
                     ):
                         self.target.writelns(
-                            f'TH_ANI_LOG_ERROR("Error from {subregister}, code: %d", ret);',
+                            f'TH_ANI_LOG_ERROR("Error from {subregister}, code: " TH_ANI_LOG_FMT_INT, ret);',
                             f"status = ANI_ERROR;",
                         )
                 self.target.writelns(
@@ -820,7 +820,7 @@ class AniIfaceImplGenerator:
                         f"return ::taihe::unexpected<::taihe::error>(::taihe::catch_ani_taihe_error(env));",
                     )
             self.target.writelns(
-                f'TH_ANI_ASSERT(ani_ret == ANI_OK, "{method_ani_info.perf_id} failed with status %d", ani_ret);',
+                f'TH_ANI_ASSERT(ani_ret == ANI_OK, "{method_ani_info.perf_id} failed with status " TH_ANI_LOG_FMT_INT, ani_ret);',
             )
             # return value from ANI
             if isinstance(return_ty := method.return_ty, NonVoidType):
