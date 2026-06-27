@@ -98,11 +98,11 @@ env_guard::env_guard()
         if (status != ANI_OK) {
             TH_ANI_LOG_ERROR("Failed to attach current thread to ANI VM, status: " TH_ANI_LOG_FMT_INT, status);
         }
-    }
 
-    ani_status temp = env->CreateLocalScope(4096);
-    if (temp != ANI_OK) {
-        TH_ANI_LOG_ERROR("Failed to create local scope for ANI environment, status: " TH_ANI_LOG_FMT_INT, temp);
+        ani_status temp = env->CreateLocalScope(4096);
+        if (temp != ANI_OK) {
+            TH_ANI_LOG_ERROR("Failed to create local scope for ANI environment, status: " TH_ANI_LOG_FMT_INT, temp);
+        }
     }
 }
 
@@ -114,12 +114,12 @@ env_guard::~env_guard()
         return;
     }
 
-    ani_status temp = env->DestroyLocalScope();
-    if (temp != ANI_OK) {
-        TH_ANI_LOG_ERROR("Failed to destroy local scope for ANI environment, status: " TH_ANI_LOG_FMT_INT, temp);
-    }
-
     if (is_temporary) {
+        ani_status temp = env->DestroyLocalScope();
+        if (temp != ANI_OK) {
+            TH_ANI_LOG_ERROR("Failed to destroy local scope for ANI environment, status: " TH_ANI_LOG_FMT_INT, temp);
+        }
+
         ani_status status = vm->DetachCurrentThread();
         if (status != ANI_OK) {
             TH_ANI_LOG_ERROR("Failed to detach current thread from ANI VM, status: " TH_ANI_LOG_FMT_INT, status);
