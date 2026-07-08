@@ -27,5 +27,5 @@ function main() {
     threadTest.invokeFromOtherThreadAfter(1.0, () => {
         console.log("hello world");
     });
-    sleep(2000).awaitSync();
+    waitForCompletion(() => sleep(2000));
 }
