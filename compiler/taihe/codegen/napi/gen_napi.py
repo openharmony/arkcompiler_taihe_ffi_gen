@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -209,9 +209,15 @@ class NapiCodeGenerator:
             group=None,
         ) as target:
             target.add_include("taihe/array.hpp")
+            target.add_include("taihe/runtime_napi.hpp")
             target.add_include("mutex")
             target.add_include("condition_variable")
+            target.add_include("functional")
+            target.add_include("optional")
             target.add_include("pthread.h")
+            target.add_include("tuple")
+            target.add_include("type_traits")
+            target.add_include("utility")
             target.writelns(
                 f"namespace taihe {{",
                 f"class ThreadContext {{",
@@ -220,6 +226,7 @@ class NapiCodeGenerator:
                 f"        static ThreadContext instance;",
                 f"        return instance;",
                 f"    }}",
+                f"",
                 f"    void init_main_thread_id() {{",
                 f"        static std::once_flag flag;",
                 f"        std::call_once(flag, [this]() {{",
@@ -227,31 +234,147 @@ class NapiCodeGenerator:
                 f"            initialized_ = true;",
                 f"        }});",
                 f"    }}",
+                f"",
                 f"    bool _is_main_thread() const {{",
                 f"        if (!initialized_) {{",
                 f"            return false;",
                 f"        }}",
                 f"        return pthread_equal(pthread_self(), main_thread_id_) != 0;",
                 f"    }}",
+                f"",
                 f"    ThreadContext(const ThreadContext&) = delete;",
                 f"    ThreadContext& operator=(const ThreadContext&) = delete;",
+                f"",
                 f"private:",
                 f"    ThreadContext() = default;",
                 f"    pthread_t main_thread_id_;",
                 f"    bool initialized_ = false;",
                 f"}};",
+                f"",
                 f"inline bool _is_main_thread() {{",
                 f"    return ThreadContext::get_instance()._is_main_thread();",
                 f"}}",
+                f"",
                 f"inline void _init_main_thread() {{",
                 f"    ThreadContext::get_instance().init_main_thread_id();",
                 f"}}",
+                f"",
+                f"struct napi_ref_guard {{",
+                f"private:",
+                f"    struct threadsafe_call {{",
+                f"        virtual void invoke(napi_env env) = 0;",
+                f"        virtual ~threadsafe_call() = default;",
+                f"    }};",
+                f"",
+                f"    napi_env env_;",
+                f"    napi_ref ref_;",
+                f"    napi_threadsafe_function tsfn_;",
+                f"",
+                f"    static void dispatch_threadsafe_call(napi_env env, [[maybe_unused]] napi_value js_cb,",
+                f"                                         [[maybe_unused]] void *context, void *data)",
+                f"    {{",
+                f"        auto *call = static_cast<threadsafe_call *>(data);",
+                f"        call->invoke(env);",
+                f"    }}",
+                f"",
+                f"protected:",
+                f"    template<typename callable_t, typename... arg_t>",
+                f"    auto sync_call(callable_t &&callable, arg_t &&...args)",
+                f"        -> std::invoke_result_t<std::decay_t<callable_t> &, napi_env, napi_ref, std::decay_t<arg_t> &...>",
+                f"    {{",
+                f"        using result_t = std::invoke_result_t<std::decay_t<callable_t> &, napi_env, napi_ref, std::decay_t<arg_t> &...>;",
+                f"        struct no_result_t {{}};",
+                f"        using stored_result_t = std::conditional_t<std::is_void_v<result_t>, no_result_t, result_t>;",
+                f"",
+                f"        if (::taihe::_is_main_thread()) {{",
+                f"            return std::invoke(std::forward<callable_t>(callable), env_, ref_, std::forward<arg_t>(args)...);",
+                f"        }}",
+                f"",
+                f"        struct sync_call_data final : threadsafe_call {{",
+                f"            std::mutex mutex;",
+                f"            std::condition_variable cv;",
+                f"            napi_ref ref;",
+                f"            std::decay_t<callable_t> callable;",
+                f"            std::tuple<std::decay_t<arg_t>...> args;",
+                f"            std::optional<stored_result_t> result;",
+                f"",
+                f"            sync_call_data(napi_ref ref, callable_t &&callable, arg_t &&...args)",
+                f"                : ref(ref), callable(std::forward<callable_t>(callable)), args(std::forward<arg_t>(args)...)",
+                f"            {{",
+                f"            }}",
+                f"",
+                f"            void invoke(napi_env env) override",
+                f"            {{",
+                f"                std::lock_guard<std::mutex> lock(this->mutex);",
+                f"                if constexpr (std::is_void_v<result_t>) {{",
+                f"                    std::apply(",
+                f"                        [this, env](auto &...args) {{",
+                f"                            std::invoke(this->callable, env, this->ref, args...);",
+                f"                        }},",
+                f"                        this->args);",
+                f"                    this->result.emplace();",
+                f"                }} else {{",
+                f"                    this->result = std::apply(",
+                f"                        [this, env](auto &...args) {{",
+                f"                            return std::invoke(this->callable, env, this->ref, args...);",
+                f"                        }},",
+                f"                        this->args);",
+                f"                }}",
+                f"                this->cv.notify_one();",
+                f"            }}",
+                f"        }};",
+                f"",
+                f"        sync_call_data call_data(ref_, std::forward<callable_t>(callable), std::forward<arg_t>(args)...);",
+                f"        NAPI_CALL(env_,",
+                f"                  napi_call_threadsafe_function(tsfn_, static_cast<threadsafe_call *>(&call_data), napi_tsfn_blocking));",
+                f"        std::unique_lock<std::mutex> lock(call_data.mutex);",
+                f"        call_data.cv.wait(lock, [&call_data] {{",
+                f"            return call_data.result.has_value();",
+                f"        }});",
+                f"",
+                f"        if constexpr (std::is_void_v<result_t>) {{",
+                f"            return;",
+                f"        }} else {{",
+                f"            return std::move(*call_data.result);",
+                f"        }}",
+                f"    }}",
+                f"",
+                f"public:",
+                f"    explicit napi_ref_guard(napi_env env) : env_(env), ref_(nullptr), tsfn_(nullptr)",
+                f"    {{",
+                f"    }}",
+                f"",
+                f"    napi_ref_guard(napi_env env, napi_value callback) : napi_ref_guard(env)",
+                f"    {{",
+                f"        NAPI_CALL(env, napi_create_reference(env, callback, 1, &ref_));",
+                f"        napi_value napi_resname;",
+                f'        NAPI_CALL(env, napi_create_string_utf8(env, "MyWorkResource", NAPI_AUTO_LENGTH, &napi_resname));',
+                f"        NAPI_CALL(env, napi_create_threadsafe_function(env, nullptr, nullptr, napi_resname, 0, 1, nullptr, nullptr,",
+                f"                                                       nullptr, napi_ref_guard::dispatch_threadsafe_call, &tsfn_));",
+                f"        napi_unref_threadsafe_function(env, tsfn_);",
+                f"    }}",
+                f"",
+                f"    ~napi_ref_guard()",
+                f"    {{",
+                f"        if (ref_) {{",
+                f"            this->sync_call([](napi_env env, napi_ref ref) {{",
+                f"                NAPI_CALL(env, napi_delete_reference(env, ref));",
+                f"            }});",
+                f"        }}",
+                f"        if (tsfn_) {{",
+                f"            NAPI_CALL(env_, napi_release_threadsafe_function(tsfn_, napi_tsfn_release));",
+                f"        }}",
+                f"    }}",
+                f"}};",
+                f"",
                 f"inline bool _get_bigint_msb(uint64_t dig) {{",
                 f"    return dig >> (sizeof(uint64_t) * 8 - 1) != 0;",
                 f"}}",
+                f"",
                 f"inline bool _get_bigint_sign(taihe::array_view<uint64_t> num) {{",
                 f"    return _get_bigint_msb(num[num.size() - 1]);",
                 f"}}",
+                f"",
                 f"inline std::pair<bool, taihe::array<uint64_t>> _get_bigint_sign_and_abs(taihe::array_view<uint64_t> num) {{",
                 f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc(num.size() * sizeof(uint64_t)));",
                 f"    bool sign = _get_bigint_msb(num[num.size() - 1]);",
@@ -272,6 +395,7 @@ class NapiCodeGenerator:
                 f"    }}",
                 f"    return {{sign, taihe::array<uint64_t>(buf, size)}};",
                 f"}}",
+                f"",
                 f"inline taihe::array<uint64_t> _taihe_build_num(bool sign, taihe::array_view<uint64_t> abs) {{",
                 f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc((abs.size() + 1) * sizeof(uint64_t)));",
                 f"    if (sign) {{",
@@ -1710,135 +1834,18 @@ class NapiCodeGenerator:
             f"inline {iface_cpp_info.as_owner} taihe::from_napi_t<{iface_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
-            base_tsfn_data_type = "tsfn_callback"
-            destruct_data_type = "destruct_data"
-
-            iface_napi_impl_target.add_include("optional")
             with iface_napi_impl_target.indented(
-                f"struct {base_tsfn_data_type} {{",
+                f"struct cpp_impl_t: ::taihe::napi_ref_guard {{",
                 f"}};",
             ):
                 iface_napi_impl_target.writelns(
-                    f"virtual void operator()(napi_env env) = 0;",
-                    f"virtual ~{base_tsfn_data_type}() {{}};",
+                    f"using ::taihe::napi_ref_guard::napi_ref_guard;",
                 )
-
-            napi_resname = f"napi_resname"
-            with iface_napi_impl_target.indented(
-                f"struct cpp_impl_t {{",
-                f"}};",
-            ):
-                iface_napi_impl_target.writelns(
-                    f"napi_env env;",
-                    f"napi_ref _ref;",
-                    f"napi_threadsafe_function _tsfn;",
-                )
-                with iface_napi_impl_target.indented(
-                    f"cpp_impl_t(napi_env env, napi_value callback): env(env), _ref(nullptr), _tsfn(nullptr) {{",
-                    f"}}",
-                ):
-                    iface_napi_impl_target.writelns(
-                        f"NAPI_CALL(env, napi_create_reference(env, callback, 1, &_ref));",
-                        f"napi_value {napi_resname};",
-                        f'NAPI_CALL(env, napi_create_string_utf8(env, "MyWorkResource", NAPI_AUTO_LENGTH, &{napi_resname}));',
-                    )
-                    with iface_napi_impl_target.indented(
-                        f"NAPI_CALL(env, napi_create_threadsafe_function(",
-                        f"));",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"env,",
-                            f"nullptr,",
-                            f"nullptr,",
-                            f"{napi_resname},",
-                            f"0,",
-                            f"1,",
-                            f"nullptr,",
-                            f"nullptr,",
-                            f"nullptr,",
-                        )
-                        with iface_napi_impl_target.indented(
-                            f"[](napi_env env, napi_value js_cb, [[maybe_unused]] void* context, void* data) {{",
-                            f"}},",
-                        ):
-                            iface_napi_impl_target.writelns(
-                                f"{base_tsfn_data_type}* cpp_cb =static_cast<{base_tsfn_data_type}*>(data);",
-                                f"(*cpp_cb)(env);",
-                            )
-                        iface_napi_impl_target.writelns(
-                            f"&_tsfn",
-                        )
-                    iface_napi_impl_target.writelns(
-                        f"napi_unref_threadsafe_function(env, _tsfn);",
-                    )
-                with iface_napi_impl_target.indented(
-                    f"~cpp_impl_t() {{",
-                    f"}}",
-                ):
-                    with iface_napi_impl_target.indented(
-                        f"if (_ref) {{",
-                        f"}}",
-                    ):
-                        with iface_napi_impl_target.indented(
-                            f"if (::taihe::_is_main_thread()) {{",
-                            f"}}",
-                        ):
-                            iface_napi_impl_target.writelns(
-                                f"NAPI_CALL(env, napi_delete_reference(env, _ref));",
-                            )
-                        with iface_napi_impl_target.indented(
-                            f"else {{",
-                            f"}}",
-                        ):
-                            with iface_napi_impl_target.indented(
-                                f"struct {destruct_data_type}: {base_tsfn_data_type} {{",
-                                f"}};",
-                            ):
-                                iface_napi_impl_target.writelns(
-                                    f"bool completed = false;",
-                                    f"std::mutex mutex;",
-                                    f"std::condition_variable cv;",
-                                    f"napi_ref ref;",
-                                )
-                                with iface_napi_impl_target.indented(
-                                    f"void operator()(napi_env env) override {{",
-                                    f"}}",
-                                ):
-                                    iface_napi_impl_target.writelns(
-                                        f"NAPI_CALL(env, napi_delete_reference(env, this->ref));",
-                                        f"this->completed = true;",
-                                        f"this->cv.notify_one();",
-                                    )
-                            iface_napi_impl_target.writelns(
-                                f"{destruct_data_type} del_ref_data;",
-                                f"del_ref_data.ref = _ref;",
-                            )
-                            with iface_napi_impl_target.indented(
-                                f"NAPI_CALL(env, napi_call_threadsafe_function(",
-                                f"));",
-                            ):
-                                iface_napi_impl_target.writelns(
-                                    f"_tsfn,",
-                                    f"static_cast<{base_tsfn_data_type}*>(&del_ref_data),",
-                                    f"napi_tsfn_blocking",
-                                )
-                            iface_napi_impl_target.writelns(
-                                f"std::unique_lock<std::mutex> lock(del_ref_data.mutex);",
-                                f"del_ref_data.cv.wait(lock, [&del_ref_data] {{ return del_ref_data.completed; }});",
-                            )
-
-                    with iface_napi_impl_target.indented(
-                        f"if (_tsfn) {{",
-                        f"}}",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"NAPI_CALL(env, napi_release_threadsafe_function(_tsfn, napi_tsfn_release));",
-                        )
 
                 for ancestor in iface_abi_info.ancestor_infos:
                     for method in ancestor.methods:
                         self.gen_iface_napi_method(
-                            method, base_tsfn_data_type, iface_napi_impl_target
+                            method, iface_napi_impl_target
                         )
             iface_napi_impl_target.writelns(
                 f"return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, napi_obj);",
@@ -1847,11 +1854,8 @@ class NapiCodeGenerator:
     def gen_iface_napi_method(
         self,
         method: IfaceMethodDecl,
-        base_tsfn_data_type: str,
         iface_napi_impl_target: CHeaderWriter,
     ):
-        iface_method_data_type = "iface_method_data_type"
-        iface_method_data = "iface_method_data"
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
 
         method_napi_info = IfaceMethodNapiInfo.get(self.am, method)
@@ -1869,42 +1873,57 @@ class NapiCodeGenerator:
         return_ty_expected_name = (
             f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
         )
-        if method_abi_info.is_noexcept:
-            with iface_napi_impl_target.indented(
-                f"{return_ty_cpp_name} {method_napi_info.norm_name}({params_cpp_str}) {{",
-                f"}}",
-            ):
+        lambda_params = ["napi_env env", "napi_ref ref", *params_cpp]
+        lambda_params_str = ", ".join(lambda_params)
+        method_args = ", ".join(param.name for param in method.params)
+
+        def write_method_lambda_body(is_noexcept: bool) -> None:
+            if method.params:
+                iface_napi_impl_target.writelns(
+                    f"napi_value args_inner[{len(method.params)}];",
+                )
+                args_inner = "args_inner"
+            else:
+                args_inner = "nullptr"
+
+            for index, param in enumerate(method.params):
+                param_napi_type_info = TypeNapiInfo.get(self.am, param.ty)
+                param_napi_type_info.into_napi(
+                    iface_napi_impl_target,
+                    param.name,
+                    f"value_{index}",
+                )
+                iface_napi_impl_target.writelns(
+                    f"args_inner[{index}] = value_{index};",
+                )
+
+            iface_napi_impl_target.writelns(
+                f"napi_value org_napi_obj;",
+                f"NAPI_CALL(env, napi_get_reference_value(env, ref, &org_napi_obj));",
+                f"napi_value {method_napi_info.norm_name}_ts_method;",
+                f'NAPI_CALL(env, napi_get_named_property(env, org_napi_obj, "{method_napi_info.norm_name}", &{method_napi_info.norm_name}_ts_method));',
+                f"napi_value method_result_napi;",
+                f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, {method_napi_info.norm_name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi));",
+            )
+
+            if not is_noexcept:
+                iface_napi_impl_target.writelns(
+                    f"bool has_error = false;",
+                    f"napi_is_exception_pending(env, &has_error);",
+                )
                 with iface_napi_impl_target.indented(
-                    f"if (::taihe::_is_main_thread()) {{",
+                    f"if (has_error) {{",
                     f"}}",
                 ):
-                    if method.params:
-                        iface_napi_impl_target.writelns(
-                            f"napi_value args_inner[{len(method.params)}];",
-                        )
-                        args_inner = "args_inner"
-                    else:
-                        args_inner = "nullptr"
-
-                    for i, param in enumerate(method.params):
-                        param_napi_type_info = TypeNapiInfo.get(self.am, param.ty)
-                        param_napi_type_info.into_napi(
-                            iface_napi_impl_target,
-                            f"{param.name}",
-                            f"value_{i}",
-                        )
-                        iface_napi_impl_target.writelns(
-                            f"args_inner[{i}] = value_{i};",
-                        )
-
                     iface_napi_impl_target.writelns(
-                        f"napi_value org_napi_obj;",
-                        f"NAPI_CALL(env, napi_get_reference_value(env, _ref, &org_napi_obj));",
-                        f"napi_value {method_napi_info.norm_name}_ts_method;",
-                        f'NAPI_CALL(env, napi_get_named_property(env, org_napi_obj, "{method_napi_info.norm_name}", &{method_napi_info.norm_name}_ts_method));',
-                        f"napi_value method_result_napi;",
-                        f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, {method_napi_info.norm_name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi));",
+                        f"napi_value exception = nullptr;",
+                        f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
                     )
+                with iface_napi_impl_target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
                     if isinstance(method.return_ty, NonVoidType):
                         return_napi_type_info = TypeNapiInfo.get(
                             self.am, method.return_ty
@@ -1919,319 +1938,40 @@ class NapiCodeGenerator:
                         )
                     else:
                         iface_napi_impl_target.writelns(
-                            f"return;",
+                            f"return {{}};",
                         )
-                with iface_napi_impl_target.indented(
-                    f"else {{",
-                    f"}}",
-                ):
-                    cpp_inputs = []
-                    with iface_napi_impl_target.indented(
-                        f"struct {iface_method_data_type}: {base_tsfn_data_type} {{",
-                        f"}};",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"bool completed = false;",
-                            f"std::mutex mutex;",
-                            f"std::condition_variable cv;",
-                            f"napi_ref ref;",
-                        )
-                        for index, param in enumerate(method.params):
-                            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                            cpp_input = f"cpp_input_{index}"
-                            iface_napi_impl_target.writelns(
-                                f"std::optional<{param_ty_cpp_info.as_owner}> {cpp_input};",
-                            )
-                            cpp_inputs.append(cpp_input)
-                        if isinstance(return_ty := method.return_ty, NonVoidType):
-                            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                            iface_napi_impl_target.writelns(
-                                f"std::optional<{return_ty_cpp_info.as_owner}> cpp_result;",
-                            )
-                        with iface_napi_impl_target.indented(
-                            f"void operator()(napi_env env) override {{",
-                            f"}}",
-                        ):
-                            iface_napi_impl_target.writelns(
-                                f"napi_value global = nullptr;",
-                                f"NAPI_CALL(env, napi_get_global(env, &global));",
-                            )
-                            inner_napi_args = []
-                            for index, param in enumerate(method.params):
-                                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-                                inner_napi_arg = f"napi_arg_{index}"
-                                inner_napi_args.append(inner_napi_arg)
-                                param_ty_napi_info.into_napi(
-                                    iface_napi_impl_target,
-                                    f"(*(this->{cpp_inputs[index]}))",
-                                    inner_napi_arg,
-                                )
-                            inner_napi_args_str = ", ".join(inner_napi_args)
-                            if len(method.params) != 0:
-                                iface_napi_impl_target.writelns(
-                                    f"napi_value napi_argv[{len(method.params)}] = {{{inner_napi_args_str}}};",
-                                )
-                            else:
-                                iface_napi_impl_target.writelns(
-                                    f"napi_value napi_argv[] = {{}};",
-                                )
-                            inner_napi_res = "napi_result"
-                            inner_cpp_res = "cpp_result"
-                            iface_napi_impl_target.writelns(
-                                f"napi_value {inner_napi_res} = nullptr;",
-                                f"napi_value cb = nullptr;",
-                                f"NAPI_CALL(env, napi_get_reference_value(env, this->ref, &cb));",
-                                f"NAPI_CALL(env, napi_call_function(env, global, cb, {len(method.params)}, napi_argv, &{inner_napi_res}));",
-                            )
-                            if isinstance(return_ty := method.return_ty, NonVoidType):
-                                return_ty_napi_info = TypeNapiInfo.get(
-                                    self.am, return_ty
-                                )
-                                return_ty_napi_info.from_napi(
-                                    iface_napi_impl_target,
-                                    inner_napi_res,
-                                    inner_cpp_res,
-                                )
-                                iface_napi_impl_target.writelns(
-                                    f"this->cpp_result = {inner_cpp_res};",
-                                )
-                            iface_napi_impl_target.writelns(
-                                f"this->completed = true;",
-                                f"this->cv.notify_one();",
-                            )
+                return
 
-                    iface_napi_impl_target.writelns(
-                        f"{iface_method_data_type} {iface_method_data};",
-                        f"{iface_method_data}.ref = _ref;",
-                    )
-                    for index, param in enumerate(method.params):
-                        iface_napi_impl_target.writelns(
-                            f"{iface_method_data}.{cpp_inputs[index]} = {param.name};",
-                        )
-                    with iface_napi_impl_target.indented(
-                        f"NAPI_CALL(env, napi_call_threadsafe_function(",
-                        f"));",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"_tsfn,",
-                            f"&{iface_method_data},",
-                            f"napi_tsfn_blocking",
-                        )
-                    iface_napi_impl_target.writelns(
-                        f"std::unique_lock<std::mutex> lock({iface_method_data}.mutex);",
-                        f"{iface_method_data}.cv.wait(lock, [&{iface_method_data}] {{ return {iface_method_data}.completed; }});",
-                    )
-                    if isinstance(return_ty := method.return_ty, NonVoidType):
-                        iface_napi_impl_target.writelns(
-                            f"return *{iface_method_data}.cpp_result;",
-                        )
-                    else:
-                        iface_napi_impl_target.writelns(
-                            f"return;",
-                        )
+            if isinstance(method.return_ty, NonVoidType):
+                return_napi_type_info = TypeNapiInfo.get(self.am, method.return_ty)
+                return_napi_type_info.from_napi(
+                    iface_napi_impl_target,
+                    f"method_result_napi",
+                    f"method_result_cpp",
+                )
+                iface_napi_impl_target.writelns(
+                    f"return method_result_cpp;",
+                )
+            else:
+                iface_napi_impl_target.writelns(
+                    f"return;",
+                )
+
+        if method_abi_info.is_noexcept:
+            return_type_name = return_ty_cpp_name
+            is_noexcept = True
         else:
+            return_type_name = return_ty_expected_name
+            is_noexcept = False
+        with iface_napi_impl_target.indented(
+            f"{return_type_name} {method_napi_info.norm_name}({params_cpp_str}) {{",
+            f"}}",
+        ):
             with iface_napi_impl_target.indented(
-                f"{return_ty_expected_name} {method_napi_info.norm_name}({params_cpp_str}) {{",
-                f"}}",
+                f"return this->sync_call([]( {lambda_params_str} ) -> {return_type_name} {{",
+                f"}}, {method_args});" if method_args else f"}});",
             ):
-                with iface_napi_impl_target.indented(
-                    f"if (::taihe::_is_main_thread()) {{",
-                    f"}}",
-                ):
-                    if method.params:
-                        iface_napi_impl_target.writelns(
-                            f"napi_value args_inner[{len(method.params)}];",
-                        )
-                        args_inner = "args_inner"
-                    else:
-                        args_inner = "nullptr"
-
-                    for i, param in enumerate(method.params):
-                        param_napi_type_info = TypeNapiInfo.get(self.am, param.ty)
-                        param_napi_type_info.into_napi(
-                            iface_napi_impl_target,
-                            f"{param.name}",
-                            f"value_{i}",
-                        )
-                        iface_napi_impl_target.writelns(
-                            f"args_inner[{i}] = value_{i};",
-                        )
-
-                    iface_napi_impl_target.writelns(
-                        f"napi_value org_napi_obj;",
-                        f"NAPI_CALL(env, napi_get_reference_value(env, _ref, &org_napi_obj));",
-                        f"napi_value {method_napi_info.norm_name}_ts_method;",
-                        f'NAPI_CALL(env, napi_get_named_property(env, org_napi_obj, "{method_napi_info.norm_name}", &{method_napi_info.norm_name}_ts_method));',
-                        f"napi_value method_result_napi;",
-                        f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, {method_napi_info.norm_name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi));",
-                    )
-                    iface_napi_impl_target.writelns(
-                        f"bool has_error = false;",
-                        f"napi_is_exception_pending(env, &has_error);",
-                    )
-                    with iface_napi_impl_target.indented(
-                        f"if (has_error) {{",
-                        f"}}",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"napi_value exception = nullptr;",
-                            f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                            f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
-                        )
-                    with iface_napi_impl_target.indented(
-                        f"else {{",
-                        f"}}",
-                    ):
-                        if isinstance(method.return_ty, NonVoidType):
-                            return_napi_type_info = TypeNapiInfo.get(
-                                self.am, method.return_ty
-                            )
-                            return_napi_type_info.from_napi(
-                                iface_napi_impl_target,
-                                f"method_result_napi",
-                                f"method_result_cpp",
-                            )
-                            iface_napi_impl_target.writelns(
-                                f"return method_result_cpp;",
-                            )
-                        else:
-                            iface_napi_impl_target.writelns(
-                                f"return {{}};",
-                            )
-                with iface_napi_impl_target.indented(
-                    f"else {{",
-                    f"}}",
-                ):
-                    cpp_inputs = []
-                    with iface_napi_impl_target.indented(
-                        f"struct {iface_method_data_type}: {base_tsfn_data_type} {{",
-                        f"}};",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"bool completed = false;",
-                            f"std::mutex mutex;",
-                            f"std::condition_variable cv;",
-                            f"napi_ref ref;",
-                        )
-                        for index, param in enumerate(method.params):
-                            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                            cpp_input = f"cpp_input_{index}"
-                            iface_napi_impl_target.writelns(
-                                f"std::optional<{param_ty_cpp_info.as_owner}> {cpp_input};",
-                            )
-                            cpp_inputs.append(cpp_input)
-                        if isinstance(return_ty := method.return_ty, NonVoidType):
-                            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                            return_ty_cpp_name = return_ty_cpp_info.as_owner
-                        else:
-                            return_ty_cpp_name = "void"
-                        return_ty_expected_name = (
-                            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-                        )
-                        iface_napi_impl_target.writelns(
-                            f"std::optional<{return_ty_expected_name}> cpp_result;",
-                        )
-
-                        with iface_napi_impl_target.indented(
-                            f"void operator()(napi_env env) override {{",
-                            f"}}",
-                        ):
-                            iface_napi_impl_target.writelns(
-                                f"napi_value global = nullptr;",
-                                f"NAPI_CALL(env, napi_get_global(env, &global));",
-                            )
-                            inner_napi_args = []
-                            for index, param in enumerate(method.params):
-                                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-                                inner_napi_arg = f"napi_arg_{index}"
-                                inner_napi_args.append(inner_napi_arg)
-                                param_ty_napi_info.into_napi(
-                                    iface_napi_impl_target,
-                                    f"(*(this->{cpp_inputs[index]}))",
-                                    inner_napi_arg,
-                                )
-                            inner_napi_args_str = ", ".join(inner_napi_args)
-                            if len(method.params) != 0:
-                                iface_napi_impl_target.writelns(
-                                    f"napi_value napi_argv[{len(method.params)}] = {{{inner_napi_args_str}}};",
-                                )
-                            else:
-                                iface_napi_impl_target.writelns(
-                                    f"napi_value napi_argv[] = {{}};",
-                                )
-                            inner_napi_res = "napi_result"
-                            inner_cpp_res = "cpp_result"
-                            iface_napi_impl_target.writelns(
-                                f"napi_value {inner_napi_res} = nullptr;",
-                                f"napi_value cb = nullptr;",
-                                f"NAPI_CALL(env, napi_get_reference_value(env, this->ref, &cb));",
-                                f"NAPI_CALL(env, napi_call_function(env, global, cb, {len(method.params)}, napi_argv, &{inner_napi_res}));",
-                            )
-                            iface_napi_impl_target.writelns(
-                                f"bool has_error = false;",
-                                f"napi_is_exception_pending(env, &has_error);",
-                            )
-                            with iface_napi_impl_target.indented(
-                                f"if (has_error) {{",
-                                f"}}",
-                            ):
-                                iface_napi_impl_target.writelns(
-                                    f"napi_value exception = nullptr;",
-                                    f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                                    f"this->cpp_result = ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
-                                )
-                            with iface_napi_impl_target.indented(
-                                f"else {{",
-                                f"}}",
-                            ):
-                                if isinstance(
-                                    return_ty := method.return_ty, NonVoidType
-                                ):
-                                    return_ty_napi_info = TypeNapiInfo.get(
-                                        self.am, return_ty
-                                    )
-                                    return_ty_napi_info.from_napi(
-                                        iface_napi_impl_target,
-                                        inner_napi_res,
-                                        inner_cpp_res,
-                                    )
-                                    iface_napi_impl_target.writelns(
-                                        f"this->cpp_result = {inner_cpp_res};",
-                                    )
-                            iface_napi_impl_target.writelns(
-                                f"this->completed = true;",
-                                f"this->cv.notify_one();",
-                            )
-
-                    iface_napi_impl_target.writelns(
-                        f"{iface_method_data_type} {iface_method_data};",
-                        f"{iface_method_data}.ref = _ref;",
-                    )
-                    for index, param in enumerate(method.params):
-                        iface_napi_impl_target.writelns(
-                            f"{iface_method_data}.{cpp_inputs[index]} = {param.name};",
-                        )
-                    with iface_napi_impl_target.indented(
-                        f"NAPI_CALL(env, napi_call_threadsafe_function(",
-                        f"));",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"_tsfn,",
-                            f"&{iface_method_data},",
-                            f"napi_tsfn_blocking",
-                        )
-                    iface_napi_impl_target.writelns(
-                        f"std::unique_lock<std::mutex> lock({iface_method_data}.mutex);",
-                        f"{iface_method_data}.cv.wait(lock, [&{iface_method_data}] {{ return {iface_method_data}.completed; }});",
-                    )
-                    if isinstance(return_ty := method.return_ty, NonVoidType):
-                        iface_napi_impl_target.writelns(
-                            f"return *{iface_method_data}.cpp_result;",
-                        )
-                    else:
-                        iface_napi_impl_target.writelns(
-                            f"return;",
-                        )
+                write_method_lambda_body(is_noexcept)
 
     def gen_iface_into_napi_func(
         self,
