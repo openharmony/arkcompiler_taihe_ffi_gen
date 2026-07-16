@@ -105,9 +105,9 @@ export class UnifiedData {
     }
     getRecords(): Array<UnifiedRecord> {
         let res_th: UnifiedRecord_th[] = this.inner.getRecords();
-        let res: UnifiedRecord[] = new Array<UnifiedRecord>(res_th.length);
-        for(let i = 0; i < res.length; i++) {
-            res[i] = new UnifiedRecord(res_th[i]);
+        let res: Array<UnifiedRecord> = new Array<UnifiedRecord>();
+        for(let i = 0; i < res_th.length; i++) {
+            res.push(new UnifiedRecord(res_th[i]));
         }
         return res;
     }
