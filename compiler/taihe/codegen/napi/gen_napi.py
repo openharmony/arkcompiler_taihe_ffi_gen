@@ -78,7 +78,6 @@ class NapiCodeGenerator:
         pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
         for module, ns in pg_napi_info.module_dict.items():
             self.gen_register(module, ns)
-        self.gen_utils_file()
 
     def gen_ns_register(self, ns: Namespace, reg_obj: str, target: CSourceWriter):
         for child_ns_name, child_ns in ns.children.items():
@@ -201,226 +200,6 @@ class NapiCodeGenerator:
                 self.gen_module_init(pkg, register_infos, pkg_napi_target)
         self.gen_napi_header_file(pkg_napi_info)
 
-    def gen_utils_file(self):
-        """Generate util functions for main thread."""
-        with CHeaderWriter(
-            self.oc,
-            f"include/napi_utils.hpp",
-            group=None,
-        ) as target:
-            target.add_include("taihe/array.hpp")
-            target.add_include("taihe/runtime_napi.hpp")
-            target.add_include("mutex")
-            target.add_include("condition_variable")
-            target.add_include("functional")
-            target.add_include("optional")
-            target.add_include("pthread.h")
-            target.add_include("tuple")
-            target.add_include("type_traits")
-            target.add_include("utility")
-            target.writelns(
-                f"namespace taihe {{",
-                f"class ThreadContext {{",
-                f"public:",
-                f"    static ThreadContext& get_instance() {{",
-                f"        static ThreadContext instance;",
-                f"        return instance;",
-                f"    }}",
-                f"",
-                f"    void init_main_thread_id() {{",
-                f"        static std::once_flag flag;",
-                f"        std::call_once(flag, [this]() {{",
-                f"            main_thread_id_ = pthread_self();",
-                f"            initialized_ = true;",
-                f"        }});",
-                f"    }}",
-                f"",
-                f"    bool _is_main_thread() const {{",
-                f"        if (!initialized_) {{",
-                f"            return false;",
-                f"        }}",
-                f"        return pthread_equal(pthread_self(), main_thread_id_) != 0;",
-                f"    }}",
-                f"",
-                f"    ThreadContext(const ThreadContext&) = delete;",
-                f"    ThreadContext& operator=(const ThreadContext&) = delete;",
-                f"",
-                f"private:",
-                f"    ThreadContext() = default;",
-                f"    pthread_t main_thread_id_;",
-                f"    bool initialized_ = false;",
-                f"}};",
-                f"",
-                f"inline bool _is_main_thread() {{",
-                f"    return ThreadContext::get_instance()._is_main_thread();",
-                f"}}",
-                f"",
-                f"inline void _init_main_thread() {{",
-                f"    ThreadContext::get_instance().init_main_thread_id();",
-                f"}}",
-                f"",
-                f"struct napi_ref_guard {{",
-                f"private:",
-                f"    struct threadsafe_call {{",
-                f"        virtual void invoke(napi_env env) = 0;",
-                f"        virtual ~threadsafe_call() = default;",
-                f"    }};",
-                f"",
-                f"    napi_env env_;",
-                f"    napi_ref ref_;",
-                f"    napi_threadsafe_function tsfn_;",
-                f"",
-                f"    static void dispatch_threadsafe_call(napi_env env, [[maybe_unused]] napi_value js_cb,",
-                f"                                         [[maybe_unused]] void *context, void *data)",
-                f"    {{",
-                f"        auto *call = static_cast<threadsafe_call *>(data);",
-                f"        call->invoke(env);",
-                f"    }}",
-                f"",
-                f"protected:",
-                f"    template<typename callable_t, typename... arg_t>",
-                f"    auto sync_call(callable_t &&callable, arg_t &&...args)",
-                f"        -> std::invoke_result_t<std::decay_t<callable_t> &, napi_env, napi_ref, std::decay_t<arg_t> &...>",
-                f"    {{",
-                f"        using result_t = std::invoke_result_t<std::decay_t<callable_t> &, napi_env, napi_ref, std::decay_t<arg_t> &...>;",
-                f"        struct no_result_t {{}};",
-                f"        using stored_result_t = std::conditional_t<std::is_void_v<result_t>, no_result_t, result_t>;",
-                f"",
-                f"        if (::taihe::_is_main_thread()) {{",
-                f"            return std::invoke(std::forward<callable_t>(callable), env_, ref_, std::forward<arg_t>(args)...);",
-                f"        }}",
-                f"",
-                f"        struct sync_call_data final : threadsafe_call {{",
-                f"            std::mutex mutex;",
-                f"            std::condition_variable cv;",
-                f"            napi_ref ref;",
-                f"            std::decay_t<callable_t> callable;",
-                f"            std::tuple<std::decay_t<arg_t>...> args;",
-                f"            std::optional<stored_result_t> result;",
-                f"",
-                f"            sync_call_data(napi_ref ref, callable_t &&callable, arg_t &&...args)",
-                f"                : ref(ref), callable(std::forward<callable_t>(callable)), args(std::forward<arg_t>(args)...)",
-                f"            {{",
-                f"            }}",
-                f"",
-                f"            void invoke(napi_env env) override",
-                f"            {{",
-                f"                std::lock_guard<std::mutex> lock(this->mutex);",
-                f"                if constexpr (std::is_void_v<result_t>) {{",
-                f"                    std::apply(",
-                f"                        [this, env](auto &...args) {{",
-                f"                            std::invoke(this->callable, env, this->ref, args...);",
-                f"                        }},",
-                f"                        this->args);",
-                f"                    this->result.emplace();",
-                f"                }} else {{",
-                f"                    this->result = std::apply(",
-                f"                        [this, env](auto &...args) {{",
-                f"                            return std::invoke(this->callable, env, this->ref, args...);",
-                f"                        }},",
-                f"                        this->args);",
-                f"                }}",
-                f"                this->cv.notify_one();",
-                f"            }}",
-                f"        }};",
-                f"",
-                f"        sync_call_data call_data(ref_, std::forward<callable_t>(callable), std::forward<arg_t>(args)...);",
-                f"        NAPI_CALL(env_,",
-                f"                  napi_call_threadsafe_function(tsfn_, static_cast<threadsafe_call *>(&call_data), napi_tsfn_blocking));",
-                f"        std::unique_lock<std::mutex> lock(call_data.mutex);",
-                f"        call_data.cv.wait(lock, [&call_data] {{",
-                f"            return call_data.result.has_value();",
-                f"        }});",
-                f"",
-                f"        if constexpr (std::is_void_v<result_t>) {{",
-                f"            return;",
-                f"        }} else {{",
-                f"            return std::move(*call_data.result);",
-                f"        }}",
-                f"    }}",
-                f"",
-                f"public:",
-                f"    explicit napi_ref_guard(napi_env env) : env_(env), ref_(nullptr), tsfn_(nullptr)",
-                f"    {{",
-                f"    }}",
-                f"",
-                f"    napi_ref_guard(napi_env env, napi_value callback) : napi_ref_guard(env)",
-                f"    {{",
-                f"        NAPI_CALL(env, napi_create_reference(env, callback, 1, &ref_));",
-                f"        napi_value napi_resname;",
-                f'        NAPI_CALL(env, napi_create_string_utf8(env, "MyWorkResource", NAPI_AUTO_LENGTH, &napi_resname));',
-                f"        NAPI_CALL(env, napi_create_threadsafe_function(env, nullptr, nullptr, napi_resname, 0, 1, nullptr, nullptr,",
-                f"                                                       nullptr, napi_ref_guard::dispatch_threadsafe_call, &tsfn_));",
-                f"        napi_unref_threadsafe_function(env, tsfn_);",
-                f"    }}",
-                f"",
-                f"    ~napi_ref_guard()",
-                f"    {{",
-                f"        if (ref_) {{",
-                f"            this->sync_call([](napi_env env, napi_ref ref) {{",
-                f"                NAPI_CALL(env, napi_delete_reference(env, ref));",
-                f"            }});",
-                f"        }}",
-                f"        if (tsfn_) {{",
-                f"            NAPI_CALL(env_, napi_release_threadsafe_function(tsfn_, napi_tsfn_release));",
-                f"        }}",
-                f"    }}",
-                f"}};",
-                f"",
-                f"inline bool _get_bigint_msb(uint64_t dig) {{",
-                f"    return dig >> (sizeof(uint64_t) * 8 - 1) != 0;",
-                f"}}",
-                f"",
-                f"inline bool _get_bigint_sign(taihe::array_view<uint64_t> num) {{",
-                f"    return _get_bigint_msb(num[num.size() - 1]);",
-                f"}}",
-                f"",
-                f"inline std::pair<bool, taihe::array<uint64_t>> _get_bigint_sign_and_abs(taihe::array_view<uint64_t> num) {{",
-                f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc(num.size() * sizeof(uint64_t)));",
-                f"    bool sign = _get_bigint_msb(num[num.size() - 1]);",
-                f"    if (sign) {{",
-                f"        bool carry = true;",
-                f"        for (std::size_t i = 0; i < num.size(); i++) {{",
-                f"            buf[i] = ~num[i] + carry;",
-                f"            carry = carry && (buf[i] == 0);",
-                f"        }}",
-                f"    }} else {{",
-                f"        for (std::size_t i = 0; i < num.size(); i++) {{",
-                f"            buf[i] = num[i];",
-                f"        }}",
-                f"    }}",
-                f"    std::size_t size = num.size();",
-                f"    while (size > 0 && buf[size - 1] == 0) {{",
-                f"        size--;",
-                f"    }}",
-                f"    return {{sign, taihe::array<uint64_t>(buf, size)}};",
-                f"}}",
-                f"",
-                f"inline taihe::array<uint64_t> _taihe_build_num(bool sign, taihe::array_view<uint64_t> abs) {{",
-                f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc((abs.size() + 1) * sizeof(uint64_t)));",
-                f"    if (sign) {{",
-                f"        bool carry = true;",
-                f"        for (std::size_t i = 0; i < abs.size(); i++) {{",
-                f"            buf[i] = ~abs[i] + carry;",
-                f"            carry = carry && (buf[i] == 0);",
-                f"        }}",
-                f"        buf[abs.size()] = carry - 1;",
-                f"    }} else {{",
-                f"        for (std::size_t i = 0; i < abs.size(); i++) {{",
-                f"            buf[i] = abs[i];",
-                f"        }}",
-                f"        buf[abs.size()] = 0;",
-                f"    }}",
-                f"    std::size_t size = abs.size() + 1;",
-                f"    while (size >= 2 && ((buf[size - 1] == 0 && _get_bigint_msb(buf[size - 2]) == 0) ||",
-                f"                        (buf[size - 1] == static_cast<uint64_t>(-1) && _get_bigint_msb(buf[size - 2]) == 1))) {{",
-                f"        size--;",
-                f"    }}",
-                f"    return taihe::array<uint64_t>(buf, size);",
-                f"}}",
-                f"}}",
-            )
-
     def gen_napi_header_file(self, pkg_napi_info: PackageNapiInfo):
         with CHeaderWriter(
             self.oc,
@@ -428,7 +207,7 @@ class NapiCodeGenerator:
             group=None,
         ) as target:
             target.add_include("taihe/runtime_napi.hpp")
-            target.add_include("napi_utils.hpp")
+            target.add_include("taihe/platform/napi.hpp")
             target.writelns(
                 f"#if __has_include(<napi/native_api.h>)",
                 f"#include <napi/native_api.h>",
@@ -1389,7 +1168,7 @@ class NapiCodeGenerator:
             f"include/{struct_napi_info.decl_header}",
             group=None,
         ) as struct_napi_decl_target:
-            struct_napi_decl_target.add_include("napi_utils.hpp")
+            struct_napi_decl_target.add_include("taihe/platform/napi.hpp")
             struct_napi_decl_target.add_include("taihe/runtime_napi.hpp")
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
             with struct_napi_decl_target.indented(
@@ -1786,7 +1565,7 @@ class NapiCodeGenerator:
             f"include/{iface_napi_info.decl_header}",
             group=None,
         ) as iface_napi_decl_target:
-            iface_napi_decl_target.add_include("napi_utils.hpp")
+            iface_napi_decl_target.add_include("taihe/platform/napi.hpp")
             iface_napi_decl_target.add_include("taihe/runtime_napi.hpp")
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             with iface_napi_decl_target.indented(
@@ -1848,7 +1627,7 @@ class NapiCodeGenerator:
                             method, iface_napi_impl_target
                         )
             iface_napi_impl_target.writelns(
-                f"return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, napi_obj);",
+                f"return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}, ::taihe::platform::napi::NapiObject>(env, napi_obj);",
             )
 
     def gen_iface_napi_method(
@@ -2319,7 +2098,7 @@ class NapiCodeGenerator:
             f"include/{union_napi_info.decl_header}",
             group=None,
         ) as union_napi_decl_target:
-            union_napi_decl_target.add_include("napi_utils.hpp")
+            union_napi_decl_target.add_include("taihe/platform/napi.hpp")
             union_napi_decl_target.add_include(union_cpp_info.defn_header)
             with union_napi_decl_target.indented(
                 f"template<> struct ::taihe::from_napi_t<{union_cpp_info.as_owner}> {{",

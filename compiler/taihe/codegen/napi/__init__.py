@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
+from taihe.utils.resources import StandardLibrary
+from taihe.utils.sources import SourceFile
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
@@ -45,6 +47,14 @@ class NapiBridgeBackendConfig(BackendConfig):
 
             def setup(self):
                 self._ci.attribute_registry.register(*all_napi_attr_types)
+
+            def add_sources(self):
+                self._ci.source_manager.add_source(
+                    SourceFile(
+                        StandardLibrary.resolve_path() / "taihe.platform.napi.taihe",
+                        is_stdlib=True,
+                    )
+                )
 
             def generate(self):
                 self._ci.output_manager.record_runtime_cxx_src("runtime_napi.cpp")

@@ -895,7 +895,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
             self.gen_invoke_operator(cpp_result, target)
 
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}>(env, {napi_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}, ::taihe::platform::napi::NapiObject>(env, {napi_value});",
         )
 
     def gen_invoke_operator(
