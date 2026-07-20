@@ -864,9 +864,10 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
     def dts_type_in(self, target: DtsWriter) -> str:
         params_ty_dts = []
         for index, param in enumerate(self.type.ref.params):
+            arg = f"arg_{index}"
             param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             params_ty_dts.append(
-                f"arg_{index}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
+                f"{arg}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
         params_ty_dts_str = ", ".join(params_ty_dts)
         if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
@@ -1021,18 +1022,15 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        cpp_scope = f"{napi_result}_cpp_scope"
-        invoke_name = "invoke"
-        with target.indented(
-            f"struct {cpp_scope} {{",
-            f"}};",
-        ):
-            self.gen_native_invoke(invoke_name, target)
         target.writelns(
             f"{self.cpp_info.as_owner}* cpp_ptr = new {self.cpp_info.as_owner}({cpp_value});",
             f"napi_value {napi_result} = nullptr;",
-            f"NAPI_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, {cpp_scope}::{invoke_name}, cpp_ptr, &{napi_result}));",
         )
+        with target.indented(
+            f"NAPI_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, []([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) -> napi_value {{",
+            f"}}, cpp_ptr, &{napi_result}));",
+        ):
+            self.gen_func_content(target)
         with target.indented(
             f"NAPI_CALL(env, napi_add_finalizer(env, {napi_result}, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
             f"}}, nullptr, nullptr));",
@@ -1041,134 +1039,97 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"delete static_cast<{self.cpp_info.as_owner}*>(finalize_data);",
             )
 
-    def gen_native_invoke(
+    def gen_func_content(
         self,
-        cpp_cast_ptr: str,
         target: CSourceWriter,
     ):
-        inner_napi_args = []
-        inner_cpp_args = []
-        for index, param in enumerate(self.type.ref.params):
-            inner_cpp_arg = f"cpp_arg_{index}"
-            inner_napi_arg = f"args[{index}]"
-            inner_napi_args.append(inner_napi_arg)
-            inner_cpp_args.append(inner_cpp_arg)
-
-        with target.indented(
-            f"static napi_value {cpp_cast_ptr}(napi_env env, napi_callback_info info) {{",
-            f"}};",
-        ):
-            if len(self.type.ref.params) != 0:
-                target.writelns(
-                    f"napi_value args[{len(self.type.ref.params)}] = {{nullptr}};",
-                )
-            else:
-                target.writelns(
-                    f"napi_value args[] = {{}};",
-                )
+        is_noexcept = CallbackAbiInfo.get(self.am, self.type).is_noexcept
+        target.writelns(
+            f"{self.cpp_info.as_owner}* cpp_cb;",
+            f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, nullptr, reinterpret_cast<void**>(&cpp_cb)));",
+        )
+        argc = len(self.type.ref.params)
+        if argc:
             target.writelns(
-                f"size_t argc = {len(self.type.ref.params)};",
-                f"void* data_ptr = nullptr;",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, &data_ptr));",
-                f"{self.cpp_info.as_owner}* cpp_cb = static_cast<{self.cpp_info.as_owner}*>(data_ptr);",
+                f"size_t argc = {argc};",
+                f"napi_value args[{argc}] = {{nullptr}};",
+                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args , nullptr, nullptr));",
             )
-            args_cpp = []
-            for inner_napi_arg, inner_cpp_arg, param in zip(
-                inner_napi_args,
-                inner_cpp_args,
-                self.type.ref.params,
-                strict=True,
-            ):
-                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-                param_ty_napi_info.from_napi(target, inner_napi_arg, inner_cpp_arg)
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                args_cpp.append(
-                    f"std::forward<{param_ty_cpp_info.as_param}>({inner_cpp_arg})"
-                )
-            args_cpp_str = ", ".join(args_cpp)
-            with target.indented(
-                f"if (cpp_cb) {{",
-                f"}}",
-            ):
-                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                    cpp_return_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_cpp_name = cpp_return_info.as_owner
-                else:
-                    return_ty_cpp_name = "void"
-                return_ty_cpp_name_expected = (
-                    f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-                )
-                result_cpp = "cpp_result"
-                result_napi = "napi_result"
-                result_expected = "expected_result"
-                result_error = "error_result"
-                cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
-                if cb_abi_info.is_noexcept:
-                    if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                        return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                        return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                        target.writelns(
-                            f"{return_ty_cpp_info.as_owner} {result_cpp} = (*cpp_cb)({args_cpp_str});",
-                        )
-                        return_ty_napi_info.into_napi(
-                            target,
-                            result_cpp,
-                            result_napi,
-                        )
-                    else:
-                        target.writelns(
-                            f"napi_value {result_napi} = nullptr;",
-                            f"(*cpp_cb)({args_cpp_str});",
-                            f"napi_get_undefined(env, &{result_napi});",
-                        )
-                    target.writelns(
-                        f"return {result_napi};",
-                    )
-                else:
-                    target.writelns(
-                        f"{return_ty_cpp_name_expected} {result_expected} = (*cpp_cb)({args_cpp_str});",
-                    )
-                    with target.indented(
-                        f"if ({result_expected}) {{",
-                        f"}}",
-                    ):
-                        if isinstance(
-                            return_ty := self.type.ref.return_ty, NonVoidType
-                        ):
-                            target.writelns(
-                                f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
-                            )
-                            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                            return_ty_napi_info.into_napi(
-                                target, result_cpp, result_napi
-                            )
-                            target.writelns(
-                                f"return {result_napi};",
-                            )
-                        else:
-                            target.writelns(
-                                f"return nullptr;",
-                            )
-                    with target.indented(
-                        f"else {{",
-                        f"}}",
-                    ):
-                        target.writelns(
-                            f"::taihe::error {result_error} = {result_expected}.error();",
-                            f"napi_throw(env, ::taihe::into_napi_error(env, {result_error}));",
-                            f"return nullptr;",
-                        )
-            with target.indented(
-                f"else {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"napi_throw_error(env,",
-                    f'    "ERR_NOT_FOUND",',
-                    f'    "No cpp function pointer"',
-                    f");",
-                    f"return nullptr;",
-                )
+        cpp_values = self._read_func_params(target, "args")
+        result_storage_type = self._get_async_result_storage_type(is_noexcept)
+        cpp_args_str = ", ".join(
+            f"std::forward<decltype({value})>({value})" for value in cpp_values
+        )
+        cpp_call = f"(*cpp_cb)({cpp_args_str})"
+        if result_storage_type == "void":
+            target.writelns(
+                f"{cpp_call};",
+            )
+        else:
+            target.writelns(
+                f"{result_storage_type} cpp_result = {cpp_call};",
+            )
+        if is_noexcept:
+            self._write_native_noexcept_success(target, "cpp_result")
+        else:
+            self._write_native_maythrow_success(target, "cpp_result")
+
+    def _write_native_noexcept_success(
+        self,
+        target: CSourceWriter,
+        result: str,
+    ):
+        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+            return_ty_napi_info.into_napi(target, result, "napi_result")
+            target.writelns(
+                f"return napi_result;",
+            )
+        else:
+            target.writelns(
+                f"return nullptr;",
+            )
+
+    def _write_native_maythrow_success(
+        self,
+        target: CSourceWriter,
+        result: str,
+    ):
+        with target.indented(
+            f"if ({result}.has_value()) {{",
+            f"}}",
+        ):
+            self._write_native_noexcept_success(target, f"{result}.value()")
+        target.writelns(
+            f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
+            f"napi_throw(env, error_obj);",
+            f"return nullptr;",
+        )
+
+    def _get_async_result_storage_type(
+        self,
+        is_noexcept: bool,
+    ) -> str:
+        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+            cpp_ty = TypeCppInfo.get(self.am, return_ty).as_owner
+        else:
+            cpp_ty = "void"
+        if not is_noexcept:
+            cpp_ty = f"::taihe::expected<{cpp_ty}, ::taihe::error>"
+        return cpp_ty
+
+    def _read_func_params(
+        self,
+        target: CSourceWriter,
+        args: str,
+    ) -> list[str]:
+        values = []
+        for index, param in enumerate(self.type.ref.params):
+            value = f"value_{index}"
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+            param_ty_napi_info.from_napi(target, f"{args}[{index}]", value)
+            values.append(value)
+        return values
 
 
 class EnumTypeNapiInfo(TypeNapiInfo):
@@ -1356,12 +1317,10 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         self,
         am: AnalysisManager,
         t: ArrayType,
-        typedarray_attr: TypedArrayAttr,
     ) -> None:
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.typedarray_attr = typedarray_attr
         napi_type_name = None
         if isinstance(self.type.item_ty, ScalarType):
             napi_type_name = {
@@ -1852,8 +1811,8 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
             return BigIntTypeNapiInfo(self.am, t)
         if ArrayBufferAttr.get(t.ref):
             return ArrayBufferTypeNapiInfo(self.am, t)
-        if typedarray_attr := TypedArrayAttr.get(t.ref):
-            return TypedArrayTypeNapiInfo(self.am, t, typedarray_attr)
+        if TypedArrayAttr.get(t.ref):
+            return TypedArrayTypeNapiInfo(self.am, t)
         return ArrayTypeNapiInfo(self.am, t)
 
     @override
@@ -1872,10 +1831,7 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
 
     @override
     def visit_unit_type(self, t: UnitType) -> TypeNapiInfo:
-        if UndefinedAttr.get(t.ref) or (
-            isinstance(t.ref.parent_type_holder, StructFieldDecl | UnionFieldDecl)
-            and UndefinedAttr.get(t.ref.parent_type_holder)
-        ):
+        if UndefinedAttr.get(t.ref):
             return UndefinedTypeNapiInfo(self.am, t)
         if NullAttr.get(t.ref):
             return NullTypeNapiInfo(self.am, t)
