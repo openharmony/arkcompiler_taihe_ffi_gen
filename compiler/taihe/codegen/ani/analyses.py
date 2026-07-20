@@ -2060,7 +2060,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             ScalarKinds.U32: "Uint32Array",
             ScalarKinds.U64: "BigUint64Array",
         }[typedarray_attr.item_ty.kind]
-        self.ets_desc = f"std.core.{self.sts_type}"
+        self.ets_desc = f"escompat.{self.sts_type}"
 
     @property
     @override
