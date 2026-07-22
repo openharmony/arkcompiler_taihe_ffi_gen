@@ -72,7 +72,7 @@ _BUILD_CONFIGS = {
     ),
     "lite": BuildModeConfig(
         exclude_compiler=[
-            "taihe/codegen/ohipc",
+            "taihe/codegen/modobj",
         ],
     ),
     "full": BuildModeConfig(),

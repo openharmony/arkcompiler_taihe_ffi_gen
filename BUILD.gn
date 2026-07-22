@@ -149,6 +149,151 @@ action("build_taihe") {
   ]
 }
 
+action("build_taihe_modobj") {
+  inputs = [
+    # compiler/
+    "compiler/Taihe.g4",
+    "compiler/build.py",
+    "compiler/taihe/__init__.py",
+    "compiler/taihe/cli/__init__.py",
+    "compiler/taihe/cli/compiler.py",
+    "compiler/taihe/cli/tryit.py",
+    "compiler/taihe/codegen/__init__.py",
+    "compiler/taihe/codegen/abi/__init__.py",
+    "compiler/taihe/codegen/abi/analyses.py",
+    "compiler/taihe/codegen/abi/attributes.py",
+    "compiler/taihe/codegen/abi/gen_abi.py",
+    "compiler/taihe/codegen/abi/gen_impl.py",
+    "compiler/taihe/codegen/abi/mangle.py",
+    "compiler/taihe/codegen/abi/options.py",
+    "compiler/taihe/codegen/abi/writer.py",
+    "compiler/taihe/codegen/ani/__init__.py",
+    "compiler/taihe/codegen/ani/analyses.py",
+    "compiler/taihe/codegen/ani/attributes.py",
+    "compiler/taihe/codegen/ani/gen_ani.py",
+    "compiler/taihe/codegen/ani/gen_sts.py",
+    "compiler/taihe/codegen/ani/options.py",
+    "compiler/taihe/codegen/ani/writer.py",
+    "compiler/taihe/codegen/cpp/__init__.py",
+    "compiler/taihe/codegen/cpp/analyses.py",
+    "compiler/taihe/codegen/cpp/gen_common.py",
+    "compiler/taihe/codegen/cpp/gen_impl.py",
+    "compiler/taihe/codegen/cpp/gen_user.py",
+    "compiler/taihe/codegen/napi/__init__.py",
+    "compiler/taihe/codegen/napi/analyses.py",
+    "compiler/taihe/codegen/napi/attributes.py",
+    "compiler/taihe/codegen/napi/gen_dts.py",
+    "compiler/taihe/codegen/napi/gen_napi.py",
+    "compiler/taihe/codegen/napi/gen_ts.py",
+    "compiler/taihe/codegen/napi/writer.py",
+    "compiler/taihe/codegen/modobj/analyses.py",
+    "compiler/taihe/codegen/modobj/attribute.py",
+    "compiler/taihe/codegen/modobj/gen_interface.py",
+    "compiler/taihe/codegen/modobj/gen_json.py",
+    "compiler/taihe/codegen/modobj/gen_proxy.py",
+    "compiler/taihe/codegen/modobj/gen_stub.py",
+    "compiler/taihe/codegen/modobj/serialization.py",
+    "compiler/taihe/codegen/modobj/taihe_version.json",
+    "compiler/taihe/codegen/modobj/typelib_schema.py",
+    "compiler/taihe/codegen/modobj/__init__.py",
+    "compiler/taihe/driver/__init__.py",
+    "compiler/taihe/driver/backend.py",
+    "compiler/taihe/driver/contexts.py",
+    "compiler/taihe/driver/options.py",
+    "compiler/taihe/driver/toolchain.py",
+    "compiler/taihe/parse/__init__.py",
+    "compiler/taihe/parse/antlr/__init__.py",
+    "compiler/taihe/parse/ast_generation.py",
+    "compiler/taihe/parse/convert.py",
+    "compiler/taihe/semantics/__init__.py",
+    "compiler/taihe/semantics/analysis.py",
+    "compiler/taihe/semantics/attributes.py",
+    "compiler/taihe/semantics/declarations.py",
+    "compiler/taihe/semantics/format.py",
+    "compiler/taihe/semantics/types.py",
+    "compiler/taihe/semantics/visitor.py",
+    "compiler/taihe/utils/__init__.py",
+    "compiler/taihe/utils/analyses.py",
+    "compiler/taihe/utils/build_metadata.py",
+    "compiler/taihe/utils/diagnostics.py",
+    "compiler/taihe/utils/exceptions.py",
+    "compiler/taihe/utils/logging.py",
+    "compiler/taihe/utils/outputs.py",
+    "compiler/taihe/utils/resources.py",
+    "compiler/taihe/utils/sources.py",
+    "compiler/tests/test_mangler.py",
+    "compiler/tests/test_resources.py",
+    "compiler/tests/test_semantic_error.py",
+
+    # runtime/
+    "runtime/CMakeLists.txt",
+    "runtime/include/taihe/array.abi.h",
+    "runtime/include/taihe/array.hpp",
+    "runtime/include/taihe/async.abi.h",
+    "runtime/include/taihe/async.hpp",
+    "runtime/include/taihe/callback.abi.h",
+    "runtime/include/taihe/callback.hpp",
+    "runtime/include/taihe/common.h",
+    "runtime/include/taihe/common.hpp",
+    "runtime/include/taihe/error.abi.h",
+    "runtime/include/taihe/error.hpp",
+    "runtime/include/taihe/expected.hpp",
+    "runtime/include/taihe/invoke.hpp",
+    "runtime/include/taihe/map.abi.h",
+    "runtime/include/taihe/map.hpp",
+    "runtime/include/taihe/object.abi.h",
+    "runtime/include/taihe/object.hpp",
+    "runtime/include/taihe/optional.abi.h",
+    "runtime/include/taihe/optional.hpp",
+    "runtime/include/taihe/platform/ani.hpp",
+    "runtime/include/taihe/runtime.hpp",
+    "runtime/include/taihe/runtime_ani.hpp",
+    "runtime/include/taihe/runtime_napi.hpp",
+    "runtime/include/taihe/set.abi.h",
+    "runtime/include/taihe/set.hpp",
+    "runtime/include/taihe/string.abi.h",
+    "runtime/include/taihe/string.hpp",
+    "runtime/include/taihe/unit.abi.h",
+    "runtime/include/taihe/unit.hpp",
+    "runtime/include/taihe/vector.abi.h",
+    "runtime/include/taihe/vector.hpp",
+    "runtime/src/object.cpp",
+    "runtime/src/runtime_ani.cpp",
+    "runtime/src/runtime_napi.cpp",
+    "runtime/src/string.cpp",
+
+    # Build script
+    "scripts/build",
+
+    # Python build config
+    "pyproject.toml",
+    "setup.py",
+
+    # CMake
+    "cmake/TaiheUtils.cmake",
+    "cmake/TaiheWorkflows.cmake",
+  ]
+  script = "//arkcompiler/taihe_ffi_gen/scripts/build"
+  args = [
+    "--output",
+    rebase_path("$target_out_dir/dist_modobj"),
+    "--strip_version",
+    "--mode",
+    "core",
+  ]
+
+  outputs = [
+    "$target_out_dir/dist_modobj/taihe-linux-x86_64.tar.gz",
+    "$target_out_dir/dist_modobj/taihe-darwin-arm64.tar.gz",
+    "$target_out_dir/dist_modobj/taihe-darwin-x86_64.tar.gz",
+    "$target_out_dir/dist_modobj/taihe-windows-x86_64.tar.gz",
+    "$target_out_dir/dist_modobj/taihe-linux-x86_64/version.txt",
+    "$target_out_dir/dist_modobj/taihe-darwin-arm64/version.txt",
+    "$target_out_dir/dist_modobj/taihe-darwin-x86_64/version.txt",
+    "$target_out_dir/dist_modobj/taihe-windows-x86_64/version.txt",
+  ]
+}
+
 ohos_copy("build_taihe_wrapper") {
   sources = [
     "$target_out_dir/dist/taihe-linux-x86_64.tar.gz",
@@ -198,6 +343,56 @@ if (sdk_build_arkts) {
       sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-arm64" ]
     } else if (current_toolchain == "//build/toolchain/mac:clang_x64") {
       sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-x86_64" ]
+    }
+    outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
+    module_source_dir = target_out_dir + "/$target_name"
+    module_install_name = ""
+    part_name = "taihe_ffi_gen"
+    subsystem_name = "arkcompiler"
+  }
+} else {
+  action("copy_taihe_out") {
+    build_taihe_out_dir = get_label_info("build_taihe", "target_out_dir")
+    parent_build_taihe_out_dir = get_path_info(build_taihe_out_dir, "dir")
+
+    sources = [
+      "$parent_build_taihe_out_dir/dist_modobj/taihe-darwin-arm64/version.txt",
+      "$parent_build_taihe_out_dir/dist_modobj/taihe-darwin-x86_64/version.txt",
+      "$parent_build_taihe_out_dir/dist_modobj/taihe-linux-x86_64/version.txt",
+      "$parent_build_taihe_out_dir/dist_modobj/taihe-windows-x86_64/version.txt",
+    ]
+
+    script = "//arkcompiler/taihe_ffi_gen/scripts/process_sdk_files"
+    args = [
+      "--input_dir",
+      rebase_path("${parent_build_taihe_out_dir}/dist_modobj"),
+      "--output_dir",
+      rebase_path("$target_out_dir/tmp_taihe_modobj"),
+    ]
+    outputs = [
+      "$target_out_dir/tmp_taihe_modobj/taihe-linux-x86_64",
+      "$target_out_dir/tmp_taihe_modobj/taihe-windows-x86_64",
+      "$target_out_dir/tmp_taihe_modobj/taihe-darwin-arm64",
+      "$target_out_dir/tmp_taihe_modobj/taihe-darwin-x86_64",
+    ]
+    deps = [ ":build_taihe_modobj" ]
+  }
+
+  ohos_copy("copy_taihe_tools") {
+    if (current_toolchain == "//build/toolchain/linux:clang_x64") {
+      deps = [ ":copy_taihe_out" ]
+      sources = [ "$target_out_dir/tmp_taihe_modobj/taihe-linux-x86_64" ]
+    } else if (current_toolchain == "//build/toolchain/mingw:mingw_x86_64") {
+      deps = [ ":copy_taihe_out" ]
+      sources = [ "$target_out_dir/tmp_taihe_modobj/taihe-windows-x86_64" ]
+    } else if (current_toolchain == "//build/toolchain/mac:clang_arm64") {
+      deps = [ ":copy_taihe_out" ]
+      sources = [ "$target_out_dir/tmp_taihe_modobj/taihe-darwin-arm64" ]
+    } else if (current_toolchain == "//build/toolchain/mac:clang_x64") {
+      deps = [ ":copy_taihe_out" ]
+      sources = [ "$target_out_dir/tmp_taihe_modobj/taihe-darwin-x86_64" ]
+    } else {
+      sources = [ "//arkcompiler/taihe_ffi_gen/LICENSE" ]
     }
     outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
     module_source_dir = target_out_dir + "/$target_name"
