@@ -81,21 +81,23 @@ function test_string_return_value() {
     arktest.assertEQ(result, "888");
 }
 
-async function test_from_callback(): Promise<void> {
+function test_from_callback() {
     let foo = FuncTest.makeFoo();
     let res: int;
     let err: BusinessError = new BusinessError();
     try {
-        res = await new Promise<int>((resolve, reject) => {
-            foo.add(
-                10, NUMBER_TWENTY, (error: BusinessError|null, data?: int) => {
-                    if (error != null && error.message) {
-                        reject(error);
-                    } else {
-                        resolve(data!);
-                    }
-                });
-        });
+        res = waitForCompletion(
+            () => new Promise<int>((resolve, reject) => {
+                foo.add(
+                    10, NUMBER_TWENTY,
+                    (error: BusinessError|null, data?: int) => {
+                        if (error != null && error.message) {
+                            reject(error);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -149,7 +151,7 @@ function main() {
     suite.addTest(
         "test callback string boolean input", test_string_boolean_input);
     suite.addTest("test callback", test_string_return_value);
-    suite.addAsyncTest("test from callback", test_from_callback);
+    suite.addTest("test from callback", test_from_callback);
     suite.addTest("test static func add", test_static_func_add);
     suite.addTest("test static func sub", test_static_func_sub);
     suite.addTest("test new class", test_new_class);

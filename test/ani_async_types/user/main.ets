@@ -40,7 +40,7 @@ async function assertAsyncError(
     }
 }
 
-async function test_returns_promise() {
+async function test_returns_promise(): Promise<void> {
     let x = hello.futureResultReturnsPromise(1000, "InitialValue");
     console.log("Waiting for promise result...");
     await x.then((s: String) => {
@@ -49,7 +49,7 @@ async function test_returns_promise() {
     });
 }
 
-async function test_with_callback() {
+async function test_with_callback(): Promise<void> {
     let x = new Promise<string>((resolve, reject) => {
         hello.futureResultWithCallback(
             1000, "InitialValue",
@@ -68,13 +68,13 @@ async function test_with_callback() {
     });
 }
 
-function test_returns_promise_with_sync_error() {
+function test_returns_promise_with_sync_error(): void {
     arktest.expectError(() => {
         hello.futureResultReturnsPromise(-1, "InitialValue");
     });
 }
 
-function test_with_callback_with_sync_error() {
+function test_with_callback_with_sync_error(): void {
     arktest.expectError(() => {
         hello.futureResultWithCallback(
             -1, "InitialValue",
@@ -84,13 +84,13 @@ function test_with_callback_with_sync_error() {
     });
 }
 
-async function test_returns_promise_with_async_error() {
+async function test_returns_promise_with_async_error(): Promise<void> {
     let x = hello.futureResultReturnsPromise(1000, "");
     console.log("Waiting for promise result with async error...");
     await assertAsyncError(() => x);
 }
 
-async function test_with_callback_with_async_error() {
+async function test_with_callback_with_async_error(): Promise<void> {
     let x = new Promise<string>((resolve, reject) => {
         hello.futureResultWithCallback(
             1000, "", (err: BusinessError|null, res: String|undefined) => {
@@ -122,7 +122,7 @@ class UserTypeImpl implements hello.UserType {
     }
 }
 
-async function test_reverse_returns_promise() {
+async function test_reverse_returns_promise(): Promise<void> {
     let user = new UserTypeImpl();
     let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
     console.log("Waiting for promise result...");
@@ -134,7 +134,7 @@ async function test_reverse_returns_promise() {
     });
 }
 
-async function test_reverse_with_callback() {
+async function test_reverse_with_callback(): Promise<void> {
     let user = new UserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
@@ -166,14 +166,14 @@ class SyncErrorUserTypeImpl implements hello.UserType {
     }
 }
 
-async function test_reverse_returns_promise_with_sync_error() {
+async function test_reverse_returns_promise_with_sync_error(): Promise<void> {
     let user = new SyncErrorUserTypeImpl();
     let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
     console.log("Waiting for promise result with sync error...");
     await assertAsyncError(() => x, "Synchronous error in fooReturnsPromise");
 }
 
-async function test_reverse_with_callback_with_sync_error() {
+async function test_reverse_with_callback_with_sync_error(): Promise<void> {
     let user = new SyncErrorUserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
@@ -208,14 +208,14 @@ class AsyncErrorUserTypeImpl implements hello.UserType {
     }
 }
 
-async function test_reverse_returns_promise_with_async_error() {
+async function test_reverse_returns_promise_with_async_error(): Promise<void> {
     let user = new AsyncErrorUserTypeImpl();
     let x = hello.processUserTypeReturnsPromise(user, 500, 500, "InitialValue");
     console.log("Waiting for promise result with async error...");
     await assertAsyncError(() => x, "Asynchronous error in fooReturnsPromise");
 }
 
-async function test_reverse_with_callback_with_async_error() {
+async function test_reverse_with_callback_with_async_error(): Promise<void> {
     let user = new AsyncErrorUserTypeImpl();
     let x = new Promise<string>((resolve, reject) => {
         hello.processUserTypeWithCallback(
@@ -247,7 +247,7 @@ class VoidAsyncUserTypeImpl implements hello.VoidAsyncUserType {
     }
 }
 
-async function test_void_async_with_callback() {
+async function test_void_async_with_callback(): Promise<void> {
     let x = new Promise<void>((resolve, reject) => {
         hello.testVoidAsyncWithCallback(100, (err: BusinessError|null) => {
             if (err) {
@@ -261,12 +261,12 @@ async function test_void_async_with_callback() {
     arktest.assertTrue(true);
 }
 
-async function test_void_async_returns_promise() {
+async function test_void_async_returns_promise(): Promise<void> {
     await hello.testVoidAsyncReturnsPromise(100);
     arktest.assertTrue(true);
 }
 
-async function test_reverse_void_async_with_callback() {
+async function test_reverse_void_async_with_callback(): Promise<void> {
     let user = new VoidAsyncUserTypeImpl();
     let x = new Promise<void>((resolve, reject) => {
         hello.testReverseVoidAsyncWithCallback(
@@ -282,7 +282,7 @@ async function test_reverse_void_async_with_callback() {
     arktest.assertTrue(true);
 }
 
-async function test_reverse_void_async_returns_promise() {
+async function test_reverse_void_async_returns_promise(): Promise<void> {
     let user = new VoidAsyncUserTypeImpl();
     await hello.testReverseVoidAsyncReturnsPromise(user);
     arktest.assertTrue(true);
@@ -304,23 +304,23 @@ class AsyncBoolUserTypeImpl implements hello.SyncOrAsyncUserType {
     }
 }
 
-async function test_sync_or_async_with_sync_value() {
+async function test_sync_or_async_with_sync_value(): Promise<void> {
     let result = await hello.testSyncOrAsync(new SyncBoolUserTypeImpl());
     arktest.assertEQ("C++SyncBool-true", result);
 }
 
-async function test_sync_or_async_with_async_value() {
+async function test_sync_or_async_with_async_value(): Promise<void> {
     let result = await hello.testSyncOrAsync(new AsyncBoolUserTypeImpl());
     arktest.assertEQ("C++AsyncBool-false", result);
 }
 
-async function test_double_async_results() {
+async function test_double_async_results(): Promise<void> {
     let result = hello.getDoubleAsyncResults("First", (21).toLong());
     arktest.assertEQ("C++AsyncProcessed-First", await result.first);
     arktest.assertEQ((42).toLong(), await result.second);
 }
 
-async function test_many_async_results() {
+async function test_many_async_results(): Promise<void> {
     let result =
         await Promise.all(hello.getManyAsyncResults((3).toLong(), "Batch"));
     arktest.assertEQ(3, result.length);
@@ -329,7 +329,7 @@ async function test_many_async_results() {
     arktest.assertEQ("C++AsyncProcessed-Batch-2", result[2]);
 }
 
-async function test_complex_async_result() {
+async function test_complex_async_result(): Promise<void> {
     let result =
         await hello.getComplexAsyncResult("Complex", (7).toLong(), true);
     arktest.assertEQ("Complex", result.str);
@@ -337,19 +337,19 @@ async function test_complex_async_result() {
     arktest.assertEQ(true, result.flag);
 }
 
-async function test_string_or_number_string() {
+async function test_string_or_number_string(): Promise<void> {
     let result =
         await hello.getStringOrNumber(true, "StringValue", (9).toLong());
     arktest.assertEQ("StringValue", result);
 }
 
-async function test_string_or_number_number() {
+async function test_string_or_number_number(): Promise<void> {
     let result =
         await hello.getStringOrNumber(false, "StringValue", (9).toLong());
     arktest.assertEQ((9).toLong(), result);
 }
 
-async function test_container() {
+async function test_container(): Promise<void> {
     let result = await hello.getContainer();
     arktest.assertEQ(3, result.length);
     arktest.assertEQ("alpha", result[0]);
@@ -357,13 +357,13 @@ async function test_container() {
     arktest.assertEQ("gamma", result[2]);
 }
 
-async function test_nested_future() {
+async function test_nested_future(): Promise<void> {
     let outer = await hello.getNestedFuture();
     let value = await outer;
     arktest.assertEQ("C++NestedFuture", value);
 }
 
-function main() {
+function main(): void {
     const suite = new arktest.ArkTestsuite("Hello Module Test");
 
     suite.addAsyncTest("test_returns_promise", test_returns_promise);

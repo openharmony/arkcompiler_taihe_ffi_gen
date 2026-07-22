@@ -29,7 +29,7 @@ function main() {
     })
 
     try {
-        let res = async_test.add(0, 2).awaitSync();
+        let res = waitForCompletion(() => async_test.add(0, 2));
         console.log("async promise success")
     } catch (error) {
         console.error("async promise ERROR ", error)
