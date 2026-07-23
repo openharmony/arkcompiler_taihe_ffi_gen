@@ -489,22 +489,10 @@ class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
             return self.dts_type_in(target)
 
     @abstractmethod
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        pass
+    def gen_from_napi(self, target: CSourceWriter, name: str): ...
 
     @abstractmethod
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        pass
+    def gen_into_napi(self, target: CSourceWriter, name: str): ...
 
 
 class NullTypeNapiInfo(TypeNapiInfo):
@@ -520,27 +508,27 @@ class NullTypeNapiInfo(TypeNapiInfo):
         return "null"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {{}};",
-        )
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{self.cpp_info.as_owner} cpp_result = {{}};",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"napi_get_null(env, &{napi_result});",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"napi_get_null(env, &napi_result);",
+                f"return napi_result;",
+            )
 
 
 class UndefinedTypeNapiInfo(TypeNapiInfo):
@@ -556,27 +544,27 @@ class UndefinedTypeNapiInfo(TypeNapiInfo):
         return "undefined"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {{}};",
-        )
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{self.cpp_info.as_owner} cpp_result = {{}};",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"napi_get_undefined(env, &{napi_result});",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"napi_get_undefined(env, &napi_result);",
+                f"return napi_result;",
+            )
 
 
 class ScalarTypeNapiInfo(TypeNapiInfo):
@@ -609,12 +597,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         return dts_type
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         from_js_to_c_func = {
             ScalarKinds.BOOL: "napi_get_value_bool",
             ScalarKinds.F64: "napi_get_value_double",
@@ -624,18 +607,18 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         }.get(self.type.kind)
         if from_js_to_c_func is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result};",
-            f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}));",
-        )
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{self.cpp_info.as_owner} cpp_result;",
+                f"NAPI_CALL(env, {from_js_to_c_func}(env, napi_input, &cpp_result));",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         from_c_to_js_func = {
             ScalarKinds.BOOL: "napi_get_boolean",
             ScalarKinds.F64: "napi_create_double",
@@ -645,10 +628,15 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         }.get(self.type.kind)
         if from_c_to_js_func is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"NAPI_CALL(env, {from_c_to_js_func}(env, {cpp_value}, &{napi_result}));",
-        )
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"NAPI_CALL(env, {from_c_to_js_func}(env, cpp_value, &napi_result));",
+                f"return napi_result;",
+            )
 
 
 class StringTypeNapiInfo(TypeNapiInfo):
@@ -664,34 +652,34 @@ class StringTypeNapiInfo(TypeNapiInfo):
         return "string"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        target.writelns(
-            f"size_t {cpp_result}_len = 0;",
-            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {napi_value}, nullptr, 0, &{cpp_result}_len));",
-            f"TString {cpp_result}_abi;",
-            f"char* {cpp_result}_buf = tstr_initialize(&{cpp_result}_abi, {cpp_result}_len + 1);",
-            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {napi_value}, {cpp_result}_buf, {cpp_result}_len + 1, &{cpp_result}_len));",
-            f"{cpp_result}_buf[{cpp_result}_len] = '\\0';",
-            f"{cpp_result}_abi.length = {cpp_result}_len;",
-            f"taihe::string {cpp_result}({cpp_result}_abi);",
-        )
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"size_t cpp_result_len = 0;",
+                f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, nullptr, 0, &cpp_result_len));",
+                f"TString cpp_result_abi;",
+                f"char* cpp_result_buf = tstr_initialize(&cpp_result_abi, cpp_result_len + 1);",
+                f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, cpp_result_buf, cpp_result_len + 1, &cpp_result_len));",
+                f"cpp_result_buf[cpp_result_len] = '\\0';",
+                f"cpp_result_abi.length = cpp_result_len;",
+                f"taihe::string cpp_result(cpp_result_abi);",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"NAPI_CALL(env, napi_create_string_utf8(env, {cpp_value}.c_str(), {cpp_value}.size(), &{napi_result}));",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"NAPI_CALL(env, napi_create_string_utf8(env, cpp_value.c_str(), cpp_value.size(), &napi_result));",
+                f"return napi_result;",
+            )
 
 
 class StructTypeNapiInfo(TypeNapiInfo):
@@ -707,31 +695,21 @@ class StructTypeNapiInfo(TypeNapiInfo):
         return struct_napi_info.dts_type_in(target)
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
         struct_cpp_info = StructCppInfo.get(self.am, self.type.decl)
         target.add_include(struct_napi_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{struct_cpp_info.as_owner}>(env, {napi_value});",
+            f"static constexpr auto {name} = ::taihe::from_napi<{struct_cpp_info.as_owner}>;",
         )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
         struct_cpp_info = StructCppInfo.get(self.am, self.type.decl)
         target.add_include(struct_napi_info.impl_header)
         target.writelns(
-            f"napi_value {napi_result} = ::taihe::into_napi<{struct_cpp_info.as_owner}>(env, {cpp_value});",
+            f"static constexpr auto {name} = ::taihe::into_napi<{struct_cpp_info.as_owner}>;",
         )
 
 
@@ -750,31 +728,21 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         return iface_napi_info.dts_type_in(target)
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.type.decl)
         target.add_include(iface_napi_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{iface_cpp_info.as_owner}>(env, {napi_value});",
+            f"static constexpr auto {name} = ::taihe::from_napi<{iface_cpp_info.as_owner}>;",
         )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.type.decl)
         target.add_include(iface_napi_info.impl_header)
         target.writelns(
-            f"napi_value {napi_result} = ::taihe::into_napi<{iface_cpp_info.as_owner}>(env, {cpp_value});",
+            f"static constexpr auto {name} = ::taihe::into_napi<{iface_cpp_info.as_owner}>;",
         )
 
 
@@ -792,64 +760,64 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
         return item_ty_napi_info.dts_type_in(target)
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        napi_ty = f"{cpp_result}_v_ty"
-        napi_status = f"{cpp_result}_v_ty_status"
-        cpp_pointer = f"{cpp_result}_ptr"
-        cpp_spec = f"{cpp_result}_spec"
-        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
-        target.writelns(
-            f"{item_ty_cpp_info.as_owner}* {cpp_pointer} = nullptr;",
-            f"napi_valuetype {napi_ty};",
-            f"napi_status {napi_status} = napi_typeof(env, {napi_value}, &{napi_ty});",
-            f"{self.cpp_info.as_owner} {cpp_result};",
-        )
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"if ({napi_status} == napi_ok && {napi_ty} != napi_undefined) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
         ):
             item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
-            item_ty_napi_info.from_napi(target, napi_value, cpp_spec)
+            item_from_napi = "from_napi_item"
+            item_ty_napi_info.gen_from_napi(target, item_from_napi)
             target.writelns(
-                f"{cpp_result} = {self.cpp_info.as_owner}(std::in_place, {cpp_spec});",
+                f"napi_valuetype napi_type;",
+                f"napi_status status = napi_typeof(env, napi_input, &napi_type);",
+                f"{self.cpp_info.as_owner} cpp_result;",
             )
-        with target.indented(
-            f"else {{",
-            f"}}",
-        ):
+            with target.indented(
+                f"if (status == napi_ok && napi_type != napi_undefined) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"auto cpp_spec = {item_from_napi}(env, napi_input);",
+                    f"cpp_result = {self.cpp_info.as_owner}(std::in_place, std::move(cpp_spec));",
+                )
+            with target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"cpp_result = std::nullopt;",
+                )
             target.writelns(
-                f"{cpp_result} = std::nullopt;",
+                f"return cpp_result;",
             )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        napi_spec = f"{napi_result}_spec"
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"if (!{cpp_value}) {{",
-            f"}}",
-        ):
-            target.writelns(f"napi_get_undefined(env, &{napi_result});")
-        with target.indented(
-            f"else {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
         ):
             item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
-            item_ty_napi_info.into_napi(target, f"(*{cpp_value})", napi_spec)
+            item_into_napi = "into_napi_item"
+            item_ty_napi_info.gen_into_napi(target, item_into_napi)
             target.writelns(
-                f"{napi_result} = {napi_spec};",
+                f"napi_value napi_result = nullptr;",
+            )
+            with target.indented(
+                f"if (!cpp_value) {{",
+                f"}}",
+            ):
+                target.writelns("napi_get_undefined(env, &napi_result);")
+            with target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_result = {item_into_napi}(env, *cpp_value);",
+                )
+            target.writelns(
+                f"return napi_result;",
             )
 
 
@@ -878,43 +846,35 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         return f"(({params_ty_dts_str}) => {return_ty_dts})"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        cpp_impl_class = f"{cpp_result}_cpp_impl_t"
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"struct {cpp_impl_class}: ::taihe::napi_ref_guard {{",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
             f"}};",
         ):
+            cpp_impl_class = "cpp_impl_t"
+            with target.indented(
+                f"struct {cpp_impl_class}: ::taihe::napi_ref_guard {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"using ::taihe::napi_ref_guard::napi_ref_guard;",
+                )
+                self.gen_invoke_operator(target)
             target.writelns(
-                f"using ::taihe::napi_ref_guard::napi_ref_guard;",
+                f"{self.cpp_info.as_owner} cpp_result = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}, ::taihe::platform::napi::NapiObject>(env, napi_input);",
+                f"return cpp_result;",
             )
-
-            self.gen_invoke_operator(cpp_result, target)
-
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}, ::taihe::platform::napi::NapiObject>(env, {napi_value});",
-        )
 
     def gen_invoke_operator(
         self,
-        cpp_result: str,
         target: CSourceWriter,
     ):
-        inner_cpp_params = []
-        inner_napi_args = []
-        inner_cpp_args = []
-        for index, param in enumerate(self.type.ref.params):
-            inner_cpp_arg = f"cpp_arg_{index}"
-            inner_napi_arg = f"napi_arg_{index}"
+        cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
+        params_cpp = []
+        for param in self.type.ref.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-            inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
-            inner_napi_args.append(inner_napi_arg)
-            inner_cpp_args.append(inner_cpp_arg)
-        cpp_params_str = ", ".join(inner_cpp_params)
+            params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
+        params_cpp_str = ", ".join(params_cpp)
         if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -923,37 +883,29 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         return_ty_expected_name = (
             f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
         )
-        cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
-        lambda_params = ["napi_env env", "napi_ref ref", *inner_cpp_params]
+        lambda_params = ["napi_env env", "napi_ref ref", *params_cpp]
         lambda_params_str = ", ".join(lambda_params)
-        callback_args = ", ".join(inner_cpp_args)
+        callback_args = ", ".join(param.name for param in self.type.ref.params)
 
         def write_callback_lambda_body(is_noexcept: bool) -> None:
-            for inner_napi_arg, inner_cpp_arg, param in zip(
-                inner_napi_args,
-                inner_cpp_args,
-                self.type.ref.params,
-                strict=True,
-            ):
-                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-                param_ty_napi_info.into_napi(target, inner_cpp_arg, inner_napi_arg)
-            inner_napi_args_str = ", ".join(inner_napi_args)
-            inner_napi_res = "napi_result"
-            inner_cpp_res = "cpp_result"
-            if len(self.type.ref.params) != 0:
-                target.writelns(
-                    f"napi_value napi_argv[{len(self.type.ref.params)}] = {{{inner_napi_args_str}}};",
-                )
-            else:
-                target.writelns(
-                    f"napi_value napi_argv[] = {{}};",
-                )
             target.writelns(
-                f"napi_value {inner_napi_res} = nullptr;",
-                f"napi_value cb_ref = nullptr, global = nullptr;",
+                f"napi_value args_inner[{len(self.type.ref.params)}];",
+            )
+            for index, param in enumerate(self.type.ref.params):
+                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+                into_napi = f"into_napi_arg_{index}"
+                param_ty_napi_info.gen_into_napi(target, into_napi)
+                target.writelns(
+                    f"args_inner[{index}] = {into_napi}(env, {param.name});",
+                )
+
+            target.writelns(
+                f"napi_value cb_ref = nullptr;",
                 f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
+                f"napi_value global = nullptr;",
                 f"NAPI_CALL(env, napi_get_global(env, &global));",
-                f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
+                f"napi_value callback_result_napi = nullptr;",
+                f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, args_inner, &callback_result_napi));",
             )
 
             if not is_noexcept:
@@ -976,28 +928,25 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 ):
                     if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
                         return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                        return_ty_napi_info.from_napi(
-                            target, inner_napi_res, inner_cpp_res
-                        )
+                        return_ty_napi_info.gen_from_napi(target, "from_napi_result")
                         target.writelns(
-                            f"return {inner_cpp_res};",
+                            f"return from_napi_result(env, callback_result_napi);",
                         )
                     else:
                         target.writelns(
                             f"return {{}};",
                         )
-                return
-
-            if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                return_ty_napi_info.from_napi(target, inner_napi_res, inner_cpp_res)
-                target.writelns(
-                    f"return {inner_cpp_res};",
-                )
             else:
-                target.writelns(
-                    f"return;",
-                )
+                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                    return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                    return_ty_napi_info.gen_from_napi(target, "from_napi_result")
+                    target.writelns(
+                        f"return from_napi_result(env, callback_result_napi);",
+                    )
+                else:
+                    target.writelns(
+                        f"return;",
+                    )
 
         if cb_abi_info.is_noexcept:
             return_type_name = return_ty_cpp_name
@@ -1006,7 +955,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
             return_type_name = return_ty_expected_name
             is_noexcept = False
         with target.indented(
-            f"{return_type_name} operator()({cpp_params_str}) {{",
+            f"{return_type_name} operator()({params_cpp_str}) {{",
             f"}}",
         ):
             with target.indented(
@@ -1016,27 +965,29 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 write_callback_lambda_body(is_noexcept)
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        target.writelns(
-            f"{self.cpp_info.as_owner}* cpp_ptr = new {self.cpp_info.as_owner}({cpp_value});",
-            f"napi_value {napi_result} = nullptr;",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         with target.indented(
-            f"NAPI_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, []([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) -> napi_value {{",
-            f"}}, cpp_ptr, &{napi_result}));",
-        ):
-            self.gen_func_content(target)
-        with target.indented(
-            f"NAPI_CALL(env, napi_add_finalizer(env, {napi_result}, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
-            f"}}, nullptr, nullptr));",
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_owner} cpp_value) -> napi_value {{",
+            f"}};",
         ):
             target.writelns(
-                f"delete static_cast<{self.cpp_info.as_owner}*>(finalize_data);",
+                f"{self.cpp_info.as_owner}* cpp_ptr = new {self.cpp_info.as_owner}(std::move(cpp_value));",
+                f"napi_value napi_result = nullptr;",
+            )
+            with target.indented(
+                f"NAPI_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, []([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) -> napi_value {{",
+                f"}}, cpp_ptr, &napi_result));",
+            ):
+                self.gen_func_content(target)
+            with target.indented(
+                f"NAPI_CALL(env, napi_add_finalizer(env, napi_result, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"}}, nullptr, nullptr));",
+            ):
+                target.writelns(
+                    f"delete static_cast<{self.cpp_info.as_owner}*>(finalize_data);",
+                )
+            target.writelns(
+                f"return napi_result;",
             )
 
     def gen_func_content(
@@ -1081,9 +1032,10 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
     ):
         if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
             return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-            return_ty_napi_info.into_napi(target, result, "napi_result")
+            into_napi = "into_napi_result"
+            return_ty_napi_info.gen_into_napi(target, into_napi)
             target.writelns(
-                f"return napi_result;",
+                f"return {into_napi}(env, {result});",
             )
         else:
             target.writelns(
@@ -1127,7 +1079,11 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         for index, param in enumerate(self.type.ref.params):
             value = f"value_{index}"
             param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-            param_ty_napi_info.from_napi(target, f"{args}[{index}]", value)
+            from_napi = f"from_napi_arg_{index}"
+            param_ty_napi_info.gen_from_napi(target, from_napi)
+            target.writelns(
+                f"auto {value} = {from_napi}(env, {args}[{index}]);",
+            )
             values.append(value)
         return values
 
@@ -1149,40 +1105,30 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         return enum_napi_info.dts_type_in(target)
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
-        if isinstance(self.type.decl.ty, ScalarType | StringType):
-            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
-            item_ty_napi_info.from_napi(target, napi_value, f"{cpp_result}_item")
-        else:
-            raise ValueError
-
-        target.writelns(
-            f"{enum_cpp_info.as_owner} {cpp_result} = {enum_cpp_info.as_owner}::from_value({cpp_result}_item);",
-        )
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {enum_cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            item_ty_napi_info.gen_from_napi(target, "item_from_napi")
+            target.writelns(
+                f"return {enum_cpp_info.as_owner}::from_value(item_from_napi(env, napi_input));",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        if isinstance(self.type.decl.ty, ScalarType | StringType):
-            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
-            item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
-            item_ty_napi_info.into_napi(
-                target,
-                f"(({item_ty_cpp_info.as_owner})({cpp_value}.get_value()))",
-                napi_result,
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {enum_cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            item_ty_napi_info.gen_into_napi(target, "item_into_napi")
+            target.writelns(
+                f"return item_into_napi(env, cpp_value.get_value());",
             )
-        else:
-            raise ValueError
 
 
 class ArrayBufferTypeNapiInfo(TypeNapiInfo):
@@ -1205,38 +1151,34 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         return "ArrayBuffer"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
-        napi_data = f"{cpp_result}_data"
-        napi_length = f"{cpp_result}_length"
-        target.writelns(
-            f"void* {napi_data};",
-            f"size_t {napi_length};",
-            f"NAPI_CALL(env, napi_get_arraybuffer_info(env, {napi_value}, &{napi_data}, &{napi_length}));",
-            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
-        )
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_param} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"void* data;",
+                f"size_t size;",
+                f"NAPI_CALL(env, napi_get_arraybuffer_info(env, napi_input, &data, &size));",
+                f"{self.cpp_info.as_param} cpp_result(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), size);",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
-        target.add_include("string.h")
-        napi_data = f"{napi_result}_data"
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"void* {napi_data} = nullptr;",
-            f"NAPI_CALL(env, napi_create_arraybuffer(env, {cpp_value}.size(), &{napi_data}, &{napi_result}));",
-            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}));",
-        )
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"void* data = nullptr;",
+                f"NAPI_CALL(env, napi_create_arraybuffer(env, cpp_value.size(), &data, &napi_result));",
+                f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
+                f"return napi_result;",
+            )
 
 
 class ArrayTypeNapiInfo(TypeNapiInfo):
@@ -1252,63 +1194,59 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
         return f"Array<{item_ty_napi_info.dts_type_in(target)}>"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
         item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
-        array_size = f"{cpp_result}_size"
-        cpp_buffer = f"{cpp_result}_buffer"
-        napi_item = f"{cpp_buffer}_napi_item"
-        cpp_item = f"{cpp_buffer}_cpp_item"
-        cpp_ctr = f"{cpp_buffer}_i"
-        target.writelns(
-            f"uint32_t {array_size};",
-            f"NAPI_CALL(env, napi_get_array_length(env, {napi_value}, &{array_size}));",
-            f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({array_size} * sizeof({item_ty_cpp_info.as_owner})));",
-        )
         with target.indented(
-            f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {array_size}; {cpp_ctr}++) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
         ):
+            item_from_napi = "from_napi_item"
+            item_ty_napi_info.gen_from_napi(target, item_from_napi)
             target.writelns(
-                f"napi_value {napi_item};",
-                f"NAPI_CALL(env, napi_get_element(env, {napi_value}, {cpp_ctr}, &{napi_item}));",
+                f"uint32_t size;",
+                f"NAPI_CALL(env, napi_get_array_length(env, napi_input, &size));",
+                f"{item_ty_cpp_info.as_owner}* cpp_buffer = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc(size * sizeof({item_ty_cpp_info.as_owner})));",
             )
-            item_ty_napi_info.from_napi(target, napi_item, cpp_item)
+            with target.indented(
+                f"for (uint32_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_value napi_item;",
+                    f"NAPI_CALL(env, napi_get_element(env, napi_input, i, &napi_item));",
+                    f"auto cpp_item = {item_from_napi}(env, napi_item);",
+                    f"new (&cpp_buffer[i]) {item_ty_napi_info.cpp_info.as_owner}(std::move(cpp_item));",
+                )
             target.writelns(
-                f"new (&{cpp_buffer}[{cpp_ctr}]) {item_ty_napi_info.cpp_info.as_owner}(std::move({cpp_item}));",
+                f"{self.cpp_info.as_owner} cpp_result(cpp_buffer, size);",
+                f"return cpp_result;",
             )
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {array_size});",
-        )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
-        cpp_size = f"{napi_result}_size"
-        napi_item = f"{napi_result}_item"
-        cpp_ctr = f"{napi_result}_i"
-        target.writelns(
-            f"uint32_t {cpp_size} = {cpp_value}.size();",
-            f"napi_value {napi_result} = nullptr;",
-            f"NAPI_CALL(env, napi_create_array_with_length(env, {cpp_size}, &{napi_result}));",
-        )
         with target.indented(
-            f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {cpp_size}; {cpp_ctr}++) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
         ):
-            item_ty_napi_info.into_napi(target, f"{cpp_value}[{cpp_ctr}]", napi_item)
+            item_into_napi = "into_napi_item"
+            item_ty_napi_info.gen_into_napi(target, item_into_napi)
             target.writelns(
-                f"NAPI_CALL(env, napi_set_element(env, {napi_result}, {cpp_ctr}, {napi_item}));",
+                f"uint32_t size = cpp_value.size();",
+                f"napi_value napi_result = nullptr;",
+                f"NAPI_CALL(env, napi_create_array_with_length(env, size, &napi_result));",
+            )
+            with target.indented(
+                f"for (uint32_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_value napi_item = {item_into_napi}(env, cpp_value[i]);",
+                    f"NAPI_CALL(env, napi_set_element(env, napi_result, i, napi_item));",
+                )
+            target.writelns(
+                f"return napi_result;",
             )
 
 
@@ -1360,19 +1298,8 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         return dts_type
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
-        napi_ta_type = f"{cpp_result}_type"
-        napi_length = f"{cpp_result}_length"
-        napi_data = f"{cpp_result}_data"
-        napi_arrbuf = f"{cpp_result}_arrbuf"
-        napi_byte_offset = f"{cpp_result}_byoff"
-        element_length = f"{cpp_result}_element_length"
         element_size = None
         if isinstance(self.type.item_ty, ScalarType):
             element_size = {
@@ -1389,36 +1316,38 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             }.get(self.type.item_ty.kind)
         if element_size is None:
             raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
-
-        target.writelns(
-            f"napi_typedarray_type {napi_ta_type};",
-            f"size_t {napi_length};",
-            f"void* {napi_data};",
-            f"napi_value {napi_arrbuf};",
-            f"size_t {napi_byte_offset};",
-            f"NAPI_CALL(env, napi_get_typedarray_info(env, {napi_value}, &{napi_ta_type}, &{napi_length}, &{napi_data}, &{napi_arrbuf}, &{napi_byte_offset}));",
-            f"size_t {element_length} = {napi_length} / sizeof({element_size});",
-            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {element_length});",
-        )
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_param} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_typedarray_type type;",
+                f"size_t size;",
+                f"void* data;",
+                f"napi_value arrbuf;",
+                f"size_t byte_offset;",
+                f"NAPI_CALL(env, napi_get_typedarray_info(env, napi_input, &type, &size, &data, &arrbuf, &byte_offset));",
+                f"size_t element_length = size / sizeof({element_size});",
+                f"{self.cpp_info.as_param} cpp_result(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), element_length);",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
-        napi_data = f"{napi_result}_data"
-        napi_arrbuf = f"{napi_result}_arrbuf"
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"napi_value {napi_arrbuf} = nullptr;",
-            f"void* {napi_data} = nullptr;",
-            f"NAPI_CALL(env, napi_create_arraybuffer(env, {cpp_value}.size() * sizeof({item_ty_cpp_info.as_owner}), &{napi_data}, &{napi_arrbuf}));",
-            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}));",
-            f"NAPI_CALL(env, napi_create_typedarray(env, {self.napi_type_name}, {cpp_value}.size(), {napi_arrbuf}, 0, &{napi_result}));",
-        )
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"napi_value arrbuf = nullptr;",
+                f"void* data = nullptr;",
+                f"NAPI_CALL(env, napi_create_arraybuffer(env, cpp_value.size() * sizeof({item_ty_cpp_info.as_owner}), &data, &arrbuf));",
+                f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
+                f"NAPI_CALL(env, napi_create_typedarray(env, {self.napi_type_name}, cpp_value.size(), arrbuf, 0, &napi_result));",
+                f"return napi_result;",
+            )
 
 
 class RecordTypeNapiInfo(TypeNapiInfo):
@@ -1438,70 +1367,63 @@ class RecordTypeNapiInfo(TypeNapiInfo):
         return f"Record<{key_dts_type}, {val_dts_type}>"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        prop_names = f"{cpp_result}_prop_names"
-        prop_count = f"{cpp_result}_prop_count"
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
         val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
-        napi_key = f"{cpp_result}_napi_key"
-        napi_val = f"{cpp_result}_napi_val"
-
-        cpp_key = f"{cpp_result}_cpp_key"
-        cpp_val = f"{cpp_result}_cpp_val"
-        target.writelns(
-            f"napi_value {prop_names} = nullptr;",
-            f"uint32_t {prop_count};",
-            f"NAPI_CALL(env, napi_get_property_names(env, {napi_value}, &{prop_names}));",
-            f"NAPI_CALL(env, napi_get_array_length(env, {prop_names}, &{prop_count}));",
-            f"{self.cpp_info.as_owner} {cpp_result};",
-        )
         with target.indented(
-            f"for (uint32_t i = 0; i < {prop_count}; i++) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
         ):
+            key_from_napi = "from_napi_key"
+            val_from_napi = "from_napi_value"
+            key_ty_napi_info.gen_from_napi(target, key_from_napi)
+            val_ty_napi_info.gen_from_napi(target, val_from_napi)
             target.writelns(
-                f"napi_value {napi_key} = nullptr, {napi_val} = nullptr;",
-                f"NAPI_CALL(env, napi_get_element(env, {prop_names}, i, &{napi_key}));",
-                f"NAPI_CALL(env, napi_get_property(env, {napi_value}, {napi_key}, &{napi_val}));",
+                f"napi_value prop_names = nullptr;",
+                f"uint32_t prop_count;",
+                f"NAPI_CALL(env, napi_get_property_names(env, napi_input, &prop_names));",
+                f"NAPI_CALL(env, napi_get_array_length(env, prop_names, &prop_count));",
+                f"{self.cpp_info.as_owner} cpp_result;",
             )
-            key_ty_napi_info.from_napi(target, napi_key, cpp_key)
-            val_ty_napi_info.from_napi(target, napi_val, cpp_val)
+            with target.indented(
+                f"for (uint32_t i = 0; i < prop_count; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_value napi_key = nullptr, napi_val = nullptr;",
+                    f"NAPI_CALL(env, napi_get_element(env, prop_names, i, &napi_key));",
+                    f"NAPI_CALL(env, napi_get_property(env, napi_input, napi_key, &napi_val));",
+                    f"cpp_result.emplace({key_from_napi}(env, napi_key), {val_from_napi}(env, napi_val));",
+                )
             target.writelns(
-                f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
+                f"return cpp_result;",
             )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
         val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
-
-        napi_key = f"{napi_result}_napi_key"
-        napi_val = f"{napi_result}_napi_val"
-        cpp_key = f"{napi_result}_cpp_key"
-        cpp_val = f"{napi_result}_cpp_val"
-
-        target.writelns(
-            f"napi_value {napi_result};",
-            f"napi_create_object(env, &{napi_result});",
-        )
         with target.indented(
-            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
         ):
-            key_ty_napi_info.into_napi(target, cpp_key, napi_key)
-            val_ty_napi_info.into_napi(target, cpp_val, napi_val)
+            key_into_napi = "into_napi_key"
+            val_into_napi = "into_napi_value"
+            key_ty_napi_info.gen_into_napi(target, key_into_napi)
+            val_ty_napi_info.gen_into_napi(target, val_into_napi)
             target.writelns(
-                f"NAPI_CALL(env, napi_set_property(env, {napi_result}, {napi_key}, {napi_val}));",
+                f"napi_value napi_result;",
+                f"napi_create_object(env, &napi_result);",
+            )
+            with target.indented(
+                f"for (const auto& [cpp_key, cpp_val] : cpp_value) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"NAPI_CALL(env, napi_set_property(env, napi_result, {key_into_napi}(env, cpp_key), {val_into_napi}(env, cpp_val)));",
+                )
+            target.writelns(
+                f"return napi_result;",
             )
 
 
@@ -1521,78 +1443,79 @@ class MapTypeNapiInfo(TypeNapiInfo):
         return f"Map<{key_dts_type}, {val_dts_type}>"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
         val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
-        cpp_key = f"{cpp_result}_cpp_key"
-        cpp_val = f"{cpp_result}_cpp_val"
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result};",
-            f"napi_value {cpp_result}_entries_fn = nullptr, {cpp_result}_entries_iter = nullptr;",
-            f'NAPI_CALL(env, napi_get_named_property(env, {napi_value}, "entries", &{cpp_result}_entries_fn));',
-            f"NAPI_CALL(env, napi_call_function(env, {napi_value}, {cpp_result}_entries_fn, 0, nullptr, &{cpp_result}_entries_iter));",
-            f"napi_value {cpp_result}_next_meth = nullptr;",
-            f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_entries_iter, "next", &{cpp_result}_next_meth));',
-        )
         with target.indented(
-            f"while (true) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
         ):
+            key_from_napi = "from_napi_key"
+            val_from_napi = "from_napi_value"
+            key_ty_napi_info.gen_from_napi(target, key_from_napi)
+            val_ty_napi_info.gen_from_napi(target, val_from_napi)
             target.writelns(
-                f"napi_value {cpp_result}_next_result;",
-                f"NAPI_CALL(env, napi_call_function(env, {cpp_result}_entries_iter, {cpp_result}_next_meth, 0, nullptr, &{cpp_result}_next_result));",
-                f"bool {cpp_result}_done;",
-                f"napi_value {cpp_result}_done_prop;",
-                f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_next_result, "done", &{cpp_result}_done_prop));',
-                f"NAPI_CALL(env, napi_get_value_bool(env, {cpp_result}_done_prop, &{cpp_result}_done));",
-                f"if ({cpp_result}_done) break;",
-                f"napi_value {cpp_result}_value_prop, {cpp_result}_key, {cpp_result}_value;",
-                f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_next_result, "value", &{cpp_result}_value_prop));',
-                f"NAPI_CALL(env, napi_get_element(env, {cpp_result}_value_prop, 0, &{cpp_result}_key));",
-                f"NAPI_CALL(env, napi_get_element(env, {cpp_result}_value_prop, 1, &{cpp_result}_value));",
+                f"{self.cpp_info.as_owner} cpp_result;",
+                f"napi_value entries_fn = nullptr, entries_iter = nullptr;",
+                f'NAPI_CALL(env, napi_get_named_property(env, napi_input, "entries", &entries_fn));',
+                f"NAPI_CALL(env, napi_call_function(env, napi_input, entries_fn, 0, nullptr, &entries_iter));",
+                f"napi_value next_meth = nullptr;",
+                f'NAPI_CALL(env, napi_get_named_property(env, entries_iter, "next", &next_meth));',
             )
-            key_ty_napi_info.from_napi(target, f"{cpp_result}_key", cpp_key)
-            val_ty_napi_info.from_napi(target, f"{cpp_result}_value", cpp_val)
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_value next_result;",
+                    f"NAPI_CALL(env, napi_call_function(env, entries_iter, next_meth, 0, nullptr, &next_result));",
+                    f"bool done;",
+                    f"napi_value done_prop;",
+                    f'NAPI_CALL(env, napi_get_named_property(env, next_result, "done", &done_prop));',
+                    f"NAPI_CALL(env, napi_get_value_bool(env, done_prop, &done));",
+                    f"if (done) break;",
+                    f"napi_value value_prop, napi_key, napi_val;",
+                    f'NAPI_CALL(env, napi_get_named_property(env, next_result, "value", &value_prop));',
+                    f"NAPI_CALL(env, napi_get_element(env, value_prop, 0, &napi_key));",
+                    f"NAPI_CALL(env, napi_get_element(env, value_prop, 1, &napi_val));",
+                    f"cpp_result.emplace({key_from_napi}(env, napi_key), {val_from_napi}(env, napi_val));",
+                )
             target.writelns(
-                f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
+                f"return cpp_result;",
             )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        napi_key = f"{napi_result}_napi_key"
-        napi_val = f"{napi_result}_napi_val"
-        cpp_key = f"{napi_result}_cpp_key"
-        cpp_val = f"{napi_result}_cpp_val"
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
         val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
-
-        target.writelns(
-            f"napi_value {napi_result}_global = nullptr, {napi_result}_map_ctor = nullptr, {napi_result} = nullptr;",
-            f"napi_get_global(env, &{napi_result}_global);",
-            f'NAPI_CALL(env, napi_get_named_property(env, {napi_result}_global, "Map", &{napi_result}_map_ctor));',
-            f"NAPI_CALL(env, napi_new_instance(env, {napi_result}_map_ctor, 0, nullptr, &{napi_result}));",
-            f"napi_value {napi_result}_set_fn = nullptr;",
-            f'NAPI_CALL(env, napi_get_named_property(env, {napi_result}, "set", &{napi_result}_set_fn));',
-        )
         with target.indented(
-            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
-            f"}}",
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
         ):
-            key_ty_napi_info.into_napi(target, cpp_key, napi_key)
-            val_ty_napi_info.into_napi(target, cpp_val, napi_val)
+            key_into_napi = "into_napi_key"
+            val_into_napi = "into_napi_value"
+            key_ty_napi_info.gen_into_napi(target, key_into_napi)
+            val_ty_napi_info.gen_into_napi(target, val_into_napi)
             target.writelns(
-                f"napi_value {napi_result}_args[2] = {{{napi_key}, {napi_val}}};",
-                f"NAPI_CALL(env, napi_call_function(env, {napi_result}, {napi_result}_set_fn, 2, {napi_result}_args, nullptr));",
+                f"napi_value global = nullptr, map_ctor = nullptr, napi_result = nullptr;",
+                f"napi_get_global(env, &global);",
+                f'NAPI_CALL(env, napi_get_named_property(env, global, "Map", &map_ctor));',
+                f"NAPI_CALL(env, napi_new_instance(env, map_ctor, 0, nullptr, &napi_result));",
+                f"napi_value set_fn = nullptr;",
+                f'NAPI_CALL(env, napi_get_named_property(env, napi_result, "set", &set_fn));',
+            )
+            with target.indented(
+                f"for (const auto& [cpp_key, cpp_val] : cpp_value) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_value napi_key = {key_into_napi}(env, cpp_key);",
+                    f"napi_value napi_val = {val_into_napi}(env, cpp_val);",
+                    f"napi_value args[2] = {{napi_key, napi_val}};",
+                    f"NAPI_CALL(env, napi_call_function(env, napi_result, set_fn, 2, args, nullptr));",
+                )
+            target.writelns(
+                f"return napi_result;",
             )
 
 
@@ -1609,31 +1532,21 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         return union_napi_info.dts_type_in(target)
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
         union_cpp_info = UnionCppInfo.get(self.am, self.type.decl)
         target.add_include(union_napi_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_napi<{union_cpp_info.as_owner}>(env, {napi_value});",
+            f"static constexpr auto {name} = ::taihe::from_napi<{union_cpp_info.as_owner}>;",
         )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
         union_cpp_info = UnionCppInfo.get(self.am, self.type.decl)
         target.add_include(union_napi_info.impl_header)
         target.writelns(
-            f"napi_value {napi_result} = ::taihe::into_napi<{union_cpp_info.as_owner}>(env, {cpp_value});",
+            f"static constexpr auto {name} = ::taihe::into_napi<{union_cpp_info.as_owner}>;",
         )
 
 
@@ -1652,26 +1565,26 @@ class OpaqueTypeNapiInfo(TypeNapiInfo):
             return "Object"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = ({self.cpp_info.as_owner}){napi_value};",
-        )
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{self.cpp_info.as_owner} cpp_result = ({self.cpp_info.as_owner})napi_input;",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        target.writelns(
-            f"napi_value {napi_result} = (napi_value){cpp_value};",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = (napi_value)cpp_value;",
+                f"return napi_result;",
+            )
 
 
 class ConstEnumTypeNapiInfo(TypeNapiInfo):
@@ -1689,34 +1602,32 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         return ty_napi_info.dts_type_in(target)
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        cpp_temp = f"{cpp_result}_cpp_temp"
+    def gen_from_napi(self, target: CSourceWriter, name: str):
         ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
-        ty_napi_info.from_napi(target, napi_value, cpp_temp)
-        target.writelns(
-            f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
-        )
+        from_napi_inner = "from_napi_inner"
+        ty_napi_info.gen_from_napi(target, from_napi_inner)
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {enum_cpp_info.full_name} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"return {enum_cpp_info.full_name}::from_value({from_napi_inner}(env, napi_input));",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        cpp_temp = f"{napi_result}_cpp_temp"
+    def gen_into_napi(self, target: CSourceWriter, name: str):
         ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         value_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
-        target.writelns(
-            f"{value_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
-        )
-        ty_napi_info.into_napi(target, cpp_temp, napi_result)
+        into_napi_inner = "into_napi_inner"
+        ty_napi_info.gen_into_napi(target, into_napi_inner)
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"return {into_napi_inner}(env, cpp_value.get_value());",
+            )
 
 
 class BigIntTypeNapiInfo(TypeNapiInfo):
@@ -1742,33 +1653,33 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         return "bigint"
 
     @override
-    def from_napi(
-        self,
-        target: CSourceWriter,
-        napi_value: str,
-        cpp_result: str,
-    ):
-        target.writelns(
-            f"size_t {cpp_result}_len = 0;",
-            f"int {cpp_result}_sign = 0;",
-            f"NAPI_CALL(env, napi_get_value_bigint_words(env, {napi_value}, nullptr, &{cpp_result}_len, nullptr));",
-            f"uint64_t* {cpp_result}_words = new uint64_t[{cpp_result}_len];",
-            f"NAPI_CALL(env, napi_get_value_bigint_words(env, {napi_value}, &{cpp_result}_sign, &{cpp_result}_len, {cpp_result}_words));",
-            f"{self.cpp_info.as_owner} {cpp_result}(_taihe_build_num({cpp_result}_sign, {self.cpp_info.as_owner}{{{cpp_result}_words, {cpp_result}_len}}));",
-        )
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"size_t size = 0;",
+                f"int sign = 0;",
+                f"NAPI_CALL(env, napi_get_value_bigint_words(env, napi_input, nullptr, &size, nullptr));",
+                f"uint64_t* words = new uint64_t[size];",
+                f"NAPI_CALL(env, napi_get_value_bigint_words(env, napi_input, &sign, &size, words));",
+                f"{self.cpp_info.as_owner} cpp_result(_taihe_build_num(sign, {self.cpp_info.as_owner}{{words, size}}));",
+                f"return cpp_result;",
+            )
 
     @override
-    def into_napi(
-        self,
-        target: CSourceWriter,
-        cpp_value: str,
-        napi_result: str,
-    ):
-        target.writelns(
-            f"napi_value {napi_result} = nullptr;",
-            f"auto [{napi_result}_sign, {napi_result}_abs] = ::taihe::_get_bigint_sign_and_abs({cpp_value});",
-            f"NAPI_CALL(env, napi_create_bigint_words(env, {napi_result}_sign, {napi_result}_abs.size(), {napi_result}_abs.data(), &{napi_result}));",
-        )
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_value napi_result = nullptr;",
+                f"auto [sign, abs] = ::taihe::_get_bigint_sign_and_abs(cpp_value);",
+                f"NAPI_CALL(env, napi_create_bigint_words(env, sign, abs.size(), abs.data(), &napi_result));",
+                f"return napi_result;",
+            )
 
 
 class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
