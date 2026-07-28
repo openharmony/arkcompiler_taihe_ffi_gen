@@ -44,9 +44,11 @@ from taihe.codegen.napi.attributes import (
     DtsTypeAttr,
     ExtendsAttr,
     GetAttr,
+    LibAttr,
     NamespaceAttr,
     NullAttr,
     PromiseAttribute,
+    ReadOnlyAttr,
     RecordAttr,
     SetAttr,
     StaticAttr,
@@ -103,6 +105,8 @@ class Namespace:
 
         self.dts_injected_heads: list[str] = []
         self.dts_injected_codes: list[str] = []
+
+        self.lib_name: str | None = None
 
         if parent is None:
             self.module = self
@@ -168,6 +172,9 @@ class PackageGroupNapiInfo(AbstractAnalysis[PackageGroup]):
             for attr in DtsInjectAttr.get_all(pkg):
                 ns.dts_injected_codes.append(attr.dts_code)
 
+            if attr := LibAttr.get(pkg):
+                mod.lib_name = attr.lib_name
+
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupNapiInfo":
@@ -186,6 +193,9 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
         self.cpp_ns = "::".join(p.segments)
         pg_napi_info = PackageGroupNapiInfo.get(am, p.parent_group)
         self.ns = pg_napi_info.get_namespace(p)
+
+        self.global_register_infos: dict[str, tuple[str, str, str]] = {}
+        self.global_funcs: list[GlobFuncDecl] = []
 
     @classmethod
     @override
@@ -219,8 +229,8 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
             self.class_dts_injected_codes.append(class_injected.dts_code)
 
         self.ctor: GlobFuncDecl | None = None
-        self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
-        self.register_infos = []
+        self.static_register_infos: dict[str, tuple[str, str, str]] = {}
+        self.static_funcs: list[GlobFuncDecl] = []
 
         self.dts_fields: list[StructFieldDecl] = []
         self.dts_iface_parents: list[StructFieldDecl] = []
@@ -244,6 +254,22 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
                 self.dts_fields.append(field)
                 self.dts_final_fields.append([field])
 
+        self.register_infos: dict[str, tuple[str, str, str]] = defaultdict(
+            lambda: ("nullptr", "nullptr", "nullptr")
+        )
+        self.getters: list[tuple[str, list[StructFieldDecl]]] = []
+        self.setters: list[tuple[str, list[StructFieldDecl]]] = []
+        for parts in self.dts_final_fields:
+            final = parts[-1]
+            getter = f"getter::{final.name}"
+            self.getters.append((final.name, parts))
+            if ReadOnlyAttr.get(final) is None:
+                setter = f"setter::{final.name}"
+                self.setters.append((final.name, parts))
+            else:
+                setter = "nullptr"
+            self.register_infos[final.name] = ("nullptr", getter, setter)
+
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, p: StructDecl) -> "StructNapiInfo":
@@ -266,7 +292,6 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
         self.dts_type_name = d.name
-        iface_abi_info = IfaceAbiInfo.get(am, d)
         if ClassAttr.get(d):
             self.dts_impl_name = f"{d.name}"
         else:
@@ -286,60 +311,31 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         for class_injected in DtsInjectIntoClazzAttr.get_all(d):
             self.class_dts_injected_codes.append(class_injected.dts_code)
 
-        iface_register_infos: list[
-            tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]
-        ] = []
+        self.register_infos: dict[str, tuple[str, str, str]] = defaultdict(
+            lambda: ("nullptr", "nullptr", "nullptr")
+        )
+        self.methods: list[tuple[str, IfaceMethodDecl]] = []
+        iface_abi_info = IfaceAbiInfo.get(am, d)
         for ancestor in iface_abi_info.ancestor_infos:
-            property_map: dict[
-                str, tuple[str | None, str | None, list[IfaceMethodDecl]]
-            ] = defaultdict(lambda: (None, None, []))
             for method in ancestor.methods:
+                local_name = method.name
+                self.methods.append((local_name, method))
                 iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
-                mangled_name = f"local::{d.name}::method::{method.name}"
+                mangled_name = f"local::{d.name}::method::{local_name}"
                 if get_name := iface_meth_napi_info.get_name:
-                    existing_get, existing_set, methods = property_map[get_name]
-                    methods.append(method)
-                    property_map[get_name] = (mangled_name, existing_set, methods)
-
+                    caller, _, setter = self.register_infos[get_name]
+                    self.register_infos[get_name] = (caller, mangled_name, setter)
+                    continue
                 if set_name := iface_meth_napi_info.set_name:
-                    existing_get, existing_set, methods = property_map[set_name]
-                    methods.append(method)
-                    property_map[set_name] = (existing_get, mangled_name, methods)
-            for prop_name, (get_name, set_name, methods) in property_map.items():
-                if methods:
-                    get_mangled = get_name or "nullptr"
-                    set_mangled = set_name or "nullptr"
-                    props_strs = [
-                        f'"{prop_name}"',
-                        "nullptr",
-                        "nullptr",
-                        get_mangled,
-                        set_mangled,
-                        "nullptr",
-                        "napi_default",
-                        "nullptr",
-                    ]
-                    iface_register_infos.append((methods, ancestor, props_strs))
-            for method in ancestor.methods:
-                iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
-                if (
-                    iface_meth_napi_info.get_name is None
-                    and iface_meth_napi_info.set_name is None
-                ):
-                    props_strs = [
-                        f'"{method.name}"',
-                        "nullptr",
-                        f"local::{d.name}::method::{method.name}",
-                        "nullptr",
-                        "nullptr",
-                        "nullptr",
-                        "napi_default",
-                        "nullptr",
-                    ]
-                    iface_register_infos.append(([method], ancestor, props_strs))
-        self.iface_register_infos = iface_register_infos
+                    caller, getter, _ = self.register_infos[set_name]
+                    self.register_infos[set_name] = (caller, getter, mangled_name)
+                    continue
+                method_name = method.name
+                _, getter, setter = self.register_infos[method_name]
+                self.register_infos[method_name] = (mangled_name, getter, setter)
         self.ctor: GlobFuncDecl | None = None
-        self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
+        self.static_register_infos: dict[str, tuple[str, str, str]] = {}
+        self.static_funcs: list[GlobFuncDecl] = []
 
         self.dts_class_parents: list[IfaceExtendDecl] = []
         self.dts_iface_parents: list[IfaceExtendDecl] = []
@@ -377,15 +373,14 @@ class IfaceMethodNapiInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         if get_attr := GetAttr.get(f):
             self.get_name = get_attr.member_name or get_attr.func_suffix
-        if set_attr := SetAttr.get(f):
+        elif set_attr := SetAttr.get(f):
             self.set_name = set_attr.member_name or set_attr.func_suffix
-
-        self.norm_name = f.name
-
-        if PromiseAttribute.get(f):
-            self.promise_name = self.norm_name
+        elif PromiseAttribute.get(f):
+            self.promise_name = f.name
         elif AsyncAttribute.get(f):
-            self.async_name = self.norm_name
+            self.async_name = f.name
+        else:
+            self.norm_name = f.name
 
     @classmethod
     @override
@@ -423,12 +418,12 @@ class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
         elif static_attr := StaticAttr.get(f):
             self.static_class_name = static_attr.cls_name
 
-        self.norm_name = f.name
-
         if PromiseAttribute.get(f):
-            self.promise_name = self.norm_name
+            self.promise_name = f.name
         elif AsyncAttribute.get(f):
-            self.async_name = self.norm_name
+            self.async_name = f.name
+        else:
+            self.norm_name = f.name
 
     @classmethod
     @override
@@ -719,7 +714,7 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         iface_napi_info = IfaceNapiInfo.get(self.am, t.decl)
-        self.iface_register_infos = iface_napi_info.iface_register_infos
+        self.iface_register_infos = iface_napi_info.register_infos
         self.napi_type_name = "napi_object"
 
     @override
@@ -870,35 +865,75 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         target: CSourceWriter,
     ):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
-        params_cpp = []
+        method_params = []
+        method_args = []
         for param in self.type.ref.params:
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-            params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
-        params_cpp_str = ", ".join(params_cpp)
+            param_cpp_type_info = TypeCppInfo.get(self.am, param.ty)
+            method_arg = param.name
+            method_args.append(method_arg)
+            method_params.append(f"{param_cpp_type_info.as_param} {method_arg}")
+        method_params_str = ", ".join(method_params)
         if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_cpp_name = return_ty_cpp_info.as_owner
+            return_ty_info = TypeCppInfo.get(self.am, return_ty)
+            return_ty_cpp_name = return_ty_info.as_owner
         else:
             return_ty_cpp_name = "void"
-        return_ty_expected_name = (
-            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
-        )
-        lambda_params = ["napi_env env", "napi_ref ref", *params_cpp]
-        lambda_params_str = ", ".join(lambda_params)
-        callback_args = ", ".join(param.name for param in self.type.ref.params)
+        if not cb_abi_info.is_noexcept:
+            return_ty_cpp_name = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+        with target.indented(
+            f"{return_ty_cpp_name} operator()({method_params_str}) {{",
+            f"}}",
+        ):
+            with target.indented(
+                f"return this->sync_call(",
+                f");",
+            ):
+                self.write_sync_call_lambda(target)
+                for method_arg in method_args:
+                    target.writelns(
+                        f", {method_arg}",
+                    )
 
-        def write_callback_lambda_body(is_noexcept: bool) -> None:
+    def write_sync_call_lambda(
+        self,
+        target: CSourceWriter,
+    ):
+        cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
+        method_params = ["napi_env env", "napi_ref ref"]
+        method_args = []
+        for param in self.type.ref.params:
+            param_cpp_type_info = TypeCppInfo.get(self.am, param.ty)
+            method_arg = param.name
+            method_params.append(f"{param_cpp_type_info.as_param} {method_arg}")
+            method_args.append(method_arg)
+        method_params_str = ", ".join(method_params)
+        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+            return_ty_info = TypeCppInfo.get(self.am, return_ty)
+            return_ty_cpp_name = return_ty_info.as_owner
+        else:
+            return_ty_cpp_name = "void"
+        if not cb_abi_info.is_noexcept:
+            return_ty_cpp_name = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+        with target.indented(
+            f"[]({method_params_str}) -> {return_ty_cpp_name} {{",
+            f"}}",
+        ):
             target.writelns(
                 f"napi_value args_inner[{len(self.type.ref.params)}];",
             )
-            for index, param in enumerate(self.type.ref.params):
-                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-                into_napi = f"into_napi_arg_{index}"
-                param_ty_napi_info.gen_into_napi(target, into_napi)
+            for index, (param, method_arg) in enumerate(
+                zip(self.type.ref.params, method_args, strict=True)
+            ):
+                param_napi_type_info = TypeNapiInfo.get(self.am, param.ty)
+                into_napi = f"into_napi_{param.name}"
+                param_napi_type_info.gen_into_napi(target, into_napi)
                 target.writelns(
-                    f"args_inner[{index}] = {into_napi}(env, {param.name});",
+                    f"args_inner[{index}] = {into_napi}(env, {method_arg});",
                 )
-
             target.writelns(
                 f"napi_value cb_ref = nullptr;",
                 f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
@@ -907,8 +942,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"napi_value callback_result_napi = nullptr;",
                 f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, args_inner, &callback_result_napi));",
             )
-
-            if not is_noexcept:
+            if not cb_abi_info.is_noexcept:
                 target.writelns(
                     f"bool has_error = false;",
                     f"napi_is_exception_pending(env, &has_error);",
@@ -947,22 +981,6 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     target.writelns(
                         f"return;",
                     )
-
-        if cb_abi_info.is_noexcept:
-            return_type_name = return_ty_cpp_name
-            is_noexcept = True
-        else:
-            return_type_name = return_ty_expected_name
-            is_noexcept = False
-        with target.indented(
-            f"{return_type_name} operator()({params_cpp_str}) {{",
-            f"}}",
-        ):
-            with target.indented(
-                f"return this->sync_call([]( {lambda_params_str} ) -> {return_type_name} {{",
-                f"}}, {callback_args});" if callback_args else f"}});",
-            ):
-                write_callback_lambda_body(is_noexcept)
 
     @override
     def gen_into_napi(self, target: CSourceWriter, name: str):
