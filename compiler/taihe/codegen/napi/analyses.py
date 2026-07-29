@@ -24,7 +24,6 @@ from taihe.codegen.abi.analyses import (
 )
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.cpp.analyses import (
-    EnumCppInfo,
     IfaceCppInfo,
     StructCppInfo,
     TypeCppInfo,
@@ -828,26 +827,21 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
             target.writelns(
                 f"napi_valuetype napi_type;",
                 f"napi_status status = napi_typeof(env, napi_input, &napi_type);",
-                f"{self.cpp_info.as_owner} cpp_result;",
             )
             with target.indented(
                 f"if (status == napi_ok && napi_type != napi_undefined) {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"auto cpp_spec = {item_from_napi}(env, napi_input);",
-                    f"cpp_result = {self.cpp_info.as_owner}(std::in_place, std::move(cpp_spec));",
+                    f"return {self.cpp_info.as_owner}(std::in_place, {item_from_napi}(env, napi_input));",
                 )
             with target.indented(
                 f"else {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"cpp_result = std::nullopt;",
+                    f"return std::nullopt;",
                 )
-            target.writelns(
-                f"return cpp_result;",
-            )
 
     @override
     def gen_into_napi(self, target: CSourceWriter, name: str):
@@ -858,24 +852,22 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
             item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
             item_into_napi = "into_napi_item"
             item_ty_napi_info.gen_into_napi(target, item_into_napi)
-            target.writelns(
-                f"napi_value napi_result = nullptr;",
-            )
             with target.indented(
-                f"if (!cpp_value) {{",
+                f"if (cpp_value) {{",
                 f"}}",
             ):
-                target.writelns("napi_get_undefined(env, &napi_result);")
+                target.writelns(
+                    f"return {item_into_napi}(env, *cpp_value);",
+                )
             with target.indented(
                 f"else {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"napi_result = {item_into_napi}(env, *cpp_value);",
+                    f"napi_value napi_result = nullptr;",
+                    f"napi_get_undefined(env, &napi_result);",
+                    f"return napi_result;",
                 )
-            target.writelns(
-                f"return napi_result;",
-            )
 
     @override
     def gen_check_napi(self, target: CSourceWriter, name: str):
@@ -959,7 +951,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 self.write_sync_call_lambda(target)
                 for method_arg in method_args:
                     target.writelns(
-                        f", {method_arg}",
+                        f", std::forward<decltype({method_arg})>({method_arg})",
                     )
 
     def write_sync_call_lambda(
@@ -998,7 +990,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 into_napi = f"into_napi_{param.name}"
                 param_napi_type_info.gen_into_napi(target, into_napi)
                 target.writelns(
-                    f"args_inner[{index}] = {into_napi}(env, {method_arg});",
+                    f"args_inner[{index}] = {into_napi}(env, std::forward<decltype({method_arg})>({method_arg}));",
                 )
             target.writelns(
                 f"napi_value cb_ref = nullptr;",
@@ -1022,31 +1014,20 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
                         f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
                     )
-                with target.indented(
-                    f"else {{",
-                    f"}}",
-                ):
-                    if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                        return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                        return_ty_napi_info.gen_from_napi(target, "from_napi_result")
-                        target.writelns(
-                            f"return from_napi_result(env, callback_result_napi);",
-                        )
-                    else:
-                        target.writelns(
-                            f"return {{}};",
-                        )
+            if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                return_ty_napi_info.gen_from_napi(target, "from_napi_result")
+                target.writelns(
+                    f"return from_napi_result(env, callback_result_napi);",
+                )
+            elif not cb_abi_info.is_noexcept:
+                target.writelns(
+                    f"return {{}};",
+                )
             else:
-                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                    return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                    return_ty_napi_info.gen_from_napi(target, "from_napi_result")
-                    target.writelns(
-                        f"return from_napi_result(env, callback_result_napi);",
-                    )
-                else:
-                    target.writelns(
-                        f"return;",
-                    )
+                target.writelns(
+                    f"return;",
+                )
 
     @override
     def gen_into_napi(self, target: CSourceWriter, name: str):
@@ -1090,59 +1071,42 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"napi_value args[{argc}] = {{nullptr}};",
                 f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args , nullptr, nullptr));",
             )
-        cpp_values = self._read_func_params(target, "args")
-        result_storage_type = self._get_async_result_storage_type(is_noexcept)
-        cpp_args_str = ", ".join(
-            f"std::forward<decltype({value})>({value})" for value in cpp_values
-        )
-        cpp_call = f"(*cpp_cb)({cpp_args_str})"
+        cpp_exprs = self._read_func_params(target, "args")
+        result_storage_type = self._get_cpp_result_type(is_noexcept)
+        cpp_exprs_str = ", ".join(cpp_exprs)
+        result = "cpp_result"
         if result_storage_type == "void":
             target.writelns(
-                f"{cpp_call};",
+                f"(*cpp_cb)({cpp_exprs_str});",
             )
         else:
             target.writelns(
-                f"{result_storage_type} cpp_result = {cpp_call};",
+                f"{result_storage_type} {result} = (*cpp_cb)({cpp_exprs_str});",
             )
-        if is_noexcept:
-            self._write_native_noexcept_success(target, "cpp_result")
-        else:
-            self._write_native_maythrow_success(target, "cpp_result")
-
-    def _write_native_noexcept_success(
-        self,
-        target: CSourceWriter,
-        result: str,
-    ):
+        if not is_noexcept:
+            with target.indented(
+                f"if (not {result}.has_value()) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
+                    f"napi_throw(env, error_obj);",
+                    f"return nullptr;",
+                )
+            result = f"{result}.value()"
         if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
             return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
             into_napi = "into_napi_result"
             return_ty_napi_info.gen_into_napi(target, into_napi)
             target.writelns(
-                f"return {into_napi}(env, {result});",
+                f"return {into_napi}(env, std::move({result}));",
             )
         else:
             target.writelns(
                 f"return nullptr;",
             )
 
-    def _write_native_maythrow_success(
-        self,
-        target: CSourceWriter,
-        result: str,
-    ):
-        with target.indented(
-            f"if ({result}.has_value()) {{",
-            f"}}",
-        ):
-            self._write_native_noexcept_success(target, f"{result}.value()")
-        target.writelns(
-            f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
-            f"napi_throw(env, error_obj);",
-            f"return nullptr;",
-        )
-
-    def _get_async_result_storage_type(
+    def _get_cpp_result_type(
         self,
         is_noexcept: bool,
     ) -> str:
@@ -1159,17 +1123,13 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         target: CSourceWriter,
         args: str,
     ) -> list[str]:
-        values = []
+        cpp_exprs = []
         for index, param in enumerate(self.type.ref.params):
-            value = f"value_{index}"
-            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             from_napi = f"from_napi_arg_{index}"
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             param_ty_napi_info.gen_from_napi(target, from_napi)
-            target.writelns(
-                f"auto {value} = {from_napi}(env, {args}[{index}]);",
-            )
-            values.append(value)
-        return values
+            cpp_exprs.append(f"{from_napi}(env, {args}[{index}])")
+        return cpp_exprs
 
 
 class EnumTypeNapiInfo(TypeNapiInfo):
@@ -1303,8 +1263,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
                 target.writelns(
                     f"napi_value napi_item;",
                     f"NAPI_CALL(env, napi_get_element(env, napi_input, i, &napi_item));",
-                    f"auto cpp_item = {item_from_napi}(env, napi_item);",
-                    f"new (&cpp_buffer[i]) {item_ty_napi_info.cpp_info.as_owner}(std::move(cpp_item));",
+                    f"new (&cpp_buffer[i]) {item_ty_napi_info.cpp_info.as_owner}({item_from_napi}(env, napi_item));",
                 )
             target.writelns(
                 f"return {self.cpp_info.as_owner}(cpp_buffer, size);",
@@ -1329,8 +1288,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
                 f"}}",
             ):
                 target.writelns(
-                    f"napi_value napi_item = {item_into_napi}(env, cpp_value[i]);",
-                    f"NAPI_CALL(env, napi_set_element(env, napi_result, i, napi_item));",
+                    f"NAPI_CALL(env, napi_set_element(env, napi_result, i, {item_into_napi}(env, cpp_value[i])));",
                 )
             target.writelns(
                 f"return napi_result;",
@@ -1605,9 +1563,7 @@ class MapTypeNapiInfo(TypeNapiInfo):
                 f"}}",
             ):
                 target.writelns(
-                    f"napi_value napi_key = {key_into_napi}(env, cpp_key);",
-                    f"napi_value napi_val = {val_into_napi}(env, cpp_val);",
-                    f"napi_value args[2] = {{napi_key, napi_val}};",
+                    f"napi_value args[2] = {{{key_into_napi}(env, cpp_key), {val_into_napi}(env, cpp_val)}};",
                     f"NAPI_CALL(env, napi_call_function(env, napi_result, set_fn, 2, args, nullptr));",
                 )
             target.writelns(
