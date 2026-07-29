@@ -80,40 +80,40 @@ class DtsCodeGenerator:
             ):
                 self.gen_namespace(child_ns, target)
 
-    def gen_package(self, pkg: PackageDecl, pkg_dts_target: DtsWriter):
-        self.gen_utils(pkg_dts_target)
+    def gen_package(self, pkg: PackageDecl, target: DtsWriter):
+        self.gen_utils(target)
         pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
         for func in pkg_napi_info.global_funcs:
-            self.gen_func(func, pkg_dts_target)
+            self.gen_func(func, target)
         for struct in pkg.structs:
-            self.gen_struct_interface(struct, pkg_dts_target)
-            self.gen_struct_class(struct, pkg_dts_target)
+            self.gen_struct_interface(struct, target)
+            self.gen_struct_class(struct, target)
         for iface in pkg.interfaces:
-            self.gen_iface_interface(iface, pkg_dts_target)
-            self.gen_iface_class(iface, pkg_dts_target)
+            self.gen_iface_interface(iface, target)
+            self.gen_iface_class(iface, target)
         for enum in pkg.enums:
-            self.gen_enum(enum, pkg_dts_target)
+            self.gen_enum(enum, target)
         for union in pkg.unions:
-            self.gen_union(union, pkg_dts_target)
+            self.gen_union(union, target)
 
     def gen_utils(self, target: DtsWriter):
         target.writelns(
             f"type AsyncCallback<T> = (error: Error | null, result: T | undefined) => void;",
         )
 
-    def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
+    def gen_func(self, func: GlobFuncDecl, target: DtsWriter):
         func_napi_info = GlobFuncNapiInfo.get(self.am, func)
         args = []
         for param in func.params:
             value_ty = param.ty
             param_dts_info = TypeNapiInfo.get(self.am, value_ty)
             args.append(
-                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(pkg_dts_target)}"
+                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
             )
         args_str = ", ".join(args)
         if isinstance(func.return_ty, NonVoidType):
             return_ty_dts_info = TypeNapiInfo.get(self.am, func.return_ty)
-            return_ty = return_ty_dts_info.dts_return_type_in(pkg_dts_target)
+            return_ty = return_ty_dts_info.dts_return_type_in(target)
         else:
             return_ty = "void"
         if func_napi_info.async_name is not None:
@@ -121,16 +121,16 @@ class DtsCodeGenerator:
             callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
             callback_ts = f"{cbname}: {callback_ty_ts_name}"
             params_with_callback_ts_str = ", ".join([*args, callback_ts])
-            pkg_dts_target.writelns(
+            target.writelns(
                 f"export function {func_napi_info.async_name}({params_with_callback_ts_str}): void;",
             )
         elif func_napi_info.promise_name is not None:
             promise_ty = f"Promise<{return_ty}>"
-            pkg_dts_target.writelns(
+            target.writelns(
                 f"export function {func_napi_info.promise_name}({args_str}): {promise_ty};",
             )
         else:
-            pkg_dts_target.writelns(
+            target.writelns(
                 f"export function {func_napi_info.norm_name}({args_str}): {return_ty};",
             )
 

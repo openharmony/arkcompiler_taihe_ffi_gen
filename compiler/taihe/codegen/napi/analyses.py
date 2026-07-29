@@ -1065,12 +1065,11 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
             f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, nullptr, reinterpret_cast<void**>(&cpp_cb)));",
         )
         argc = len(self.type.ref.params)
-        if argc:
-            target.writelns(
-                f"size_t argc = {argc};",
-                f"napi_value args[{argc}] = {{nullptr}};",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args , nullptr, nullptr));",
-            )
+        target.writelns(
+            f"size_t argc = {argc};",
+            f"napi_value args[{argc}] = {{}};",
+            f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+        )
         cpp_exprs = self._read_func_params(target, "args")
         result_storage_type = self._get_cpp_result_type(is_noexcept)
         cpp_exprs_str = ", ".join(cpp_exprs)
@@ -1199,7 +1198,7 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
                 f"void* data;",
                 f"size_t size;",
                 f"NAPI_CALL(env, napi_get_arraybuffer_info(env, napi_input, &data, &size));",
-                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), size);",
+                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), size / sizeof({item_ty_cpp_info.as_owner}));",
             )
 
     @override
@@ -1212,7 +1211,7 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
             target.writelns(
                 f"napi_value napi_result = nullptr;",
                 f"void* data = nullptr;",
-                f"NAPI_CALL(env, napi_create_arraybuffer(env, cpp_value.size(), &data, &napi_result));",
+                f"NAPI_CALL(env, napi_create_arraybuffer(env, cpp_value.size() * sizeof({item_ty_cpp_info.as_owner}), &data, &napi_result));",
                 f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
                 f"return napi_result;",
             )
@@ -1362,14 +1361,10 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             f"}};",
         ):
             target.writelns(
-                f"napi_typedarray_type type;",
                 f"size_t size;",
                 f"void* data;",
-                f"napi_value arrbuf;",
-                f"size_t byte_offset;",
-                f"NAPI_CALL(env, napi_get_typedarray_info(env, napi_input, &type, &size, &data, &arrbuf, &byte_offset));",
-                f"size_t element_length = size / sizeof({item_ty_cpp_info.as_owner});",
-                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), element_length);",
+                f"NAPI_CALL(env, napi_get_typedarray_info(env, napi_input, nullptr, &size, &data, nullptr, nullptr));",
+                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), size / sizeof({item_ty_cpp_info.as_owner}));",
             )
 
     @override
@@ -1444,7 +1439,8 @@ class RecordTypeNapiInfo(TypeNapiInfo):
                 f"}}",
             ):
                 target.writelns(
-                    f"napi_value napi_key = nullptr, napi_val = nullptr;",
+                    f"napi_value napi_key = nullptr;",
+                    f"napi_value napi_val = nullptr;",
                     f"NAPI_CALL(env, napi_get_element(env, prop_names, i, &napi_key));",
                     f"NAPI_CALL(env, napi_get_property(env, napi_input, napi_key, &napi_val));",
                     f"cpp_result.emplace({key_from_napi}(env, napi_key), {val_from_napi}(env, napi_val));",
@@ -1510,7 +1506,8 @@ class MapTypeNapiInfo(TypeNapiInfo):
             val_ty_napi_info.gen_from_napi(target, val_from_napi)
             target.writelns(
                 f"{self.cpp_info.as_owner} cpp_result;",
-                f"napi_value entries_fn = nullptr, entries_iter = nullptr;",
+                f"napi_value entries_fn = nullptr;",
+                f"napi_value entries_iter = nullptr;",
                 f'NAPI_CALL(env, napi_get_named_property(env, napi_input, "entries", &entries_fn));',
                 f"NAPI_CALL(env, napi_call_function(env, napi_input, entries_fn, 0, nullptr, &entries_iter));",
                 f"napi_value next_meth = nullptr;",
@@ -1551,7 +1548,9 @@ class MapTypeNapiInfo(TypeNapiInfo):
             key_ty_napi_info.gen_into_napi(target, key_into_napi)
             val_ty_napi_info.gen_into_napi(target, val_into_napi)
             target.writelns(
-                f"napi_value global = nullptr, map_ctor = nullptr, napi_result = nullptr;",
+                f"napi_value global = nullptr;",
+                f"napi_value map_ctor = nullptr;",
+                f"napi_value napi_result = nullptr;",
                 f"napi_get_global(env, &global);",
                 f'NAPI_CALL(env, napi_get_named_property(env, global, "Map", &map_ctor));',
                 f"NAPI_CALL(env, napi_new_instance(env, map_ctor, 0, nullptr, &napi_result));",
