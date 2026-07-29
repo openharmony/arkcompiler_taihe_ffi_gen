@@ -50,7 +50,7 @@ public:
         });
     }
 
-    bool _is_main_thread() const
+    bool is_main_thread() const
     {
         if (!initialized_) {
             return false;
@@ -69,7 +69,7 @@ private:
 
 inline bool _is_main_thread()
 {
-    return ThreadContext::get_instance()._is_main_thread();
+    return ThreadContext::get_instance().is_main_thread();
 }
 
 inline void _init_main_thread()
@@ -227,7 +227,7 @@ inline std::pair<bool, taihe::array<uint64_t>> _get_bigint_sign_and_abs(taihe::a
     return {sign, taihe::array<uint64_t>(buf, size)};
 }
 
-inline taihe::array<uint64_t> _taihe_build_num(bool sign, taihe::array_view<uint64_t> abs)
+inline taihe::array<uint64_t> _build_num(bool sign, taihe::array_view<uint64_t> abs)
 {
     uint64_t *buf = reinterpret_cast<uint64_t *>(malloc((abs.size() + 1) * sizeof(uint64_t)));
     if (sign) {

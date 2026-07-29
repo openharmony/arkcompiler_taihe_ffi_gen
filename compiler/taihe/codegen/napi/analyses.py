@@ -100,6 +100,7 @@ class Namespace:
 
         self.children: dict[str, Namespace] = {}
         self.packages: list[PackageDecl] = []
+
         self.ts_injected_heads: list[str] = []
         self.ts_injected_codes: list[str] = []
 
@@ -462,7 +463,7 @@ class UnionNapiInfo(AbstractAnalysis[UnionDecl]):
 
 class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
     is_optional: bool = False
-    napi_type_name: str
+    napi_valuetype: str
 
     def __init__(self, am: AnalysisManager, t: NonVoidType):
         self.am = am
@@ -489,6 +490,16 @@ class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
     @abstractmethod
     def gen_into_napi(self, target: CSourceWriter, name: str): ...
 
+    def gen_check_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> bool {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_valuetype napi_type;",
+                f"return napi_typeof(env, napi_input, &napi_type) == napi_ok && napi_type == {self.napi_valuetype};",
+            )
+
 
 class NullTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: UnitType):
@@ -496,7 +507,7 @@ class NullTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         self.cpp_info = TypeCppInfo.get(am, t)
-        self.napi_type_name = "napi_null"
+        self.napi_valuetype = "napi_null"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -532,7 +543,7 @@ class UndefinedTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         self.cpp_info = TypeCppInfo.get(am, t)
-        self.napi_type_name = "napi_undefined"
+        self.napi_valuetype = "napi_undefined"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -576,7 +587,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         }.get(self.type.kind)
         if napi_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
-        self.napi_type_name = napi_type
+        self.napi_valuetype = napi_type
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -640,7 +651,7 @@ class StringTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         self.cpp_info = TypeCppInfo.get(am, t)
-        self.napi_type_name = "napi_string"
+        self.napi_valuetype = "napi_string"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -682,7 +693,7 @@ class StructTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -715,7 +726,7 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         self.type = t
         iface_napi_info = IfaceNapiInfo.get(self.am, t.decl)
         self.iface_register_infos = iface_napi_info.register_infos
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -747,7 +758,7 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         self.is_optional = True
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -815,13 +826,26 @@ class OptionalTypeNapiInfo(TypeNapiInfo):
                 f"return napi_result;",
             )
 
+    @override
+    def gen_check_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> bool {{",
+            f"}};",
+        ):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
+            item_ty_napi_info.gen_check_napi(target, "check_napi_item")
+            target.writelns(
+                f"napi_valuetype napi_type;",
+                f"return (napi_typeof(env, napi_input, &napi_type) == napi_ok && napi_type == napi_undefined) || check_napi_item(env, napi_input);",
+            )
+
 
 class CallbackTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_function"
+        self.napi_valuetype = "napi_function"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1111,11 +1135,8 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        if isinstance(self.type.decl.ty, ScalarType | StringType):
-            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
-            self.napi_type_name = item_ty_napi_info.napi_type_name
-        else:
-            raise ValueError
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        self.napi_valuetype = item_ty_napi_info.napi_valuetype
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1124,23 +1145,21 @@ class EnumTypeNapiInfo(TypeNapiInfo):
 
     @override
     def gen_from_napi(self, target: CSourceWriter, name: str):
-        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
         item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         with target.indented(
-            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {enum_cpp_info.as_owner} {{",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
             f"}};",
         ):
             item_ty_napi_info.gen_from_napi(target, "item_from_napi")
             target.writelns(
-                f"return {enum_cpp_info.as_owner}::from_value(item_from_napi(env, napi_input));",
+                f"return {self.cpp_info.as_owner}::from_value(item_from_napi(env, napi_input));",
             )
 
     @override
     def gen_into_napi(self, target: CSourceWriter, name: str):
-        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
         item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         with target.indented(
-            f"static constexpr auto {name} = [](napi_env env, {enum_cpp_info.as_param} cpp_value) -> napi_value {{",
+            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
             f"}};",
         ):
             item_ty_napi_info.gen_into_napi(target, "item_into_napi")
@@ -1154,7 +1173,7 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
         if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
             ScalarKinds.I8,
@@ -1198,13 +1217,24 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
                 f"return napi_result;",
             )
 
+    @override
+    def gen_check_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> bool {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"bool result = false;",
+                f"return napi_is_arraybuffer(env, napi_input, &result) == napi_ok && result;",
+            )
+
 
 class ArrayTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1267,6 +1297,17 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
                 f"return napi_result;",
             )
 
+    @override
+    def gen_check_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> bool {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"bool result = false;",
+                f"return napi_is_array(env, napi_input, &result) == napi_ok && result;",
+            )
+
 
 class TypedArrayTypeNapiInfo(TypeNapiInfo):
     def __init__(
@@ -1277,9 +1318,10 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        napi_type_name = None
+        self.napi_valuetype = "napi_object"
+        napi_typedarray_type = None
         if isinstance(self.type.item_ty, ScalarType):
-            napi_type_name = {
+            napi_typedarray_type = {
                 ScalarKinds.F32: "napi_float32_array",
                 ScalarKinds.F64: "napi_float64_array",
                 ScalarKinds.I8: "napi_int8_array",
@@ -1291,9 +1333,9 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
                 ScalarKinds.U32: "napi_uint32_array",
                 ScalarKinds.U64: "napi_biguint64_array",
             }.get(self.type.item_ty.kind)
-        if napi_type_name is None:
+        if napi_typedarray_type is None:
             raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
-        self.napi_type_name = napi_type_name
+        self.napi_typedarray_type = napi_typedarray_type
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1318,22 +1360,6 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
     @override
     def gen_from_napi(self, target: CSourceWriter, name: str):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
-        element_size = None
-        if isinstance(self.type.item_ty, ScalarType):
-            element_size = {
-                ScalarKinds.F32: "float",
-                ScalarKinds.F64: "double",
-                ScalarKinds.I8: "int8_t",
-                ScalarKinds.I16: "int16_t",
-                ScalarKinds.I32: "int32_t",
-                ScalarKinds.I64: "int64_t",
-                ScalarKinds.U8: "uint8_t",
-                ScalarKinds.U16: "uint16_t",
-                ScalarKinds.U32: "uint32_t",
-                ScalarKinds.U64: "uint64_t",
-            }.get(self.type.item_ty.kind)
-        if element_size is None:
-            raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
         with target.indented(
             f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_param} {{",
             f"}};",
@@ -1345,7 +1371,7 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
                 f"napi_value arrbuf;",
                 f"size_t byte_offset;",
                 f"NAPI_CALL(env, napi_get_typedarray_info(env, napi_input, &type, &size, &data, &arrbuf, &byte_offset));",
-                f"size_t element_length = size / sizeof({element_size});",
+                f"size_t element_length = size / sizeof({item_ty_cpp_info.as_owner});",
                 f"{self.cpp_info.as_param} cpp_result(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), element_length);",
                 f"return cpp_result;",
             )
@@ -1363,8 +1389,23 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
                 f"void* data = nullptr;",
                 f"NAPI_CALL(env, napi_create_arraybuffer(env, cpp_value.size() * sizeof({item_ty_cpp_info.as_owner}), &data, &arrbuf));",
                 f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
-                f"NAPI_CALL(env, napi_create_typedarray(env, {self.napi_type_name}, cpp_value.size(), arrbuf, 0, &napi_result));",
+                f"NAPI_CALL(env, napi_create_typedarray(env, {self.napi_typedarray_type}, cpp_value.size(), arrbuf, 0, &napi_result));",
                 f"return napi_result;",
+            )
+
+    @override
+    def gen_check_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> bool {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"bool result = false;",
+                f"if (napi_is_typedarray(env, napi_input, &result) != napi_ok || !result) {{",
+                f"    return false;",
+                f"}}",
+                f"napi_typedarray_type napi_type;",
+                f"return napi_get_typedarray_info(env, napi_input, &napi_type, nullptr, nullptr, nullptr, nullptr) == napi_ok && napi_type == {self.napi_typedarray_type};",
             )
 
 
@@ -1373,8 +1414,7 @@ class RecordTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_object"
-        # TODO: 错误 key 类型提示
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1450,7 +1490,7 @@ class MapTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1536,13 +1576,32 @@ class MapTypeNapiInfo(TypeNapiInfo):
                 f"return napi_result;",
             )
 
+    @override
+    def gen_check_napi(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> bool {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"napi_valuetype napi_type;",
+                f"if (napi_typeof(env, napi_input, &napi_type) != napi_ok || napi_type != napi_object) {{",
+                f"    return false;",
+                f"}}",
+                f"napi_value global = nullptr, map_ctor = nullptr;",
+                f"bool result = false;",
+                f"return napi_get_global(env, &global) == napi_ok",
+                f'    && napi_get_named_property(env, global, "Map", &map_ctor) == napi_ok',
+                f"    && napi_instanceof(env, napi_input, map_ctor, &result) == napi_ok",
+                f"    && result;",
+            )
+
 
 class UnionTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: UnionType):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_value"  # TODO not sure
+        self.napi_valuetype = "napi_value"  # TODO not sure
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1573,7 +1632,7 @@ class OpaqueTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.napi_type_name = "napi_object"
+        self.napi_valuetype = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1612,7 +1671,7 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         self.type = t
         self.const_attr = const_attr
         item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
-        self.napi_type_name = item_ty_napi_info.napi_type_name
+        self.napi_valuetype = item_ty_napi_info.napi_valuetype
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1621,30 +1680,26 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
 
     @override
     def gen_from_napi(self, target: CSourceWriter, name: str):
-        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
-        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
-        from_napi_inner = "from_napi_inner"
-        ty_napi_info.gen_from_napi(target, from_napi_inner)
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         with target.indented(
-            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {enum_cpp_info.full_name} {{",
+            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
             f"}};",
         ):
+            item_ty_napi_info.gen_from_napi(target, "item_from_napi")
             target.writelns(
-                f"return {enum_cpp_info.full_name}::from_value({from_napi_inner}(env, napi_input));",
+                f"return {self.cpp_info.as_owner}::from_value(item_from_napi(env, napi_input));",
             )
 
     @override
     def gen_into_napi(self, target: CSourceWriter, name: str):
-        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
-        value_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
-        into_napi_inner = "into_napi_inner"
-        ty_napi_info.gen_into_napi(target, into_napi_inner)
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         with target.indented(
             f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
             f"}};",
         ):
+            item_ty_napi_info.gen_into_napi(target, "item_into_napi")
             target.writelns(
-                f"return {into_napi_inner}(env, cpp_value.get_value());",
+                f"return item_into_napi(env, cpp_value.get_value());",
             )
 
 
@@ -1657,6 +1712,7 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
+        self.napi_valuetype = "napi_bigint"
         if not (
             isinstance(self.type.item_ty, ScalarType)
             and self.type.item_ty.kind == ScalarKinds.U64
@@ -1664,7 +1720,6 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
             raise ValueError(
                 "Attribute bigint can only be attached to array types with u64 items"
             )
-        # TODO: check the attribute should be used in Array<u64>
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -1682,7 +1737,7 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
                 f"NAPI_CALL(env, napi_get_value_bigint_words(env, napi_input, nullptr, &size, nullptr));",
                 f"uint64_t* words = new uint64_t[size];",
                 f"NAPI_CALL(env, napi_get_value_bigint_words(env, napi_input, &sign, &size, words));",
-                f"{self.cpp_info.as_owner} cpp_result(_taihe_build_num(sign, {self.cpp_info.as_owner}{{words, size}}));",
+                f"{self.cpp_info.as_owner} cpp_result(taihe::_build_num(sign, {self.cpp_info.as_owner}{{words, size}}));",
                 f"return cpp_result;",
             )
 

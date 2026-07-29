@@ -57,13 +57,7 @@ from taihe.semantics.declarations import (
     UnionDecl,
 )
 from taihe.semantics.types import (
-    ArrayType,
-    MapType,
     NonVoidType,
-    OpaqueType,
-    ScalarType,
-    StringType,
-    UnitType,
 )
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import GEN_CXX_SRC_GROUP, OutputManager
@@ -1776,12 +1770,7 @@ class NapiCodeGenerator:
             f"inline {union_cpp_info.as_owner} taihe::from_napi_t<{union_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
-            union_napi_impl_target.writelns(
-                f"napi_valuetype value_ty;",
-                f"NAPI_CALL(env, napi_typeof(env, napi_obj, &value_ty));",
-                f"bool flag;",
-            )
-            for parts in union_napi_info.dts_final_fields:
+            for i, parts in enumerate(union_napi_info.dts_final_fields):
                 final = parts[-1]
                 static_tags = []
                 for part in parts:
@@ -1790,61 +1779,18 @@ class NapiCodeGenerator:
                         f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
                     )
                 static_tags_str = ", ".join(static_tags)
-                full_name = "_".join(part.name for part in parts)
                 type_napi_info = TypeNapiInfo.get(self.am, final.ty)
-                if isinstance(
-                    final.ty, ScalarType | StringType | UnitType | OpaqueType
+                check_napi = f"check_napi_{i}"
+                type_napi_info.gen_check_napi(union_napi_impl_target, check_napi)
+                with union_napi_impl_target.indented(
+                    f"if ({check_napi}(env, napi_obj)) {{",
+                    f"}}",
                 ):
-                    with union_napi_impl_target.indented(
-                        f"if (value_ty == {type_napi_info.napi_type_name}) {{",
-                        f"}}",
-                    ):
-                        cpp_result_spec = f"cpp_field_{full_name}"
-                        from_napi = f"from_napi_{full_name}"
-                        type_napi_info.gen_from_napi(union_napi_impl_target, from_napi)
-                        union_napi_impl_target.writelns(
-                            f"auto {cpp_result_spec} = {from_napi}(env, napi_obj);",
-                        )
-                        union_napi_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                        )
-                elif isinstance(final.ty, ArrayType):
+                    from_napi = f"from_napi_{i}"
+                    type_napi_info.gen_from_napi(union_napi_impl_target, from_napi)
                     union_napi_impl_target.writelns(
-                        f"NAPI_CALL(env, napi_is_array(env, napi_obj, &flag));",
+                        f"return {union_cpp_info.full_name}({static_tags_str}, {from_napi}(env, napi_obj));",
                     )
-                    with union_napi_impl_target.indented(
-                        f"if (flag) {{",
-                        f"}}",
-                    ):
-                        cpp_result_spec = f"cpp_field_{full_name}"
-                        from_napi = f"from_napi_{full_name}"
-                        type_napi_info.gen_from_napi(union_napi_impl_target, from_napi)
-                        union_napi_impl_target.writelns(
-                            f"auto {cpp_result_spec} = {from_napi}(env, napi_obj);",
-                        )
-                        union_napi_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                        )
-                elif isinstance(final.ty, MapType):
-                    union_napi_impl_target.writelns(
-                        f"napi_value global = nullptr, map_ctor = nullptr;",
-                        f"napi_get_global(env, &global);",
-                        f'NAPI_CALL(env, napi_get_named_property(env, global, "Map", &map_ctor));',
-                        f"NAPI_CALL(env, napi_instanceof(env, napi_obj, map_ctor, &flag));",
-                    )
-                    with union_napi_impl_target.indented(
-                        f"if (flag) {{",
-                        f"}}",
-                    ):
-                        cpp_result_spec = f"cpp_field_{full_name}"
-                        from_napi = f"from_napi_{full_name}"
-                        type_napi_info.gen_from_napi(union_napi_impl_target, from_napi)
-                        union_napi_impl_target.writelns(
-                            f"auto {cpp_result_spec} = {from_napi}(env, napi_obj);",
-                        )
-                        union_napi_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                        )
 
     def gen_union_into_napi_func(
         self,
