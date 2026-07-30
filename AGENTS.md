@@ -1,222 +1,71 @@
-# AGENTS.md
+# Taihe 指引
 
-**Name**: Taihe
+## 项目定位
 
-**Purpose**: Multi-language interface programming model compiler and code generator
+本仓库是 Taihe 语言、编译器、运行时、标准库、测试和示例的源码树根目录。优先按这些目录定位问题：
 
-**Primary Language**: Python, C++
+- `compiler/`：IDL 前端、语义 IR、编译驱动、后端框架和代码生成实现。
+- `runtime/`：跨语言 ABI 所需的 C/C++ 运行时、头文件分层和对象模型基础设施。
+- `stdlib/`：编译器内置或后端注入的标准 IDL 定义。
+- `test/`：生成代码、运行时和跨语言互操作的端到端测试。
+- `cookbook/`：公开行为的示例工程，不替代 `test/` 中的回归测试。
+- `docs/public/`、`docs/internal/`、`docs/knowledge/`：公开规格、内部设计文档和 Agent 知识库。
+- `scripts/`、`cmake/`：构建、检查、测试和 CMake 集成脚本。
 
-## Project Overview
+## 构建和验证
 
-Taihe is a multi-language interface programming model that generates cross-language bindings from IDL (Interface Definition Language) files. It separates API publishers from consumers at the binary level, enabling independent upgrades.
+以下命令均从仓库根目录执行。
 
-Key capabilities:
-- Parse `.taihe` IDL files defining structs, enums, interfaces, functions
-- Generate C ABI layer for binary compatibility
-- Generate C++ projections for comfortable native development
-- Generate ArkTS/ANI bindings for HarmonyOS development
-
-## Tooling Requirements
-
-- Python 3.11+, uv package manager
-- Clang 15+, CMake 3.14+
-- Linux recommended (Windows not fully supported)
-
-## Directory Structure
-
-```
-taihe/
-├── compiler/
-│   ├── taihe/               # Compiler source code
-│   │   ├── utils/           # Utilities: diagnostics, analyses, file handling
-│   │   ├── parse/           # Frontend: parsing and AST to IR conversion
-│   │   ├── semantics/       # Semantic analysis and IR definitions
-│   │   ├── codegen/         # Code generation backends
-│   │   ├── driver/          # Compiler driver and backend system
-│   │   └── cli/             # Command-line interface
-│   ├── Taihe.g4             # ANTLR grammar file
-│   └── tests/               # Python unit tests
-├── runtime/                 # Taihe runtime library (C++)
-│   ├── include/             # Taihe runtime headers
-│   │   └── taihe/           # Common runtime headers
-│   │      └── platform/     # Platform-specific headers
-│   └── src/                 # Taihe runtime source files
-├── stdlib/                  # Standard library IDL files
-├── test/                    # Integration tests
-│   └── .../                 # Test projects with idl/, author/, user/ structure
-├── cookbook/                # Example projects
-│   └── .../                 # Example projects with idl/, author/, user/ structure and additional README.md
-└── docs/                    # Documentation
-    ├── public/              # User-facing documentation
-    │   ├── spec/            # Language specification and reference
-    │   └── backend-*/       # Backend specific usage guides
-    └── internal/            # Developer documentation
-        ├── compiler/        # Compiler architecture and development
-        └── runtime/         # Runtime architecture and development
-```
-
-## Development Commands
-
-### Environment Setup
-
-```bash
-# Sync Python dependencies
+```sh
+# 同步 Python 开发环境
 uv sync
 
-# Build ANTLR parser (required after Taihe.g4 changes)
+# 构建 Python 包；修改 compiler/Taihe.g4 后必须重新生成 ANTLR 产物
 uv build
 
-# Activate virtual environment
-source .venv/bin/activate
-```
-
-### Running the Compiler
-
-```bash
-taihec --help
-taihec idl/path/to/file.taihe ... --output output/dir --generate backend ... --codegen key=value ...
-```
-
-### Code Quality
-
-```bash
-# Check formatting and types (run before committing)
+# 代码格式与类型检查
 scripts/check
-
-# Auto-fix code formatting
-scripts/autofix
 ```
 
-### Testing
-
-There are two layers of tests. Use the right one depending on what you're testing:
-
-- **pytest** (`compiler/tests/`): Only for testing the compiler frontend — parsing, semantic analysis, error diagnostics. Not for backend-specific features like code generation or annotations.
-- **taihe-tryit / integration tests** (`test/`): End-to-end tests for backend features (code generation, annotations, runtime behavior). Each test is a self-contained project with `idl/`, `author/`, `user/` directories. If user-facing interface or functionality is affected, also add corresponding examples to `cookbook/`. Don't forget to register new subdirectories in `CMakeLists.txt`.
-
-```bash
-# Clean previous builds
-rm -rf build/
-
-# Run all tests (pytest, core, ani, cmake)
+```sh
+# 默认测试集合：pytest、C++ 用户、ANI 用户、CMake、NAPI 用户
 scripts/test
 
-# Run specific test suites
-scripts/test --run pytest          # Python unit tests only
-scripts/test --run pytest core     # Multiple test suites
-scripts/test --run ani             # ANI tests (requires CMake build)
+# 编译器前端和语义测试
+scripts/test --run pytest
 
-# Run single pytest file
-uv run pytest compiler/tests/test_semantic_error.py -v
+# C++、ANI、NAPI 用户测试
+scripts/test --run core            # C++ 用户；单工程使用 -u cpp
+scripts/test --run ani             # ANI 用户；单工程使用 -u sts
+scripts/test --run napi            # NAPI 用户；单工程使用 -u ts
+
+# 单个端到端工程
+taihe-tryit test -u cpp test/rgb
+taihe-tryit test -u sts test/ani_primitives
+taihe-tryit test -u ts test/napi_primitives
 ```
 
-### Testing Individual Projects (taihe-tryit)
+修改 `compiler/Taihe.g4` 后必须运行 `uv build`。涉及设备、平台 SDK 或服务集成的行为，必须补充实际环境证据。
 
-`taihe-tryit` is a development utility for testing single cookbook examples or test cases. Each project follows the structure: `idl/` (source .taihe files), `author/` (implementation), `user/` (consumer code), `generated/` (output from code generation), `build/` (build artifacts).
+## 知识索引
 
-**Standard workflow:**
+稳定背景知识放在 `docs/knowledge/`。改动前按场景读取对应文件：
 
-1. **Define Interface**: Write `.taihe` IDL files in `idl/`.
-2. **Generate Code**: Run `taihe-tryit generate -u <mode> example` to produce bridge code in `generated/` and author-side templates in `generated/temp/`.
-3. **Implement Author Side**: Write the implementation in `author/`, referring to the generated templates.
-4. **Implement User Side**: Write consumer code in `user/`.
-5. **Run Test**: Run `taihe-tryit test -u <mode> example` to regenerate, build, and execute the test.
+| 场景 | 先读 |
+| --- | --- |
+| 源码树、模块所有权、语言/编译器/ABI/运行时边界、文档分层 | `docs/knowledge/Project_Overview_Knowledge_Base_CN.md` |
+| IR 声明和类型、TypeRefDecl、注解载体、Visitor、数据结构 | `docs/knowledge/Compiler_IR_Design_Knowledge_Base_CN.md` |
+| 编译阶段、状态转移、失败短路、工具使用时段 | `docs/knowledge/Compiler_Pipeline_Knowledge_Base_CN.md` |
+| 注解、Options、BackendConfig、后端依赖和 hooks | `docs/knowledge/Compiler_Extensibility_Knowledge_Base_CN.md` |
+| Analysis、诊断、异常、Outputs、Writer | `docs/knowledge/Compiler_Utils_Knowledge_Base_CN.md` |
+| 公共基础、调用、对象、容器、平台运行时、作者入口和平台桥分层 | `docs/knowledge/Runtime_Architecture_Knowledge_Base_CN.md` |
+| 运行时数据类型与内存模型、类型映射、对象/句柄、接口投影和调用适配 | `docs/knowledge/Runtime_Type_Protocols_Knowledge_Base_CN.md` |
+| pytest、集成测试、taihe-tryit、CMake、验证证据选择 | `docs/knowledge/Validation_Strategy_Knowledge_Base_CN.md` |
 
-**Commands:**
+## 项目约束
 
-```bash
-taihe-tryit create -u cpp path/to/example         # Create a new project scaffold
-taihe-tryit generate -u sts path/to/example       # Generate code only (no build)
-taihe-tryit build -u sts path/to/example          # Build only (assumes code generated)
-taihe-tryit test -u cpp test/rgb                  # Full flow: generate + build + run
-taihe-tryit test -u sts test/ani_callback         # Full flow (ArkTS Static mode)
-```
-
-## Architecture
-
-### Compiler Pipeline
-
-The compilation is driven by `CompilerInstance.run()`, which executes the following phases:
-
-| Phase | Compiler Action | Backend Hook | Backend Action | Hook Constraints |
-|-------|-----------------|--------------|----------------|------------------|
-| (init) | Build backends | `setup()` | Set up attributes, analyses | - |
-| `collect()` | Scan and add source files | `add_sources()` | Add backend-specific sources (e.g., stdlib) | - |
-| `parse()` | Parse sources to syntax IR | - | - | - |
-| `resolve()` | Resolve names, types, enum values, attributes | - | - | - |
-| `post_process()` | - | `post_process()` | Add backend-specific metadata to resolved IR | Must be idempotent. Must not affect other backends or modify shared attributes, only for adding backend-specific metadata. May call `Analysis.provide()`. |
-| `validate()` | Semantic validation | `validate()` | Backend-specific validation | Must not transform IR. Must not break previously valid code, code without backend-specific features must always pass. |
-| `generate()` | Code generation (skip if errors) | `generate()` | Emit output files | Must not transform IR or report errors at this stage. |
-
-### Key Modules
-
-1. **Frontend** (`taihe.parse`): Source text -> IR
-   - `compiler/Taihe.g4`: ANTLR grammar definition
-   - `taihe.parse.antlr`: Generated lexer/parser (regenerate with `uv build`)
-   - `taihe.parse.convert`: AST to IR conversion
-
-2. **Semantics** (`taihe.semantics`): IR resolution and validation
-   - `declarations.py`: IR node types (GlobFuncDecl, StructDecl, EnumDecl, etc.)
-   - `types.py`: Type system definitions
-   - `attributes.py`: Language-agnostic annotation system
-   - `visitor.py`: DeclVisitor, RecursiveDeclVisitor, TypeVisitor patterns
-   - `analysis.py`: IR resolution (name/type/attribute) and semantic validation passes
-
-3. **Code Generation** (`taihe.codegen`): IR -> Target source code
-   - `abi/`: C ABI layer generation (mangle, analyses, gen_abi, gen_impl)
-   - `cpp/`: C++ projection generation
-   - `ani/`: ArkTS/ANI binding generation
-
-### Driver and Backend System
-
-- `taihe.driver.contexts`: CompilerInvocation (configuration) and CompilerInstance (execution)
-- `taihe.driver.backend`: BackendRegistry, BackendConfig, Backend base classes
-
-Current Available backends:
-- ABI related: `abi-header`, `abi-source`, `c-author`
-- C++ related: `cpp-common`, `cpp-user`, `cpp-author`
-- ArkTS/ANI related: `ani-bridge`
-- Utility: `pretty-print`
-
-### Key Design Patterns
-
-- **Analysis System** (`taihe.utils.analyses`): Cached, lazy computation of derived information attached to IR nodes via AnalysisManager
-- **Diagnostics** (`taihe.utils.diagnostics`): Structured error/warning reporting with source locations
-- **Attribute System** (`taihe.semantics.attributes`): Flexible annotation system for attaching metadata to IR nodes without modifying their structure, used for implementing backend-specific features
-
-## Documentation
-
-Here are some useful references for different tasks:
-
-| Task | Reference |
-|------|-----------|
-| Use Taihe CLI tools | `docs/public/spec/CliReference.md` |
-| IDL syntax and language features | `docs/public/spec/IdlReference.md` |
-| C++ projection usage | `docs/public/backend-cpp/CppUsageGuide.md` |
-| Compiler architecture and development | `docs/internal/compiler` |
-| Runtime library architecture and development | `docs/internal/runtime` |
-
-For usage patterns, refer to `cookbook/` examples. For complete test cases, see `test/`.
-
-## Development Notes
-
-### Common Pitfalls
-
-1. **Virtual environment required**: `taihec` and `taihe-tryit` require an activated virtual environment. Use `source .venv/bin/activate` first, or prefix commands with `uv run`.
-
-2. **ANTLR regeneration**: After modifying `compiler/Taihe.g4`, you must run `uv build` to regenerate the parser. Forgetting this will cause the changes to have no effect.
-
-3. **CMake cache stale**: `scripts/test` depends on CMake and does not automatically clean the `build/` directory. If you only modified compiler code, CMake won't detect the changes. Run `rm -rf build/` before re-running tests to ensure a fresh build.
-
-4. **CMakeLists.txt updates**: When adding new subdirectories to `test/` or `cookbook/`, remember to register them in the corresponding `CMakeLists.txt`.
-
-### Workflow Recommendations
-
-- **Consult documentation first**: For IDL syntax, type mappings, and backend-specific features, refer to `docs/` before guessing. The documentation is authoritative for current behavior.
-- **Use `taihe-tryit generate`**: When developing backends, use `taihe-tryit generate` to quickly validate code generation without a full build/run cycle.
-
-### Code Style
-
-- **Python**: ruff format + ruff check + pyright type checking. Type annotations are always required for function signatures.
-- **C++**: clang-format-19, C++17 standard, Clang compiler. Since the Taihe runtime aims to provide users with a similar experience to the C++ standard library, its naming conventions and coding styles should also follow the C++ standard library as much as possible.
-- **ArkTS**: clang-format-19 (with JS assumptions).
+- 必须把 `AGENTS.md` 保持为入口层，只放路由、全局命令和全局硬约束；不要在此展开领域知识。
+- 必须把稳定设计约束写入 `docs/knowledge/`；不要写入临时状态、具体后端当前实现细节或教程式说明。
+- 不要把目标语言或平台特有信息写入语言无关 IR；优先通过注解系统、Analysis 或后端私有结构承载。
+- 修改 `compiler/Taihe.g4` 必须运行 `uv build`，并补充前端或语义验证。
+- 新增 `test/` 或 `cookbook/` 子目录必须同步注册到对应 `CMakeLists.txt`。
