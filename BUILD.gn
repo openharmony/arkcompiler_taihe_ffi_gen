@@ -101,6 +101,7 @@ action("build_taihe") {
     "runtime/include/taihe/optional.abi.h",
     "runtime/include/taihe/optional.hpp",
     "runtime/include/taihe/platform/ani.hpp",
+    "runtime/include/taihe/platform/napi.hpp",
     "runtime/include/taihe/runtime.hpp",
     "runtime/include/taihe/runtime_ani.hpp",
     "runtime/include/taihe/runtime_napi.hpp",
@@ -126,6 +127,7 @@ action("build_taihe") {
 
     # Stdlib IDL
     "stdlib/taihe.platform.ani.taihe",
+    "stdlib/taihe.platform.napi.taihe",
 
     # CMake
     "cmake/TaiheUtils.cmake",
@@ -246,6 +248,7 @@ action("build_taihe_modobj") {
     "runtime/include/taihe/optional.abi.h",
     "runtime/include/taihe/optional.hpp",
     "runtime/include/taihe/platform/ani.hpp",
+    "runtime/include/taihe/platform/napi.hpp",
     "runtime/include/taihe/runtime.hpp",
     "runtime/include/taihe/runtime_ani.hpp",
     "runtime/include/taihe/runtime_napi.hpp",

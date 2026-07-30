@@ -65,6 +65,7 @@ _BUILD_CONFIGS = {
             "src/taihe/runtime/runtime_ani.cpp",
             "src/taihe/runtime/runtime_napi.cpp",
             "include/taihe/platform/ani.hpp",
+            "include/taihe/platform/napi.hpp",
         ],
     ),
     "sdk": BuildModeConfig(
