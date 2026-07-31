@@ -103,35 +103,34 @@ class DtsCodeGenerator:
 
     def gen_func(self, func: GlobFuncDecl, target: DtsWriter):
         func_napi_info = GlobFuncNapiInfo.get(self.am, func)
-        args = []
+        params = []
         for param in func.params:
-            value_ty = param.ty
-            param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-            args.append(
-                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+            params.append(
+                f"{param.name}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
-        args_str = ", ".join(args)
+        params_str = ", ".join(params)
         if isinstance(func.return_ty, NonVoidType):
-            return_ty_dts_info = TypeNapiInfo.get(self.am, func.return_ty)
-            return_ty = return_ty_dts_info.dts_return_type_in(target)
+            return_ty_napi_info = TypeNapiInfo.get(self.am, func.return_ty)
+            return_ty = return_ty_napi_info.dts_return_type_in(target)
         else:
             return_ty = "void"
         if func_napi_info.async_name is not None:
             cbname = "callback"
             callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
             callback_ts = f"{cbname}: {callback_ty_ts_name}"
-            params_with_callback_ts_str = ", ".join([*args, callback_ts])
+            params_with_callback_ts_str = ", ".join([*params, callback_ts])
             target.writelns(
                 f"export function {func_napi_info.async_name}({params_with_callback_ts_str}): void;",
             )
         elif func_napi_info.promise_name is not None:
             promise_ty = f"Promise<{return_ty}>"
             target.writelns(
-                f"export function {func_napi_info.promise_name}({args_str}): {promise_ty};",
+                f"export function {func_napi_info.promise_name}({params_str}): {promise_ty};",
             )
         else:
             target.writelns(
-                f"export function {func_napi_info.norm_name}({args_str}): {return_ty};",
+                f"export function {func_napi_info.norm_name}({params_str}): {return_ty};",
             )
 
     def gen_struct_interface(
@@ -161,7 +160,7 @@ class DtsCodeGenerator:
             for injected in struct_napi_info.interfacets_dts_injected_codes:
                 target.write_block(injected)
 
-            for field in struct_napi_info.dts_fields:
+            for field in struct_napi_info.dts_local_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 ty_napi_info = TypeNapiInfo.get(self.am, field.ty)
                 target.writelns(
@@ -178,6 +177,11 @@ class DtsCodeGenerator:
             return
 
         struct_decl = f"class {struct_napi_info.dts_type_name}"
+        if parent := struct_napi_info.dts_class_parent:
+            parent_ty = parent.ty
+            parent_napi_info = TypeNapiInfo.get(self.am, parent_ty)
+            extends_str = parent_napi_info.dts_type_in(target)
+            struct_decl = f"{struct_decl} extends {extends_str}"
         if struct_napi_info.dts_iface_parents:
             parents = []
             for parent in struct_napi_info.dts_iface_parents:
@@ -221,7 +225,7 @@ class DtsCodeGenerator:
         iface_decl = f"interface {iface_napi_info.dts_type_name}"
         if iface_napi_info.dts_iface_parents:
             parents = []
-            for parent in iface.extends:
+            for parent in iface_napi_info.dts_iface_parents:
                 parent_ty = parent.ty
                 parent_napi_info = TypeNapiInfo.get(self.am, parent_ty)
                 parents.append(parent_napi_info.dts_type_in(target))
@@ -249,6 +253,11 @@ class DtsCodeGenerator:
             return
 
         iface_decl = f"class {iface_napi_info.dts_type_name}"
+        if parent := iface_napi_info.dts_class_parent:
+            parent_ty = parent.ty
+            parent_napi_info = TypeNapiInfo.get(self.am, parent_ty)
+            extends_str = parent_napi_info.dts_type_in(target)
+            iface_decl = f"{iface_decl} extends {extends_str}"
         if iface_napi_info.dts_iface_parents:
             parents = []
             for parent in iface_napi_info.dts_iface_parents:
@@ -300,15 +309,14 @@ class DtsCodeGenerator:
         static_func_napi_info = GlobFuncNapiInfo.get(self.am, static_func)
         params = []
         for param in static_func.params:
-            value_ty = param.ty
-            param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             params.append(
-                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                f"{param.name}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
         params_str = ", ".join(params)
         if isinstance(static_func.return_ty, NonVoidType):
-            return_ty_dts_info = TypeNapiInfo.get(self.am, static_func.return_ty)
-            return_ty = return_ty_dts_info.dts_return_type_in(target)
+            return_ty_napi_info = TypeNapiInfo.get(self.am, static_func.return_ty)
+            return_ty = return_ty_napi_info.dts_return_type_in(target)
         else:
             return_ty = "void"
         if static_func_napi_info.async_name is not None:
@@ -335,44 +343,42 @@ class DtsCodeGenerator:
         target: DtsWriter,
     ):
         iface_method_napi_info = IfaceMethodNapiInfo.get(self.am, method)
-        dts_params = []
+        params = []
         for param in method.params:
-            type_napi_info = TypeNapiInfo.get(self.am, param.ty)
-            dts_params.append(
-                f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+            params.append(
+                f"{param.name}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
-        dts_params_str = ", ".join(dts_params)
+        params_str = ", ".join(params)
         if isinstance(method.return_ty, NonVoidType):
-            type_napi_info = TypeNapiInfo.get(self.am, method.return_ty)
-            return_ty = type_napi_info.dts_return_type_in(target)
-            property_return_ty_name = ": " + return_ty
+            return_ty_napi_info = TypeNapiInfo.get(self.am, method.return_ty)
+            return_ty = return_ty_napi_info.dts_return_type_in(target)
         else:
-            property_return_ty_name = ""
             return_ty = "void"
         if iface_method_napi_info.get_name is not None:
             target.writelns(
-                f"get {iface_method_napi_info.get_name}({dts_params_str}){property_return_ty_name};",
+                f"get {iface_method_napi_info.get_name}(): {return_ty};",
             )
         elif iface_method_napi_info.set_name is not None:
             target.writelns(
-                f"set {iface_method_napi_info.set_name}({dts_params_str}){property_return_ty_name};",
+                f"set {iface_method_napi_info.set_name}({params_str});",
             )
         elif iface_method_napi_info.async_name is not None:
             cbname = "callback"
             callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
             callback_ts = f"{cbname}: {callback_ty_ts_name}"
-            params_with_callback_ts_str = ", ".join([*dts_params, callback_ts])
+            params_with_callback_ts_str = ", ".join([*params, callback_ts])
             target.writelns(
                 f"{iface_method_napi_info.async_name}({params_with_callback_ts_str}): void;",
             )
         elif iface_method_napi_info.promise_name is not None:
             promise_ty = f"Promise<{return_ty}>"
             target.writelns(
-                f"{iface_method_napi_info.promise_name}({dts_params_str}): {promise_ty};",
+                f"{iface_method_napi_info.promise_name}({params_str}): {promise_ty};",
             )
         else:
             target.writelns(
-                f"{iface_method_napi_info.norm_name}({dts_params_str}): {return_ty};",
+                f"{iface_method_napi_info.norm_name}({params_str}): {return_ty};",
             )
 
     def gen_enum(

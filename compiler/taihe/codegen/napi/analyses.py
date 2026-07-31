@@ -53,7 +53,6 @@ from taihe.codegen.napi.attributes import (
     StaticAttr,
     TsInjectAttr,
     TsInjectIntoClazzAttr,
-    TsInjectIntoIfaceAttr,
     TsInjectIntoModuleAttr,
     TypedArrayAttr,
     UndefinedAttr,
@@ -210,14 +209,8 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
         self.dts_type_name = d.name
-        if ClassAttr.get(d):
-            self.dts_impl_name = f"{d.name}"
-        else:
-            self.dts_impl_name = f"{d.name}_inner"
+        self._is_class = ClassAttr.get(d) is not None
 
-        self.interfacets_ts_injected_codes: list[str] = []
-        for iface_injected in TsInjectIntoIfaceAttr.get_all(d):
-            self.interfacets_ts_injected_codes.append(iface_injected.ts_code)
         self.class_ts_injected_codes: list[str] = []
         for class_injected in TsInjectIntoClazzAttr.get_all(d):
             self.class_ts_injected_codes.append(class_injected.ts_code)
@@ -233,27 +226,23 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         self.static_register_infos: dict[str, tuple[str, str, str]] = {}
         self.static_funcs: list[GlobFuncDecl] = []
 
-        self.dts_fields: list[StructFieldDecl] = []
         self.dts_iface_parents: list[StructFieldDecl] = []
-        self.dts_class_parents: list[StructFieldDecl] = []
+        self.dts_class_parent: StructFieldDecl | None = None
         self.dts_final_fields: list[list[StructFieldDecl]] = []
+        self.dts_local_fields: list[StructFieldDecl] = []
         for field in d.fields:
-            if ExtendsAttr.get(field):
-                ty = field.ty
-                if not isinstance(ty, StructType):
-                    raise ValueError("struct cannot extend non-struct type")
-                    # TODO: check struct parent type
-                parent_napi_info = StructNapiInfo.get(am, ty.decl)
+            if extend := ExtendsAttr.get(field):
+                parent_napi_info = StructNapiInfo.get(am, extend.ty.decl)
                 if parent_napi_info.is_class():
-                    self.dts_class_parents.append(field)
+                    self.dts_class_parent = field
                 else:
                     self.dts_iface_parents.append(field)
                 self.dts_final_fields.extend(
                     [field, *parts] for parts in parent_napi_info.dts_final_fields
                 )
             else:
-                self.dts_fields.append(field)
                 self.dts_final_fields.append([field])
+                self.dts_local_fields.append(field)
 
         self.register_infos: dict[str, tuple[str, str, str]] = defaultdict(
             lambda: ("nullptr", "nullptr", "nullptr")
@@ -277,7 +266,7 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         return StructNapiInfo(am, p)
 
     def is_class(self):
-        return self.dts_type_name == self.dts_impl_name
+        return self._is_class
 
     def dts_type_in(self, target: DtsWriter):
         return self.pkg_napi_info.ns.get_member(
@@ -293,14 +282,8 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
         self.dts_type_name = d.name
-        if ClassAttr.get(d):
-            self.dts_impl_name = f"{d.name}"
-        else:
-            self.dts_impl_name = f"{d.name}_inner"
+        self._is_class = ClassAttr.get(d) is not None
 
-        self.interface_ts_injected_codes: list[str] = []
-        for iface_injected in TsInjectIntoIfaceAttr.get_all(d):
-            self.interface_ts_injected_codes.append(iface_injected.ts_code)
         self.class_ts_injected_codes: list[str] = []
         for class_injected in TsInjectIntoClazzAttr.get_all(d):
             self.class_ts_injected_codes.append(class_injected.ts_code)
@@ -322,7 +305,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
                 local_name = method.name
                 self.methods.append((local_name, method))
                 iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
-                mangled_name = f"local::{d.name}::method::{local_name}"
+                mangled_name = f"method::{local_name}"
                 if get_name := iface_meth_napi_info.get_name:
                     caller, _, setter = self.register_infos[get_name]
                     self.register_infos[get_name] = (caller, mangled_name, setter)
@@ -338,14 +321,12 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.static_register_infos: dict[str, tuple[str, str, str]] = {}
         self.static_funcs: list[GlobFuncDecl] = []
 
-        self.dts_class_parents: list[IfaceExtendDecl] = []
+        self.dts_class_parent: IfaceExtendDecl | None = None
         self.dts_iface_parents: list[IfaceExtendDecl] = []
         for extend in d.extends:
-            ty = extend.ty
-            assert isinstance(ty, IfaceType)
-            parent_napi_info = IfaceNapiInfo.get(am, ty.decl)
+            parent_napi_info = IfaceNapiInfo.get(am, extend.ty.decl)
             if parent_napi_info.is_class():
-                self.dts_class_parents.append(extend)
+                self.dts_class_parent = extend
             else:
                 self.dts_iface_parents.append(extend)
 
@@ -355,7 +336,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         return IfaceNapiInfo(am, f)
 
     def is_class(self):
-        return self.dts_type_name == self.dts_impl_name
+        return self._is_class
 
     def dts_type_in(self, target: DtsWriter):
         return self.pkg_napi_info.ns.get_member(
@@ -752,8 +733,6 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        iface_napi_info = IfaceNapiInfo.get(self.am, t.decl)
-        self.iface_register_infos = iface_napi_info.register_infos
         self.napi_valuetype = False
 
     @override
@@ -884,20 +863,19 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        params_ty_dts = []
-        for index, param in enumerate(self.type.ref.params):
-            arg = f"arg_{index}"
+        params = []
+        for param in self.type.ref.params:
             param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-            params_ty_dts.append(
-                f"{arg}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
+            params.append(
+                f"{param.name}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
-        params_ty_dts_str = ", ".join(params_ty_dts)
+        params_str = ", ".join(params)
         if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
             return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-            return_ty_dts = return_ty_napi_info.dts_type_in(target)
+            return_ty = return_ty_napi_info.dts_type_in(target)
         else:
-            return_ty_dts = "void"
-        return f"(({params_ty_dts_str}) => {return_ty_dts})"
+            return_ty = "void"
+        return f"(({params_str}) => {return_ty})"
 
     @override
     def gen_from_napi(self, target: CSourceWriter, name: str):
@@ -927,7 +905,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         method_args = []
         for param in self.type.ref.params:
             param_cpp_type_info = TypeCppInfo.get(self.am, param.ty)
-            method_arg = param.name
+            method_arg = f"arg_{param.name}"
             method_args.append(method_arg)
             method_params.append(f"{param_cpp_type_info.as_param} {method_arg}")
         method_params_str = ", ".join(method_params)
@@ -963,7 +941,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         method_args = []
         for param in self.type.ref.params:
             param_cpp_type_info = TypeCppInfo.get(self.am, param.ty)
-            method_arg = param.name
+            method_arg = f"arg_{param.name}"
             method_params.append(f"{param_cpp_type_info.as_param} {method_arg}")
             method_args.append(method_arg)
         method_params_str = ", ".join(method_params)
@@ -981,16 +959,16 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
             f"}}",
         ):
             target.writelns(
-                f"napi_value args_inner[{len(self.type.ref.params)}];",
+                f"napi_value args[{len(self.type.ref.params)}];",
             )
             for index, (param, method_arg) in enumerate(
                 zip(self.type.ref.params, method_args, strict=True)
             ):
                 param_napi_type_info = TypeNapiInfo.get(self.am, param.ty)
-                into_napi = f"into_napi_{param.name}"
+                into_napi = f"into_napi_arg_{param.name}"
                 param_napi_type_info.gen_into_napi(target, into_napi)
                 target.writelns(
-                    f"args_inner[{index}] = {into_napi}(env, std::forward<decltype({method_arg})>({method_arg}));",
+                    f"args[{index}] = {into_napi}(env, std::forward<decltype({method_arg})>({method_arg}));",
                 )
             target.writelns(
                 f"napi_value cb_ref = nullptr;",
@@ -998,7 +976,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"napi_value global = nullptr;",
                 f"NAPI_CALL(env, napi_get_global(env, &global));",
                 f"napi_value callback_result_napi = nullptr;",
-                f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, args_inner, &callback_result_napi));",
+                f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, args, &callback_result_napi));",
             )
             if not cb_abi_info.is_noexcept:
                 target.writelns(
@@ -1124,7 +1102,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
     ) -> list[str]:
         cpp_exprs = []
         for index, param in enumerate(self.type.ref.params):
-            from_napi = f"from_napi_arg_{index}"
+            from_napi = f"from_napi_arg_{param.name}"
             param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             param_ty_napi_info.gen_from_napi(target, from_napi)
             cpp_exprs.append(f"{from_napi}(env, {args}[{index}])")
@@ -1151,9 +1129,9 @@ class EnumTypeNapiInfo(TypeNapiInfo):
             f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
             f"}};",
         ):
-            item_ty_napi_info.gen_from_napi(target, "item_from_napi")
+            item_ty_napi_info.gen_from_napi(target, "from_napi_item")
             target.writelns(
-                f"return {self.cpp_info.as_owner}::from_value(item_from_napi(env, napi_input));",
+                f"return {self.cpp_info.as_owner}::from_value(from_napi_item(env, napi_input));",
             )
 
     @override
@@ -1163,9 +1141,9 @@ class EnumTypeNapiInfo(TypeNapiInfo):
             f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
             f"}};",
         ):
-            item_ty_napi_info.gen_into_napi(target, "item_into_napi")
+            item_ty_napi_info.gen_into_napi(target, "into_napi_item")
             target.writelns(
-                f"return item_into_napi(env, cpp_value.get_value());",
+                f"return into_napi_item(env, cpp_value.get_value());",
             )
 
 
@@ -1771,9 +1749,9 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
             f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
             f"}};",
         ):
-            item_ty_napi_info.gen_from_napi(target, "item_from_napi")
+            item_ty_napi_info.gen_from_napi(target, "from_napi_item")
             target.writelns(
-                f"return {self.cpp_info.as_owner}::from_value(item_from_napi(env, napi_input));",
+                f"return {self.cpp_info.as_owner}::from_value(from_napi_item(env, napi_input));",
             )
 
     @override
@@ -1783,9 +1761,9 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
             f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
             f"}};",
         ):
-            item_ty_napi_info.gen_into_napi(target, "item_into_napi")
+            item_ty_napi_info.gen_into_napi(target, "into_napi_item")
             target.writelns(
-                f"return item_into_napi(env, cpp_value.get_value());",
+                f"return into_napi_item(env, cpp_value.get_value());",
             )
 
 

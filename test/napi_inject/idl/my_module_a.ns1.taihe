@@ -25,7 +25,6 @@ enum Color: String {
 function noo(): void;
 
 interface IBase {
-@!ts_inject_into_interface("add(a: number, b: number): number;")
     @get getName(): String;
     @set setName(s: String): void;
     getId(): String;

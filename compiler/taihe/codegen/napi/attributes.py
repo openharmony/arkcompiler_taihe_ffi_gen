@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -136,16 +136,6 @@ class TsInjectIntoClazzAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
     ts_code: str
 
 
-@dataclass
-class TsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
-    # TODO: Hack
-
-    NAME = "ts_inject_into_interface"
-    TARGETS = (IfaceDecl, StructDecl)
-
-    ts_code: str
-
-
 all_napi_attr_types = [
     DtsTypeAttr,
     LibAttr,
@@ -156,7 +146,6 @@ all_napi_attr_types = [
     TsInjectAttr,
     TsInjectIntoModuleAttr,
     TsInjectIntoClazzAttr,
-    TsInjectIntoIfaceAttr,
     # TODO: hack from ani
     ArrayBufferAttr,
     AsyncAttribute,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,7 +40,6 @@ function Funtest(s: MyStruct): i32;
 struct MyStruct {
     a: i32;
     b: i32;
-@!ts_inject_into_interface("add(a: number, b: number): number;")
 }
 function foo(): void;
 
@@ -65,9 +64,9 @@ struct MyTest {
     a: Array<i32>;
 @!ts_inject_into_class("""constructor(a: Array<number> | number) {
     if (typeof a === "number") {
-        this.nativeMyTest = createMyTestNum(a);
+        super(createMyTestNum(a).a);
     } else {
-        this.nativeMyTest = createMyTestArrayNum(a);
+        super(createMyTestArrayNum(a).a);
     }
 }
 """)

@@ -1488,9 +1488,9 @@ export namespace functiontest {
 
 注意，如果需要让当前 Taihe 文件对应的 module 生成 .ts 文件，或在当前 Taihe 文件中使用 ts inject 相关功能，必须提供 @!lib 注解。其语法为 @!lib("{so_file_name}")，使用注解时需指定 so 文件，作用是为生成的 .ts 文件提供寻找 C++ 层实现的途径。
 
-此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject_into_interface 将一段 ArkTS-Dyn 代码注入到当前 interface 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTS-Dyn 代码注入到当前 interface 对应的 class 中。
+此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTS-Dyn 代码注入到当前 interface 对应的 class 中。
 
-注意，@!ts_inject_into_interface 注解应用于 struct 和 interface，@!ts_inject_into_class 注解可以应用于添加了 @class 注解的 struct 和 interface。
+注意，@!ts_inject_into_class 注解可以应用于添加了 @class 注解的 struct 和 interface。
 
 **`my_module_a.ohidl`**
 
@@ -1516,7 +1516,6 @@ function concat_i32(a: i32): i32;
 @!namespace("my_module_a", "ns1")
 
 interface IBase {
-@!ts_inject_into_interface("add(a: number, b: number): number;")
     getId(): String;
     setId(s: String): void;
 }
