@@ -188,6 +188,8 @@ public:
 
     napi_ref_guard(napi_ref_guard const &) = delete;
     napi_ref_guard &operator=(napi_ref_guard const &) = delete;
+    napi_ref_guard(napi_ref_guard &&other) = delete;
+    napi_ref_guard &operator=(napi_ref_guard &&other) = delete;
 
     uintptr_t getGlobalReference() const
     {

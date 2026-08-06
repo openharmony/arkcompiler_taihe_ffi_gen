@@ -918,7 +918,8 @@ class NapiCodeGenerator:
         ):
             if (ctor := struct_napi_info.ctor) is None:
                 target.writelns(
-                    f"return inner_constructor(env, info);",
+                    f'napi_throw_error(env, nullptr, "Constructor does not exist for class {struct_napi_info.dts_type_name}");',
+                    f"return nullptr;",
                 )
                 return
             ctor_abi_info = GlobFuncAbiInfo.get(self.am, ctor)
@@ -1354,7 +1355,8 @@ class NapiCodeGenerator:
         ):
             if (ctor := iface_napi_info.ctor) is None:
                 target.writelns(
-                    f"return inner_constructor(env, info);",
+                    f'napi_throw_error(env, nullptr, "Constructor does not exist for class {iface_napi_info.dts_type_name}");',
+                    f"return nullptr;",
                 )
                 return
             ctor_abi_info = GlobFuncAbiInfo.get(self.am, ctor)
@@ -1497,12 +1499,12 @@ class NapiCodeGenerator:
     ):
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
-        for name, method in iface_napi_info.methods:
-            ancestor_cpp_info = IfaceCppInfo.get(self.am, method.parent_iface)
-            with target.indented(
-                f"namespace method {{",
-                f"}}",
-            ):
+        with target.indented(
+            f"namespace method {{",
+            f"}}",
+        ):
+            for name, method in iface_napi_info.methods:
+                ancestor_cpp_info = IfaceCppInfo.get(self.am, method.parent_iface)
                 with target.indented(
                     f"static napi_value {name}(napi_env env, napi_callback_info info) {{",
                     f"}}",
