@@ -28,10 +28,13 @@
 enum TStringFlags {
     TSTRING_MODE_MASK = 0xFFFF,
     TSTRING_ENCODING_MASK = 0xFFFF0000,
-    TSTRING_REF = 1u,
-    TSTRING_EXT = 1u << 1,
+    TSTRING_STA = 0u,
+    TSTRING_NAT = 1u,
+    TSTRING_EXT = 2u,
+    TSTRING_REF = 3u,
+    TSTRING_UNKNOWN = 0u << 16,
     TSTRING_UTF8 = 1u << 16,
-    TSTRING_UTF16 = 1u << 17,
+    TSTRING_UTF16 = 2u << 16,
 };
 
 struct TStringInfo {
@@ -43,8 +46,8 @@ struct TStringInfo {
 struct TString {
     uint32_t flags;
     uint32_t length;
-    struct TStringInfo *pstrinfo;
     char const *ptr;
+    struct TStringInfo *pstrinfo;
 };
 
 //////////////////
@@ -91,6 +94,16 @@ TH_INLINE void tstr_set_len(struct TString *tstr_ptr, size_t len)
 TH_INLINE void tstr_set_len_utf16(struct TString *tstr_ptr, size_t len)
 {
     tstr_ptr->length = len * sizeof(uint16_t);
+}
+
+TH_INLINE void tstr_set_buf(struct TString *tstr_ptr, char const *buf)
+{
+    tstr_ptr->ptr = buf;
+}
+
+TH_INLINE void tstr_set_buf_utf16(struct TString *tstr_ptr, uint16_t const *buf)
+{
+    tstr_ptr->ptr = reinterpret_cast<char const *>(buf);
 }
 
 // Allocates memory and initializes a UTF8 encoding TString with a given
@@ -153,6 +166,11 @@ TH_EXPORT struct TString tstr_new(char const *buf TH_NONNULL, size_t len);
 //    used.
 TH_EXPORT struct TString tstr_new_ref(char const *buf TH_NONNULL, size_t len);
 
+TH_EXPORT struct TString tstr_new_from_external(char const *buf TH_NONNULL, size_t len, void *external_obj,
+                                                void (*drop)(void *));
+
+TH_EXPORT struct TString tstr_new_from_static(char const *buf TH_NONNULL, size_t len);
+
 // Creates a new heap-allocated TString by copying an existing UTF16 string.
 //
 // # Arguments
@@ -182,6 +200,11 @@ TH_EXPORT struct TString tstr_new_utf16(uint16_t const *buf TH_NONNULL, size_t l
 //    In this case, the original `tstr` is still uninitialized and should not be
 //    used.
 TH_EXPORT struct TString tstr_new_ref_utf16(uint16_t const *buf TH_NONNULL, size_t len);
+
+TH_EXPORT struct TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size_t len, void *external_obj,
+                                                      void (*drop)(void *));
+
+TH_EXPORT struct TString tstr_new_from_static_utf16(uint16_t const *buf TH_NONNULL, size_t len);
 
 // Frees a TString, releasing allocated memory if applicable.
 //
@@ -235,10 +258,10 @@ TH_EXPORT struct TString tstr_concat(size_t count, struct TString const *tstr_li
 //   the memory, so it should not be freed.
 TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos, size_t len);
 
-// Converts a UTF8-encoded TString object into a UTF16-encoded TString.
+// Creates a duplicate of a TString, converting it to UTF16 encoding if necessary.
 //
 // # Parameters
-// - `utf8_str`: The source TString encoded in UTF8.
+// - `tstr`: The source TString.
 //
 // # Returns
 // - A new TString encoded in UTF16.
@@ -249,12 +272,12 @@ TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos, size_t len
 //   policy (typically replacing invalid sequences with U+FFFD).
 // - Serious errors return an empty string U'\0'.
 // - The returned TString is heap-allocated and independent of the input.
-TH_EXPORT struct TString tstr_utf8_to_utf16(struct TString utf8_str);
+TH_EXPORT struct TString tstr_dup_as_utf16(struct TString tstr);
 
-// Converts a UTF16-encoded TString object into a UTF8-encoded TString.
+// Creates a duplicate of a TString, converting it to UTF8 encoding if necessary.
 //
 // # Parameters
-// - `utf16_str`: The source TString encoded in UTF16.
+// - `tstr`: The source TString.
 //
 // # Returns
 // - A new TString encoded in UTF8.
@@ -265,7 +288,7 @@ TH_EXPORT struct TString tstr_utf8_to_utf16(struct TString utf8_str);
 //   to the internal conversion policy (typically replacing invalid sequences
 //   with U+FFFD).
 // - The returned TString is heap-allocated and independent of the input.
-TH_EXPORT struct TString tstr_utf16_to_utf8(struct TString utf16_str);
+TH_EXPORT struct TString tstr_dup_as_utf8(struct TString tstr);
 
 // Concatenates two UTF-16 TString objects.
 //

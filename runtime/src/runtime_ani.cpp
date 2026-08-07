@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -254,7 +254,7 @@ taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
     char *msgBuffer = tstr_initialize(&msgHandle, msgLength + 1);
     TH_ANI_CHECKED_CALL(env, String_GetUTF8, errMsg, msgBuffer, msgLength + 1, &msgLength);
     msgBuffer[msgLength] = '\0';
-    msgHandle.length = msgLength;
+    tstr_set_len(&msgHandle, msgLength);
     taihe::string msg(msgHandle);
 
     ani_int code = 0;

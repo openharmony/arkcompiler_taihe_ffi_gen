@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -1611,7 +1611,7 @@ class StringTypeAniInfo(TypeAniInfo):
                 f"char* buff = tstr_initialize(&tstr, size + 1);",
                 f"TH_ANI_CHECKED_CALL(env, String_GetUTF8, ani_value, buff, size + 1, &size);",
                 f"buff[size] = '\\0';",
-                f"tstr.length = size;",
+                f"tstr_set_len(&tstr, size);",
                 f"return ::taihe::string(tstr);",
             )
 

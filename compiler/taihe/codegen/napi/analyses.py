@@ -659,7 +659,7 @@ class StringTypeNapiInfo(TypeNapiInfo):
                 f"char* cpp_result_buf = tstr_initialize(&cpp_result_abi, cpp_result_len + 1);",
                 f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, cpp_result_buf, cpp_result_len + 1, &cpp_result_len));",
                 f"cpp_result_buf[cpp_result_len] = '\\0';",
-                f"cpp_result_abi.length = cpp_result_len;",
+                f"tstr_set_len(&cpp_result_abi, cpp_result_len);",
                 f"return taihe::string(cpp_result_abi);",
             )
 

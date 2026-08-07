@@ -45,16 +45,31 @@ struct common_string_view {
     {
     }
 
-    common_string_view(char const *value TH_NONNULL) : common_string_view(tstr_new_ref(value, std::strlen(value)))
+    common_string_view(char const *value TH_NONNULL, std::size_t size) : common_string_view(tstr_new_ref(value, size))
     {
     }
 
-    common_string_view(char const *value TH_NONNULL, std::size_t size) : common_string_view(tstr_new_ref(value, size))
+    common_string_view(char const *value TH_NONNULL) : common_string_view(value, std::strlen(value))
+    {
+    }
+
+    common_string_view(static_flag_t, char const *value TH_NONNULL, std::size_t size)
+        : common_string_view(tstr_new_from_static(value, size))
+    {
+    }
+
+    common_string_view(static_flag_t, char const *value TH_NONNULL)
+        : common_string_view(static_flag, value, std::strlen(value))
     {
     }
 
     common_string_view(char16_t const *value TH_NONNULL, std::size_t size)
         : common_string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
+    {
+    }
+
+    common_string_view(static_flag_t, char16_t const *value TH_NONNULL, std::size_t size)
+        : common_string_view(tstr_new_from_static_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
 
@@ -126,16 +141,41 @@ struct common_string : public common_string_view {
     {
     }
 
-    common_string(char const *value TH_NONNULL) : common_string(tstr_new(value, std::strlen(value)))
+    common_string(char const *value TH_NONNULL, std::size_t size) : common_string(tstr_new(value, size))
     {
     }
 
-    common_string(char const *value TH_NONNULL, std::size_t size) : common_string(tstr_new(value, size))
+    common_string(char const *value TH_NONNULL) : common_string(value, std::strlen(value))
+    {
+    }
+
+    common_string(static_flag_t, char const *value TH_NONNULL, std::size_t size)
+        : common_string(tstr_new_from_static(value, size))
+    {
+    }
+
+    common_string(static_flag_t, char const *value TH_NONNULL) : common_string(static_flag, value, std::strlen(value))
+    {
+    }
+
+    common_string(char const *value TH_NONNULL, std::size_t size, void *external_obj, void (*drop)(void *))
+        : common_string(tstr_new_from_external(value, size, external_obj, drop))
     {
     }
 
     common_string(char16_t const *value TH_NONNULL, std::size_t size)
         : common_string(tstr_new_utf16(reinterpret_cast<uint16_t const *>(value), size))
+    {
+    }
+
+    common_string(static_flag_t, char16_t const *value TH_NONNULL, std::size_t size)
+        : common_string(tstr_new_from_static_utf16(reinterpret_cast<uint16_t const *>(value), size))
+    {
+    }
+
+    common_string(char16_t const *value TH_NONNULL, std::size_t size, void *external_obj, void (*drop)(void *))
+        : common_string(
+              tstr_new_from_external_utf16(reinterpret_cast<uint16_t const *>(value), size, external_obj, drop))
     {
     }
 
@@ -208,11 +248,24 @@ struct string_view {
     {
     }
 
-    string_view(char const *value TH_NONNULL) : string_view(tstr_new_ref(value, std::strlen(value)))
+    string_view(char const *value TH_NONNULL, size_type size) : string_view(tstr_new_ref(value, size))
     {
     }
 
-    string_view(char const *value TH_NONNULL, size_type size) : string_view(tstr_new_ref(value, size))
+    string_view(char const *value TH_NONNULL) : string_view(value, std::strlen(value))
+    {
+    }
+
+    string_view(static_flag_t, char const *value TH_NONNULL, size_type size)
+        : string_view(tstr_new_from_static(value, size))
+    {
+    }
+
+    string_view(static_flag_t, char const *value TH_NONNULL) : string_view(static_flag, value, std::strlen(value))
+    {
+    }
+
+    string_view() : string_view(static_flag, "", 0)
     {
     }
 
@@ -355,11 +408,28 @@ struct string : public string_view {
     {
     }
 
-    string(char const *value TH_NONNULL) : string(tstr_new(value, std::strlen(value)))
+    string(char const *value TH_NONNULL, size_type size) : string(tstr_new(value, size))
     {
     }
 
-    string(char const *value TH_NONNULL, size_type size) : string(tstr_new(value, size))
+    string(char const *value TH_NONNULL) : string(value, std::strlen(value))
+    {
+    }
+
+    string(static_flag_t, char const *value TH_NONNULL, size_type size) : string(tstr_new_from_static(value, size))
+    {
+    }
+
+    string(static_flag_t, char const *value TH_NONNULL) : string(static_flag, value, std::strlen(value))
+    {
+    }
+
+    string() : string(static_flag, "", 0)
+    {
+    }
+
+    string(char const *value TH_NONNULL, size_type size, void *external_obj, void (*drop)(void *))
+        : string(tstr_new_from_external(value, size, external_obj, drop))
     {
     }
 
@@ -397,7 +467,7 @@ struct string : public string_view {
             other.m_handle.pstrinfo = nullptr;
             return handle;
         } else if (other.is_utf16()) {
-            TString handle = tstr_utf16_to_utf8(other.m_handle);
+            TString handle = tstr_dup_as_utf8(other.m_handle);
             return handle;
         }
 
@@ -458,6 +528,15 @@ struct u16string_view {
 
     u16string_view(char16_t const *value TH_NONNULL, size_type size)
         : u16string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
+    {
+    }
+
+    u16string_view(static_flag_t, char16_t const *value TH_NONNULL, size_type size)
+        : u16string_view(tstr_new_from_static_utf16(reinterpret_cast<uint16_t const *>(value), size))
+    {
+    }
+
+    u16string_view() : u16string_view(static_flag, u"", 0)
     {
     }
 
@@ -605,6 +684,20 @@ struct u16string : public u16string_view {
     {
     }
 
+    u16string(static_flag_t, char16_t const *value TH_NONNULL, size_type size)
+        : u16string(tstr_new_from_static_utf16(reinterpret_cast<uint16_t const *>(value), size))
+    {
+    }
+
+    u16string() : u16string(static_flag, u"", 0)
+    {
+    }
+
+    u16string(char16_t const *value TH_NONNULL, size_type size, void *external_obj, void (*drop)(void *))
+        : u16string(tstr_new_from_external_utf16(reinterpret_cast<uint16_t const *>(value), size, external_obj, drop))
+    {
+    }
+
     u16string(std::initializer_list<char16_t> value) : u16string(value.begin(), value.size())
     {
     }
@@ -639,7 +732,7 @@ struct u16string : public u16string_view {
             other.m_handle.pstrinfo = nullptr;
             return handle;
         } else if (other.is_utf8()) {
-            TString handle = tstr_utf8_to_utf16(other.m_handle);
+            TString handle = tstr_dup_as_utf16(other.m_handle);
             return handle;
         }
 
@@ -831,9 +924,9 @@ inline string to_string(T value)
 inline string to_string(bool value)
 {
     if (value) {
-        return string {"true", 4};
+        return string {taihe::static_flag, "true", 4};
     } else {
-        return string {"false", 5};
+        return string {taihe::static_flag, "false", 5};
     }
 }
 

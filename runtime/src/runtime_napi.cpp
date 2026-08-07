@@ -71,7 +71,7 @@ taihe::error from_napi_error(napi_env env, napi_value err)
     NAPI_CALL(env, napi_get_value_string_utf8(env, error_message_napi, error_message_cpp_buf, error_message_cpp_len + 1,
                                               &error_message_cpp_len));
     error_message_cpp_buf[error_message_cpp_len] = '\0';
-    error_message_tstr.length = error_message_cpp_len;
+    tstr_set_len(&error_message_tstr, error_message_cpp_len);
     taihe::string error_message_cpp(error_message_tstr);
     bool error_has_code;
     NAPI_CALL(env, napi_has_named_property(env, err, "code", &error_has_code));

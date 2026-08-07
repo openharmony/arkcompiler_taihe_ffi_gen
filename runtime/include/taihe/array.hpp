@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -203,14 +203,6 @@ protected:
     std::size_t m_size;
     cpp_owner_t *m_data;
 };
-
-struct copy_data_t {};
-
-constexpr inline copy_data_t copy_data;
-
-struct move_data_t {};
-
-constexpr inline move_data_t move_data;
 
 template<typename cpp_owner_t>
 struct array : public array_view<cpp_owner_t> {
