@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,14 +13,36 @@
  * limitations under the License.
  */
 
+@class
+struct Foo {
+  a: i32;
+  b: String;
+}
+
+@class
+interface Bar {}
+
+@ctor("Foo")
+function makeFoo(a: i32, b: String): Foo;
+
+@ctor("Bar")
+function makeBar(): Bar;
+
 union union_primitive {
-  uValue: @undefined unit;
-  nValue: @null unit;
-  sValue: String;
+  undefinedValue: @undefined unit;
+  nullValue: @null unit;
+  stringValue: String;
   numberValue: f64;
-  bValue: bool;
-  aValue: Array<i32>;
-  mValue: Map<i32, String>;
+  booleanValue: bool;
+  arrayValue: Array<i32>;
+  mapValue: Map<i32, String>;
+  setValue: Set<String>;
+  int16arrayValue: @typedarray Array<i16>;
+  int32arrayValue: @typedarray Array<i32>;
+  arraybufferValue: @arraybuffer Array<u8>;
+  bigintValue: @bigint Array<u64>;
+  fooValue: Foo;
+  barValue: Bar;
 }
 
 function printUnion(data: union_primitive): String;

@@ -22,8 +22,6 @@
 
 - `@!ts_inject_into_class("""...""")`：将一段代码注入到实现的声明文件的 class 中。可加在 Taihe struct 和 interface 上。
 
-- `@!ts_inject_into_interface("""...""")`：将一段代码注入到实现的声明文件的 interface 中。可加在 Taihe struct 和 interface 上。
-
 ## 类型注解
 
 - `@dts_type("MyType")`：将一个 Opaque 的实际类型设置为具体的类型 `MyType`。
