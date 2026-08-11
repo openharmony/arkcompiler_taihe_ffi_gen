@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@
 #include <taihe/common.hpp>
 
 #include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 #define VEC_GROWTH_FACTOR 2
@@ -89,6 +90,14 @@ public:
 
     T &operator[](std::size_t index) const
     {
+        return m_handle->buffer[index];
+    }
+
+    T &at(std::size_t index) const
+    {
+        if (index >= size()) {
+            TH_THROW(std::out_of_range, "Index out of range");
+        }
         return m_handle->buffer[index];
     }
 

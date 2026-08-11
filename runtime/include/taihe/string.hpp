@@ -131,6 +131,8 @@ struct common_string_view {
     friend struct common_string;
     friend struct string_view;
     friend struct u16string_view;
+    friend struct string;
+    friend struct u16string;
 
 protected:
     struct TString m_handle;
@@ -310,6 +312,11 @@ struct string_view {
     // methods
     const_reference operator[](size_type pos) const
     {
+        return tstr_buf(m_handle)[pos];
+    }
+
+    const_reference at(size_type pos) const
+    {
         if (pos >= size()) {
             TH_THROW(std::out_of_range, "Index out of range");
         }
@@ -394,9 +401,6 @@ struct string_view {
 
     friend struct string;
 
-    friend string concat(std::initializer_list<string_view> sv_list);
-    friend string_view substr(string_view sv, std::size_t pos, std::size_t len);
-    friend string operator+(string_view left, string_view right);
     string_view substr(std::size_t pos, std::size_t len) const;
 
 protected:
@@ -511,7 +515,9 @@ struct string : public string_view {
         }
     }
 
-    string &operator+=(string_view other);
+    static string concat(std::initializer_list<common_string_view> sv_list);
+
+    string &operator+=(common_string_view other);
 };
 
 struct u16string_view {
@@ -580,6 +586,11 @@ struct u16string_view {
 
     // methods
     const_reference operator[](size_type pos) const
+    {
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[pos];
+    }
+
+    const_reference at(size_type pos) const
     {
         if (pos >= size()) {
             TH_THROW(std::out_of_range, "Index out of range");
@@ -665,9 +676,6 @@ struct u16string_view {
 
     friend struct u16string;
 
-    friend u16string concat(std::initializer_list<u16string_view> sv_list);
-    friend u16string_view substr(u16string_view sv, std::size_t pos, std::size_t len);
-    friend u16string operator+(u16string_view left, u16string_view right);
     u16string_view substr(std::size_t pos, std::size_t len) const;
 
 protected:
@@ -776,8 +784,16 @@ struct u16string : public u16string_view {
         }
     }
 
-    u16string &operator+=(u16string_view other);
+    static u16string concat(std::initializer_list<common_string_view> sv_list);
+
+    u16string &operator+=(common_string_view other);
 };
+
+inline string string::concat(std::initializer_list<common_string_view> sv_list)
+{
+    static_assert(alignof(common_string_view) == alignof(struct TString));
+    return string(tstr_concat(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
+}
 
 inline string concat(std::initializer_list<string_view> sv_list)
 {
@@ -790,19 +806,20 @@ inline string operator+(string_view left, string_view right)
     return concat({left, right});
 }
 
-inline string &string::operator+=(string_view other)
+inline string &string::operator+=(common_string_view other)
 {
-    return *this = *this + other;
-}
-
-inline string_view substr(string_view sv, std::size_t pos, std::size_t len)
-{
-    return string_view(tstr_substr(sv.m_handle, pos, len));
+    return *this = string::concat({*this, other});
 }
 
 inline string_view string_view::substr(std::size_t pos, std::size_t len) const
 {
     return string_view(tstr_substr(this->m_handle, pos, len));
+}
+
+// TODO: Deprecate this
+inline string_view substr(string_view sv, std::size_t pos, std::size_t len)
+{
+    return sv.substr(pos, len);
 }
 
 inline bool operator==(string_view lhs, string_view rhs)
@@ -840,9 +857,15 @@ inline std::ostream &operator<<(std::ostream &os, string_view sv)
     return os << std::string_view(sv);
 }
 
+inline u16string u16string::concat(std::initializer_list<common_string_view> sv_list)
+{
+    static_assert(alignof(common_string_view) == alignof(struct TString));
+    return u16string(tstr_concat_utf16(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
+}
+
 inline u16string concat(std::initializer_list<u16string_view> sv_list)
 {
-    static_assert(alignof(string_view) == alignof(struct TString));
+    static_assert(alignof(u16string_view) == alignof(struct TString));
     return u16string(tstr_concat_utf16(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
 }
 
@@ -851,19 +874,20 @@ inline u16string operator+(u16string_view left, u16string_view right)
     return concat({left, right});
 }
 
-inline u16string &u16string::operator+=(u16string_view other)
+inline u16string &u16string::operator+=(common_string_view other)
 {
-    return *this = *this + other;
-}
-
-inline u16string_view substr(u16string_view sv, std::size_t pos, std::size_t len)
-{
-    return u16string_view(tstr_substr_utf16(sv.m_handle, pos, len));
+    return *this = u16string::concat({*this, other});
 }
 
 inline u16string_view u16string_view::substr(std::size_t pos, std::size_t len) const
 {
     return u16string_view(tstr_substr_utf16(this->m_handle, pos, len));
+}
+
+// TODO: Deprecate this
+inline u16string_view substr(u16string_view sv, std::size_t pos, std::size_t len)
+{
+    return sv.substr(pos, len);
 }
 
 inline bool operator==(u16string_view lhs, u16string_view rhs)
