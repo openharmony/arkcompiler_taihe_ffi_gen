@@ -168,6 +168,7 @@ class PythonBundle:
         env = os.environ.copy()
         env['UV_HTTP_TIMEOUT'] = '300'
         env['UV_CONNECT_TIMEOUT'] = '300'
+        env['UV_NO_INSTALLER_METADATA'] = '1'
         uv_args = ["uv", "pip", "install", f"--target={self.sitepkg_dir}"]
         uv_args += ["--", str(wheel)]
         subprocess.run(uv_args, check=True, env=env)
