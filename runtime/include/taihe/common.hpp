@@ -57,6 +57,16 @@ struct as_param<cpp_owner_t, std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>
 };
 }  // namespace taihe
 
+////////////////////////
+// method declaration //
+////////////////////////
+
+namespace taihe {
+struct use_default_t {};
+
+constexpr inline use_default_t use_default;
+}  // namespace taihe
+
 ///////////////
 // enum tags //
 ///////////////

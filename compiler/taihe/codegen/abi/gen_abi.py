@@ -377,7 +377,7 @@ class AbiIfaceImplGenerator:
                 f"struct {{",
                 f"}} methods;",
             ):
-                for method in self.iface.methods:
+                for method in iface_abi_info.sorted_methods:
                     self.gen_iface_ftable_method(method)
 
     def gen_iface_ftable_method(self, method: IfaceMethodDecl):
@@ -427,20 +427,25 @@ class AbiIfaceImplGenerator:
             f"}}",
         ):
             ancestor_slot = iface_abi_info.ancestor_infos[self.iface].slots[0]
-            with self.target.indented(
-                f"if (0 >= {method_abi_info.min_version} || tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->version >= {method_abi_info.min_version}) {{",
-                f"}}",
-            ):
-                self.target.writelns(
-                    f"return tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->methods.{method.name}({args_str});",
-                )
-            with self.target.indented(
-                f"else {{",
-                f"}}",
-            ):
-                self.target.writelns(
-                    f"return {method_abi_info.impl_name}({args_str});",
-                )
+            if method_abi_info.min_version:
+                with self.target.indented(
+                    f"if (tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->version < {method_abi_info.min_version}) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"return {method_abi_info.impl_name}({args_str});",
+                    )
+            if method_abi_info.is_optional:
+                with self.target.indented(
+                    f"if (tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->methods.{method.name} == NULL) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"return {method_abi_info.impl_name}({args_str});",
+                    )
+            self.target.writelns(
+                f"return tobj.vtbl_ptr->{ancestor_slot.ftbl_ptr}->methods.{method.name}({args_str});",
+            )
 
     def gen_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)

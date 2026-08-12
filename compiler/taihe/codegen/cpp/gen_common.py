@@ -1623,7 +1623,10 @@ class CppIfaceImplGenerator:
             param_ty_cpp_name = param_ty_cpp_info.as_param
             args_tmpl.append(param_ty_cpp_name)
         args_tmpl_str = ", ".join(args_tmpl)
-        return f"&::taihe::method_calling_convention<{args_tmpl_str}>::abi_func"
+        if method_abi_info.is_optional:
+            return f"::taihe::method_as_abi_func_optional_v<{args_tmpl_str}>"
+        else:
+            return f"::taihe::method_as_abi_func_required_v<{args_tmpl_str}>"
 
     def gen_iface_ftbl_impl(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1642,7 +1645,7 @@ class CppIfaceImplGenerator:
                 f".methods = {{",
                 f"}},",
             ):
-                for method in self.iface.methods:
+                for method in iface_abi_info.sorted_methods:
                     self.target.writelns(
                         f".{method.name} = {self.get_iface_ftbl_impl_abi_method(method)},",
                     )

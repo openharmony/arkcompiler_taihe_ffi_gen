@@ -82,6 +82,7 @@ class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
         segments = [*f.parent_pkg.segments, f.parent_iface.name, f.name]
         self.impl_name = encode(segments, DeclKind.FUNC)
         self.wrap_name = encode(segments, DeclKind.METHOD)
+        self.is_optional = False
         self.min_version = 0
 
         self.is_noexcept = NoexceptAttr.get(f) is not None
@@ -171,6 +172,10 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.version = 0
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
+        self.sorted_methods = sorted(
+            d.methods,
+            key=lambda method: IfaceMethodAbiInfo.get(am, method).min_version,
+        )
         self.ftable = encode(segments, DeclKind.FTABLE)
         self.vtable = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)

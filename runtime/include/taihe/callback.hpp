@@ -86,8 +86,7 @@ public:
         .version = 0,
         .methods =
             {
-                .invoke =
-                    taihe::method_calling_convention<Impl, &Impl::operator(), Return, view_type, Params...>::abi_func,
+                .invoke = taihe::method_as_abi_func_required_v<Impl, &Impl::operator(), Return, view_type, Params...>,
             },
     };
 
