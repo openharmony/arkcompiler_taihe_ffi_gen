@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -36,35 +36,6 @@ if TYPE_CHECKING:
 class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
-    @classmethod
-    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
-        return AbiHeaderBackendConfig()
-
-    def build(self, instance: "CompilerInstance"):
-        from taihe.codegen.abi.attributes import all_attr_types
-        from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
-
-        class AbiHeaderBackendImpl(Backend):
-            def __init__(self, ci: "CompilerInstance"):
-                self._ci = ci
-
-            def setup(self):
-                self._ci.attribute_registry.register(*all_attr_types)
-
-            def generate(self):
-                om = self._ci.output_manager
-                am = self._ci.analysis_manager
-                pg = self._ci.package_group
-                AbiHeadersGenerator(om, am).generate(pg)
-
-        return AbiHeaderBackendImpl(instance)
-
-
-@dataclass
-class AbiSourcesBackendConfig(BackendConfig):
-    NAME = "abi-source"
-    DEPS: ClassVar = ["abi-header"]
-
     noexcept_all: bool = False
 
     @classmethod
@@ -78,18 +49,21 @@ class AbiSourcesBackendConfig(BackendConfig):
         from taihe.codegen.abi.options import NoexceptAllOption
 
         noexcept_all_opt = options.get(NoexceptAllOption)
-        return AbiSourcesBackendConfig(
+        return AbiHeaderBackendConfig(
             noexcept_all=noexcept_all_opt is not None,
         )
 
     def build(self, instance: "CompilerInstance"):
-        from taihe.codegen.abi.attributes import NoexceptAttr
-        from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
+        from taihe.codegen.abi.attributes import NoexceptAttr, all_attr_types
+        from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
-        class AbiSourcesBackendImpl(Backend):
-            def __init__(self, ci: "CompilerInstance", config: AbiSourcesBackendConfig):
+        class AbiHeaderBackendImpl(Backend):
+            def __init__(self, ci: "CompilerInstance", config: AbiHeaderBackendConfig):
                 self._ci = ci
                 self._config = config
+
+            def setup(self):
+                self._ci.attribute_registry.register(*all_attr_types)
 
             def post_process(self):
                 if self._config.noexcept_all:
@@ -125,6 +99,31 @@ class AbiSourcesBackendConfig(BackendConfig):
                 self._ci.package_group.accept(NoexceptCallbackVisitor())
 
             def generate(self):
+                om = self._ci.output_manager
+                am = self._ci.analysis_manager
+                pg = self._ci.package_group
+                AbiHeadersGenerator(om, am).generate(pg)
+
+        return AbiHeaderBackendImpl(instance, self)
+
+
+@dataclass
+class AbiSourcesBackendConfig(BackendConfig):
+    NAME = "abi-source"
+    DEPS: ClassVar = ["abi-header"]
+
+    @classmethod
+    def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
+        return AbiSourcesBackendConfig()
+
+    def build(self, instance: "CompilerInstance"):
+        from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
+
+        class AbiSourcesBackendImpl(Backend):
+            def __init__(self, ci: "CompilerInstance"):
+                self._ci = ci
+
+            def generate(self):
                 self._ci.output_manager.record_runtime_cxx_src("string.cpp")
                 self._ci.output_manager.record_runtime_cxx_src("object.cpp")
                 om = self._ci.output_manager
@@ -132,7 +131,7 @@ class AbiSourcesBackendConfig(BackendConfig):
                 pg = self._ci.package_group
                 AbiSourcesGenerator(om, am).generate(pg)
 
-        return AbiSourcesBackendImpl(instance, self)
+        return AbiSourcesBackendImpl(instance)
 
 
 @dataclass
