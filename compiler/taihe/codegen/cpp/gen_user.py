@@ -82,8 +82,7 @@ class CppUserPackageGenerator:
         func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
         params_cpp = []
         args_tmpl = []
-        args_call = []
-        args_call.append(f"&{func_abi_info.impl_name}")
+        args_call = [f"&{func_abi_info.impl_name}"]
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
