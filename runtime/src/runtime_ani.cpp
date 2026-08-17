@@ -251,10 +251,10 @@ taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
     ani_size msgLength;
     TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, errMsg, &msgLength);
     TString msgHandle;
-    char *msgBuffer = tstr_initialize(&msgHandle, msgLength + 1);
+    char *msgBuffer = tstr_initialize_utf8(&msgHandle, msgLength + 1);
     TH_ANI_CHECKED_CALL(env, String_GetUTF8, errMsg, msgBuffer, msgLength + 1, &msgLength);
     msgBuffer[msgLength] = '\0';
-    tstr_set_len(&msgHandle, msgLength);
+    tstr_set_len_utf8(&msgHandle, msgLength);
     taihe::string msg(msgHandle);
 
     ani_int code = 0;

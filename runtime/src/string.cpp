@@ -89,7 +89,7 @@ TString tstr_new_invalid()
     return tstr;
 }
 
-char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity)
+char *tstr_initialize_utf8(struct TString *tstr_ptr, uint32_t capacity)
 {
     size_t bytes_required = sizeof(struct TStringInfo) + capacity;
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
@@ -104,7 +104,7 @@ char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity)
     char *buffer = reinterpret_cast<char *>(sh + 1);
 
     tstr_ptr->flags = TSTRING_NAT | TSTRING_UTF8;
-    tstr_set_buf(tstr_ptr, buffer);
+    tstr_set_buf_utf8(tstr_ptr, buffer);
     tstr_ptr->pstrinfo = sh;
 
     return buffer;
@@ -131,17 +131,17 @@ uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity)
     return buffer;
 }
 
-struct TString tstr_new(char const *value TH_NONNULL, size_t len)
+struct TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
 {
     struct TString tstr;
-    char *buf = tstr_initialize(&tstr, len + 1);
+    char *buf = tstr_initialize_utf8(&tstr, len + 1);
     if (!buf) {
         return tstr_new_invalid();
     }
 
     buf = std::copy(value, value + len, buf);
     *buf = '\0';
-    tstr_set_len(&tstr, len);
+    tstr_set_len_utf8(&tstr, len);
     return tstr;
 }
 
@@ -159,12 +159,12 @@ struct TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
     return tstr;
 }
 
-struct TString tstr_new_ref(char const *buf TH_NONNULL, size_t len)
+struct TString tstr_new_ref_utf8(char const *buf TH_NONNULL, size_t len)
 {
     struct TString tstr;
     tstr.flags = TSTRING_REF | TSTRING_UTF8;
-    tstr_set_len(&tstr, len);
-    tstr_set_buf(&tstr, buf);
+    tstr_set_len_utf8(&tstr, len);
+    tstr_set_buf_utf8(&tstr, buf);
     tstr.pstrinfo = nullptr;
     return tstr;
 }
@@ -179,7 +179,8 @@ struct TString tstr_new_ref_utf16(uint16_t const *buf TH_NONNULL, size_t len)
     return tstr;
 }
 
-struct TString tstr_new_from_external(char const *buf TH_NONNULL, size_t len, void *external_obj, void (*drop)(void *))
+struct TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t len, void *external_obj,
+                                           void (*drop)(void *))
 {
     struct TString tstr;
     struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
@@ -192,8 +193,8 @@ struct TString tstr_new_from_external(char const *buf TH_NONNULL, size_t len, vo
     info->external_obj = external_obj;
 
     tstr.flags = TSTRING_EXT | TSTRING_UTF8;
-    tstr_set_len(&tstr, len);
-    tstr_set_buf(&tstr, buf);
+    tstr_set_len_utf8(&tstr, len);
+    tstr_set_buf_utf8(&tstr, buf);
     tstr.pstrinfo = info;
     return tstr;
 }
@@ -218,12 +219,12 @@ struct TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size
     return tstr;
 }
 
-struct TString tstr_new_from_static(char const *buf TH_NONNULL, size_t len)
+struct TString tstr_new_from_static_utf8(char const *buf TH_NONNULL, size_t len)
 {
     struct TString tstr;
     tstr.flags = TSTRING_STA | TSTRING_UTF8;
-    tstr_set_len(&tstr, len);
-    tstr_set_buf(&tstr, buf);
+    tstr_set_len_utf8(&tstr, len);
+    tstr_set_buf_utf8(&tstr, buf);
     tstr.pstrinfo = nullptr;
     return tstr;
 }
@@ -243,7 +244,7 @@ struct TString tstr_dup(struct TString tstr)
     uint32_t mode = tstr.flags & TSTRING_MODE_MASK;
     if (mode == TSTRING_REF) {
         if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            return tstr_new(tstr_buf(tstr), tstr_len(tstr));
+            return tstr_new_utf8(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
         }
         if (tstr_encoding(tstr) == TSTRING_UTF16) {
             return tstr_new_utf16(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
@@ -541,8 +542,8 @@ struct TString tstr_dup_as_utf16(struct TString tstr)
     if (tstr_encoding(tstr) == TSTRING_UTF16) {
         return tstr_dup(tstr);
     }
-    char const *src = tstr_buf(tstr);
-    size_t len = tstr_len(tstr);
+    char const *src = tstr_buf_utf8(tstr);
+    size_t len = tstr_len_utf8(tstr);
     if (tstr_encoding(tstr) == TSTRING_UTF8) {
         struct TString result;
         size_t needed = utf8_to_utf16_required(src, len);
@@ -570,7 +571,7 @@ struct TString tstr_dup_as_utf8(struct TString tstr)
     if (tstr_encoding(tstr) == TSTRING_UTF16) {
         struct TString result;
         size_t needed = utf16_to_utf8_required(src, len);
-        char *dst = tstr_initialize(&result, needed + 1);
+        char *dst = tstr_initialize_utf8(&result, needed + 1);
         if (!dst) {
             return tstr_new_invalid();
         }
@@ -578,25 +579,27 @@ struct TString tstr_dup_as_utf8(struct TString tstr)
         size_t used_len = utf16_to_utf8(src, len, dst);
         dst[used_len] = '\0';
         result.flags = TSTRING_NAT | TSTRING_UTF8;
-        tstr_set_len(&result, used_len);
+        tstr_set_len_utf8(&result, used_len);
         return result;
     }
     return tstr_new_invalid();
 }
 
-struct TString tstr_concat(size_t count, struct TString const *tstr_list)
+struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list)
 {
     struct TString result;
     size_t len = 0;
     for (size_t i = 0; i < count; ++i) {
         struct TString tstr = tstr_list[i];
         if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            len += tstr_len(tstr);
+            len += tstr_len_utf8(tstr);
         } else if (tstr_encoding(tstr) == TSTRING_UTF16) {
             len += utf16_to_utf8_required(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
+        } else {
+            return tstr_new_invalid();
         }
     }
-    char *buf = tstr_initialize(&result, len + 1);
+    char *buf = tstr_initialize_utf8(&result, len + 1);
     if (!buf) {
         return tstr_new_invalid();
     }
@@ -604,17 +607,17 @@ struct TString tstr_concat(size_t count, struct TString const *tstr_list)
     for (size_t i = 0; i < count; ++i) {
         struct TString tstr = tstr_list[i];
         if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            buf = std::copy(tstr_buf(tstr), tstr_buf(tstr) + tstr_len(tstr), buf);
+            buf = std::copy(tstr_buf_utf8(tstr), tstr_buf_utf8(tstr) + tstr_len_utf8(tstr), buf);
         } else if (tstr_encoding(tstr) == TSTRING_UTF16) {
             buf += utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), buf);
         }
     }
     *buf = '\0';
-    tstr_set_len(&result, len);
+    tstr_set_len_utf8(&result, len);
     return result;
 }
 
-struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list)
+struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_list)
 {
     struct TString result;
     size_t len = 0;
@@ -623,7 +626,9 @@ struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list)
         if (tstr_encoding(tstr) == TSTRING_UTF16) {
             len += tstr_len_utf16(tstr);
         } else if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            len += utf8_to_utf16_required(tstr_buf(tstr), tstr_len(tstr));
+            len += utf8_to_utf16_required(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
+        } else {
+            return tstr_new_invalid();
         }
     }
     uint16_t *buf = tstr_initialize_utf16(&result, len + 1);
@@ -636,7 +641,7 @@ struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list)
         if (tstr_encoding(tstr) == TSTRING_UTF16) {
             buf = std::copy(tstr_buf_utf16(tstr), tstr_buf_utf16(tstr) + tstr_len_utf16(tstr), buf);
         } else if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            buf += utf8_to_utf16(tstr_buf(tstr), tstr_len(tstr), buf);
+            buf += utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), buf);
         }
     }
     *buf = u'\0';
@@ -644,19 +649,19 @@ struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list)
     return result;
 }
 
-struct TString tstr_substr(struct TString tstr, size_t pos, size_t len)
+struct TString tstr_substr_utf8(struct TString tstr, size_t pos, size_t len)
 {
     if (tstr_encoding(tstr) != TSTRING_UTF8) {
         return tstr_new_invalid();
     }
-    size_t orig_len = tstr_len(tstr);
+    size_t orig_len = tstr_len_utf8(tstr);
     if (pos > orig_len) {
         len = 0;
     } else if (pos + len > orig_len) {
         len = orig_len - pos;
     }
-    tstr_set_len(&tstr, len);
-    tstr_set_buf(&tstr, tstr_buf(tstr) + pos);
+    tstr_set_len_utf8(&tstr, len);
+    tstr_set_buf_utf8(&tstr, tstr_buf_utf8(tstr) + pos);
     return tstr;
 }
 

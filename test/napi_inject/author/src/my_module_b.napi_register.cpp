@@ -41,10 +41,10 @@ static napi_value my_module_a_concat(napi_env env, [[maybe_unused]] napi_callbac
             size_t value0_len = 0;
             napi_get_value_string_utf8(env, args[0], nullptr, 0, &value0_len);
             TString value0_abi;
-            char *value0_buf = tstr_initialize(&value0_abi, value0_len + 1);
+            char *value0_buf = tstr_initialize_utf8(&value0_abi, value0_len + 1);
             napi_get_value_string_utf8(env, args[0], value0_buf, value0_len + 1, &value0_len);
             value0_buf[value0_len] = '\0';
-            tstr_set_len(&value0_abi, value0_len);
+            tstr_set_len_utf8(&value0_abi, value0_len);
             taihe::string value0_str(value0_abi);
             ::taihe::string value_str = concat_str(value0_str);
             napi_value result_str = nullptr;

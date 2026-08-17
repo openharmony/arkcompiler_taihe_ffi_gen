@@ -1608,10 +1608,10 @@ class StringTypeAniInfo(TypeAniInfo):
                 f"ani_size size = {{}};",
                 f"TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, ani_value, &size);",
                 f"TString tstr;",
-                f"char* buff = tstr_initialize(&tstr, size + 1);",
+                f"char* buff = tstr_initialize_utf8(&tstr, size + 1);",
                 f"TH_ANI_CHECKED_CALL(env, String_GetUTF8, ani_value, buff, size + 1, &size);",
                 f"buff[size] = '\\0';",
-                f"tstr_set_len(&tstr, size);",
+                f"tstr_set_len_utf8(&tstr, size);",
                 f"return ::taihe::string(tstr);",
             )
 

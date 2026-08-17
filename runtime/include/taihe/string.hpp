@@ -45,7 +45,8 @@ struct common_string_view {
     {
     }
 
-    common_string_view(char const *value TH_NONNULL, std::size_t size) : common_string_view(tstr_new_ref(value, size))
+    common_string_view(char const *value TH_NONNULL, std::size_t size)
+        : common_string_view(tstr_new_ref_utf8(value, size))
     {
     }
 
@@ -54,7 +55,7 @@ struct common_string_view {
     }
 
     common_string_view(static_flag_t, char const *value TH_NONNULL, std::size_t size)
-        : common_string_view(tstr_new_from_static(value, size))
+        : common_string_view(tstr_new_from_static_utf8(value, size))
     {
     }
 
@@ -143,7 +144,7 @@ struct common_string : public common_string_view {
     {
     }
 
-    common_string(char const *value TH_NONNULL, std::size_t size) : common_string(tstr_new(value, size))
+    common_string(char const *value TH_NONNULL, std::size_t size) : common_string(tstr_new_utf8(value, size))
     {
     }
 
@@ -152,7 +153,7 @@ struct common_string : public common_string_view {
     }
 
     common_string(static_flag_t, char const *value TH_NONNULL, std::size_t size)
-        : common_string(tstr_new_from_static(value, size))
+        : common_string(tstr_new_from_static_utf8(value, size))
     {
     }
 
@@ -161,7 +162,7 @@ struct common_string : public common_string_view {
     }
 
     common_string(char const *value TH_NONNULL, std::size_t size, void *external_obj, void (*drop)(void *))
-        : common_string(tstr_new_from_external(value, size, external_obj, drop))
+        : common_string(tstr_new_from_external_utf8(value, size, external_obj, drop))
     {
     }
 
@@ -250,7 +251,7 @@ struct string_view {
     {
     }
 
-    string_view(char const *value TH_NONNULL, size_type size) : string_view(tstr_new_ref(value, size))
+    string_view(char const *value TH_NONNULL, size_type size) : string_view(tstr_new_ref_utf8(value, size))
     {
     }
 
@@ -259,7 +260,7 @@ struct string_view {
     }
 
     string_view(static_flag_t, char const *value TH_NONNULL, size_type size)
-        : string_view(tstr_new_from_static(value, size))
+        : string_view(tstr_new_from_static_utf8(value, size))
     {
     }
 
@@ -306,13 +307,13 @@ struct string_view {
 
     operator std::string_view() const noexcept
     {
-        return {tstr_buf(m_handle), tstr_len(m_handle)};
+        return {tstr_buf_utf8(m_handle), tstr_len_utf8(m_handle)};
     }
 
     // methods
     const_reference operator[](size_type pos) const
     {
-        return tstr_buf(m_handle)[pos];
+        return tstr_buf_utf8(m_handle)[pos];
     }
 
     const_reference at(size_type pos) const
@@ -320,7 +321,7 @@ struct string_view {
         if (pos >= size()) {
             TH_THROW(std::out_of_range, "Index out of range");
         }
-        return tstr_buf(m_handle)[pos];
+        return tstr_buf_utf8(m_handle)[pos];
     }
 
     bool empty() const noexcept
@@ -330,7 +331,7 @@ struct string_view {
 
     size_type size() const noexcept
     {
-        return tstr_len(m_handle);
+        return tstr_len_utf8(m_handle);
     }
 
     const_reference front() const
@@ -338,7 +339,7 @@ struct string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return tstr_buf(m_handle)[0];
+        return tstr_buf_utf8(m_handle)[0];
     }
 
     const_reference back() const
@@ -346,22 +347,22 @@ struct string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return tstr_buf(m_handle)[size() - 1];
+        return tstr_buf_utf8(m_handle)[size() - 1];
     }
 
     const_pointer c_str() const noexcept
     {
-        return tstr_buf(m_handle);
+        return tstr_buf_utf8(m_handle);
     }
 
     const_pointer data() const noexcept
     {
-        return tstr_buf(m_handle);
+        return tstr_buf_utf8(m_handle);
     }
 
     const_iterator begin() const noexcept
     {
-        return tstr_buf(m_handle);
+        return tstr_buf_utf8(m_handle);
     }
 
     const_iterator cbegin() const noexcept
@@ -371,7 +372,7 @@ struct string_view {
 
     const_iterator end() const noexcept
     {
-        return tstr_buf(m_handle) + tstr_len(m_handle);
+        return tstr_buf_utf8(m_handle) + tstr_len_utf8(m_handle);
     }
 
     const_iterator cend() const noexcept
@@ -412,7 +413,7 @@ struct string : public string_view {
     {
     }
 
-    string(char const *value TH_NONNULL, size_type size) : string(tstr_new(value, size))
+    string(char const *value TH_NONNULL, size_type size) : string(tstr_new_utf8(value, size))
     {
     }
 
@@ -420,7 +421,7 @@ struct string : public string_view {
     {
     }
 
-    string(static_flag_t, char const *value TH_NONNULL, size_type size) : string(tstr_new_from_static(value, size))
+    string(static_flag_t, char const *value TH_NONNULL, size_type size) : string(tstr_new_from_static_utf8(value, size))
     {
     }
 
@@ -433,7 +434,7 @@ struct string : public string_view {
     }
 
     string(char const *value TH_NONNULL, size_type size, void *external_obj, void (*drop)(void *))
-        : string(tstr_new_from_external(value, size, external_obj, drop))
+        : string(tstr_new_from_external_utf8(value, size, external_obj, drop))
     {
     }
 
@@ -470,12 +471,8 @@ struct string : public string_view {
             TString handle = other.m_handle;
             other.m_handle.pstrinfo = nullptr;
             return handle;
-        } else if (other.is_utf16()) {
-            TString handle = tstr_dup_as_utf8(other.m_handle);
-            return handle;
         }
-
-        TH_THROW(std::invalid_argument, "unknown encoding in common_string");
+        return tstr_dup_as_utf8(other.m_handle);
     }
 
     explicit string(common_string other) : string(move_as_utf8_handle(std::move(other)))
@@ -739,12 +736,8 @@ struct u16string : public u16string_view {
             TString handle = other.m_handle;
             other.m_handle.pstrinfo = nullptr;
             return handle;
-        } else if (other.is_utf8()) {
-            TString handle = tstr_dup_as_utf16(other.m_handle);
-            return handle;
         }
-
-        TH_THROW(std::invalid_argument, "unknown encoding in common_string");
+        return tstr_dup_as_utf16(other.m_handle);
     }
 
     explicit u16string(common_string other) : u16string(move_as_utf16_handle(std::move(other)))
@@ -792,13 +785,13 @@ struct u16string : public u16string_view {
 inline string string::concat(std::initializer_list<common_string_view> sv_list)
 {
     static_assert(alignof(common_string_view) == alignof(struct TString));
-    return string(tstr_concat(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
+    return string(tstr_concat_as_utf8(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
 }
 
 inline string concat(std::initializer_list<string_view> sv_list)
 {
     static_assert(alignof(string_view) == alignof(struct TString));
-    return string(tstr_concat(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
+    return string(tstr_concat_as_utf8(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
 }
 
 inline string operator+(string_view left, string_view right)
@@ -813,7 +806,7 @@ inline string &string::operator+=(common_string_view other)
 
 inline string_view string_view::substr(std::size_t pos, std::size_t len) const
 {
-    return string_view(tstr_substr(this->m_handle, pos, len));
+    return string_view(tstr_substr_utf8(this->m_handle, pos, len));
 }
 
 // TODO: Deprecate this
@@ -860,13 +853,13 @@ inline std::ostream &operator<<(std::ostream &os, string_view sv)
 inline u16string u16string::concat(std::initializer_list<common_string_view> sv_list)
 {
     static_assert(alignof(common_string_view) == alignof(struct TString));
-    return u16string(tstr_concat_utf16(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
+    return u16string(tstr_concat_as_utf16(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
 }
 
 inline u16string concat(std::initializer_list<u16string_view> sv_list)
 {
     static_assert(alignof(u16string_view) == alignof(struct TString));
-    return u16string(tstr_concat_utf16(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
+    return u16string(tstr_concat_as_utf16(sv_list.size(), reinterpret_cast<struct TString const *>(sv_list.begin())));
 }
 
 inline u16string operator+(u16string_view left, u16string_view right)
