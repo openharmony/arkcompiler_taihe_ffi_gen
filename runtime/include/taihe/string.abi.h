@@ -126,7 +126,7 @@ TH_INLINE void tstr_set_buf_utf16(struct TString *tstr_ptr, uint16_t const *buf)
 // # Notes
 // - The caller is responsible for setting the string length.
 // - Reference count is set to 1 after called.
-TH_EXPORT char *tstr_initialize_utf8(struct TString *tstr_ptr, uint32_t capacity);
+TH_EXPORT char *tstr_initialize_utf8(struct TString *tstr_ptr, size_t capacity);
 
 // Allocates memory and initializes a UTF16 TString with a given capacity.
 //
@@ -140,7 +140,7 @@ TH_EXPORT char *tstr_initialize_utf8(struct TString *tstr_ptr, uint32_t capacity
 // # Notes
 // - The caller is responsible for setting the string length.
 // - Reference count is set to 1 after called.
-TH_EXPORT uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity);
+TH_EXPORT uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, size_t capacity);
 
 // Creates a new heap-allocated TString by copying an existing UTF8 string.
 //

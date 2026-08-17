@@ -16,12 +16,13 @@
 #include <taihe/string.abi.h>
 
 #include <algorithm>
+#include <cstdint>
 
 namespace {
-
-constexpr size_t UTF8_FAST_BLOCK_SIZE = 16;
-constexpr size_t UTF8_FAST_WORD_SIZE = 8;
-constexpr size_t UTF16_FAST_BLOCK_SIZE = 4;
+constexpr size_t UTF8_FAST_WORD_SIZE = sizeof(uint64_t) / sizeof(uint8_t);
+constexpr size_t UTF8_FAST_BLOCK_SIZE = UTF8_FAST_WORD_SIZE * 2;
+constexpr size_t UTF16_FAST_WORD_SIZE = sizeof(uint64_t) / sizeof(uint16_t);
+constexpr size_t UTF16_FAST_BLOCK_SIZE = UTF16_FAST_WORD_SIZE * 2;
 
 constexpr size_t UTF8_ONE_BYTE_COUNT = 1;
 constexpr size_t UTF8_TWO_BYTE_COUNT = 2;
@@ -76,7 +77,6 @@ constexpr uint64_t UTF8_FAST_ASCII_MASK = 0x8080808080808080;
 constexpr uint64_t UTF16_FAST_ASCII_MASK = 0xff80ff80ff80ff80;
 constexpr uint16_t UTF16_NON_ASCII_MASK = 0xff80;
 constexpr uint16_t UTF16_THREE_BYTE_MASK = 0xf800;
-
 }  // namespace
 
 TString tstr_new_invalid()
@@ -89,7 +89,7 @@ TString tstr_new_invalid()
     return tstr;
 }
 
-char *tstr_initialize_utf8(struct TString *tstr_ptr, uint32_t capacity)
+char *tstr_initialize_utf8(struct TString *tstr_ptr, size_t capacity)
 {
     size_t bytes_required = sizeof(struct TStringInfo) + capacity;
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
@@ -110,7 +110,7 @@ char *tstr_initialize_utf8(struct TString *tstr_ptr, uint32_t capacity)
     return buffer;
 }
 
-uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity)
+uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, size_t capacity)
 {
     size_t bytes_required = sizeof(struct TStringInfo) + capacity * sizeof(uint16_t);
     struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
@@ -139,9 +139,9 @@ struct TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
         return tstr_new_invalid();
     }
 
-    buf = std::copy(value, value + len, buf);
-    *buf = '\0';
-    tstr_set_len_utf8(&tstr, len);
+    char *end = std::copy_n(value, len, buf);
+    *end = '\0';
+    tstr_set_len_utf8(&tstr, end - buf);
     return tstr;
 }
 
@@ -153,9 +153,9 @@ struct TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
         return tstr_new_invalid();
     }
 
-    buf = std::copy(value, value + len, buf);
-    *buf = u'\0';
-    tstr_set_len_utf16(&tstr, len);
+    uint16_t *end = std::copy_n(value, len, buf);
+    *end = u'\0';
+    tstr_set_len_utf16(&tstr, end - buf);
     return tstr;
 }
 
@@ -185,6 +185,9 @@ struct TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t le
     struct TString tstr;
     struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
     if (!info) {
+        if (drop != nullptr) {
+            drop(external_obj);
+        }
         return tstr_new_invalid();
     }
 
@@ -205,6 +208,9 @@ struct TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size
     struct TString tstr;
     struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
     if (!info) {
+        if (drop != nullptr) {
+            drop(external_obj);
+        }
         return tstr_new_invalid();
     }
 
@@ -263,7 +269,7 @@ void tstr_drop(struct TString tstr)
     if (mode == TSTRING_NAT || mode == TSTRING_EXT) {
         struct TStringInfo *sh = tstr.pstrinfo;
         if (tref_dec(&sh->count)) {
-            if (mode == TSTRING_EXT) {
+            if (mode == TSTRING_EXT && sh->drop != nullptr) {
                 sh->drop(sh->external_obj);
             }
             free(sh);
@@ -271,271 +277,269 @@ void tstr_drop(struct TString tstr)
     }
 }
 
-inline size_t utf8_to_utf16_required(char const *src, size_t len)
-{
-    uint8_t const *data = reinterpret_cast<uint8_t const *>(src);
-    size_t pos = 0;
-    size_t units = 0;
-
-    while (pos < len) {
-        if (pos + UTF8_FAST_BLOCK_SIZE <= len) {
-            uint64_t v1;
-            uint64_t v2;
-            std::copy(data + pos, data + pos + UTF8_FAST_WORD_SIZE, reinterpret_cast<uint8_t *>(&v1));
-            std::copy(data + pos + UTF8_FAST_WORD_SIZE, data + pos + UTF8_FAST_BLOCK_SIZE,
-                      reinterpret_cast<uint8_t *>(&v2));
-            uint64_t v = v1 | v2;
-            if ((v & UTF8_FAST_ASCII_MASK) == 0) {
-                units += UTF8_FAST_BLOCK_SIZE;
-                pos += UTF8_FAST_BLOCK_SIZE;
-                continue;
-            }
-        }
-
-        uint8_t leading_byte = data[pos];
-        if (leading_byte < UTF8_NON_ASCII_MIN) {
-            // ASCII
-            units += UTF16_ONE_UNIT_COUNT;
-            pos++;
-        } else if ((leading_byte & UTF8_TWO_BYTE_PREFIX_MASK) == UTF8_TWO_BYTE_PREFIX) {
-            // 2 字节 UTF-8
-            if (pos + UTF8_CONTINUATION_BYTE_OFFSET >= len ||
-                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
-                units += UTF16_ONE_UNIT_COUNT;
-                pos++;
-                continue;
-            }
-            units += UTF16_ONE_UNIT_COUNT;
-            pos += UTF8_TWO_BYTE_COUNT;
-        } else if ((leading_byte & UTF8_THREE_BYTE_PREFIX_MASK) == UTF8_THREE_BYTE_PREFIX) {
-            // 3 字节 UTF-8
-            if (pos + UTF8_THREE_BYTE_LAST_OFFSET >= len ||
-                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
-                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
-                units += UTF16_ONE_UNIT_COUNT;
-                pos++;
-                continue;
-            }
-            units += UTF16_ONE_UNIT_COUNT;
-            pos += UTF8_THREE_BYTE_COUNT;
-        } else if ((leading_byte & UTF8_FOUR_BYTE_PREFIX_MASK) == UTF8_FOUR_BYTE_PREFIX) {
-            // 4 字节 UTF-8
-            if (pos + UTF8_FOUR_BYTE_LAST_OFFSET >= len ||
-                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
-                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
-                (data[pos + UTF8_FOUR_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
-                units += UTF16_ONE_UNIT_COUNT;
-                pos++;
-                continue;
-            }
-            units += UTF16_TWO_UNIT_COUNT;
-            pos += UTF8_FOUR_BYTE_COUNT;
-        } else {
-            units += UTF16_ONE_UNIT_COUNT;
-            pos++;
-        }
+namespace {
+struct utf16_counter {
+    explicit utf16_counter() : count(0)
+    {
     }
-    return units;
-}
 
-inline size_t utf8_to_utf16(char const *input, size_t len, uint16_t *output)
+    void write(uint16_t)
+    {
+        count++;
+    }
+
+    size_t result()
+    {
+        return count;
+    }
+
+private:
+    size_t count;
+};
+
+struct utf16_writer {
+    explicit utf16_writer(uint16_t *output) : output(output)
+    {
+    }
+
+    void write(uint16_t value)
+    {
+        *output++ = value;
+    }
+
+    uint16_t *result()
+    {
+        return output;
+    }
+
+private:
+    uint16_t *output;
+};
+
+template<typename Sink, typename... Args>
+inline auto utf8_to_utf16(char const *buf, size_t len, Args &&...args)
 {
-    uint8_t const *data = reinterpret_cast<uint8_t const *>(input);
-    size_t pos = 0;
-    uint16_t *start {output};
+    uint8_t const *pos = reinterpret_cast<uint8_t const *>(buf);
+    uint8_t const *end = reinterpret_cast<uint8_t const *>(buf + len);
+    Sink sink(std::forward<Args>(args)...);
 
-    while (pos < len) {
-        if (pos + UTF8_FAST_BLOCK_SIZE <= len) {
-            uint64_t v1;
-            uint64_t v2;
-            std::copy(data + pos, data + pos + UTF8_FAST_WORD_SIZE, reinterpret_cast<uint8_t *>(&v1));
-            std::copy(data + pos + UTF8_FAST_WORD_SIZE, data + pos + UTF8_FAST_BLOCK_SIZE,
-                      reinterpret_cast<uint8_t *>(&v2));
-            uint64_t v {v1 | v2};
+    while (pos < end) {
+        if (pos + UTF8_FAST_BLOCK_SIZE <= end) {
+            uint64_t v = 0;
+            for (size_t offset = 0; offset < UTF8_FAST_BLOCK_SIZE; offset += UTF8_FAST_WORD_SIZE) {
+                uint64_t t;
+                std::copy_n(pos + offset, UTF8_FAST_WORD_SIZE, reinterpret_cast<uint8_t *>(&t));
+                v |= t;
+            }
             if ((v & UTF8_FAST_ASCII_MASK) == 0) {
-                size_t final_pos = pos + UTF8_FAST_BLOCK_SIZE;
+                uint8_t const *final_pos = pos + UTF8_FAST_BLOCK_SIZE;
                 while (pos < final_pos) {
-                    *output++ = uint16_t(input[pos]);
-                    pos++;
+                    sink.write(uint16_t(*pos++));
                 }
                 continue;
             }
         }
 
-        uint8_t leading_byte = data[pos];
+        uint8_t leading_byte = *pos;
         if (leading_byte < UTF8_NON_ASCII_MIN) {
             // ASCII
-            *output++ = uint16_t(leading_byte);
-            pos++;
+            pos += UTF8_ONE_BYTE_COUNT;
+            sink.write(uint16_t(leading_byte));
         } else if ((leading_byte & UTF8_TWO_BYTE_PREFIX_MASK) == UTF8_TWO_BYTE_PREFIX) {
             // 2 字节 UTF-8
-            if (pos + UTF8_CONTINUATION_BYTE_OFFSET >= len ||
-                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
-                *output++ = UNICODE_REPLACEMENT_CHAR;
-                pos++;
+            if (pos + UTF8_CONTINUATION_BYTE_OFFSET >= end ||
+                (*(pos + UTF8_CONTINUATION_BYTE_OFFSET) & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                pos += UTF8_ONE_BYTE_COUNT;
+                sink.write(UNICODE_REPLACEMENT_CHAR);
                 continue;
             }
             uint32_t code_point = (leading_byte & UTF8_TWO_BYTE_PAYLOAD_MASK) << UTF8_SHIFT_1 |
-                                  (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_PAYLOAD_MASK);
+                                  (*(pos + UTF8_CONTINUATION_BYTE_OFFSET) & UTF8_PAYLOAD_MASK);
             if (code_point < UTF8_TWO_BYTE_MIN || UTF8_TWO_BYTE_MAX < code_point) {
-                return 0;
+                pos += UTF8_ONE_BYTE_COUNT;
+                sink.write(UNICODE_REPLACEMENT_CHAR);
+                continue;
             }
-            *output++ = uint16_t(code_point);
             pos += UTF8_TWO_BYTE_COUNT;
+            sink.write(uint16_t(code_point));
         } else if ((leading_byte & UTF8_THREE_BYTE_PREFIX_MASK) == UTF8_THREE_BYTE_PREFIX) {
             // 3 字节 UTF-8
-            if (pos + UTF8_THREE_BYTE_LAST_OFFSET >= len ||
-                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
-                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
-                *output++ = UNICODE_REPLACEMENT_CHAR;
-                pos++;
+            if (pos + UTF8_THREE_BYTE_LAST_OFFSET >= end ||
+                (*(pos + UTF8_CONTINUATION_BYTE_OFFSET) & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (*(pos + UTF8_THREE_BYTE_LAST_OFFSET) & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                pos += UTF8_ONE_BYTE_COUNT;
+                sink.write(UNICODE_REPLACEMENT_CHAR);
                 continue;
             }
             uint32_t code_point = (leading_byte & UTF8_THREE_BYTE_PAYLOAD_MASK) << UTF8_SHIFT_2 |
-                                  (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_1 |
-                                  (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_PAYLOAD_MASK);
+                                  (*(pos + UTF8_CONTINUATION_BYTE_OFFSET) & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_1 |
+                                  (*(pos + UTF8_THREE_BYTE_LAST_OFFSET) & UTF8_PAYLOAD_MASK);
             if (code_point < UTF8_THREE_BYTE_MIN || UTF8_THREE_BYTE_MAX < code_point ||
                 (UTF16_SURROGATE_HIGH_START <= code_point && code_point <= UTF16_SURROGATE_LOW_END)) {
-                return 0;
+                pos += UTF8_ONE_BYTE_COUNT;
+                sink.write(UNICODE_REPLACEMENT_CHAR);
+                continue;
             }
-            *output++ = uint16_t(code_point);
             pos += UTF8_THREE_BYTE_COUNT;
+            sink.write(uint16_t(code_point));
         } else if ((leading_byte & UTF8_FOUR_BYTE_PREFIX_MASK) == UTF8_FOUR_BYTE_PREFIX) {
             // 4 字节 UTF-8
-            if (pos + UTF8_FOUR_BYTE_LAST_OFFSET >= len ||
-                (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
-                (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
-                (data[pos + UTF8_FOUR_BYTE_LAST_OFFSET] & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
-                *output++ = UNICODE_REPLACEMENT_CHAR;
-                pos++;
+            if (pos + UTF8_FOUR_BYTE_LAST_OFFSET >= end ||
+                (*(pos + UTF8_CONTINUATION_BYTE_OFFSET) & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (*(pos + UTF8_THREE_BYTE_LAST_OFFSET) & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX ||
+                (*(pos + UTF8_FOUR_BYTE_LAST_OFFSET) & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PREFIX) {
+                pos += UTF8_ONE_BYTE_COUNT;
+                sink.write(UNICODE_REPLACEMENT_CHAR);
                 continue;
             }
             uint32_t code_point = (leading_byte & UTF8_FOUR_BYTE_PAYLOAD_MASK) << UTF8_SHIFT_3 |
-                                  (data[pos + UTF8_CONTINUATION_BYTE_OFFSET] & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_2 |
-                                  (data[pos + UTF8_THREE_BYTE_LAST_OFFSET] & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_1 |
-                                  (data[pos + UTF8_FOUR_BYTE_LAST_OFFSET] & UTF8_PAYLOAD_MASK);
+                                  (*(pos + UTF8_CONTINUATION_BYTE_OFFSET) & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_2 |
+                                  (*(pos + UTF8_THREE_BYTE_LAST_OFFSET) & UTF8_PAYLOAD_MASK) << UTF8_SHIFT_1 |
+                                  (*(pos + UTF8_FOUR_BYTE_LAST_OFFSET) & UTF8_PAYLOAD_MASK);
             if (code_point < UTF8_FOUR_BYTE_MIN || UTF8_FOUR_BYTE_MAX < code_point) {
-                return 0;
+                pos += UTF8_ONE_BYTE_COUNT;
+                sink.write(UNICODE_REPLACEMENT_CHAR);
+                continue;
             }
+            pos += UTF8_FOUR_BYTE_COUNT;
             code_point -= UTF8_FOUR_BYTE_MIN;
             uint16_t high_surrogate = uint16_t(UTF16_SURROGATE_HIGH_START + (code_point >> UTF16_SURROGATE_SHIFT));
             uint16_t low_surrogate = uint16_t(UTF16_SURROGATE_LOW_START + (code_point & UTF16_SURROGATE_MASK));
-            *output++ = high_surrogate;
-            *output++ = low_surrogate;
-            pos += UTF8_FOUR_BYTE_COUNT;
+            sink.write(high_surrogate);
+            sink.write(low_surrogate);
         } else {
-            return 0;
+            pos += UTF8_ONE_BYTE_COUNT;
+            sink.write(UNICODE_REPLACEMENT_CHAR);
         }
     }
-    return output - start;
+    return sink.result();
 }
 
-inline size_t utf16_to_utf8_required(uint16_t const *src, size_t len)
+inline size_t count_utf8_to_utf16(char const *buf, size_t len)
 {
-    uint16_t const *data = src;
-    size_t pos = 0;
-    size_t units = 0;
-    while (pos < len) {
-        if (pos + UTF16_FAST_BLOCK_SIZE <= len) {
-            uint64_t v;
-            std::copy(data + pos, data + pos + UTF16_FAST_BLOCK_SIZE, reinterpret_cast<uint8_t *>(&v));
-            if ((v & UTF16_FAST_ASCII_MASK) == 0) {
-                units += UTF16_FAST_BLOCK_SIZE;
-                pos += UTF16_FAST_BLOCK_SIZE;
-                continue;
-            }
-        }
-        uint16_t word = data[pos];
-        if ((word & UTF16_NON_ASCII_MASK) == 0) {
-            units += UTF8_ONE_BYTE_COUNT;
-            pos++;
-        } else if ((word & UTF16_THREE_BYTE_MASK) == 0) {
-            units += UTF8_TWO_BYTE_COUNT;
-            pos++;
-        } else if ((word & UTF16_THREE_BYTE_MASK) != UTF16_SURROGATE_HIGH_START) {
-            units += UTF8_THREE_BYTE_COUNT;
-            pos++;
-        } else {
-            // must be a surrogate pair
-            uint16_t diff = uint16_t(word - UTF16_SURROGATE_HIGH_START);
-            if (pos + UTF16_TRAIL_SURROGATE_OFFSET >= len || diff > UTF16_SURROGATE_MASK) {
-                units += UTF8_THREE_BYTE_COUNT;
-                pos++;
-                continue;
-            }
-            if (uint16_t(data[pos + UTF16_TRAIL_SURROGATE_OFFSET] - UTF16_SURROGATE_LOW_START) > UTF16_SURROGATE_MASK) {
-                units += UTF8_THREE_BYTE_COUNT;
-                pos++;
-                continue;
-            }
-            units += UTF8_FOUR_BYTE_COUNT;
-            pos += UTF16_TWO_UNIT_COUNT;
-        }
+    return utf8_to_utf16<utf16_counter>(buf, len);
+}
+
+inline uint16_t *write_utf8_to_utf16(char const *buf, size_t len, uint16_t *output)
+{
+    return utf8_to_utf16<utf16_writer>(buf, len, output);
+}
+
+struct utf8_counter {
+    explicit utf8_counter() : count(0)
+    {
     }
-    return units;
-}
 
-inline size_t utf16_to_utf8(uint16_t const *input, size_t len, char *output)
+    void write(char)
+    {
+        count++;
+    }
+
+    size_t result()
+    {
+        return count;
+    }
+
+private:
+    size_t count;
+};
+
+struct utf8_writer {
+    explicit utf8_writer(char *output) : output(output)
+    {
+    }
+
+    void write(char value)
+    {
+        *output++ = value;
+    }
+
+    char *result()
+    {
+        return output;
+    }
+
+private:
+    char *output;
+};
+
+template<typename Sink, typename... Args>
+inline auto utf16_to_utf8(uint16_t const *buf, size_t len, Args &&...args)
 {
-    uint16_t const *data = input;
-    size_t pos = 0;
-    char *start {output};
-    while (pos < len) {
-        if (pos + UTF16_FAST_BLOCK_SIZE <= len) {
-            uint64_t v;
-            std::copy(data + pos, data + pos + UTF16_FAST_BLOCK_SIZE, reinterpret_cast<uint8_t *>(&v));
+    uint16_t const *pos = buf;
+    uint16_t const *end = buf + len;
+    Sink sink(std::forward<Args>(args)...);
+
+    while (pos < end) {
+        if (pos + UTF16_FAST_BLOCK_SIZE <= end) {
+            uint64_t v = 0;
+            for (size_t i = 0; i < UTF16_FAST_BLOCK_SIZE; i += UTF16_FAST_WORD_SIZE) {
+                uint64_t t;
+                std::copy_n(pos + i, UTF16_FAST_WORD_SIZE, reinterpret_cast<uint16_t *>(&t));
+                v |= t;
+            }
             if ((v & UTF16_FAST_ASCII_MASK) == 0) {
-                size_t final_pos = pos + UTF16_FAST_BLOCK_SIZE;
+                uint16_t const *final_pos = pos + UTF16_FAST_BLOCK_SIZE;
                 while (pos < final_pos) {
-                    *output++ = char(input[pos]);
-                    pos++;
+                    sink.write(char(*pos++));
                 }
                 continue;
             }
         }
-        uint16_t word = data[pos];
+
+        uint16_t word = *pos;
         if ((word & UTF16_NON_ASCII_MASK) == 0) {
-            *output++ = char(word);
-            pos++;
+            pos += UTF16_ONE_UNIT_COUNT;
+            sink.write(char(word));
         } else if ((word & UTF16_THREE_BYTE_MASK) == 0) {
-            *output++ = char((word >> UTF8_SHIFT_1) | UTF8_TWO_BYTE_PREFIX);
-            *output++ = char((word & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
-            pos++;
+            pos += UTF16_ONE_UNIT_COUNT;
+            sink.write(char((word >> UTF8_SHIFT_1) | UTF8_TWO_BYTE_PREFIX));
+            sink.write(char((word & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX));
         } else if ((word & UTF16_THREE_BYTE_MASK) != UTF16_SURROGATE_HIGH_START) {
-            *output++ = char((word >> UTF8_SHIFT_2) | UTF8_THREE_BYTE_PREFIX);
-            *output++ = char(((word >> UTF8_SHIFT_1) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
-            *output++ = char((word & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
-            pos++;
+            pos += UTF16_ONE_UNIT_COUNT;
+            sink.write(char((word >> UTF8_SHIFT_2) | UTF8_THREE_BYTE_PREFIX));
+            sink.write(char(((word >> UTF8_SHIFT_1) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX));
+            sink.write(char((word & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX));
         } else {
             // must be a surrogate pair
-            uint16_t diff = uint16_t(word - UTF16_SURROGATE_HIGH_START);
-            if (pos + UTF16_TRAIL_SURROGATE_OFFSET >= len || diff > UTF16_SURROGATE_MASK) {
-                *output++ = char(UTF8_REPLACEMENT_BYTE_1);
-                *output++ = char(UTF8_REPLACEMENT_BYTE_2);
-                *output++ = char(UTF8_REPLACEMENT_BYTE_3);
-                pos++;
+            uint16_t word_diff = uint16_t(word - UTF16_SURROGATE_HIGH_START);
+            if (pos + UTF16_TRAIL_SURROGATE_OFFSET >= end || word_diff > UTF16_SURROGATE_MASK) {
+                pos += UTF16_ONE_UNIT_COUNT;
+                sink.write(char(UTF8_REPLACEMENT_BYTE_1));
+                sink.write(char(UTF8_REPLACEMENT_BYTE_2));
+                sink.write(char(UTF8_REPLACEMENT_BYTE_3));
                 continue;
             }
-            uint16_t next_word = data[pos + UTF16_TRAIL_SURROGATE_OFFSET];
-            uint16_t diff2 = uint16_t(next_word - UTF16_SURROGATE_LOW_START);
-            if (diff2 > UTF16_SURROGATE_MASK) {
-                *output++ = char(UTF8_REPLACEMENT_BYTE_1);
-                *output++ = char(UTF8_REPLACEMENT_BYTE_2);
-                *output++ = char(UTF8_REPLACEMENT_BYTE_3);
-                pos++;
+            uint16_t next = *(pos + UTF16_TRAIL_SURROGATE_OFFSET);
+            uint16_t next_diff = uint16_t(next - UTF16_SURROGATE_LOW_START);
+            if (next_diff > UTF16_SURROGATE_MASK) {
+                pos += UTF16_ONE_UNIT_COUNT;
+                sink.write(char(UTF8_REPLACEMENT_BYTE_1));
+                sink.write(char(UTF8_REPLACEMENT_BYTE_2));
+                sink.write(char(UTF8_REPLACEMENT_BYTE_3));
                 continue;
             }
-
-            uint32_t value = (diff << UTF16_SURROGATE_SHIFT) + diff2 + UTF8_FOUR_BYTE_MIN;
-            *output++ = char((value >> UTF8_SHIFT_3) | UTF8_FOUR_BYTE_PREFIX);
-            *output++ = char(((value >> UTF8_SHIFT_2) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
-            *output++ = char(((value >> UTF8_SHIFT_1) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
-            *output++ = char((value & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX);
             pos += UTF16_TWO_UNIT_COUNT;
+            uint32_t value = (word_diff << UTF16_SURROGATE_SHIFT) + next_diff + UTF8_FOUR_BYTE_MIN;
+            sink.write(char((value >> UTF8_SHIFT_3) | UTF8_FOUR_BYTE_PREFIX));
+            sink.write(char(((value >> UTF8_SHIFT_2) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX));
+            sink.write(char(((value >> UTF8_SHIFT_1) & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX));
+            sink.write(char((value & UTF8_PAYLOAD_MASK) | UTF8_CONTINUATION_PREFIX));
         }
     }
-    return output - start;
+    return sink.result();
 }
+
+inline size_t count_utf16_to_utf8(uint16_t const *buf, size_t len)
+{
+    return utf16_to_utf8<utf8_counter>(buf, len);
+}
+
+inline char *write_utf16_to_utf8(uint16_t const *buf, size_t len, char *output)
+{
+    return utf16_to_utf8<utf8_writer>(buf, len, output);
+}
+}  // namespace
 
 struct TString tstr_dup_as_utf16(struct TString tstr)
 {
@@ -546,16 +550,15 @@ struct TString tstr_dup_as_utf16(struct TString tstr)
     size_t len = tstr_len_utf8(tstr);
     if (tstr_encoding(tstr) == TSTRING_UTF8) {
         struct TString result;
-        size_t needed = utf8_to_utf16_required(src, len);
+        size_t needed = count_utf8_to_utf16(src, len);
         uint16_t *dst = tstr_initialize_utf16(&result, needed + 1);
         if (!dst) {
             return tstr_new_invalid();
         }
 
-        size_t used_len = utf8_to_utf16(src, len, dst);
-        dst[used_len] = u'\0';
-        result.flags = TSTRING_NAT | TSTRING_UTF16;
-        tstr_set_len_utf16(&result, used_len);
+        uint16_t *end = write_utf8_to_utf16(src, len, dst);
+        *end = u'\0';
+        tstr_set_len_utf16(&result, end - dst);
         return result;
     }
     return tstr_new_invalid();
@@ -570,16 +573,15 @@ struct TString tstr_dup_as_utf8(struct TString tstr)
     size_t len = tstr_len_utf16(tstr);
     if (tstr_encoding(tstr) == TSTRING_UTF16) {
         struct TString result;
-        size_t needed = utf16_to_utf8_required(src, len);
+        size_t needed = count_utf16_to_utf8(src, len);
         char *dst = tstr_initialize_utf8(&result, needed + 1);
         if (!dst) {
             return tstr_new_invalid();
         }
 
-        size_t used_len = utf16_to_utf8(src, len, dst);
-        dst[used_len] = '\0';
-        result.flags = TSTRING_NAT | TSTRING_UTF8;
-        tstr_set_len_utf8(&result, used_len);
+        char *end = write_utf16_to_utf8(src, len, dst);
+        *end = '\0';
+        tstr_set_len_utf8(&result, end - dst);
         return result;
     }
     return tstr_new_invalid();
@@ -594,7 +596,7 @@ struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list
         if (tstr_encoding(tstr) == TSTRING_UTF8) {
             len += tstr_len_utf8(tstr);
         } else if (tstr_encoding(tstr) == TSTRING_UTF16) {
-            len += utf16_to_utf8_required(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
+            len += count_utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
         } else {
             return tstr_new_invalid();
         }
@@ -604,16 +606,17 @@ struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list
         return tstr_new_invalid();
     }
 
+    char *end = buf;
     for (size_t i = 0; i < count; ++i) {
         struct TString tstr = tstr_list[i];
         if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            buf = std::copy(tstr_buf_utf8(tstr), tstr_buf_utf8(tstr) + tstr_len_utf8(tstr), buf);
+            end = std::copy_n(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), end);
         } else if (tstr_encoding(tstr) == TSTRING_UTF16) {
-            buf += utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), buf);
+            end = write_utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), end);
         }
     }
-    *buf = '\0';
-    tstr_set_len_utf8(&result, len);
+    *end = '\0';
+    tstr_set_len_utf8(&result, end - buf);
     return result;
 }
 
@@ -626,7 +629,7 @@ struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_lis
         if (tstr_encoding(tstr) == TSTRING_UTF16) {
             len += tstr_len_utf16(tstr);
         } else if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            len += utf8_to_utf16_required(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
+            len += count_utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
         } else {
             return tstr_new_invalid();
         }
@@ -636,16 +639,17 @@ struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_lis
         return tstr_new_invalid();
     }
 
+    uint16_t *end = buf;
     for (size_t i = 0; i < count; ++i) {
         struct TString tstr = tstr_list[i];
         if (tstr_encoding(tstr) == TSTRING_UTF16) {
-            buf = std::copy(tstr_buf_utf16(tstr), tstr_buf_utf16(tstr) + tstr_len_utf16(tstr), buf);
+            end = std::copy_n(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), end);
         } else if (tstr_encoding(tstr) == TSTRING_UTF8) {
-            buf += utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), buf);
+            end = write_utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), end);
         }
     }
-    *buf = u'\0';
-    tstr_set_len_utf16(&result, len);
+    *end = u'\0';
+    tstr_set_len_utf16(&result, end - buf);
     return result;
 }
 
@@ -654,11 +658,13 @@ struct TString tstr_substr_utf8(struct TString tstr, size_t pos, size_t len)
     if (tstr_encoding(tstr) != TSTRING_UTF8) {
         return tstr_new_invalid();
     }
-    size_t orig_len = tstr_len_utf8(tstr);
+    size_t const orig_len = tstr_len_utf8(tstr);
     if (pos > orig_len) {
-        len = 0;
-    } else if (pos + len > orig_len) {
-        len = orig_len - pos;
+        pos = orig_len;
+    }
+    size_t const remaining = orig_len - pos;
+    if (len > remaining) {
+        len = remaining;
     }
     tstr_set_len_utf8(&tstr, len);
     tstr_set_buf_utf8(&tstr, tstr_buf_utf8(tstr) + pos);
@@ -670,11 +676,13 @@ struct TString tstr_substr_utf16(struct TString tstr, size_t pos, size_t len)
     if (tstr_encoding(tstr) != TSTRING_UTF16) {
         return tstr_new_invalid();
     }
-    size_t orig_len = tstr_len_utf16(tstr);
+    size_t const orig_len = tstr_len_utf16(tstr);
     if (pos > orig_len) {
-        len = 0;
-    } else if (pos + len > orig_len) {
-        len = orig_len - pos;
+        pos = orig_len;
+    }
+    size_t const remaining = orig_len - pos;
+    if (len > remaining) {
+        len = remaining;
     }
     tstr_set_len_utf16(&tstr, len);
     tstr_set_buf_utf16(&tstr, tstr_buf_utf16(tstr) + pos);
