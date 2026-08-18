@@ -46,7 +46,7 @@ struct common_string_view {
     }
 
     common_string_view(char const *value TH_NONNULL, std::size_t size)
-        : common_string_view(tstr_new_ref_utf8(value, size))
+        : common_string_view(tstr_new_borrowed_utf8(value, size))
     {
     }
 
@@ -65,7 +65,7 @@ struct common_string_view {
     }
 
     common_string_view(char16_t const *value TH_NONNULL, std::size_t size)
-        : common_string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
+        : common_string_view(tstr_new_borrowed_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
 
@@ -106,22 +106,22 @@ struct common_string_view {
 
     bool is_utf8() const noexcept
     {
-        return tstr_encoding(m_handle) == TSTRING_UTF8;
+        return tstr_encoding(m_handle) == TSTRING_ENCODING_UTF8;
     }
 
     bool is_utf16() const noexcept
     {
-        return tstr_encoding(m_handle) == TSTRING_UTF16;
+        return tstr_encoding(m_handle) == TSTRING_ENCODING_UTF16;
     }
 
     [[nodiscard]]
     string_encoding encoding() const noexcept
     {
         switch (tstr_encoding(m_handle)) {
-            case TSTRING_UTF8:
+            case TSTRING_ENCODING_UTF8:
                 return string_encoding::utf8;
 
-            case TSTRING_UTF16:
+            case TSTRING_ENCODING_UTF16:
                 return string_encoding::utf16;
 
             default:
@@ -161,8 +161,8 @@ struct common_string : public common_string_view {
     {
     }
 
-    common_string(char const *value TH_NONNULL, std::size_t size, void *external_obj, void (*drop)(void *))
-        : common_string(tstr_new_from_external_utf8(value, size, external_obj, drop))
+    common_string(char const *value TH_NONNULL, std::size_t size, void *context, void (*drop)(void *))
+        : common_string(tstr_new_from_external_utf8(value, size, context, drop))
     {
     }
 
@@ -176,9 +176,8 @@ struct common_string : public common_string_view {
     {
     }
 
-    common_string(char16_t const *value TH_NONNULL, std::size_t size, void *external_obj, void (*drop)(void *))
-        : common_string(
-              tstr_new_from_external_utf16(reinterpret_cast<uint16_t const *>(value), size, external_obj, drop))
+    common_string(char16_t const *value TH_NONNULL, std::size_t size, void *context, void (*drop)(void *))
+        : common_string(tstr_new_from_external_utf16(reinterpret_cast<uint16_t const *>(value), size, context, drop))
     {
     }
 
@@ -217,7 +216,7 @@ struct common_string : public common_string_view {
 
     common_string(common_string &&other) noexcept : common_string(other.m_handle)
     {
-        other.m_handle.pstrinfo = nullptr;
+        other.m_handle.cb = nullptr;
     }
 
     // assignment
@@ -230,7 +229,7 @@ struct common_string : public common_string_view {
     // destructor
     ~common_string()
     {
-        if (m_handle.pstrinfo != nullptr) {
+        if (m_handle.cb != nullptr) {
             tstr_drop(m_handle);
         }
     }
@@ -251,7 +250,7 @@ struct string_view {
     {
     }
 
-    string_view(char const *value TH_NONNULL, size_type size) : string_view(tstr_new_ref_utf8(value, size))
+    string_view(char const *value TH_NONNULL, size_type size) : string_view(tstr_new_borrowed_utf8(value, size))
     {
     }
 
@@ -433,8 +432,8 @@ struct string : public string_view {
     {
     }
 
-    string(char const *value TH_NONNULL, size_type size, void *external_obj, void (*drop)(void *))
-        : string(tstr_new_from_external_utf8(value, size, external_obj, drop))
+    string(char const *value TH_NONNULL, size_type size, void *context, void (*drop)(void *))
+        : string(tstr_new_from_external_utf8(value, size, context, drop))
     {
     }
 
@@ -461,7 +460,7 @@ struct string : public string_view {
 
     string(string &&other) noexcept : string(other.m_handle)
     {
-        other.m_handle.pstrinfo = nullptr;
+        other.m_handle.cb = nullptr;
     }
 
     // Explicit downcast
@@ -469,7 +468,7 @@ struct string : public string_view {
     {
         if (other.is_utf8()) {
             TString handle = other.m_handle;
-            other.m_handle.pstrinfo = nullptr;
+            other.m_handle.cb = nullptr;
             return handle;
         }
         return tstr_dup_as_utf8(other.m_handle);
@@ -493,7 +492,7 @@ struct string : public string_view {
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
-        m_handle.pstrinfo = nullptr;
+        m_handle.cb = nullptr;
         return str;
     }
 
@@ -507,7 +506,7 @@ struct string : public string_view {
     // destructor
     ~string()
     {
-        if (m_handle.pstrinfo != nullptr) {
+        if (m_handle.cb != nullptr) {
             tstr_drop(m_handle);
         }
     }
@@ -530,7 +529,7 @@ struct u16string_view {
     }
 
     u16string_view(char16_t const *value TH_NONNULL, size_type size)
-        : u16string_view(tstr_new_ref_utf16(reinterpret_cast<uint16_t const *>(value), size))
+        : u16string_view(tstr_new_borrowed_utf16(reinterpret_cast<uint16_t const *>(value), size))
     {
     }
 
@@ -698,8 +697,8 @@ struct u16string : public u16string_view {
     {
     }
 
-    u16string(char16_t const *value TH_NONNULL, size_type size, void *external_obj, void (*drop)(void *))
-        : u16string(tstr_new_from_external_utf16(reinterpret_cast<uint16_t const *>(value), size, external_obj, drop))
+    u16string(char16_t const *value TH_NONNULL, size_type size, void *context, void (*drop)(void *))
+        : u16string(tstr_new_from_external_utf16(reinterpret_cast<uint16_t const *>(value), size, context, drop))
     {
     }
 
@@ -726,7 +725,7 @@ struct u16string : public u16string_view {
 
     u16string(u16string &&other) noexcept : u16string(other.m_handle)
     {
-        other.m_handle.pstrinfo = nullptr;
+        other.m_handle.cb = nullptr;
     }
 
     // Explicit downcast
@@ -734,7 +733,7 @@ struct u16string : public u16string_view {
     {
         if (other.is_utf16()) {
             TString handle = other.m_handle;
-            other.m_handle.pstrinfo = nullptr;
+            other.m_handle.cb = nullptr;
             return handle;
         }
         return tstr_dup_as_utf16(other.m_handle);
@@ -758,7 +757,7 @@ struct u16string : public u16string_view {
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
-        m_handle.pstrinfo = nullptr;
+        m_handle.cb = nullptr;
         return str;
     }
 
@@ -772,7 +771,7 @@ struct u16string : public u16string_view {
     // destructor
     ~u16string()
     {
-        if (m_handle.pstrinfo != nullptr) {
+        if (m_handle.cb != nullptr) {
             tstr_drop(m_handle);
         }
     }

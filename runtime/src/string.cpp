@@ -81,59 +81,59 @@ constexpr uint16_t UTF16_THREE_BYTE_MASK = 0xf800;
 
 TString tstr_new_invalid()
 {
-    struct TString tstr;
-    tstr.flags = TSTRING_STA | TSTRING_UNKNOWN;
-    tstr.length = 0;
-    tstr.ptr = nullptr;
-    tstr.pstrinfo = nullptr;
+    TString tstr;
+    tstr.flags = TSTRING_STORAGE_STATIC | TSTRING_ENCODING_UNKNOWN;
+    tstr.byte_length = 0;
+    tstr.data = nullptr;
+    tstr.cb = nullptr;
     return tstr;
 }
 
-char *tstr_initialize_utf8(struct TString *tstr_ptr, size_t capacity)
+char *tstr_initialize_utf8(TString *tstr_ptr, size_t capacity)
 {
-    size_t bytes_required = sizeof(struct TStringInfo) + capacity;
-    struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
-    if (!sh) {
+    size_t bytes_required = sizeof(TStringControlBlock) + capacity * sizeof(char);
+    TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
+    if (!cb) {
         return nullptr;
     }
 
-    tref_init(&sh->count, 1);
-    sh->drop = nullptr;
-    sh->external_obj = nullptr;
+    tref_init(&cb->ref_count, 1);
+    cb->drop = nullptr;
+    cb->context = nullptr;
 
-    char *buffer = reinterpret_cast<char *>(sh + 1);
+    char *buffer = reinterpret_cast<char *>(cb + 1);
 
-    tstr_ptr->flags = TSTRING_NAT | TSTRING_UTF8;
+    tstr_ptr->flags = TSTRING_STORAGE_INTERNAL | TSTRING_ENCODING_UTF8;
     tstr_set_buf_utf8(tstr_ptr, buffer);
-    tstr_ptr->pstrinfo = sh;
+    tstr_ptr->cb = cb;
 
     return buffer;
 }
 
-uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, size_t capacity)
+uint16_t *tstr_initialize_utf16(TString *tstr_ptr, size_t capacity)
 {
-    size_t bytes_required = sizeof(struct TStringInfo) + capacity * sizeof(uint16_t);
-    struct TStringInfo *sh = reinterpret_cast<struct TStringInfo *>(malloc(bytes_required));
-    if (!sh) {
+    size_t bytes_required = sizeof(TStringControlBlock) + capacity * sizeof(uint16_t);
+    TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
+    if (!cb) {
         return nullptr;
     }
 
-    tref_init(&sh->count, 1);
-    sh->drop = nullptr;
-    sh->external_obj = nullptr;
+    tref_init(&cb->ref_count, 1);
+    cb->drop = nullptr;
+    cb->context = nullptr;
 
-    uint16_t *buffer = reinterpret_cast<uint16_t *>(sh + 1);
+    uint16_t *buffer = reinterpret_cast<uint16_t *>(cb + 1);
 
-    tstr_ptr->flags = TSTRING_NAT | TSTRING_UTF16;
+    tstr_ptr->flags = TSTRING_STORAGE_INTERNAL | TSTRING_ENCODING_UTF16;
     tstr_set_buf_utf16(tstr_ptr, buffer);
-    tstr_ptr->pstrinfo = sh;
+    tstr_ptr->cb = cb;
 
     return buffer;
 }
 
-struct TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
+TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
 {
-    struct TString tstr;
+    TString tstr;
     char *buf = tstr_initialize_utf8(&tstr, len + 1);
     if (!buf) {
         return tstr_new_invalid();
@@ -145,9 +145,9 @@ struct TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
     return tstr;
 }
 
-struct TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
+TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
 {
-    struct TString tstr;
+    TString tstr;
     uint16_t *buf = tstr_initialize_utf16(&tstr, len + 1);
     if (!buf) {
         return tstr_new_invalid();
@@ -159,120 +159,120 @@ struct TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
     return tstr;
 }
 
-struct TString tstr_new_ref_utf8(char const *buf TH_NONNULL, size_t len)
+TString tstr_new_borrowed_utf8(char const *buf TH_NONNULL, size_t len)
 {
-    struct TString tstr;
-    tstr.flags = TSTRING_REF | TSTRING_UTF8;
-    tstr_set_len_utf8(&tstr, len);
+    TString tstr;
+    tstr.flags = TSTRING_STORAGE_BORROWED | TSTRING_ENCODING_UTF8;
     tstr_set_buf_utf8(&tstr, buf);
-    tstr.pstrinfo = nullptr;
+    tstr_set_len_utf8(&tstr, len);
+    tstr.cb = nullptr;
     return tstr;
 }
 
-struct TString tstr_new_ref_utf16(uint16_t const *buf TH_NONNULL, size_t len)
+TString tstr_new_borrowed_utf16(uint16_t const *buf TH_NONNULL, size_t len)
 {
-    struct TString tstr;
-    tstr.flags = TSTRING_REF | TSTRING_UTF16;
-    tstr_set_len_utf16(&tstr, len);
+    TString tstr;
+    tstr.flags = TSTRING_STORAGE_BORROWED | TSTRING_ENCODING_UTF16;
     tstr_set_buf_utf16(&tstr, buf);
-    tstr.pstrinfo = nullptr;
+    tstr_set_len_utf16(&tstr, len);
+    tstr.cb = nullptr;
     return tstr;
 }
 
-struct TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t len, void *external_obj,
-                                           void (*drop)(void *))
+TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t len, void *context, void (*drop)(void *))
 {
-    struct TString tstr;
-    struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
-    if (!info) {
+    TString tstr;
+    size_t bytes_required = sizeof(TStringControlBlock);
+    TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
+    if (!cb) {
         if (drop != nullptr) {
-            drop(external_obj);
+            drop(context);
         }
         return tstr_new_invalid();
     }
 
-    tref_init(&info->count, 1);
-    info->drop = drop;
-    info->external_obj = external_obj;
+    tref_init(&cb->ref_count, 1);
+    cb->drop = drop;
+    cb->context = context;
 
-    tstr.flags = TSTRING_EXT | TSTRING_UTF8;
-    tstr_set_len_utf8(&tstr, len);
+    tstr.flags = TSTRING_STORAGE_EXTERNAL | TSTRING_ENCODING_UTF8;
     tstr_set_buf_utf8(&tstr, buf);
-    tstr.pstrinfo = info;
+    tstr_set_len_utf8(&tstr, len);
+    tstr.cb = cb;
     return tstr;
 }
 
-struct TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size_t len, void *external_obj,
-                                            void (*drop)(void *))
+TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size_t len, void *context, void (*drop)(void *))
 {
-    struct TString tstr;
-    struct TStringInfo *info = reinterpret_cast<struct TStringInfo *>(malloc(sizeof(struct TStringInfo)));
-    if (!info) {
+    TString tstr;
+    size_t bytes_required = sizeof(TStringControlBlock);
+    TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
+    if (!cb) {
         if (drop != nullptr) {
-            drop(external_obj);
+            drop(context);
         }
         return tstr_new_invalid();
     }
 
-    tref_init(&info->count, 1);
-    info->drop = drop;
-    info->external_obj = external_obj;
+    tref_init(&cb->ref_count, 1);
+    cb->drop = drop;
+    cb->context = context;
 
-    tstr.flags = TSTRING_EXT | TSTRING_UTF16;
-    tstr_set_len_utf16(&tstr, len);
+    tstr.flags = TSTRING_STORAGE_EXTERNAL | TSTRING_ENCODING_UTF16;
     tstr_set_buf_utf16(&tstr, buf);
-    tstr.pstrinfo = info;
+    tstr_set_len_utf16(&tstr, len);
+    tstr.cb = cb;
     return tstr;
 }
 
-struct TString tstr_new_from_static_utf8(char const *buf TH_NONNULL, size_t len)
+TString tstr_new_from_static_utf8(char const *buf TH_NONNULL, size_t len)
 {
-    struct TString tstr;
-    tstr.flags = TSTRING_STA | TSTRING_UTF8;
-    tstr_set_len_utf8(&tstr, len);
+    TString tstr;
+    tstr.flags = TSTRING_STORAGE_STATIC | TSTRING_ENCODING_UTF8;
     tstr_set_buf_utf8(&tstr, buf);
-    tstr.pstrinfo = nullptr;
+    tstr_set_len_utf8(&tstr, len);
+    tstr.cb = nullptr;
     return tstr;
 }
 
-struct TString tstr_new_from_static_utf16(uint16_t const *buf TH_NONNULL, size_t len)
+TString tstr_new_from_static_utf16(uint16_t const *buf TH_NONNULL, size_t len)
 {
-    struct TString tstr;
-    tstr.flags = TSTRING_STA | TSTRING_UTF16;
-    tstr_set_len_utf16(&tstr, len);
+    TString tstr;
+    tstr.flags = TSTRING_STORAGE_STATIC | TSTRING_ENCODING_UTF16;
     tstr_set_buf_utf16(&tstr, buf);
-    tstr.pstrinfo = nullptr;
+    tstr_set_len_utf16(&tstr, len);
+    tstr.cb = nullptr;
     return tstr;
 }
 
-struct TString tstr_dup(struct TString tstr)
+TString tstr_dup(TString tstr)
 {
-    uint32_t mode = tstr.flags & TSTRING_MODE_MASK;
-    if (mode == TSTRING_REF) {
-        if (tstr_encoding(tstr) == TSTRING_UTF8) {
+    uint32_t mode = tstr.flags & TSTRING_STORAGE_MASK;
+    if (mode == TSTRING_STORAGE_BORROWED) {
+        if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
             return tstr_new_utf8(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
         }
-        if (tstr_encoding(tstr) == TSTRING_UTF16) {
+        if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
             return tstr_new_utf16(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
         }
         return tstr_new_invalid();
     }
-    if (mode == TSTRING_NAT || mode == TSTRING_EXT) {
-        tref_inc(&tstr.pstrinfo->count);
+    if (mode == TSTRING_STORAGE_INTERNAL || mode == TSTRING_STORAGE_EXTERNAL) {
+        tref_inc(&tstr.cb->ref_count);
     }
     return tstr;
 }
 
-void tstr_drop(struct TString tstr)
+void tstr_drop(TString tstr)
 {
-    uint32_t mode = tstr.flags & TSTRING_MODE_MASK;
-    if (mode == TSTRING_NAT || mode == TSTRING_EXT) {
-        struct TStringInfo *sh = tstr.pstrinfo;
-        if (tref_dec(&sh->count)) {
-            if (mode == TSTRING_EXT && sh->drop != nullptr) {
-                sh->drop(sh->external_obj);
+    uint32_t mode = tstr.flags & TSTRING_STORAGE_MASK;
+    if (mode == TSTRING_STORAGE_INTERNAL || mode == TSTRING_STORAGE_EXTERNAL) {
+        TStringControlBlock *cb = tstr.cb;
+        if (tref_dec(&cb->ref_count)) {
+            if (mode == TSTRING_STORAGE_EXTERNAL && cb->drop != nullptr) {
+                cb->drop(cb->context);
             }
-            free(sh);
+            free(cb);
         }
     }
 }
@@ -541,15 +541,15 @@ inline char *write_utf16_to_utf8(uint16_t const *buf, size_t len, char *output)
 }
 }  // namespace
 
-struct TString tstr_dup_as_utf16(struct TString tstr)
+TString tstr_dup_as_utf16(TString tstr)
 {
-    if (tstr_encoding(tstr) == TSTRING_UTF16) {
+    if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
         return tstr_dup(tstr);
     }
     char const *src = tstr_buf_utf8(tstr);
     size_t len = tstr_len_utf8(tstr);
-    if (tstr_encoding(tstr) == TSTRING_UTF8) {
-        struct TString result;
+    if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
+        TString result;
         size_t needed = count_utf8_to_utf16(src, len);
         uint16_t *dst = tstr_initialize_utf16(&result, needed + 1);
         if (!dst) {
@@ -564,15 +564,15 @@ struct TString tstr_dup_as_utf16(struct TString tstr)
     return tstr_new_invalid();
 }
 
-struct TString tstr_dup_as_utf8(struct TString tstr)
+TString tstr_dup_as_utf8(TString tstr)
 {
-    if (tstr_encoding(tstr) == TSTRING_UTF8) {
+    if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
         return tstr_dup(tstr);
     }
     uint16_t const *src = tstr_buf_utf16(tstr);
     size_t len = tstr_len_utf16(tstr);
-    if (tstr_encoding(tstr) == TSTRING_UTF16) {
-        struct TString result;
+    if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
+        TString result;
         size_t needed = count_utf16_to_utf8(src, len);
         char *dst = tstr_initialize_utf8(&result, needed + 1);
         if (!dst) {
@@ -587,15 +587,15 @@ struct TString tstr_dup_as_utf8(struct TString tstr)
     return tstr_new_invalid();
 }
 
-struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list)
+TString tstr_concat_as_utf8(size_t count, TString const *tstr_list)
 {
-    struct TString result;
+    TString result;
     size_t len = 0;
     for (size_t i = 0; i < count; ++i) {
-        struct TString tstr = tstr_list[i];
-        if (tstr_encoding(tstr) == TSTRING_UTF8) {
+        TString tstr = tstr_list[i];
+        if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
             len += tstr_len_utf8(tstr);
-        } else if (tstr_encoding(tstr) == TSTRING_UTF16) {
+        } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
             len += count_utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
         } else {
             return tstr_new_invalid();
@@ -608,10 +608,10 @@ struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list
 
     char *end = buf;
     for (size_t i = 0; i < count; ++i) {
-        struct TString tstr = tstr_list[i];
-        if (tstr_encoding(tstr) == TSTRING_UTF8) {
+        TString tstr = tstr_list[i];
+        if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
             end = std::copy_n(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), end);
-        } else if (tstr_encoding(tstr) == TSTRING_UTF16) {
+        } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
             end = write_utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), end);
         }
     }
@@ -620,15 +620,15 @@ struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list
     return result;
 }
 
-struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_list)
+TString tstr_concat_as_utf16(size_t count, TString const *tstr_list)
 {
-    struct TString result;
+    TString result;
     size_t len = 0;
     for (size_t i = 0; i < count; ++i) {
-        struct TString tstr = tstr_list[i];
-        if (tstr_encoding(tstr) == TSTRING_UTF16) {
+        TString tstr = tstr_list[i];
+        if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
             len += tstr_len_utf16(tstr);
-        } else if (tstr_encoding(tstr) == TSTRING_UTF8) {
+        } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
             len += count_utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
         } else {
             return tstr_new_invalid();
@@ -641,10 +641,10 @@ struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_lis
 
     uint16_t *end = buf;
     for (size_t i = 0; i < count; ++i) {
-        struct TString tstr = tstr_list[i];
-        if (tstr_encoding(tstr) == TSTRING_UTF16) {
+        TString tstr = tstr_list[i];
+        if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
             end = std::copy_n(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), end);
-        } else if (tstr_encoding(tstr) == TSTRING_UTF8) {
+        } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
             end = write_utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), end);
         }
     }
@@ -653,9 +653,9 @@ struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_lis
     return result;
 }
 
-struct TString tstr_substr_utf8(struct TString tstr, size_t pos, size_t len)
+TString tstr_substr_utf8(TString tstr, size_t pos, size_t len)
 {
-    if (tstr_encoding(tstr) != TSTRING_UTF8) {
+    if (tstr_encoding(tstr) != TSTRING_ENCODING_UTF8) {
         return tstr_new_invalid();
     }
     size_t const orig_len = tstr_len_utf8(tstr);
@@ -666,14 +666,14 @@ struct TString tstr_substr_utf8(struct TString tstr, size_t pos, size_t len)
     if (len > remaining) {
         len = remaining;
     }
-    tstr_set_len_utf8(&tstr, len);
     tstr_set_buf_utf8(&tstr, tstr_buf_utf8(tstr) + pos);
+    tstr_set_len_utf8(&tstr, len);
     return tstr;
 }
 
-struct TString tstr_substr_utf16(struct TString tstr, size_t pos, size_t len)
+TString tstr_substr_utf16(TString tstr, size_t pos, size_t len)
 {
-    if (tstr_encoding(tstr) != TSTRING_UTF16) {
+    if (tstr_encoding(tstr) != TSTRING_ENCODING_UTF16) {
         return tstr_new_invalid();
     }
     size_t const orig_len = tstr_len_utf16(tstr);
@@ -684,7 +684,7 @@ struct TString tstr_substr_utf16(struct TString tstr, size_t pos, size_t len)
     if (len > remaining) {
         len = remaining;
     }
-    tstr_set_len_utf16(&tstr, len);
     tstr_set_buf_utf16(&tstr, tstr_buf_utf16(tstr) + pos);
+    tstr_set_len_utf16(&tstr, len);
     return tstr;
 }
