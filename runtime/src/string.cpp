@@ -82,15 +82,61 @@ constexpr uint16_t UTF16_THREE_BYTE_MASK = 0xf800;
 TString tstr_new_invalid()
 {
     TString tstr;
-    tstr.flags = TSTRING_STORAGE_STATIC | TSTRING_ENCODING_UNKNOWN;
+    tstr.flags = TSTRING_STORAGE_INVALID | TSTRING_ENCODING_UNKNOWN;
     tstr.byte_length = 0;
     tstr.data = nullptr;
     tstr.cb = nullptr;
     return tstr;
 }
 
+#if TH_ENABLE_STRING_SSO
+namespace {
+constexpr size_t UTF8_MAX_SHORT_CAPACITY = sizeof(void *) * 2 / sizeof(char);
+constexpr size_t UTF8_MAX_SHORT_LENGTH = UTF8_MAX_SHORT_CAPACITY - 1;
+constexpr size_t UTF16_MAX_SHORT_CAPACITY = sizeof(void *) * 2 / sizeof(uint16_t);
+constexpr size_t UTF16_MAX_SHORT_LENGTH = UTF16_MAX_SHORT_CAPACITY - 1;
+}  // namespace
+
+char *tstr_initialize_short_utf8(TString *tstr_ptr)
+{
+    tstr_ptr->flags = TSTRING_STORAGE_SMALL | TSTRING_ENCODING_UTF8;
+    return tstr_ptr->small_utf8;
+}
+
+uint16_t *tstr_initialize_short_utf16(TString *tstr_ptr)
+{
+    tstr_ptr->flags = TSTRING_STORAGE_SMALL | TSTRING_ENCODING_UTF16;
+    return tstr_ptr->small_utf16;
+}
+
+TString tstr_new_short_utf8(char const *value TH_NONNULL, size_t len)
+{
+    TString tstr;
+    char *buf = tstr_initialize_short_utf8(&tstr);
+    char *end = std::copy_n(value, len, buf);
+    *end = '\0';
+    tstr_set_len_utf8(&tstr, end - buf);
+    return tstr;
+}
+
+TString tstr_new_short_utf16(uint16_t const *value TH_NONNULL, size_t len)
+{
+    TString tstr;
+    uint16_t *buf = tstr_initialize_short_utf16(&tstr);
+    uint16_t *end = std::copy_n(value, len, buf);
+    *end = u'\0';
+    tstr_set_len_utf16(&tstr, end - buf);
+    return tstr;
+}
+#endif
+
 char *tstr_initialize_utf8(TString *tstr_ptr, size_t capacity)
 {
+#if TH_ENABLE_STRING_SSO
+    if (capacity <= UTF8_MAX_SHORT_CAPACITY) {
+        return tstr_initialize_short_utf8(tstr_ptr);
+    }
+#endif
     size_t bytes_required = sizeof(TStringControlBlock) + capacity * sizeof(char);
     TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
     if (!cb) {
@@ -112,6 +158,11 @@ char *tstr_initialize_utf8(TString *tstr_ptr, size_t capacity)
 
 uint16_t *tstr_initialize_utf16(TString *tstr_ptr, size_t capacity)
 {
+#if TH_ENABLE_STRING_SSO
+    if (capacity <= UTF16_MAX_SHORT_CAPACITY) {
+        return tstr_initialize_short_utf16(tstr_ptr);
+    }
+#endif
     size_t bytes_required = sizeof(TStringControlBlock) + capacity * sizeof(uint16_t);
     TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
     if (!cb) {
@@ -133,6 +184,11 @@ uint16_t *tstr_initialize_utf16(TString *tstr_ptr, size_t capacity)
 
 TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
 {
+#if TH_ENABLE_STRING_SSO
+    if (len <= UTF8_MAX_SHORT_LENGTH) {
+        return tstr_new_short_utf8(value, len);
+    }
+#endif
     TString tstr;
     char *buf = tstr_initialize_utf8(&tstr, len + 1);
     if (!buf) {
@@ -147,6 +203,11 @@ TString tstr_new_utf8(char const *value TH_NONNULL, size_t len)
 
 TString tstr_new_utf16(uint16_t const *value TH_NONNULL, size_t len)
 {
+#if TH_ENABLE_STRING_SSO
+    if (len <= UTF16_MAX_SHORT_LENGTH) {
+        return tstr_new_short_utf16(value, len);
+    }
+#endif
     TString tstr;
     uint16_t *buf = tstr_initialize_utf16(&tstr, len + 1);
     if (!buf) {
@@ -181,6 +242,15 @@ TString tstr_new_borrowed_utf16(uint16_t const *buf TH_NONNULL, size_t len)
 
 TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t len, void *context, void (*drop)(void *))
 {
+#if TH_ENABLE_STRING_SSO
+    if (len <= UTF8_MAX_SHORT_LENGTH) {
+        TString result = tstr_new_short_utf8(buf, len);
+        if (drop != nullptr) {
+            drop(context);
+        }
+        return result;
+    }
+#endif
     TString tstr;
     size_t bytes_required = sizeof(TStringControlBlock);
     TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
@@ -204,6 +274,15 @@ TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t len, void
 
 TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size_t len, void *context, void (*drop)(void *))
 {
+#if TH_ENABLE_STRING_SSO
+    if (len <= UTF16_MAX_SHORT_LENGTH) {
+        TString result = tstr_new_short_utf16(buf, len);
+        if (drop != nullptr) {
+            drop(context);
+        }
+        return result;
+    }
+#endif
     TString tstr;
     size_t bytes_required = sizeof(TStringControlBlock);
     TStringControlBlock *cb = reinterpret_cast<TStringControlBlock *>(malloc(bytes_required));
@@ -247,13 +326,13 @@ TString tstr_new_from_static_utf16(uint16_t const *buf TH_NONNULL, size_t len)
 
 TString tstr_dup(TString tstr)
 {
-    uint32_t mode = tstr.flags & TSTRING_STORAGE_MASK;
+    uint32_t mode = tstr_mode(tstr);
     if (mode == TSTRING_STORAGE_BORROWED) {
         if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
-            return tstr_new_utf8(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
+            return tstr_new_utf8(tstr_buf_utf8(&tstr), tstr_len_utf8(tstr));
         }
         if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
-            return tstr_new_utf16(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
+            return tstr_new_utf16(tstr_buf_utf16(&tstr), tstr_len_utf16(tstr));
         }
         return tstr_new_invalid();
     }
@@ -265,7 +344,7 @@ TString tstr_dup(TString tstr)
 
 void tstr_drop(TString tstr)
 {
-    uint32_t mode = tstr.flags & TSTRING_STORAGE_MASK;
+    uint32_t mode = tstr_mode(tstr);
     if (mode == TSTRING_STORAGE_INTERNAL || mode == TSTRING_STORAGE_EXTERNAL) {
         TStringControlBlock *cb = tstr.cb;
         if (tref_dec(&cb->ref_count)) {
@@ -546,7 +625,7 @@ TString tstr_dup_as_utf16(TString tstr)
     if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
         return tstr_dup(tstr);
     }
-    char const *src = tstr_buf_utf8(tstr);
+    char const *src = tstr_buf_utf8(&tstr);
     size_t len = tstr_len_utf8(tstr);
     if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
         TString result;
@@ -569,7 +648,7 @@ TString tstr_dup_as_utf8(TString tstr)
     if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
         return tstr_dup(tstr);
     }
-    uint16_t const *src = tstr_buf_utf16(tstr);
+    uint16_t const *src = tstr_buf_utf16(&tstr);
     size_t len = tstr_len_utf16(tstr);
     if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
         TString result;
@@ -596,7 +675,7 @@ TString tstr_concat_as_utf8(size_t count, TString const *tstr_list)
         if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
             len += tstr_len_utf8(tstr);
         } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
-            len += count_utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr));
+            len += count_utf16_to_utf8(tstr_buf_utf16(&tstr), tstr_len_utf16(tstr));
         } else {
             return tstr_new_invalid();
         }
@@ -610,9 +689,9 @@ TString tstr_concat_as_utf8(size_t count, TString const *tstr_list)
     for (size_t i = 0; i < count; ++i) {
         TString tstr = tstr_list[i];
         if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
-            end = std::copy_n(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), end);
+            end = std::copy_n(tstr_buf_utf8(&tstr), tstr_len_utf8(tstr), end);
         } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
-            end = write_utf16_to_utf8(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), end);
+            end = write_utf16_to_utf8(tstr_buf_utf16(&tstr), tstr_len_utf16(tstr), end);
         }
     }
     *end = '\0';
@@ -629,7 +708,7 @@ TString tstr_concat_as_utf16(size_t count, TString const *tstr_list)
         if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
             len += tstr_len_utf16(tstr);
         } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
-            len += count_utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr));
+            len += count_utf8_to_utf16(tstr_buf_utf8(&tstr), tstr_len_utf8(tstr));
         } else {
             return tstr_new_invalid();
         }
@@ -643,9 +722,9 @@ TString tstr_concat_as_utf16(size_t count, TString const *tstr_list)
     for (size_t i = 0; i < count; ++i) {
         TString tstr = tstr_list[i];
         if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF16) {
-            end = std::copy_n(tstr_buf_utf16(tstr), tstr_len_utf16(tstr), end);
+            end = std::copy_n(tstr_buf_utf16(&tstr), tstr_len_utf16(tstr), end);
         } else if (tstr_encoding(tstr) == TSTRING_ENCODING_UTF8) {
-            end = write_utf8_to_utf16(tstr_buf_utf8(tstr), tstr_len_utf8(tstr), end);
+            end = write_utf8_to_utf16(tstr_buf_utf8(&tstr), tstr_len_utf8(tstr), end);
         }
     }
     *end = u'\0';
@@ -658,6 +737,7 @@ TString tstr_substr_utf8(TString tstr, size_t pos, size_t len)
     if (tstr_encoding(tstr) != TSTRING_ENCODING_UTF8) {
         return tstr_new_invalid();
     }
+
     size_t const orig_len = tstr_len_utf8(tstr);
     if (pos > orig_len) {
         pos = orig_len;
@@ -666,9 +746,36 @@ TString tstr_substr_utf8(TString tstr, size_t pos, size_t len)
     if (len > remaining) {
         len = remaining;
     }
-    tstr_set_buf_utf8(&tstr, tstr_buf_utf8(tstr) + pos);
+
+#if TH_ENABLE_STRING_SSO
+    uint32_t mode = tstr_mode(tstr);
+    // An SSO buffer is embedded in the by-value input, so it must be copied.
+    if (mode == TSTRING_STORAGE_SMALL) {
+        return tstr_new_short_utf8(tstr_buf_utf8(&tstr) + pos, len);
+    }
+#endif
+
+#if TH_ENABLE_RETAINABLE_SUBSTR
+
+#if TH_ENABLE_STRING_SSO
+    // Sharing a short ref-counted slice would bypass SSO, so we do it explicitly here.
+    if ((len <= UTF8_MAX_SHORT_LENGTH && (mode == TSTRING_STORAGE_INTERNAL || mode == TSTRING_STORAGE_EXTERNAL))) {
+        return tstr_new_short_utf8(tstr_buf_utf8(&tstr) + pos, len);
+    }
+#endif
+
+    // Preserve storage metadata so a later tstr_dup can share the storage.
+    // No ownership reference is acquired for this view.
+    tstr_set_buf_utf8(&tstr, tstr_buf_utf8(&tstr) + pos);
     tstr_set_len_utf8(&tstr, len);
     return tstr;
+
+#else
+
+    // We don't need to do SSO for borrowed strings since tstr_dup will do it for us.
+    return tstr_new_borrowed_utf8(tstr_buf_utf8(&tstr) + pos, len);
+
+#endif
 }
 
 TString tstr_substr_utf16(TString tstr, size_t pos, size_t len)
@@ -676,6 +783,7 @@ TString tstr_substr_utf16(TString tstr, size_t pos, size_t len)
     if (tstr_encoding(tstr) != TSTRING_ENCODING_UTF16) {
         return tstr_new_invalid();
     }
+
     size_t const orig_len = tstr_len_utf16(tstr);
     if (pos > orig_len) {
         pos = orig_len;
@@ -684,7 +792,34 @@ TString tstr_substr_utf16(TString tstr, size_t pos, size_t len)
     if (len > remaining) {
         len = remaining;
     }
-    tstr_set_buf_utf16(&tstr, tstr_buf_utf16(tstr) + pos);
+
+#if TH_ENABLE_STRING_SSO
+    uint32_t mode = tstr_mode(tstr);
+    // An SSO buffer is embedded in the by-value input, so it must be copied.
+    if (mode == TSTRING_STORAGE_SMALL) {
+        return tstr_new_short_utf16(tstr_buf_utf16(&tstr) + pos, len);
+    }
+#endif
+
+#if TH_ENABLE_RETAINABLE_SUBSTR
+
+#if TH_ENABLE_STRING_SSO
+    // Sharing a short ref-counted slice would bypass SSO, so we do it explicitly here.
+    if ((len <= UTF16_MAX_SHORT_LENGTH && (mode == TSTRING_STORAGE_INTERNAL || mode == TSTRING_STORAGE_EXTERNAL))) {
+        return tstr_new_short_utf16(tstr_buf_utf16(&tstr) + pos, len);
+    }
+#endif
+
+    // Preserve storage metadata so a later tstr_dup can share the storage.
+    // No ownership reference is acquired for this view.
+    tstr_set_buf_utf16(&tstr, tstr_buf_utf16(&tstr) + pos);
     tstr_set_len_utf16(&tstr, len);
     return tstr;
+
+#else
+
+    // We don't need to do SSO for borrowed strings since tstr_dup will do it for us.
+    return tstr_new_borrowed_utf16(tstr_buf_utf16(&tstr) + pos, len);
+
+#endif
 }

@@ -216,7 +216,7 @@ struct common_string : public common_string_view {
 
     common_string(common_string &&other) noexcept : common_string(other.m_handle)
     {
-        other.m_handle.cb = nullptr;
+        tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
     }
 
     // assignment
@@ -229,7 +229,7 @@ struct common_string : public common_string_view {
     // destructor
     ~common_string()
     {
-        if (m_handle.cb != nullptr) {
+        if (tstr_mode(m_handle) != TSTRING_STORAGE_INVALID) {
             tstr_drop(m_handle);
         }
     }
@@ -306,13 +306,13 @@ struct string_view {
 
     operator std::string_view() const noexcept
     {
-        return {tstr_buf_utf8(m_handle), tstr_len_utf8(m_handle)};
+        return {tstr_buf_utf8(&m_handle), tstr_len_utf8(m_handle)};
     }
 
     // methods
     const_reference operator[](size_type pos) const
     {
-        return tstr_buf_utf8(m_handle)[pos];
+        return tstr_buf_utf8(&m_handle)[pos];
     }
 
     const_reference at(size_type pos) const
@@ -320,7 +320,7 @@ struct string_view {
         if (pos >= size()) {
             TH_THROW(std::out_of_range, "Index out of range");
         }
-        return tstr_buf_utf8(m_handle)[pos];
+        return tstr_buf_utf8(&m_handle)[pos];
     }
 
     bool empty() const noexcept
@@ -338,7 +338,7 @@ struct string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return tstr_buf_utf8(m_handle)[0];
+        return tstr_buf_utf8(&m_handle)[0];
     }
 
     const_reference back() const
@@ -346,22 +346,22 @@ struct string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return tstr_buf_utf8(m_handle)[size() - 1];
+        return tstr_buf_utf8(&m_handle)[size() - 1];
     }
 
     const_pointer c_str() const noexcept
     {
-        return tstr_buf_utf8(m_handle);
+        return tstr_buf_utf8(&m_handle);
     }
 
     const_pointer data() const noexcept
     {
-        return tstr_buf_utf8(m_handle);
+        return tstr_buf_utf8(&m_handle);
     }
 
     const_iterator begin() const noexcept
     {
-        return tstr_buf_utf8(m_handle);
+        return tstr_buf_utf8(&m_handle);
     }
 
     const_iterator cbegin() const noexcept
@@ -371,7 +371,7 @@ struct string_view {
 
     const_iterator end() const noexcept
     {
-        return tstr_buf_utf8(m_handle) + tstr_len_utf8(m_handle);
+        return tstr_buf_utf8(&m_handle) + tstr_len_utf8(m_handle);
     }
 
     const_iterator cend() const noexcept
@@ -460,7 +460,7 @@ struct string : public string_view {
 
     string(string &&other) noexcept : string(other.m_handle)
     {
-        other.m_handle.cb = nullptr;
+        tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
     }
 
     // Explicit downcast
@@ -468,7 +468,7 @@ struct string : public string_view {
     {
         if (other.is_utf8()) {
             TString handle = other.m_handle;
-            other.m_handle.cb = nullptr;
+            tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
             return handle;
         }
         return tstr_dup_as_utf8(other.m_handle);
@@ -492,7 +492,7 @@ struct string : public string_view {
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
-        m_handle.cb = nullptr;
+        tstr_set_mode(&m_handle, TSTRING_STORAGE_INVALID);
         return str;
     }
 
@@ -506,7 +506,7 @@ struct string : public string_view {
     // destructor
     ~string()
     {
-        if (m_handle.cb != nullptr) {
+        if (tstr_mode(m_handle) != TSTRING_STORAGE_INVALID) {
             tstr_drop(m_handle);
         }
     }
@@ -577,13 +577,13 @@ struct u16string_view {
 
     operator std::u16string_view() const noexcept
     {
-        return {reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle)), tstr_len_utf16(m_handle)};
+        return {reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle)), tstr_len_utf16(m_handle)};
     }
 
     // methods
     const_reference operator[](size_type pos) const
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[pos];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle))[pos];
     }
 
     const_reference at(size_type pos) const
@@ -591,7 +591,7 @@ struct u16string_view {
         if (pos >= size()) {
             TH_THROW(std::out_of_range, "Index out of range");
         }
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[pos];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle))[pos];
     }
 
     bool empty() const noexcept
@@ -609,7 +609,7 @@ struct u16string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[0];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle))[0];
     }
 
     const_reference back() const
@@ -617,22 +617,22 @@ struct u16string_view {
         if (empty()) {
             TH_THROW(std::out_of_range, "Empty string");
         }
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle))[size() - 1];
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle))[size() - 1];
     }
 
     const_pointer c_str() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle));
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle));
     }
 
     const_pointer data() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle));
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle));
     }
 
     const_iterator begin() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle));
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle));
     }
 
     const_iterator cbegin() const noexcept
@@ -642,7 +642,7 @@ struct u16string_view {
 
     const_iterator end() const noexcept
     {
-        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(m_handle)) + tstr_len_utf16(m_handle);
+        return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle)) + tstr_len_utf16(m_handle);
     }
 
     const_iterator cend() const noexcept
@@ -725,7 +725,7 @@ struct u16string : public u16string_view {
 
     u16string(u16string &&other) noexcept : u16string(other.m_handle)
     {
-        other.m_handle.cb = nullptr;
+        tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
     }
 
     // Explicit downcast
@@ -733,7 +733,7 @@ struct u16string : public u16string_view {
     {
         if (other.is_utf16()) {
             TString handle = other.m_handle;
-            other.m_handle.cb = nullptr;
+            tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
             return handle;
         }
         return tstr_dup_as_utf16(other.m_handle);
@@ -757,7 +757,7 @@ struct u16string : public u16string_view {
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
-        m_handle.cb = nullptr;
+        tstr_set_mode(&m_handle, TSTRING_STORAGE_INVALID);
         return str;
     }
 
@@ -771,7 +771,7 @@ struct u16string : public u16string_view {
     // destructor
     ~u16string()
     {
-        if (m_handle.cb != nullptr) {
+        if (tstr_mode(m_handle) != TSTRING_STORAGE_INVALID) {
             tstr_drop(m_handle);
         }
     }
