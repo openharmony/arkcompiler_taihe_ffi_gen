@@ -655,12 +655,9 @@ class StringTypeNapiInfo(TypeNapiInfo):
             target.writelns(
                 f"size_t cpp_result_len = 0;",
                 f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, nullptr, 0, &cpp_result_len));",
-                f"TString cpp_result_abi;",
-                f"char* cpp_result_buf = tstr_initialize_utf8(&cpp_result_abi, cpp_result_len + 1);",
-                f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, cpp_result_buf, cpp_result_len + 1, &cpp_result_len));",
-                f"cpp_result_buf[cpp_result_len] = '\\0';",
-                f"tstr_set_len_utf8(&cpp_result_abi, cpp_result_len);",
-                f"return taihe::string(cpp_result_abi);",
+                f"taihe::string_builder cpp_result_builder(cpp_result_len + 1);",
+                f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, cpp_result_builder.data(), cpp_result_builder.capacity(), &cpp_result_len));",
+                f"return std::move(cpp_result_builder).finish(cpp_result_len);",
             )
 
     @override

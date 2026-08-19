@@ -17,6 +17,7 @@
 #define TAIHE_STRING_HPP
 
 #include <taihe/string.abi.h>
+#include <taihe/string_builder.h>
 #include <taihe/common.hpp>
 
 #include <algorithm>
@@ -25,6 +26,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -216,7 +218,7 @@ struct common_string : public common_string_view {
 
     common_string(common_string &&other) noexcept : common_string(other.m_handle)
     {
-        tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
+        tstr_set_invalid(&other.m_handle);
     }
 
     // assignment
@@ -229,7 +231,7 @@ struct common_string : public common_string_view {
     // destructor
     ~common_string()
     {
-        if (tstr_mode(m_handle) != TSTRING_STORAGE_INVALID) {
+        if (tstr_valid(m_handle)) {
             tstr_drop(m_handle);
         }
     }
@@ -349,6 +351,7 @@ struct string_view {
         return tstr_buf_utf8(&m_handle)[size() - 1];
     }
 
+    // To be deprecated
     const_pointer c_str() const noexcept
     {
         return tstr_buf_utf8(&m_handle);
@@ -460,7 +463,7 @@ struct string : public string_view {
 
     string(string &&other) noexcept : string(other.m_handle)
     {
-        tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
+        tstr_set_invalid(&other.m_handle);
     }
 
     // Explicit downcast
@@ -468,7 +471,7 @@ struct string : public string_view {
     {
         if (other.is_utf8()) {
             TString handle = other.m_handle;
-            tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
+            tstr_set_invalid(&other.m_handle);
             return handle;
         }
         return tstr_dup_as_utf8(other.m_handle);
@@ -492,7 +495,7 @@ struct string : public string_view {
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
-        tstr_set_mode(&m_handle, TSTRING_STORAGE_INVALID);
+        tstr_set_invalid(&m_handle);
         return str;
     }
 
@@ -506,10 +509,13 @@ struct string : public string_view {
     // destructor
     ~string()
     {
-        if (tstr_mode(m_handle) != TSTRING_STORAGE_INVALID) {
+        if (tstr_valid(m_handle)) {
             tstr_drop(m_handle);
         }
     }
+
+    template<typename Initializer>
+    static string initialize(size_type capacity, Initializer &&initializer);
 
     static string concat(std::initializer_list<common_string_view> sv_list);
 
@@ -620,6 +626,7 @@ struct u16string_view {
         return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle))[size() - 1];
     }
 
+    // To be deprecated
     const_pointer c_str() const noexcept
     {
         return reinterpret_cast<char16_t const *>(tstr_buf_utf16(&m_handle));
@@ -725,7 +732,7 @@ struct u16string : public u16string_view {
 
     u16string(u16string &&other) noexcept : u16string(other.m_handle)
     {
-        tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
+        tstr_set_invalid(&other.m_handle);
     }
 
     // Explicit downcast
@@ -733,7 +740,7 @@ struct u16string : public u16string_view {
     {
         if (other.is_utf16()) {
             TString handle = other.m_handle;
-            tstr_set_mode(&other.m_handle, TSTRING_STORAGE_INVALID);
+            tstr_set_invalid(&other.m_handle);
             return handle;
         }
         return tstr_dup_as_utf16(other.m_handle);
@@ -757,7 +764,7 @@ struct u16string : public u16string_view {
     operator common_string() && noexcept
     {
         common_string str = common_string(m_handle);
-        tstr_set_mode(&m_handle, TSTRING_STORAGE_INVALID);
+        tstr_set_invalid(&m_handle);
         return str;
     }
 
@@ -771,15 +778,102 @@ struct u16string : public u16string_view {
     // destructor
     ~u16string()
     {
-        if (tstr_mode(m_handle) != TSTRING_STORAGE_INVALID) {
+        if (tstr_valid(m_handle)) {
             tstr_drop(m_handle);
         }
     }
+
+    template<typename Initializer>
+    static u16string initialize(size_type capacity, Initializer &&initializer);
 
     static u16string concat(std::initializer_list<common_string_view> sv_list);
 
     u16string &operator+=(common_string_view other);
 };
+}  // namespace taihe
+
+namespace taihe {
+struct string_builder {
+    using value_type = char;
+    using size_type = std::size_t;
+    using reference = value_type &;
+    using pointer = value_type *;
+    using const_reference = value_type const &;
+    using const_pointer = value_type const *;
+
+    explicit string_builder(size_type capacity) : m_builder(tstr_builder_new_utf8(capacity))
+    {
+    }
+
+    ~string_builder()
+    {
+        if (tstr_builder_valid(m_builder)) {
+            tstr_builder_drop(m_builder);
+        }
+    }
+
+    string_builder(string_builder const &) = delete;
+
+    string_builder(string_builder &&other) noexcept : m_builder(other.m_builder)
+    {
+        tstr_builder_set_invalid(&other.m_builder);
+    }
+
+    string_builder &operator=(string_builder other)
+    {
+        std::swap(this->m_builder, other.m_builder);
+        return *this;
+    }
+
+    pointer data() noexcept
+    {
+        return tstr_builder_mut_buf_utf8(&m_builder);
+    }
+
+    const_pointer data() const noexcept
+    {
+        return tstr_builder_buf_utf8(&m_builder);
+    }
+
+    reference operator[](size_type pos) noexcept
+    {
+        return tstr_builder_mut_buf_utf8(&m_builder)[pos];
+    }
+
+    const_reference operator[](size_type pos) const noexcept
+    {
+        return tstr_builder_buf_utf8(&m_builder)[pos];
+    }
+
+    size_type capacity() const noexcept
+    {
+        return tstr_builder_cap_utf8(m_builder);
+    }
+
+    bool reallocate(size_type capacity, size_type initialized_length = -1)
+    {
+        return tstr_builder_reallocate_utf8(&m_builder, capacity, initialized_length);
+    }
+
+    string finish(size_type length) &&
+    {
+        string result(tstr_builder_finish_utf8(m_builder, length));
+        tstr_builder_set_invalid(&m_builder);
+        return result;
+    }
+
+private:
+    struct TStringBuilder m_builder;
+};
+
+template<typename Initializer>
+string string::initialize(size_type capacity, Initializer &&initializer)
+{
+    string_builder builder(capacity);
+    char *buf = builder.data();
+    char *end = std::forward<Initializer>(initializer)(buf);
+    return std::move(builder).finish(end - buf);
+}
 
 inline string string::concat(std::initializer_list<common_string_view> sv_list)
 {
@@ -808,7 +902,7 @@ inline string_view string_view::substr(std::size_t pos, std::size_t len) const
     return string_view(tstr_substr_utf8(this->m_handle, pos, len));
 }
 
-// TODO: Deprecate this
+// To be deprecated
 inline string_view substr(string_view sv, std::size_t pos, std::size_t len)
 {
     return sv.substr(pos, len);
@@ -849,6 +943,88 @@ inline std::ostream &operator<<(std::ostream &os, string_view sv)
     return os << std::string_view(sv);
 }
 
+struct u16string_builder {
+    using value_type = char16_t;
+    using size_type = std::size_t;
+    using reference = value_type &;
+    using pointer = value_type *;
+    using const_reference = value_type const &;
+    using const_pointer = value_type const *;
+
+    explicit u16string_builder(size_type capacity) : m_builder(tstr_builder_new_utf16(capacity))
+    {
+    }
+
+    ~u16string_builder()
+    {
+        if (tstr_builder_valid(m_builder)) {
+            tstr_builder_drop(m_builder);
+        }
+    }
+
+    u16string_builder(u16string_builder const &) = delete;
+
+    u16string_builder(u16string_builder &&other) noexcept : m_builder(other.m_builder)
+    {
+        tstr_builder_set_invalid(&other.m_builder);
+    }
+
+    u16string_builder &operator=(u16string_builder other)
+    {
+        std::swap(this->m_builder, other.m_builder);
+        return *this;
+    }
+
+    pointer data() noexcept
+    {
+        return reinterpret_cast<char16_t *>(tstr_builder_mut_buf_utf16(&m_builder));
+    }
+
+    const_pointer data() const noexcept
+    {
+        return reinterpret_cast<char16_t const *>(tstr_builder_buf_utf16(&m_builder));
+    }
+
+    reference operator[](size_type pos) noexcept
+    {
+        return reinterpret_cast<char16_t *>(tstr_builder_mut_buf_utf16(&m_builder))[pos];
+    }
+
+    const_reference operator[](size_type pos) const noexcept
+    {
+        return reinterpret_cast<char16_t const *>(tstr_builder_buf_utf16(&m_builder))[pos];
+    }
+
+    size_type capacity() const noexcept
+    {
+        return tstr_builder_cap_utf16(m_builder);
+    }
+
+    bool reallocate(size_type capacity, size_type initialized_length = -1)
+    {
+        return tstr_builder_reallocate_utf16(&m_builder, capacity, initialized_length);
+    }
+
+    u16string finish(size_type length) &&
+    {
+        u16string result(tstr_builder_finish_utf16(m_builder, length));
+        tstr_builder_set_invalid(&m_builder);
+        return result;
+    }
+
+private:
+    struct TStringBuilder m_builder;
+};
+
+template<typename Initializer>
+u16string u16string::initialize(size_type capacity, Initializer &&initializer)
+{
+    u16string_builder builder(capacity);
+    char16_t *buf = builder.data();
+    char16_t *end = std::forward<Initializer>(initializer)(buf);
+    return std::move(builder).finish(end - buf);
+}
+
 inline u16string u16string::concat(std::initializer_list<common_string_view> sv_list)
 {
     static_assert(alignof(common_string_view) == alignof(struct TString));
@@ -876,7 +1052,7 @@ inline u16string_view u16string_view::substr(std::size_t pos, std::size_t len) c
     return u16string_view(tstr_substr_utf16(this->m_handle, pos, len));
 }
 
-// TODO: Deprecate this
+// To be deprecated
 inline u16string_view substr(u16string_view sv, std::size_t pos, std::size_t len)
 {
     return sv.substr(pos, len);
@@ -911,30 +1087,58 @@ inline bool operator>=(u16string_view lhs, u16string_view rhs)
 {
     return std::u16string_view(lhs) >= std::u16string_view(rhs);
 }
+}  // namespace taihe
 
+template<>
+struct std::hash<taihe::string> {
+    std::size_t operator()(taihe::string_view sv) const noexcept
+    {
+        return std::hash<std::string_view>()(std::string_view(sv));
+    }
+};
+
+template<>
+struct std::hash<taihe::u16string> {
+    std::size_t operator()(taihe::u16string_view sv) const noexcept
+    {
+        return std::hash<std::u16string_view>()(std::u16string_view(sv));
+    }
+};
+
+namespace taihe {
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-inline string to_string(T value)
+string to_string(T value)
 {
-    char buffer[32];
-    std::to_chars_result result = std::to_chars(std::begin(buffer), std::end(buffer), value);
-    if (result.ec != std::errc {}) {
+    constexpr std::size_t shortest_capacity = (std::is_signed_v<T> ? 1 : 0)        // sign
+                                              + 1                                  // highest digit
+                                              + std::numeric_limits<T>::digits10;  // digits
+    char buffer[shortest_capacity];
+    auto [ptr, ec] = std::to_chars(std::begin(buffer), std::end(buffer), value);
+    if (ec != std::errc {}) {
         TH_THROW(std::runtime_error, "Conversion to char failed");
     }
-    // buffer automatcally
-    return string {buffer, static_cast<std::size_t>(result.ptr - buffer)};
+    // buffer automatically
+    return string {buffer, static_cast<std::size_t>(ptr - buffer)};
 }
 
 template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
-inline string to_string(T value)
+string to_string(T value)
 {
-    char buffer[32];
-    std::to_chars_result result =
-        std::to_chars(std::begin(buffer), std::end(buffer), value, std::chars_format::general);
-    if (result.ec != std::errc {}) {
+    constexpr std::size_t shortest_capacity = 1                                           // value sign
+                                              + 1                                         // value highest digit
+                                              + 1                                         // '.'
+                                              + std::numeric_limits<T>::max_digits10 - 1  // value digits
+                                              + 1                                         // 'e'
+                                              + 1                                         // exponent sign
+                                              + 1                                         // exponent highest digit
+                                              + std::numeric_limits<int>::digits10;       // exponent digits
+    char buffer[shortest_capacity];
+    auto [ptr, ec] = std::to_chars(std::begin(buffer), std::end(buffer), value, std::chars_format::general);
+    if (ec != std::errc {}) {
         TH_THROW(std::runtime_error, "Conversion to char failed");
     }
-    // buffer automatcally
-    return string {buffer, static_cast<std::size_t>(result.ptr - buffer)};
+    // buffer automatically
+    return string {buffer, static_cast<std::size_t>(ptr - buffer)};
 }
 
 inline string to_string(bool value)
@@ -945,7 +1149,9 @@ inline string to_string(bool value)
         return string {taihe::static_flag, "false", 5};
     }
 }
+}  // namespace taihe
 
+namespace taihe {
 template<>
 struct as_abi<common_string_view> {
     using type = TString;
@@ -991,13 +1197,5 @@ struct as_param<u16string> {
     using type = u16string_view;
 };
 }  // namespace taihe
-
-template<>
-struct std::hash<taihe::string> {
-    std::size_t operator()(taihe::string_view sv) const noexcept
-    {
-        return std::hash<std::string_view>()(std::string_view(sv));
-    }
-};
 
 #endif  // TAIHE_STRING_HPP

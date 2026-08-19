@@ -66,13 +66,10 @@ taihe::error from_napi_error(napi_env env, napi_value err)
     NAPI_CALL(env, napi_get_named_property(env, err, "message", &error_message_napi));
     size_t error_message_cpp_len = 0;
     NAPI_CALL(env, napi_get_value_string_utf8(env, error_message_napi, nullptr, 0, &error_message_cpp_len));
-    TString error_message_tstr;
-    char *error_message_cpp_buf = tstr_initialize_utf8(&error_message_tstr, error_message_cpp_len + 1);
-    NAPI_CALL(env, napi_get_value_string_utf8(env, error_message_napi, error_message_cpp_buf, error_message_cpp_len + 1,
-                                              &error_message_cpp_len));
-    error_message_cpp_buf[error_message_cpp_len] = '\0';
-    tstr_set_len_utf8(&error_message_tstr, error_message_cpp_len);
-    taihe::string error_message_cpp(error_message_tstr);
+    taihe::string_builder error_message_builder(error_message_cpp_len + 1);
+    NAPI_CALL(env, napi_get_value_string_utf8(env, error_message_napi, error_message_builder.data(),
+                                              error_message_builder.capacity(), &error_message_cpp_len));
+    taihe::string error_message_cpp = std::move(error_message_builder).finish(error_message_cpp_len);
     bool error_has_code;
     NAPI_CALL(env, napi_has_named_property(env, err, "code", &error_has_code));
     if (error_has_code) {
@@ -85,11 +82,10 @@ taihe::error from_napi_error(napi_env env, napi_value err)
             case napi_string: {
                 size_t error_code_napi_len = 0;
                 NAPI_CALL(env, napi_get_value_string_utf8(env, error_code_napi, nullptr, 0, &error_code_napi_len));
-                char error_code_napi_buffer[error_code_napi_len + 1];
+                std::string error_code_napi_buffer(error_code_napi_len + 1, '\0');
                 size_t error_code_napi_copied;
-                NAPI_CALL(env, napi_get_value_string_utf8(env, error_code_napi, error_code_napi_buffer,
-                                                          error_code_napi_len + 1, &error_code_napi_copied));
-                error_code_napi_buffer[error_code_napi_len] = '\0';
+                NAPI_CALL(env, napi_get_value_string_utf8(env, error_code_napi, error_code_napi_buffer.data(),
+                                                          error_code_napi_buffer.size(), &error_code_napi_copied));
                 error_code_cpp = std::stoi(error_code_napi_buffer);
                 break;
             }
