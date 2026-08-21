@@ -37,6 +37,7 @@ class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
     noexcept_all: bool = False
+    enable_default_method: bool = False
 
     @classmethod
     def register_options_to(cls, option_registry: "OptionRegistry"):
@@ -46,15 +47,24 @@ class AbiHeaderBackendConfig(BackendConfig):
 
     @classmethod
     def from_options(cls, options: "OptionStore", dm: "DiagnosticsManager"):
-        from taihe.codegen.abi.options import NoexceptAllOption
+        from taihe.codegen.abi.options import (
+            EnableDefaultMethodOption,
+            NoexceptAllOption,
+        )
 
         noexcept_all_opt = options.get(NoexceptAllOption)
+        enable_default_method_opt = options.get(EnableDefaultMethodOption)
         return AbiHeaderBackendConfig(
             noexcept_all=noexcept_all_opt is not None,
+            enable_default_method=enable_default_method_opt is not None,
         )
 
     def build(self, instance: "CompilerInstance"):
-        from taihe.codegen.abi.attributes import NoexceptAttr, all_attr_types
+        from taihe.codegen.abi.attributes import (
+            NoexceptAttr,
+            all_attr_types,
+            exp_attr_types,
+        )
         from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
         class AbiHeaderBackendImpl(Backend):
@@ -64,6 +74,8 @@ class AbiHeaderBackendConfig(BackendConfig):
 
             def setup(self):
                 self._ci.attribute_registry.register(*all_attr_types)
+                if self._config.enable_default_method:
+                    self._ci.attribute_registry.register(*exp_attr_types)
 
             def post_process(self):
                 if self._config.noexcept_all:

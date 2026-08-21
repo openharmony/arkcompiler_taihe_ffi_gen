@@ -26,6 +26,7 @@ from taihe.semantics.attributes import (
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
+    IfaceDecl,
     IfaceMethodDecl,
     TypeRefDecl,
 )
@@ -58,6 +59,34 @@ class NoexceptAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl | TypeRefDecl])
         super().check_typed_context(parent, dm)
 
 
+@dataclass
+class VersionAttr(TypedAttribute[IfaceDecl]):
+    NAME = "version"
+    TARGETS = (IfaceDecl,)
+
+    ver: int
+
+
+@dataclass
+class SinceAttr(TypedAttribute[IfaceMethodDecl]):
+    NAME = "since"
+    TARGETS = (IfaceMethodDecl,)
+
+    ver: int
+
+
+@dataclass
+class DefaultAttr(TypedAttribute[IfaceMethodDecl]):
+    NAME = "default"
+    TARGETS = (IfaceMethodDecl,)
+
+
 all_attr_types = [
     NoexceptAttr,
+]
+
+exp_attr_types = [
+    VersionAttr,
+    SinceAttr,
+    DefaultAttr,
 ]

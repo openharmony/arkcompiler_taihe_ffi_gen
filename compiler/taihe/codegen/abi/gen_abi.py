@@ -449,6 +449,10 @@ class AbiIfaceImplGenerator:
 
     def gen_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        if not method_abi_info.has_default:
+            return
+
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         params.append(f"{iface_abi_info.as_param} tobj")
