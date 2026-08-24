@@ -12,7 +12,7 @@
 # limitations under the License.
 
 [project]
-dynamic = ["version"]
+version = "0.0.0"
 name = "taihe"
 description = "Language-neutral API tooling"
 requires-python = ">=3.11.4"
@@ -28,7 +28,6 @@ dev = [
     "pytest==8.3.5",
     "ruff==0.8.4",
     "setuptools==80.0.0",
-    "setuptools-scm==9.2.1",
 ]
 
 [[tool.uv.index]]
@@ -40,7 +39,6 @@ default = true
 [build-system]
 requires = [
     "setuptools==80.0.0",
-    "setuptools-scm==9.2.1",
     "antlr4-python3-runtime==4.11.1",
     "typing-extensions==4.13.2",
 ]
@@ -49,12 +47,6 @@ build-backend = "setuptools.build_meta"
 [project.scripts]
 taihec      = "taihe.cli.compiler:main"
 taihe-tryit = "taihe.cli.tryit:main"
-
-[tool.setuptools_scm]
-search_parent_directories = true
-local_scheme = "dirty-tag"
-version_scheme = "python-simplified-semver"
-fallback_version = "0.0.0+thunk"
 
 [tool.setuptools.packages.find]
 where = ["compiler"]

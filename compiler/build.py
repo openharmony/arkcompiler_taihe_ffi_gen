@@ -221,8 +221,6 @@ class TaiheBuildHook(build_py):
         ).stdout
 
     def _generate_version(self):
-        from setuptools_scm import get_version
-
         try:
             self._git("rev-parse", "--is-inside-work-tree")
             git_commit = self._git("rev-parse", "HEAD").strip()
@@ -231,13 +229,7 @@ class TaiheBuildHook(build_py):
             git_commit = "0" * 40
             git_message = ""
 
-        version = get_version(
-            root=str(self.repo_root),
-            search_parent_directories=True,
-            fallback_version="0.0.0+thunk",
-            local_scheme="dirty-tag",
-            version_scheme="python-simplified-semver",
-        )
+        version = "0.0.0"
 
         now = datetime.now()
         build_timestamp = now.astimezone(timezone.utc).timestamp()
