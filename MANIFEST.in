@@ -13,6 +13,13 @@
 
 # Include compiler directory
 recursive-include compiler/taihe *
+include compiler/build.py
+include compiler/Taihe.g4
+
+# Include resource directories copied into the wheel build tree
+recursive-include runtime *
+recursive-include stdlib *
+recursive-include cmake *
 
 # Exclude test directories
 recursive-exclude test *
