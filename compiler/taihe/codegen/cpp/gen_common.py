@@ -1569,8 +1569,7 @@ class CppIfaceImplGenerator:
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         args_tmpl = []
         params_cpp = []
-        args_call = []
-        args_call.append(f"&{method_abi_info.wrap_name}")
+        args_call = [f"&{method_abi_info.wrap_name}"]
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -1582,9 +1581,9 @@ class CppIfaceImplGenerator:
             result_ty_cpp_name = f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"  # fmt: skip
         args_tmpl.append(result_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
-        iface_ty_cpp_name = iface_cpp_info.as_param
-        args_tmpl.append(iface_ty_cpp_name)
-        args_call.append(f"*reinterpret_cast<{iface_ty_cpp_name} const*>(this)")
+        iface_cpp_name = iface_cpp_info.as_param
+        args_tmpl.append(iface_cpp_name)
+        args_call.append(f"*reinterpret_cast<{iface_cpp_name} const*>(this)")
         for param in method.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_cpp_name = param_ty_cpp_info.as_param
@@ -1624,7 +1623,10 @@ class CppIfaceImplGenerator:
             param_ty_cpp_name = param_ty_cpp_info.as_param
             args_tmpl.append(param_ty_cpp_name)
         args_tmpl_str = ", ".join(args_tmpl)
-        return f"&::taihe::method_calling_convention<{args_tmpl_str}>::abi_func"
+        if method_abi_info.is_optional:
+            return f"::taihe::method_as_abi_func_optional_v<{args_tmpl_str}>"
+        else:
+            return f"::taihe::method_as_abi_func_required_v<{args_tmpl_str}>"
 
     def gen_iface_ftbl_impl(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1643,7 +1645,7 @@ class CppIfaceImplGenerator:
                 f".methods = {{",
                 f"}},",
             ):
-                for method in self.iface.methods:
+                for method in iface_abi_info.sorted_methods:
                     self.target.writelns(
                         f".{method.name} = {self.get_iface_ftbl_impl_abi_method(method)},",
                     )

@@ -34,16 +34,20 @@ template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
     static constexpr bool is_holder = false;
 
+    using view_type = callback_view<Return(Params...)>;
+    using holder_type = callback<Return(Params...)>;
+
     struct ftable_type {
-        as_abi_func_t<Return, callback_view<Return(Params...)>, Params...> invoke;
+        uint64_t version;
+
+        struct {
+            as_abi_func_t<Return, view_type, Params...> invoke;
+        } methods;
     };
 
     struct vtable_type {
         struct ftable_type const *ftbl_ptr_0;
     };
-
-    using view_type = callback_view<Return(Params...)>;
-    using holder_type = callback<Return(Params...)>;
 
     struct abi_type {
         vtable_type const *vtbl_ptr;
@@ -72,15 +76,18 @@ public:
 
     Return operator()(Params... params) const &
     {
-        return call_abi_func<Return, callback_view<Return(Params...)>, Params...>(
-            m_handle.vtbl_ptr->ftbl_ptr_0->invoke, *this, std::forward<Params>(params)...);
+        auto abi_func = m_handle.vtbl_ptr->ftbl_ptr_0->methods.invoke;
+        return call_abi_func<Return, view_type, Params...>(abi_func, *this, std::forward<Params>(params)...);
     }
 
 public:
     template<typename Impl>
     static constexpr ftable_type ftbl_impl = {
-        .invoke = &taihe::method_calling_convention<Impl, &Impl::operator(), Return, callback_view<Return(Params...)>,
-                                                    Params...>::abi_func,
+        .version = 0,
+        .methods =
+            {
+                .invoke = taihe::method_as_abi_func_required_v<Impl, &Impl::operator(), Return, view_type, Params...>,
+            },
     };
 
     template<typename Impl>

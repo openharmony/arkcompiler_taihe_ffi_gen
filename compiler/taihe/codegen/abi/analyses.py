@@ -18,7 +18,12 @@ from dataclasses import dataclass, field
 
 from typing_extensions import override
 
-from taihe.codegen.abi.attributes import NoexceptAttr
+from taihe.codegen.abi.attributes import (
+    DefaultAttr,
+    NoexceptAttr,
+    SinceAttr,
+    VersionAttr,
+)
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -82,7 +87,9 @@ class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
         segments = [*f.parent_pkg.segments, f.parent_iface.name, f.name]
         self.impl_name = encode(segments, DeclKind.FUNC)
         self.wrap_name = encode(segments, DeclKind.METHOD)
-        self.min_version = 0
+        self.is_optional = DefaultAttr.get(f) is not None
+        self.min_version = since_attr.ver if (since_attr := SinceAttr.get(f)) else 0
+        self.has_default = self.is_optional or self.min_version > 0
 
         self.is_noexcept = NoexceptAttr.get(f) is not None
 
@@ -168,9 +175,13 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
-        self.version = 0
+        self.version = version_attr.ver if (version_attr := VersionAttr.get(d)) else 0
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
+        self.sorted_methods = sorted(
+            d.methods,
+            key=lambda method: IfaceMethodAbiInfo.get(am, method).min_version,
+        )
         self.ftable = encode(segments, DeclKind.FTABLE)
         self.vtable = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)

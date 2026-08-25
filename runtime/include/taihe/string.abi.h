@@ -21,167 +21,267 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef TSTR_ENABLE_STRING_SSO
+#define TSTR_ENABLE_STRING_SSO 1
+#endif
+
+#ifndef TSTR_ENABLE_RETAINABLE_SUBSTR
+#define TSTR_ENABLE_RETAINABLE_SUBSTR 1
+#endif
+
 /////////////////////////////////////////
 // Private ABI: Don't use in your code //
 /////////////////////////////////////////
 
 enum TStringFlags {
-    TSTRING_MODE_MASK = 0xFFFF,
+    TSTRING_STORAGE_MASK = 0xFFFF,
+    TSTRING_STORAGE_INVALID = 0u,
+    TSTRING_STORAGE_STATIC = 1u,
+    TSTRING_STORAGE_INTERNAL = 2u,
+    TSTRING_STORAGE_EXTERNAL = 4u,
+    TSTRING_STORAGE_BORROWED = 8u,
+#if TSTR_ENABLE_STRING_SSO
+    TSTRING_STORAGE_SMALL = 16u,
+#endif
+
     TSTRING_ENCODING_MASK = 0xFFFF0000,
-    TSTRING_REF = 1u,
-    TSTRING_EXT = 1u << 1,
-    TSTRING_UTF8 = 1u << 16,
-    TSTRING_UTF16 = 1u << 17,
+    TSTRING_ENCODING_UNKNOWN = 0u << 16,
+    TSTRING_ENCODING_UTF8 = 1u << 16,
+    TSTRING_ENCODING_UTF16 = 2u << 16,
 };
 
-struct TStringInfo {
-    TRefCount count;
-    void (*drop)(void *);
-    void *external_obj;
+struct TStringInternalControlBlock {
+    TRefCount ref_count;
 };
+
+struct TStringExternalControlBlock {
+    TRefCount ref_count;
+    void (*drop)(void *);
+    void *context;
+};
+
+#if TSTR_ENABLE_STRING_SSO
+#define TSTR_SMALL_UTF8_CAPACITY (sizeof(void *) * 2 / sizeof(char))
+#define TSTR_SMALL_UTF16_CAPACITY (sizeof(void *) * 2 / sizeof(uint16_t))
+#define TSTR_SMALL_UTF8_MAX_LENGTH (TSTR_SMALL_UTF8_CAPACITY - 1)
+#define TSTR_SMALL_UTF16_MAX_LENGTH (TSTR_SMALL_UTF16_CAPACITY - 1)
+#endif
 
 struct TString {
     uint32_t flags;
-    uint32_t length;
-    struct TStringInfo *pstrinfo;
-    char const *ptr;
+    uint32_t byte_length;
+#if TSTR_ENABLE_STRING_SSO
+    union {
+        struct {
+#endif
+            void const *data;
+
+            union {
+                struct TStringInternalControlBlock *cb_int;
+                struct TStringExternalControlBlock *cb_ext;
+            };
+#if TSTR_ENABLE_STRING_SSO
+        };
+
+        char small_utf8[TSTR_SMALL_UTF8_CAPACITY];
+        uint16_t small_utf16[TSTR_SMALL_UTF16_CAPACITY];
+    };
+#endif
 };
 
 //////////////////
 // Public C API //
 //////////////////
 
-// Returns the buffer of the TString.
-TH_INLINE const char *tstr_buf(struct TString tstr)
-{
-    return tstr.ptr;
-}
-
-TH_INLINE const uint16_t *tstr_buf_utf16(struct TString tstr)
-{
-    return reinterpret_cast<uint16_t const *>(tstr.ptr);
-}
-
-// Returns the length of the TString.
-TH_INLINE size_t tstr_len(struct TString tstr)
-{
-    return tstr.length;
-}
-
-TH_INLINE size_t tstr_len_utf16(struct TString tstr)
-{
-    return tstr.length / sizeof(uint16_t);
-}
-
-TH_INLINE uint32_t tstr_empty(struct TString tstr)
-{
-    return tstr.length == 0;
-}
-
+// Returns the TString encoding.
 TH_INLINE uint32_t tstr_encoding(struct TString tstr)
 {
     return tstr.flags & TSTRING_ENCODING_MASK;
 }
 
-TH_INLINE void tstr_set_len(struct TString *tstr_ptr, size_t len)
+// Returns the TString storage type.
+TH_INLINE uint32_t tstr_mode(struct TString tstr)
 {
-    tstr_ptr->length = len;
+    return tstr.flags & TSTRING_STORAGE_MASK;
 }
 
-TH_INLINE void tstr_set_len_utf16(struct TString *tstr_ptr, size_t len)
+// Check if the TString is valid.
+TH_INLINE uint32_t tstr_valid(struct TString tstr)
 {
-    tstr_ptr->length = len * sizeof(uint16_t);
+    return tstr_mode(tstr) != TSTRING_STORAGE_INVALID;
 }
 
-// Allocates memory and initializes a UTF8 encoding TString with a given
-// capacity.
-//
-// # Arguments
-// - `tstr_ptr`: Pointer to an uninitialized TString structure.
-// - `capacity`: The desired capacity of the string buffer.
-//
-// # Returns
-// - Pointer to the allocated buffer.
-//
-// # Notes
-// - The caller is responsible for setting the string length.
-// - Reference count is set to 1 after called.
-TH_EXPORT char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity);
+// Sets the TString mode to invalid.
+TH_INLINE void tstr_set_invalid(struct TString *tstr_ptr)
+{
+    tstr_ptr->flags = (tstr_ptr->flags & ~TSTRING_STORAGE_MASK) | TSTRING_STORAGE_INVALID;
+}
 
-// Allocates memory and initializes a UTF16 encoding TString with a given
-// capacity.
-//
-// # Arguments
-// - `tstr_ptr`: Pointer to an uninitialized TString structure.
-// - `capacity`: The desired capacity of the string buffer.
-//
-// # Returns
-// - Pointer to the allocated buffer.
-//
-// # Notes
-// - The caller is responsible for setting the string length.
-// - Reference count is set to 1 after called.
-TH_EXPORT uint16_t *tstr_initialize_utf16(struct TString *tstr_ptr, uint32_t capacity);
+// Returns the UTF8 buffer.
+TH_INLINE const char *tstr_buf_utf8(struct TString const *tstr)
+{
+#if TSTR_ENABLE_STRING_SSO
+    return tstr_mode(*tstr) == TSTRING_STORAGE_SMALL ? tstr->small_utf8 : (char const *)tstr->data;
+#else
+    return (char const *)tstr->data;
+#endif
+}
+
+// Returns the UTF16 buffer.
+TH_INLINE const uint16_t *tstr_buf_utf16(struct TString const *tstr)
+{
+#if TSTR_ENABLE_STRING_SSO
+    return tstr_mode(*tstr) == TSTRING_STORAGE_SMALL ? tstr->small_utf16 : (uint16_t const *)tstr->data;
+#else
+    return (uint16_t const *)tstr->data;
+#endif
+}
+
+// Returns the UTF8 length in bytes.
+TH_INLINE size_t tstr_len_utf8(struct TString tstr)
+{
+    return tstr.byte_length / sizeof(char);
+}
+
+// Returns the UTF16 length in code units.
+TH_INLINE size_t tstr_len_utf16(struct TString tstr)
+{
+    return tstr.byte_length / sizeof(uint16_t);
+}
+
+// Returns whether the TString is empty.
+TH_INLINE uint32_t tstr_empty(struct TString tstr)
+{
+    return tstr.byte_length == 0;
+}
 
 // Creates a new heap-allocated TString by copying an existing UTF8 string.
 //
 // # Arguments
-// - `buf`: A null-terminated string (must not be null).
-// - `len`: The length of the string.
+// - `buf`: Pointer to the UTF8 buffer to copy. Null pointer is invalid.
+// - `len`: The length of the string in bytes.
 //
 // # Returns
-// - A new TString containing a copy of `buf`.
+// - A new TString containing a copy of `buf`, or an invalid TString if
+//   allocation fails.
 //
 // # Notes
-// - The returned TString must be freed using `tstr_drop`.
-TH_EXPORT struct TString tstr_new(char const *buf TH_NONNULL, size_t len);
-
-// Creates a TString from an existing UTF8 string.
-//
-// # Arguments
-// - `buf`: a null-terminated string. Null pointer is invalid.
-// - `len`: the length of the string.
-// - `tstr`: pointer to an uninitialized TString. Do not pass an
-//    already-initialized TString here.
-//
-// # Returns
-// - `tstr`, if the string is created successfully. The caller must ensure the
-//    string buffer and the returned TString remain unchanged during the whole
-//    lifetime of the TString.
-// - `NULL`, if the string is not null-terminated, or the length is too large.
-//    In this case, the original `tstr` is still uninitialized and should not be
-//    used.
-TH_EXPORT struct TString tstr_new_ref(char const *buf TH_NONNULL, size_t len);
+// - Exactly `len` bytes are copied from `buf`.
+// - The returned TString must be released using `tstr_drop`.
+TH_EXPORT struct TString tstr_new_utf8(char const *buf TH_NONNULL, size_t len);
 
 // Creates a new heap-allocated TString by copying an existing UTF16 string.
 //
 // # Arguments
-// - `buf`: A null-terminated string (must not be null).
-// - `len`: The length of the string.
+// - `buf`: Pointer to the UTF16 buffer to copy. Null pointer is invalid.
+// - `len`: The length of the string in UTF16 code units.
 //
 // # Returns
-// - A new TString containing a copy of `buf`.
+// - A new TString containing a copy of `buf`, or an invalid TString if
+//   allocation fails.
 //
 // # Notes
-// - The returned TString must be freed using `tstr_drop`.
+// - Exactly `len` UTF16 code units are copied from `buf`.
+// - The returned TString must be released using `tstr_drop`.
 TH_EXPORT struct TString tstr_new_utf16(uint16_t const *buf TH_NONNULL, size_t len);
 
-// Creates a TString from an existing UTF16 string.
+// Creates a non-owning TString reference from an existing UTF8 buffer.
 //
 // # Arguments
-// - `buf`: a null-terminated string. Null pointer is invalid.
-// - `len`: the length of the string.
-// - `tstr`: pointer to an uninitialized TString. Do not pass an
-//    already-initialized TString here.
+// - `buf`: Pointer to the UTF8 buffer. Null pointer is invalid.
+// - `len`: The length of the string in bytes.
 //
 // # Returns
-// - `tstr`, if the string is created successfully. The caller must ensure the
-//    string buffer and the returned TString remain unchanged during the whole
-//    lifetime of the TString.
-// - `NULL`, if the string is not null-terminated, or the length is too large.
-//    In this case, the original `tstr` is still uninitialized and should not be
-//    used.
-TH_EXPORT struct TString tstr_new_ref_utf16(uint16_t const *buf TH_NONNULL, size_t len);
+// - A TString referencing `buf`.
+//
+// # Notes
+// - The returned TString does not own the buffer.
+// - The caller must keep `buf` valid and unchanged during the lifetime of the
+//   returned TString.
+// - `tstr_drop` has no effect on the referenced buffer.
+TH_EXPORT struct TString tstr_new_borrowed_utf8(char const *buf TH_NONNULL, size_t len);
+
+// Creates a non-owning TString reference from an existing UTF16 buffer.
+//
+// # Arguments
+// - `buf`: Pointer to the UTF16 buffer. Null pointer is invalid.
+// - `len`: The length of the string in UTF16 code units.
+//
+// # Returns
+// - A TString referencing `buf`.
+//
+// # Notes
+// - The returned TString does not own the buffer.
+// - The caller must keep `buf` valid and unchanged during the lifetime of the
+//   returned TString.
+// - `tstr_drop` has no effect on the referenced buffer.
+TH_EXPORT struct TString tstr_new_borrowed_utf16(uint16_t const *buf TH_NONNULL, size_t len);
+
+// Creates a TString from an external UTF8 buffer with a custom drop callback.
+//
+// # Arguments
+// - `buf`: Pointer to the UTF8 buffer. Null pointer is invalid.
+// - `len`: The length of the string in bytes.
+// - `context`: External object passed to `drop`.
+// - `drop`: Callback to release the external buffer.
+//
+// # Returns
+// - A TString referencing `buf`, or an invalid TString if allocation fails.
+//
+// # Notes
+// - The caller must ensure `buf` remains valid until `drop` is called.
+// - It is not guaranteed that the returned TString is in external mode.
+// - If creation fails or a non-external TString is created, `drop` will be called
+//   directly.
+TH_EXPORT struct TString tstr_new_from_external_utf8(char const *buf TH_NONNULL, size_t len, void *context,
+                                                     void (*drop)(void *));
+
+// Creates a TString from an external UTF16 buffer with a custom drop callback.
+//
+// # Arguments
+// - `buf`: Pointer to the UTF16 buffer. Null pointer is invalid.
+// - `len`: The length of the string in UTF16 code units.
+// - `context`: External object passed to `drop`.
+// - `drop`: Callback to release the external buffer.
+//
+// # Returns
+// - A TString referencing `buf`, or an invalid TString if allocation fails.
+//
+// # Notes
+// - The caller must ensure `buf` remains valid until `drop` is called.
+// - It is not guaranteed that the returned TString is in external mode.
+// - If creation fails or a non-external TString is created, `drop` will be called
+//   directly.
+TH_EXPORT struct TString tstr_new_from_external_utf16(uint16_t const *buf TH_NONNULL, size_t len, void *context,
+                                                      void (*drop)(void *));
+
+// Creates a TString from a static UTF16 buffer.
+//
+// # Arguments
+// - `buf`: Pointer to the UTF16 buffer. Null pointer is invalid.
+// - `len`: The length of the string in UTF16 code units.
+//
+// # Returns
+// - A TString referencing `buf`.
+//
+// # Notes
+// - The returned TString does not own the buffer.
+// - `buf` must remain valid for the required lifetime.
+TH_EXPORT struct TString tstr_new_from_static_utf16(uint16_t const *buf TH_NONNULL, size_t len);
+
+// Creates a TString from a static UTF8 buffer.
+//
+// # Arguments
+// - `buf`: Pointer to the UTF8 buffer. Null pointer is invalid.
+// - `len`: The length of the string in bytes.
+//
+// # Returns
+// - A TString referencing `buf`.
+//
+// # Notes
+// - The returned TString does not own the buffer.
+// - `buf` must remain valid for the required lifetime.
+TH_EXPORT struct TString tstr_new_from_static_utf8(char const *buf TH_NONNULL, size_t len);
 
 // Frees a TString, releasing allocated memory if applicable.
 //
@@ -189,7 +289,8 @@ TH_EXPORT struct TString tstr_new_ref_utf16(uint16_t const *buf TH_NONNULL, size
 // - `tstr`: The TString to be freed.
 //
 // # Notes
-// - The TString should not be accessed after calling this function.
+// - Static and reference TStrings are not freed.
+// - Native and external TStrings are reference-counted.
 TH_EXPORT void tstr_drop(struct TString tstr);
 
 // Creates a duplicate of a TString.
@@ -198,102 +299,111 @@ TH_EXPORT void tstr_drop(struct TString tstr);
 // - `tstr`: The TString to be copied.
 //
 // # Returns
-// - A new TString that is either a reference or a deep copy.
+// - A duplicated TString, or an invalid TString if duplication fails.
 //
 // # Notes
-// - If `tstr` is heap-allocated, its reference count is incremented.
 // - If `tstr` is a reference, a new heap-allocated copy is created.
-// - Use `tstr_drop` to free the duplicate when done.
+// - If `tstr` is native or external, its reference count is incremented.
+// - If `tstr` is static, it is returned as is.
+// - Use `tstr_drop` to release the duplicate when done.
 TH_EXPORT struct TString tstr_dup(struct TString tstr);
 
-// Concatenates two UTF-8 TString objects.
+// Creates a duplicate of a TString, converting it to UTF8 encoding if necessary.
+//
+// # Parameters
+// - `tstr`: The source TString.
+//
+// # Returns
+// - A TString encoded in UTF8, or an invalid TString on failure.
+//
+// # Notes
+// - If `tstr` is already UTF8, this function behaves like `tstr_dup`.
+// - Invalid UTF16 surrogate pairs are replaced with U+FFFD during conversion.
+// - Use `tstr_drop` to release the returned TString when done.
+TH_EXPORT struct TString tstr_dup_as_utf8(struct TString tstr);
+
+// Creates a duplicate of a TString, converting it to UTF16 encoding if necessary.
+//
+// # Parameters
+// - `tstr`: The source TString.
+//
+// # Returns
+// - A TString encoded in UTF16, or an invalid TString on failure.
+//
+// # Notes
+// - If `tstr` is already UTF16, this function behaves like `tstr_dup`.
+// - Invalid UTF8 sequences are replaced with U+FFFD during conversion.
+// - Use `tstr_drop` to release the returned TString when done.
+TH_EXPORT struct TString tstr_dup_as_utf16(struct TString tstr);
+
+// Concatenates TString objects and returns a new TString in UTF8 encoding.
 //
 // # Parameters
 // - `count`: The number of strings to concatenate.
 // - `tstr_list`: An array of TString objects to concatenate.
 //
 // # Returns
-// - A new TString object containing the concatenated result.
+// - A new TString object containing the concatenated result, or an invalid
+//   TString on failure.
 //
 // # Notes
-// - The returned TString must be freed using `tstr_drop`.
-TH_EXPORT struct TString tstr_concat(size_t count, struct TString const *tstr_list);
+// - UTF16 inputs are converted to UTF8.
+// - The returned TString must be released using `tstr_drop`.
+TH_EXPORT struct TString tstr_concat_as_utf8(size_t count, struct TString const *tstr_list);
 
-// Extracts a substring from a UTF-8 TString object.
-//
-// # Parameters
-// - `tstr`: The source TString object to extract the substring from.
-// - `pos`: The starting position of the substring within the source TString
-//   object.
-// - `len`: The length of the substring to extract.
-//
-// # Returns
-// - A TString reference of the extracted substring.
-//
-// # Notes
-// - The returned TString is just a view of the original string and does not own
-//   the memory, so it should not be freed.
-TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos, size_t len);
-
-// Converts a UTF8-encoded TString object into a UTF16-encoded TString.
-//
-// # Parameters
-// - `utf8_str`: The source TString encoded in UTF8.
-//
-// # Returns
-// - A new TString encoded in UTF16.
-//   The returned TString owns its memory and must be freed with `tstr_drop`.
-//
-// # Notes
-// - Invalid UTF8 sequences are handled according to the internal conversion
-//   policy (typically replacing invalid sequences with U+FFFD).
-// - Serious errors return an empty string U'\0'.
-// - The returned TString is heap-allocated and independent of the input.
-TH_EXPORT struct TString tstr_utf8_to_utf16(struct TString utf8_str);
-
-// Converts a UTF16-encoded TString object into a UTF8-encoded TString.
-//
-// # Parameters
-// - `utf16_str`: The source TString encoded in UTF16.
-//
-// # Returns
-// - A new TString encoded in UTF8.
-//   The returned TString owns its memory and must be freed with `tstr_drop`.
-//
-// # Notes
-// - Invalid surrogate pairs or malformed UTF16 sequences are handled according
-//   to the internal conversion policy (typically replacing invalid sequences
-//   with U+FFFD).
-// - The returned TString is heap-allocated and independent of the input.
-TH_EXPORT struct TString tstr_utf16_to_utf8(struct TString utf16_str);
-
-// Concatenates two UTF-16 TString objects.
+// Concatenates TString objects and returns a new TString in UTF16 encoding.
 //
 // # Parameters
 // - `count`: The number of strings to concatenate.
 // - `tstr_list`: An array of TString objects to concatenate.
 //
 // # Returns
-// - A new TString object containing the concatenated result.
+// - A new TString object containing the concatenated result, or an invalid
+//   TString on failure.
 //
 // # Notes
-// - The returned TString must be freed using `tstr_drop`.
-TH_EXPORT struct TString tstr_concat_utf16(size_t count, struct TString const *tstr_list);
+// - UTF8 inputs are converted to UTF16.
+// - The returned TString must be released using `tstr_drop`.
+TH_EXPORT struct TString tstr_concat_as_utf16(size_t count, struct TString const *tstr_list);
 
-// Extracts a substring from a UTF-16 TString object.
+// Extracts a substring from a UTF8 TString object.
 //
 // # Parameters
 // - `tstr`: The source TString object to extract the substring from.
-// - `pos`: The starting position of the substring within the source TString
-//   object.
-// - `len`: The length of the substring to extract.
+// - `pos`: The starting byte position of the substring.
+// - `len`: The length of the substring in bytes.
 //
 // # Returns
-// - A TString reference of the extracted substring.
+// - A TString view of the extracted substring, or an invalid TString if `tstr`
+//   is not UTF8.
 //
 // # Notes
-// - The returned TString is just a view of the original string and does not own
-//   the memory, so it should not be freed.
+// - The result has an EXTRINSIC VIEW TYPESTATE regardless of its runtime storage
+//   mode.
+// - The caller must keep the source storage valid while using the result.
+// - No ownership reference is acquired for the result. Do not pass it directly
+//   to `tstr_drop`.
+// - Use `tstr_dup` to create an independently retainable TString.
+TH_EXPORT struct TString tstr_substr_utf8(struct TString tstr, size_t pos, size_t len);
+
+// Extracts a substring from a UTF16 TString object.
+//
+// # Parameters
+// - `tstr`: The source TString object to extract the substring from.
+// - `pos`: The starting position of the substring in UTF16 code units.
+// - `len`: The length of the substring in UTF16 code units.
+//
+// # Returns
+// - A TString view of the extracted substring, or an invalid TString if `tstr`
+//   is not UTF16.
+//
+// # Notes
+// - The result has an EXTRINSIC VIEW TYPESTATE regardless of its runtime storage
+//   mode.
+// - The caller must keep the source storage valid while using the result.
+// - No ownership reference is acquired for the result. Do not pass it directly
+//   to `tstr_drop`.
+// - Use `tstr_dup` to create an independently retainable TString.
 TH_EXPORT struct TString tstr_substr_utf16(struct TString tstr, size_t pos, size_t len);
 
 #endif  // TAIHE_STRING_ABI_H

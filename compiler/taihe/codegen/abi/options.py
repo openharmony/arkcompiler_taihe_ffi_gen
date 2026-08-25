@@ -39,6 +39,24 @@ class NoexceptAllOption(AbstractConfigOption):
         return cls()
 
 
+@dataclass
+class EnableDefaultMethodOption(AbstractConfigOption):
+    """Enable default methods in interfaces.
+
+    When enabled, interface methods can have default implementations.
+    @version, @since, and @default attributes will be supported.
+
+    Usage: -Cenable-default-method
+    """
+
+    NAME = "enable-default-method"
+
+    @classmethod
+    def try_parse(cls, value: str | None, dm: "DiagnosticsManager"):
+        return cls()
+
+
 all_abi_config_options = [
     NoexceptAllOption,
+    EnableDefaultMethodOption,
 ]

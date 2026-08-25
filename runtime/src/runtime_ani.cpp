@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -250,12 +250,9 @@ taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
     TH_ANI_CHECKED_CALL(env, Object_GetPropertyByName_Ref, errObj, "message", reinterpret_cast<ani_ref *>(&errMsg));
     ani_size msgLength;
     TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, errMsg, &msgLength);
-    TString msgHandle;
-    char *msgBuffer = tstr_initialize(&msgHandle, msgLength + 1);
-    TH_ANI_CHECKED_CALL(env, String_GetUTF8, errMsg, msgBuffer, msgLength + 1, &msgLength);
-    msgBuffer[msgLength] = '\0';
-    msgHandle.length = msgLength;
-    taihe::string msg(msgHandle);
+    taihe::string_builder msgBuilder(msgLength + 1);
+    TH_ANI_CHECKED_CALL(env, String_GetUTF8, errMsg, msgBuilder.data(), msgBuilder.capacity(), &msgLength);
+    taihe::string msg = std::move(msgBuilder).finish(msgLength);
 
     ani_int code = 0;
     if (ANI_OK == env->Object_GetPropertyByName_Int(errObj, "code", &code)) {

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -120,11 +120,19 @@ class CMacroIfaceGenerator:
         )
 
     def gen_iface_file(self):
+        methods: list[IfaceMethodDecl] = []
+        for method in self.iface.methods:
+            method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+            if method_abi_info.has_default:
+                methods.append(method)
+        if not methods:
+            return
+
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/common.h")
             self.target.add_include(iface_abi_info.impl_header)
-            for method in self.iface.methods:
+            for method in methods:
                 for param in method.params:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
                     self.target.add_include(*param_ty_abi_info.impl_headers)
@@ -241,10 +249,18 @@ class CTemplateIfaceGenerator:
         )
 
     def gen_iface_file(self):
+        methods: list[IfaceMethodDecl] = []
+        for method in self.iface.methods:
+            method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+            if method_abi_info.has_default:
+                methods.append(method)
+        if not methods:
+            return
+
         iface_c_impl_info = IfaceCImplInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include(iface_c_impl_info.header)
-            for method in self.iface.methods:
+            for method in methods:
                 self.gen_method(method)
 
     def gen_method(self, method: IfaceMethodDecl):

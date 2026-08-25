@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -40,12 +40,9 @@ static napi_value my_module_a_concat(napi_env env, [[maybe_unused]] napi_callbac
         case napi_string: {
             size_t value0_len = 0;
             napi_get_value_string_utf8(env, args[0], nullptr, 0, &value0_len);
-            TString value0_abi;
-            char *value0_buf = tstr_initialize(&value0_abi, value0_len + 1);
-            napi_get_value_string_utf8(env, args[0], value0_buf, value0_len + 1, &value0_len);
-            value0_buf[value0_len] = '\0';
-            value0_abi.length = value0_len;
-            taihe::string value0_str(value0_abi);
+            taihe::string_builder value0_builder(value0_len + 1);
+            napi_get_value_string_utf8(env, args[0], value0_builder.data(), value0_builder.capacity(), &value0_len);
+            auto value0_str = std::move(value0_builder).finish(value0_len);
             ::taihe::string value_str = concat_str(value0_str);
             napi_value result_str = nullptr;
             napi_create_string_utf8(env, value_str.c_str(), value_str.size(), &result_str);

@@ -275,7 +275,8 @@ ExpectedString CommonStringTest()
         std::string malformedUtf8("\xC0\x80", TWO_CODE_UNITS);
         ::taihe::common_string malformedUtf8Common(malformedUtf8);
         ::taihe::u16string failedUtf16Conversion(malformedUtf8Common);
-        Require(failedUtf16Conversion.empty(), "failed UTF-8 to UTF-16 conversion should return an empty string");
+        Require(failedUtf16Conversion.front() == u'\uFFFD',
+                "failed UTF-8 to UTF-16 conversion should return the replacement character");
 
         std::u16string malformedUtf16 {static_cast<char16_t>(0xD800)};
         ::taihe::common_string malformedUtf16Common(malformedUtf16);

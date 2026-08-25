@@ -55,16 +55,46 @@ template<typename cpp_owner_t>
 struct as_param<cpp_owner_t, std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
     using type = cpp_owner_t;
 };
+}  // namespace taihe
+
+////////////////////////
+// method declaration //
+////////////////////////
+
+namespace taihe {
+struct use_default_t {};
+
+constexpr inline use_default_t use_default;
+}  // namespace taihe
 
 ///////////////
 // enum tags //
 ///////////////
 
+namespace taihe {
 template<auto tag>
 struct static_tag_t {};
 
 template<auto tag>
 constexpr static_tag_t<tag> static_tag;
+}  // namespace taihe
+
+///////////
+// flags //
+///////////
+
+namespace taihe {
+struct copy_data_t {};
+
+constexpr inline copy_data_t copy_data;
+
+struct move_data_t {};
+
+constexpr inline move_data_t move_data;
+
+struct static_flag_t {};
+
+constexpr inline static_flag_t static_flag;
 }  // namespace taihe
 
 //////////////////////////////

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -68,6 +68,12 @@ TH_INLINE void tref_inc(TRefCount *c)
 TH_INLINE bool tref_dec(TRefCount *c)
 {
     return __atomic_sub_fetch(c, 1, __ATOMIC_ACQ_REL) == 0;
+}
+
+// Get the current value of the counter.
+TH_INLINE TRefCount tref_get(TRefCount *c)
+{
+    return __atomic_load_n(c, __ATOMIC_RELAXED);
 }
 
 #endif  // TAIHE_COMMON_H

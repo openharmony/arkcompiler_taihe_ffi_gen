@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Copyright (c) 2025-2026 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -1518,8 +1518,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
                 f"TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, static_cast<ani_string>(ani_value), &size);",
                 f"char buff[size + 1];",
                 f"TH_ANI_CHECKED_CALL(env, String_GetUTF8, static_cast<ani_string>(ani_value), buff, size + 1, &size);",
-                f"buff[size] = '\\0';",
-                f"return sv == buff;",
+                f"return sv == std::string_view(buff, size);",
             )
 
 
@@ -1607,12 +1606,9 @@ class StringTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"ani_size size = {{}};",
                 f"TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, ani_value, &size);",
-                f"TString tstr;",
-                f"char* buff = tstr_initialize(&tstr, size + 1);",
-                f"TH_ANI_CHECKED_CALL(env, String_GetUTF8, ani_value, buff, size + 1, &size);",
-                f"buff[size] = '\\0';",
-                f"tstr.length = size;",
-                f"return ::taihe::string(tstr);",
+                f"taihe::string_builder builder(size + 1);",
+                f"TH_ANI_CHECKED_CALL(env, String_GetUTF8, ani_value, builder.data(), builder.capacity(), &size);",
+                f"return std::move(builder).finish(size);",
             )
 
     @override

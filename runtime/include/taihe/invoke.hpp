@@ -188,6 +188,35 @@ struct method_calling_convention<Impl, method, taihe::expected<void, Error>, Int
     }
 };
 
+template<bool use_default, typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+struct method_as_abi_func;
+
+template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+struct method_as_abi_func<false, Impl, method, Return, InterfaceView, Params...> {
+    static constexpr as_abi_func_t<Return, InterfaceView, Params...> value =
+        &method_calling_convention<Impl, method, Return, InterfaceView, Params...>::abi_func;
+};
+
+template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+struct method_as_abi_func<true, Impl, method, Return, InterfaceView, Params...> {
+    static constexpr as_abi_func_t<Return, InterfaceView, Params...> value = nullptr;
+};
+
+template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+using method_as_abi_func_required = method_as_abi_func<false, Impl, method, Return, InterfaceView, Params...>;
+
+template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+using method_as_abi_func_optional = method_as_abi_func<std::is_same_v<decltype(method), taihe::use_default_t const *>,
+                                                       Impl, method, Return, InterfaceView, Params...>;
+
+template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+constexpr as_abi_func_t<Return, InterfaceView, Params...> method_as_abi_func_required_v =
+    method_as_abi_func_required<Impl, method, Return, InterfaceView, Params...>::value;
+
+template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+constexpr as_abi_func_t<Return, InterfaceView, Params...> method_as_abi_func_optional_v =
+    method_as_abi_func_optional<Impl, method, Return, InterfaceView, Params...>::value;
+
 template<typename Return, typename... Params>
 struct call_abi_func_t {
     Return operator()(as_abi_func_t<Return, Params...> abi_func, Params... params) const

@@ -19,7 +19,11 @@
 #include <taihe/object.abi.h>
 
 struct TCallbackFTable {
-    void (*invoke)();  // The actual signature is unknown at this level, and will be casted in C++ code.
+    uint64_t version;
+
+    struct {
+        void (*invoke)();  // The actual signature is unknown at this level, and will be casted in C++ code.
+    } methods;
 };
 
 struct TCallbackVTable {
