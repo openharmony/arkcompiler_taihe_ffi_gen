@@ -212,10 +212,6 @@ class JsonGenerator:
                         )
 
     @staticmethod
-    def _param_mode(param) -> str:
-        return "in"
-
-    @staticmethod
     def _strip_interface_prefix(name: str) -> str:
         if len(name) > 1 and name.startswith("I") and name[1].isupper():
             return name[1:]
@@ -331,7 +327,6 @@ class JsonGenerator:
                         TypeLibParameter(
                             name=p.name,
                             type_info=self._type_info(p.ty),
-                            direction="in",
                             member_id=self._next_member_id(),
                         )
                     )

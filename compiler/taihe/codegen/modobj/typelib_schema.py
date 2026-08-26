@@ -61,7 +61,6 @@ class TypeLibStruct:
 class TypeLibParameter:
     name: str
     type_info: TypeInfo
-    direction: str
     member_id: int = 0
 
 
