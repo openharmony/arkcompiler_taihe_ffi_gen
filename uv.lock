@@ -167,20 +167,8 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools-scm"
-version = "9.2.1"
-source = { registry = "https://repo.huaweicloud.com/repository/pypi/simple/" }
-dependencies = [
-    { name = "packaging" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://repo.huaweicloud.com/repository/pypi/packages/d0/32/7d8f405986239e829556ea369b7451ba885c3dc8472ae07b9437b375f6e0/setuptools_scm-9.2.1.tar.gz", hash = "sha256:2f5b21e45205e47ed3976e58bc29c38f49bb9b6f07c625c7fd2823871694b244" }
-wheels = [
-    { url = "https://repo.huaweicloud.com/repository/pypi/packages/11/cc/5fda7ed3aab0814a86e428846b6b386f55093f4621d86e3cd081ae126c27/setuptools_scm-9.2.1-py3-none-any.whl", hash = "sha256:84c9b3f39ffb77ba00dd92a06e025e4f66dc69ab8df1c2a225a0678e76311f8d" },
-]
-
-[[package]]
 name = "taihe"
+version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "antlr4-python3-runtime" },
@@ -194,7 +182,6 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
     { name = "setuptools" },
-    { name = "setuptools-scm" },
 ]
 
 [package.metadata]
@@ -210,7 +197,6 @@ dev = [
     { name = "pytest", specifier = "==8.3.5" },
     { name = "ruff", specifier = "==0.8.4" },
     { name = "setuptools", specifier = "==80.0.0" },
-    { name = "setuptools-scm", specifier = "==9.2.1" },
 ]
 
 [[package]]
