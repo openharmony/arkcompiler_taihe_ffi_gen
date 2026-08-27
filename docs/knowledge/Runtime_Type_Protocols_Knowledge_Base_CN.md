@@ -9,8 +9,9 @@
 | 基础类型 | `unit`，标量，枚举 | 标量或固定大小值 | 通常按值；没有独立堆内存。 |
 | 复合类型 | 生成的结构体，联合体，`error` | C 结构体或标签联合 | 结构体/联合体参数为 `const&`；按字段语义复制。 |
 | 独占堆内存类型 | `optional`, `array` | 指针，或指针加长度 | 作为参数时使用借用类型；复制时深拷贝，移动时转移指针。 |
-| 引用计数类型 | `string`, `vector`, `map`, `set`, `future`, `completer` | 指向共享存储的句柄 | 作为参数时传递弱引用类型，通过引用计数管理内存。 |
-| 接口类型 | IDL 接口，`callback`，接口化容器 | 胖指针 | 作为参数时传递弱引用类型，通过引用计数管理内存。 |
+| 引用计数类型 | `vector`, `map`, `set`, `future`, `completer` | 指向共享存储的句柄 | 作为参数时传递弱引用类型，通过引用计数管理内存。 |
+| 准接口类型 | `common_string`, `shared_array` | 特殊 | 作为参数时传递 borrowed view，通过引用计数或缓存的 acquire/copy 提升为 holder。 |
+| 接口类型 | IDL 接口，`callback`, `shared_vector`, `shared_map`, `shared_set`，接口化容器 | 胖指针 | 作为参数时传递弱引用类型，通过引用计数管理内存。 |
 
 类型分类由 ABI 表示、复制方式和释放责任共同决定。`expected<T, E>` 是调用结果工具，不是独立 ABI 类型；容器的借用类型通常命名为 `*_view`。
 
@@ -57,6 +58,8 @@
 | 通用句柄 | `data_*`, `type_*`, `impl_*`, `make_holder` | 管理类型擦除、实现类型和接口集合。 |
 
 - 借用类型不增加引用计数；从借用类型构造持有类型时必须增加引用计数。
+- 带 lazy acquire cache 的 borrowed view 在第一次提升为 holder 时 acquire 一次 global ref；派生 view 必须复用同一 cache，cache 与所有依赖它的 view 必须共同存活。
+- acquire cache 自持一份 acquired 引用，生成的 holder 各自持有独立引用；释放 cache 不得使仍存活的 holder 失效。
 - 持有类型移动时必须清空源指针，析构时必须且只能释放一次。
 - 不要让 `data_*` 等低信息句柄隐式恢复已经擦除的实现类型或接口集合。
 - `TypeInfo` 的函数必须围绕同一 `DataBlockHead` 身份；运行时 ABI 和生成器不得单边修改。

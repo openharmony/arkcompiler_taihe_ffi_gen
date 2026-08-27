@@ -204,6 +204,7 @@ function(add_taihe_runtime)
       "${TAIHE_RUNTIME_SOURCE_DIR}/string.cpp"
       "${TAIHE_RUNTIME_SOURCE_DIR}/object.cpp"
       "${TAIHE_RUNTIME_SOURCE_DIR}/runtime_ani.cpp"
+      "${TAIHE_RUNTIME_SOURCE_DIR}/shared_array.cpp"
     )
 
     add_library(taihe_runtime STATIC
@@ -406,6 +407,7 @@ function(add_taihe_library target_name idl_files)
     "${TAIHE_RUNTIME_SOURCE_DIR}/string.cpp"
     "${TAIHE_RUNTIME_SOURCE_DIR}/object.cpp"
     "${TAIHE_RUNTIME_SOURCE_DIR}/runtime_ani.cpp"
+    "${TAIHE_RUNTIME_SOURCE_DIR}/shared_array.cpp"
   )
   set_source_files_properties(
     ${TAIHE_RUNTIME_SOURCES}

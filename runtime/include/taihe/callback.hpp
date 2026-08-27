@@ -93,15 +93,16 @@ public:
     }
 
 public:
+    // clang-format off
     template<typename ImplBlock>
     static constexpr ftable_type ftbl_impl = {
         .version = 0,
-        .methods =
-            {
-                .invoke = taihe::method_as_abi_func_required_v<ImplBlock, &ImplBlock::impl_type::operator(), Return,
-                                                               view_type, Params...>,
-            },
+        .methods = {
+            .invoke = taihe::method_as_abi_func_required_v<ImplBlock, &ImplBlock::impl_type::operator(),
+                Return, view_type, Params...>,
+        },
     };
+    // clang-format on
 
     template<typename ImplBlock>
     static constexpr vtable_type vtbl_impl = {

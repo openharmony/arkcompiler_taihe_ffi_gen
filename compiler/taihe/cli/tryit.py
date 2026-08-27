@@ -97,8 +97,9 @@ class BuildSystem(ABC):
         """Get the list of runtime source files."""
         runtime_src_dir = RuntimeSource.resolve_path()
         return [
-            runtime_src_dir / "string.cpp",
             runtime_src_dir / "object.cpp",
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "shared_array.cpp",
         ]
 
     @property
