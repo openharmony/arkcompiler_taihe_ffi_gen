@@ -258,10 +258,6 @@ class InterfaceGenerator:
             for field in ty.decl.fields:
                 self._collect_stub_headers_for_struct(field.ty, headers)
 
-    @staticmethod
-    def _param_mode(param) -> str:
-        return "in"
-
     def _append_method_param_parts(
         self, parts: list[str], method, name: str, ty, is_output: bool = False
     ):

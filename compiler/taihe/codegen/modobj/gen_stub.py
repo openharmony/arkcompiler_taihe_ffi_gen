@@ -113,10 +113,6 @@ class StubGenerator:
         self._generate_header(iface, info, interface_type)
         self._generate_source(iface, info, interface_type)
 
-    @staticmethod
-    def _param_mode(param) -> str:
-        return "in"
-
     def _append_method_param_parts(
         self, parts: list[str], method, name: str, ty, is_output: bool = False
     ):
@@ -620,26 +616,18 @@ class StubGenerator:
                 )
                 f.write("{\n")
                 for param in method.params:
-                    if self._param_mode(param) == "in":
-                        var_name = self._param_local_name(param)
-                        f.write(
-                            self._split_long_lines(
-                                self.serializer.generate_read_code(
-                                    "data",
-                                    var_name,
-                                    param.ty,
-                                    iface_as_object=self._is_iface_type(param.ty),
-                                )
+                    var_name = self._param_local_name(param)
+                    f.write(
+                        self._split_long_lines(
+                            self.serializer.generate_read_code(
+                                "data",
+                                var_name,
+                                param.ty,
+                                iface_as_object=self._is_iface_type(param.ty),
                             )
-                            + "\n"
                         )
-                    else:
-                        initializer = (
-                            " = nullptr" if self._is_iface_type(param.ty) else ""
-                        )
-                        f.write(
-                            f"    {self.serializer.get_cpp_type(param.ty)} {param.name}{initializer};\n"
-                        )
+                        + "\n"
+                    )
                 if ret_type != "void":
                     if isinstance(method.return_ty, ArrayType):
                         f.write(
@@ -667,24 +655,8 @@ class StubGenerator:
                     "OH_IPCParcel_WriteInt32(reply, errCode) != OH_IPC_SUCCESS",
                     "OH_IPC_PARCEL_WRITE_ERROR",
                 )
-                has_output = False
-                for param in method.params:
-                    if self._param_mode(param) == "out":
-                        if not has_output:
-                            f.write("\n")
-                            has_output = True
-                        f.write(
-                            self._split_long_lines(
-                                self.serializer.generate_write_code(
-                                    "reply", param.name, param.ty, "    "
-                                )
-                            )
-                            + "\n"
-                        )
                 if ret_type != "void":
-                    if not has_output:
-                        f.write("\n")
-                        has_output = True
+                    f.write("\n")
                     f.write(
                         self._split_long_lines(
                             self.serializer.generate_write_code(
@@ -693,7 +665,7 @@ class StubGenerator:
                         )
                         + "\n"
                     )
-                if has_output:
+                if ret_type != "void":
                     f.write("\n")
                 f.write("    return OH_IPC_SUCCESS;\n")
                 f.write("}\n\n")

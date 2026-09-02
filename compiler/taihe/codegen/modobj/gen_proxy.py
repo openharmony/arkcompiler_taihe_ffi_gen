@@ -95,10 +95,6 @@ class ProxyGenerator:
         self._generate_header(iface, info)
         self._generate_source(iface, info)
 
-    @staticmethod
-    def _param_mode(param) -> str:
-        return "in"
-
     def _append_method_param_parts(
         self, parts: list[str], method, name: str, ty, is_output: bool = False
     ):
@@ -395,18 +391,17 @@ class ProxyGenerator:
                 )
                 f.write("\n")
                 for param in method.params:
-                    if self._param_mode(param) == "in":
-                        f.write(
-                            self._split_long_lines(
-                                self.serializer.generate_write_code(
-                                    f"{parcel_data_var}.get()",
-                                    param.name,
-                                    param.ty,
-                                    iface_by_ref=True,
-                                )
+                    f.write(
+                        self._split_long_lines(
+                            self.serializer.generate_write_code(
+                                f"{parcel_data_var}.get()",
+                                param.name,
+                                param.ty,
+                                iface_by_ref=True,
                             )
-                            + "\n"
                         )
+                        + "\n"
+                    )
                 f.write("\n")
                 f.write(f"    OH_IPC_MessageOption option = {{ {request_mode}, 0 }};\n")
                 f.write("    int32_t transportErr = OH_IPCRemoteProxy_SendRequest(\n")
@@ -433,19 +428,6 @@ class ProxyGenerator:
                     "OH_IPC_PARCEL_READ_ERROR",
                 )
                 f.write("\n")
-                for param in method.params:
-                    if self._param_mode(param) == "out":
-                        f.write(
-                            self._split_long_lines(
-                                self.serializer.generate_read_code(
-                                    f"{parcel_reply_var}.get()",
-                                    param.name,
-                                    param.ty,
-                                    is_decl=False,
-                                )
-                            )
-                            + "\n"
-                        )
                 if ret_type != "void":
                     f.write(
                         self._split_long_lines(

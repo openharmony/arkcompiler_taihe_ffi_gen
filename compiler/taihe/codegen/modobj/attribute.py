@@ -20,7 +20,6 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
-    ParamDecl,
     TypeRefDecl,
 )
 from taihe.semantics.types import ArrayType
@@ -96,27 +95,6 @@ class IpcOutCapacityAttribute(TypedAttribute[IfaceMethodDecl]):
     capacity: int = 0
 
 
-PARAM_DIRECTION_GROUP = AttributeGroupTag()
-
-
-@dataclass
-class InAttribute(TypedAttribute[ParamDecl]):
-    """Marks a parameter as input."""
-
-    NAME = "in"
-    TARGETS = (ParamDecl,)
-    ATTRIBUTE_GROUP_TAGS = frozenset({PARAM_DIRECTION_GROUP})
-
-
-@dataclass
-class OutAttribute(TypedAttribute[ParamDecl]):
-    """Marks a parameter as output."""
-
-    NAME = "out"
-    TARGETS = (ParamDecl,)
-    ATTRIBUTE_GROUP_TAGS = frozenset({PARAM_DIRECTION_GROUP})
-
-
 @dataclass
 class SizeAttribute(TypedAttribute[TypeRefDecl]):
     """Specifies a fixed OHIPC array size on an array type reference."""
@@ -152,8 +130,6 @@ all_attr_types: list[CheckedAttrT] = [
     IpcCodeAttribute,
     IpcInCapacityAttribute,
     IpcOutCapacityAttribute,
-    InAttribute,
-    OutAttribute,
     SizeAttribute,
     NamespaceAttr,  # Support @!namespace attribute
 ]
