@@ -21,64 +21,115 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// Storage modes are private duplication strategies. They do not determine an
+// object handle's public ownership or drop responsibility.
+enum TObjectStorageMode {
+    TOBJ_STORAGE_STATIC = 0,
+    TOBJ_STORAGE_SHAREABLE = 1,
+    TOBJ_STORAGE_PROMOTABLE = 2,
+};
+
 struct DataBlockHead;
 
 typedef void const *InterfaceId;
 
-typedef void free_func_t(struct DataBlockHead *);
 typedef size_t hash_func_t(struct DataBlockHead *);
 typedef bool same_func_t(struct DataBlockHead *, struct DataBlockHead *);
-typedef void const *qiid_func_t(InterfaceId id);
+typedef void const *qivp_func_t(struct DataBlockHead *, InterfaceId);
+typedef void free_func_t(struct DataBlockHead *);
+typedef struct DataBlockHead *promote_func_t(struct DataBlockHead *);
 
-// TypeInfo
-// Represents metadata information for a type, including version, length, and
-// function pointers.
+// Defines the operations associated with a data block's storage mode and type.
 //
 // # Members
-// - `free_fptr`: Pointer to function that frees the data block.
-// - `hash_fptr`: Pointer to function that computes the hash of a data block.
-// - `same_fptr`: Pointer to function that compares equality of two data blocks.
-// - `qiid_fptr`: Pointer to function that queries the interface id mapping.
+// - `hash_fptr`: Computes the hash of a data block.
+// - `same_fptr`: Compares equality of two data blocks.
+// - `qivp_fptr`: Queries the vtable pointer for the specified interface ID.
+// - `free_fptr`: Releases a shareable data block after its last holder is
+//   dropped.
+// - `promote_fptr`: Creates a holder from a promotable borrowed view.
 struct TypeInfo {
-    free_func_t *free_fptr;
+    // Common operations for all storage modes.
     hash_func_t *hash_fptr;
     same_func_t *same_fptr;
-    qiid_func_t *qiid_fptr;
+    qivp_func_t *qivp_fptr;
+
+    union {
+        // Operations for shareable storage mode only.
+        struct {
+            free_func_t *free_fptr;
+        };
+
+        // Operations for promotable storage mode only.
+        struct {
+            promote_func_t *promote_fptr;
+        };
+    };
 };
 
-// DataBlockHead
-// Represents the head of a data block, containing a pointer to the runtime
-// type information structure and a reference count.
+// Runtime metadata shared by object holders and borrowed views.
 //
 // # Members
 // - `rtti_ptr`: A pointer to the runtime type information structure.
-// - `m_count`: A reference count for the data block.
+// - `flags`: The private storage mode of the data block.
+// - `ref_count`: The holder reference count for shareable storage.
 struct DataBlockHead {
+    uint32_t mode;
     struct TypeInfo const *rtti_ptr;
-    TRefCount m_count;
+    TRefCount ref_count;
 };
 
-// Initializes the TObject with the given runtime typeinfo.
+// Initializes a static data block.
 //
 // # Arguments
-// - `data_ptr`: The data pointer.
-// - `rtti_ptr`: The runtime typeinfo pointer.
-TH_EXPORT void tobj_init(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr);
+// - `data_ptr`: Pointer to the data block.
+// - `rtti_ptr`: Runtime type information.
+//
+// # Notes
+// - Static data blocks have no holder reference count and are not managed by
+//   the runtime.
+TH_EXPORT void tobj_init_static(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr);
 
-// Increments the reference count of the given TObject.
+// Initializes a shareable data block with one holder reference.
 //
 // # Arguments
-// - `data_ptr`: The data pointer.
+// - `data_ptr`: Pointer to the data block.
+// - `rtti_ptr`: Runtime type information whose free operation releases the
+//   data block.
+//
+// # Notes
+// - The initial holder must eventually be passed exactly once to tobj_drop.
+TH_EXPORT void tobj_init_shareable(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr);
+
+// Initializes a data block that backs promotable borrowed views.
+//
+// # Arguments
+// - `data_ptr`: Pointer to the data block.
+// - `rtti_ptr`: Runtime type information whose promote operation creates a
+//   holder from the data block.
+//
+// # Notes
+// - This function creates no holder and no drop responsibility.
+TH_EXPORT void tobj_init_promotable(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr);
+
+// Creates a holder from an object handle.
+//
+// # Arguments
+// - `data_ptr`: Pointer from a holder or borrowed view. Null is valid.
 //
 // # Returns
-// - The new data pointer.
+// - An independent holder pointer, or null if `data_ptr` is null or invalid.
 TH_EXPORT struct DataBlockHead *tobj_dup(struct DataBlockHead *data_ptr);
 
-// Decrements the reference count of the given TObject. If the reference count
-// reaches zero, the object is destroyed.
+// Fulfills the drop responsibility of one holder.
 //
 // # Arguments
-// - `tobj`: The data pointer.
+// - `data_ptr`: The holder pointer whose responsibility is consumed. Null is
+//   valid.
+//
+// # Notes
+// - This function consumes holders only. Borrowed views have no drop
+//   responsibility and must not be passed to this function.
 TH_EXPORT void tobj_drop(struct DataBlockHead *data_ptr);
 
 #endif  // TAIHE_OBJECT_ABI_H

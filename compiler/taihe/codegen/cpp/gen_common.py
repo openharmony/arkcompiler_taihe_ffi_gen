@@ -1151,10 +1151,48 @@ class CppIfaceDefnGenerator:
                     continue
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
                 self.target.add_include(ancestor_cpp_info.defn_header)
+            self.gen_iface_vtable_helper()
             self.gen_iface_view_defn()
             self.gen_iface_holder_defn()
             self.gen_iface_same()
             self.gen_iface_hash()
+
+    def gen_iface_vtable_helper(self):
+        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
+        with self.target.indented(
+            f"template<> struct ::taihe::vtable_helper<{iface_abi_info.vtable}> {{",
+            f"}};",
+        ):
+            self.gen_iface_vtable_dynamic_cast()
+            self.gen_iface_vtable_static_cast()
+
+    def gen_iface_vtable_dynamic_cast(self):
+        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
+        with self.target.indented(
+            f"static {iface_abi_info.vtable} const* dynamic_cast_from(DataBlockHead *data_ptr) {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"return {iface_abi_info.dynamic_cast}(data_ptr);",
+            )
+
+    def gen_iface_vtable_static_cast(self):
+        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
+        self.target.writelns(
+            f"template<typename VTableDest> static VTableDest const* static_cast_to({iface_abi_info.vtable} const* vtbl_ptr) = delete;",
+        )
+        for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
+            ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
+            with self.target.indented(
+                f"template<> static {ancestor_abi_info.vtable} const* static_cast_to<{ancestor_abi_info.vtable}>({iface_abi_info.vtable} const* vtbl_ptr) {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"return {ancestor_info.static_cast}(vtbl_ptr);",
+                )
 
     def gen_iface_view_defn(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1169,21 +1207,23 @@ class CppIfaceDefnGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"static constexpr bool is_holder = false;",
+                    f"using view_type = {iface_cpp_info.full_weak_name};",
+                    f"using holder_type = {iface_cpp_info.full_norm_name};",
+                    f"using vtable_type = {iface_abi_info.vtable};",
+                    f"using abi_type = {iface_abi_info.mangled_name};",
                 )
                 self.target.writelns(
-                    f"{iface_abi_info.as_owner} m_handle;",
+                    f"abi_type m_handle;",
                 )
                 self.target.writelns(
-                    f"explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}",
+                    f"explicit {iface_cpp_info.weak_name}(abi_type handle) : m_handle(handle) {{}}",
                 )
                 self.gen_iface_view_dynamic_cast()
                 self.gen_iface_view_static_cast()
                 self.gen_iface_virtual_type_decl()
                 self.gen_iface_ftbl_decl()
                 self.gen_iface_vtbl_impl()
-                self.gen_iface_qiid_impl()
-                self.gen_iface_infos()
+                self.gen_iface_qivp_impl()
                 self.gen_iface_utils()
 
     def gen_iface_view_static_cast(self):
@@ -1193,6 +1233,7 @@ class CppIfaceDefnGenerator:
         for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
             if ancestor is self.iface:
                 continue
+            ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             with self.target.indented(
                 f"operator {ancestor_cpp_info.full_weak_name}() const& {{",
@@ -1203,7 +1244,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<{ancestor_abi_info.vtable}>(this->m_handle.vtbl_ptr),",
                         f"this->m_handle.data_ptr,",
                     )
             with self.target.indented(
@@ -1215,23 +1256,25 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<{ancestor_abi_info.vtable}>(this->m_handle.vtbl_ptr),",
                         f"tobj_dup(this->m_handle.data_ptr),",
                     )
         # static cast to root
+        template = f"template<typename... InterfaceBases, std::enable_if_t<(::taihe::is_vtable_static_castable_from_to_v<{iface_abi_info.vtable}, typename InterfaceBases::vtable_type> && ...), int> = 0>"
+        vtbl_ptr = f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<typename InterfaceBases::vtable_type>(this->m_handle.vtbl_ptr)..."
         with self.target.indented(
-            f"operator ::taihe::data_view() const& {{",
+            f"{template} operator ::taihe::interface_view<InterfaceBases...>() const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::data_view(this->m_handle.data_ptr);",
+                f"return ::taihe::interface_view<InterfaceBases...>(this->m_handle.data_ptr, {vtbl_ptr});",
             )
         with self.target.indented(
-            f"operator ::taihe::data_holder() const& {{",
+            f"{template} operator ::taihe::interface_holder<InterfaceBases...>() const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::data_holder(tobj_dup(this->m_handle.data_ptr));",
+                f"return ::taihe::interface_holder<InterfaceBases...>(tobj_dup(this->m_handle.data_ptr), {vtbl_ptr});",
             )
 
     def gen_iface_view_dynamic_cast(self):
@@ -1243,7 +1286,7 @@ class CppIfaceDefnGenerator:
             f"}}) {{}}",
         ):
             self.target.writelns(
-                f"{iface_abi_info.dynamic_cast}(other.data_ptr->rtti_ptr),",
+                f"::taihe::vtable_helper<{iface_abi_info.vtable}>::dynamic_cast_from(other.data_ptr),",
                 f"other.data_ptr,",
             )
 
@@ -1258,7 +1301,7 @@ class CppIfaceDefnGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target.writelns(
-            f"template<typename Impl>",
+            f"template<typename ImplBlock>",
             f"static const {iface_abi_info.ftable} ftbl_impl;",
         )
 
@@ -1266,7 +1309,7 @@ class CppIfaceDefnGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target.writelns(
-            f"template<typename Impl>",
+            f"template<typename ImplBlock>",
         )
         with self.target.indented(
             f"static constexpr {iface_abi_info.vtable} vtbl_impl = {{",
@@ -1276,17 +1319,17 @@ class CppIfaceDefnGenerator:
                 ancestor = ancestor_slot.info.anc_iface
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
                 self.target.writelns(
-                    f".{ancestor_slot.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
+                    f".{ancestor_slot.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<ImplBlock>,",
                 )
 
-    def gen_iface_qiid_impl(self):
+    def gen_iface_qivp_impl(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target.writelns(
-            f"template<typename Impl>",
+            f"template<typename ImplBlock>",
         )
         with self.target.indented(
-            f"static constexpr void const *qiid_impl(InterfaceId id) {{",
+            f"static constexpr void const *qivp_impl(InterfaceId id) {{",
             f"}}",
         ):
             for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
@@ -1296,21 +1339,11 @@ class CppIfaceDefnGenerator:
                     f"}}",
                 ):
                     self.target.writelns(
-                        f"return &vtbl_impl<Impl>.{ancestor_info.slots[0].ftbl_ptr};",
+                        f"return &vtbl_impl<ImplBlock>.{ancestor_info.slots[0].ftbl_ptr};",
                     )
             self.target.writelns(
                 f"return nullptr;",
             )
-
-    def gen_iface_infos(self):
-        iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
-        self.target.writelns(
-            f"using vtable_type = {iface_abi_info.vtable};",
-            f"using view_type = {iface_cpp_info.full_weak_name};",
-            f"using holder_type = {iface_cpp_info.full_norm_name};",
-            f"using abi_type = {iface_abi_info.mangled_name};",
-        )
 
     def gen_iface_utils(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1350,10 +1383,7 @@ class CppIfaceDefnGenerator:
                 f"}};",
             ):
                 self.target.writelns(
-                    f"static constexpr bool is_holder = true;",
-                )
-                self.target.writelns(
-                    f"explicit {iface_cpp_info.norm_name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.full_weak_name}(handle) {{}}",
+                    f"explicit {iface_cpp_info.norm_name}(abi_type handle) : {iface_cpp_info.full_weak_name}(handle) {{}}",
                 )
                 with self.target.indented(
                     f"{iface_cpp_info.norm_name}& operator=({iface_cpp_info.full_norm_name} other) {{",
@@ -1405,6 +1435,7 @@ class CppIfaceDefnGenerator:
         for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
             if ancestor is self.iface:
                 continue
+            ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             with self.target.indented(
                 f"operator {ancestor_cpp_info.full_weak_name}() const& {{",
@@ -1415,7 +1446,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<{ancestor_abi_info.vtable}>(this->m_handle.vtbl_ptr),",
                         f"this->m_handle.data_ptr,",
                     )
             with self.target.indented(
@@ -1427,7 +1458,7 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<{ancestor_abi_info.vtable}>(this->m_handle.vtbl_ptr),",
                         f"tobj_dup(this->m_handle.data_ptr),",
                     )
             with self.target.indented(
@@ -1439,30 +1470,32 @@ class CppIfaceDefnGenerator:
                     f"}});",
                 ):
                     self.target.writelns(
-                        f"{ancestor_info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<{ancestor_abi_info.vtable}>(this->m_handle.vtbl_ptr),",
                         f"std::exchange(this->m_handle.data_ptr, nullptr),",
                     )
         # copy/move to root
+        template = f"template<typename... InterfaceBases, std::enable_if_t<(::taihe::is_vtable_static_castable_from_to_v<{iface_abi_info.vtable}, typename InterfaceBases::vtable_type> && ...), int> = 0>"
+        vtbl_ptr = f"::taihe::vtable_helper<{iface_abi_info.vtable}>::static_cast_to<typename InterfaceBases::vtable_type>(this->m_handle.vtbl_ptr)..."
         with self.target.indented(
-            f"operator ::taihe::data_view() const& {{",
+            f"{template} operator ::taihe::interface_view<InterfaceBases...>() const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::data_view(this->m_handle.data_ptr);",
+                f"return ::taihe::interface_view<InterfaceBases...>(this->m_handle.data_ptr, {vtbl_ptr});",
             )
         with self.target.indented(
-            f"operator ::taihe::data_holder() const& {{",
+            f"{template} operator ::taihe::interface_holder<InterfaceBases...>() const& {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::data_holder(tobj_dup(this->m_handle.data_ptr));",
+                f"return ::taihe::interface_holder<InterfaceBases...>(tobj_dup(this->m_handle.data_ptr), {vtbl_ptr});",
             )
         with self.target.indented(
-            f"operator ::taihe::data_holder() && {{",
+            f"{template} operator ::taihe::interface_holder<InterfaceBases...>() && {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return ::taihe::data_holder(std::exchange(this->m_handle.data_ptr, nullptr));",
+                f"return ::taihe::interface_holder<InterfaceBases...>(std::exchange(this->m_handle.data_ptr, nullptr), {vtbl_ptr});",
             )
 
     def gen_iface_holder_dynamic_cast(self):
@@ -1474,7 +1507,7 @@ class CppIfaceDefnGenerator:
             f"}}) {{}}",
         ):
             self.target.writelns(
-                f"{iface_abi_info.dynamic_cast}(other.data_ptr->rtti_ptr),",
+                f"::taihe::vtable_helper<{iface_abi_info.vtable}>::dynamic_cast_from(other.data_ptr),",
                 f"std::exchange(other.data_ptr, nullptr),",
             )
 
@@ -1486,13 +1519,9 @@ class CppIfaceDefnGenerator:
             f"}}",
             indent="",
         ):
-            with self.target.indented(
-                f"inline bool operator==({iface_cpp_info.as_param} lhs, {iface_cpp_info.as_param} rhs) {{",
-                f"}}",
-            ):
-                self.target.writelns(
-                    f"return ::taihe::data_view(lhs) == ::taihe::data_view(rhs);",
-                )
+            self.target.writelns(
+                f"using taihe::operator==;",
+            )
 
     def gen_iface_hash(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1604,7 +1633,7 @@ class CppIfaceImplGenerator:
     def get_iface_ftbl_impl_abi_method(self, method: IfaceMethodDecl):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        args_tmpl = ["Impl", f"&Impl::{method_cpp_info.impl_name}"]
+        args_tmpl = ["ImplBlock", f"&ImplBlock::impl_type::{method_cpp_info.impl_name}"]
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -1632,7 +1661,7 @@ class CppIfaceImplGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target.writelns(
-            f"template<typename Impl>",
+            f"template<typename ImplBlock>",
         )
         with self.target.indented(
             f"constexpr {iface_abi_info.ftable} {iface_cpp_info.weakspace}::{iface_cpp_info.weak_name}::ftbl_impl = {{",

@@ -299,8 +299,6 @@ class AbiIfaceDefnGenerator:
     def gen_iface_static_cast(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
-            if ancestor is self.iface:
-                continue
             ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
             with self.target.indented(
                 f"TH_INLINE struct {ancestor_abi_info.vtable} const* {ancestor_info.static_cast}(struct {iface_abi_info.vtable} const* vtbl_ptr) {{",
@@ -313,11 +311,11 @@ class AbiIfaceDefnGenerator:
     def gen_iface_dynamic_cast(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target.indented(
-            f"TH_INLINE struct {iface_abi_info.vtable} const* {iface_abi_info.dynamic_cast}(struct TypeInfo const* rtti_ptr) {{",
+            f"TH_INLINE struct {iface_abi_info.vtable} const* {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return (struct {iface_abi_info.vtable} const*)rtti_ptr->qiid_fptr({iface_abi_info.iid});",
+                f"return (struct {iface_abi_info.vtable} const*)data_ptr->rtti_ptr->qivp_fptr(data_ptr, {iface_abi_info.iid});",
             )
 
 
@@ -452,7 +450,6 @@ class AbiIfaceImplGenerator:
         if not method_abi_info.has_default:
             return
 
-        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         params.append(f"{iface_abi_info.as_param} tobj")

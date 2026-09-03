@@ -100,7 +100,7 @@ using CallbackVoid = ::taihe::callback<::taihe::expected<void, ::taihe::error>()
 ::taihe::expected<CallbackVoid, ::taihe::error> GetCallbackVoid()
 {
     taihe::string captured = "captured variable";
-    return taihe::as_holder<CallbackVoid>([captured]() -> ::taihe::expected<void, ::taihe::error> {
+    return taihe::into_holder<CallbackVoid>([captured]() -> ::taihe::expected<void, ::taihe::error> {
         std::cout << "callback void called, captured: " << captured << std::endl;
         return {};
     });
@@ -111,7 +111,7 @@ using CallbackString = ::taihe::callback<::taihe::expected<taihe::string, ::taih
 ::taihe::expected<CallbackString, ::taihe::error> GetCallbackString()
 {
     taihe::string captured = "captured variable";
-    return taihe::as_holder<CallbackString>([captured]() -> ::taihe::expected<taihe::string, ::taihe::error> {
+    return taihe::into_holder<CallbackString>([captured]() -> ::taihe::expected<taihe::string, ::taihe::error> {
         std::cout << "callback string called, captured: " << captured << std::endl;
         return "callback result: " + captured;
     });

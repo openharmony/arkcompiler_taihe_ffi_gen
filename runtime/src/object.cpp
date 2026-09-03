@@ -15,10 +15,25 @@
 
 #include <taihe/object.abi.h>
 
-void tobj_init(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr)
+void tobj_init_static(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr)
 {
+    data_ptr->mode = TOBJ_STORAGE_STATIC;
     data_ptr->rtti_ptr = rtti_ptr;
-    tref_init(&data_ptr->m_count, 1);
+    tref_init(&data_ptr->ref_count, 0);
+}
+
+void tobj_init_shareable(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr)
+{
+    data_ptr->mode = TOBJ_STORAGE_SHAREABLE;
+    data_ptr->rtti_ptr = rtti_ptr;
+    tref_init(&data_ptr->ref_count, 1);
+}
+
+void tobj_init_promotable(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr)
+{
+    data_ptr->mode = TOBJ_STORAGE_PROMOTABLE;
+    data_ptr->rtti_ptr = rtti_ptr;
+    tref_init(&data_ptr->ref_count, 0);
 }
 
 struct DataBlockHead *tobj_dup(struct DataBlockHead *data_ptr)
@@ -26,7 +41,12 @@ struct DataBlockHead *tobj_dup(struct DataBlockHead *data_ptr)
     if (!data_ptr) {
         return nullptr;
     }
-    tref_inc(&data_ptr->m_count);
+    if (data_ptr->mode == TOBJ_STORAGE_PROMOTABLE) {
+        return data_ptr->rtti_ptr->promote_fptr(data_ptr);
+    }
+    if (data_ptr->mode == TOBJ_STORAGE_SHAREABLE) {
+        tref_inc(&data_ptr->ref_count);
+    }
     return data_ptr;
 }
 
@@ -35,7 +55,9 @@ void tobj_drop(struct DataBlockHead *data_ptr)
     if (!data_ptr) {
         return;
     }
-    if (tref_dec(&data_ptr->m_count)) {
-        data_ptr->rtti_ptr->free_fptr(data_ptr);
+    if (data_ptr->mode == TOBJ_STORAGE_SHAREABLE) {
+        if (tref_dec(&data_ptr->ref_count)) {
+            data_ptr->rtti_ptr->free_fptr(data_ptr);
+        }
     }
 }
