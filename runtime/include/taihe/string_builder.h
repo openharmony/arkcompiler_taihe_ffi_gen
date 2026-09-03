@@ -25,103 +25,142 @@
 struct TStringBuilder {
     uint32_t flags;
     uint32_t byte_capacity;
-#if TSTR_ENABLE_STRING_SSO
-    union {
-        struct {
-#endif
-            void *buffer;
-            struct TStringInternalControlBlock *cb;
-#if TSTR_ENABLE_STRING_SSO
-        };
-
-        char small_utf8[TSTR_SMALL_UTF8_CAPACITY];
-        uint16_t small_utf16[TSTR_SMALL_UTF16_CAPACITY];
-    };
-#endif
+    void *buffer;
+    struct TStringInternalControlBlock *cb;
 };
 
-// Returns the TStringBuilder encoding.
+// A TStringBuilder returned by a constructor is a holder, including when
+// invalid, and must be consumed exactly once by a matching finish function or
+// by tstr_builder_drop. Its buffers are borrowed and remain valid only until
+// reallocation or consumption.
+
 TH_INLINE uint32_t tstr_builder_encoding(struct TStringBuilder builder)
 {
     return builder.flags & TSTRING_ENCODING_MASK;
 }
 
-// Returns the TStringBuilder storage type.
-TH_INLINE uint32_t tstr_builder_mode(struct TStringBuilder builder)
+TH_INLINE void const *tstr_builder_buffer(struct TStringBuilder builder)
 {
-    return builder.flags & TSTRING_STORAGE_MASK;
+    return builder.buffer;
 }
 
-// Check if the TStringBuilder is valid.
-TH_INLINE uint32_t tstr_builder_valid(struct TStringBuilder builder)
+TH_INLINE char const *tstr_builder_buf_utf8(struct TStringBuilder builder)
 {
-    return tstr_builder_mode(builder) != TSTRING_STORAGE_INVALID;
+    return (char const *)tstr_builder_buffer(builder);
 }
 
-// Sets the TStringBuilder mode to invalid.
-TH_INLINE void tstr_builder_set_invalid(struct TStringBuilder *builder_ptr)
+TH_INLINE uint16_t const *tstr_builder_buf_utf16(struct TStringBuilder builder)
 {
-    builder_ptr->flags = (builder_ptr->flags & ~TSTRING_STORAGE_MASK) | TSTRING_STORAGE_INVALID;
+    return (uint16_t const *)tstr_builder_buffer(builder);
 }
 
-// Returns the UTF8 buffer.
-TH_INLINE char const *tstr_builder_buf_utf8(struct TStringBuilder const *bref)
+TH_INLINE void *tstr_builder_mut_buffer(struct TStringBuilder builder)
 {
-#if TSTR_ENABLE_STRING_SSO
-    return tstr_builder_mode(*bref) == TSTRING_STORAGE_SMALL ? bref->small_utf8 : (char const *)bref->buffer;
-#else
-    return (char const *)bref->buffer;
-#endif
+    return builder.buffer;
 }
 
-// Returns the UTF16 buffer.
-TH_INLINE uint16_t const *tstr_builder_buf_utf16(struct TStringBuilder const *bref)
+TH_INLINE char *tstr_builder_mut_buf_utf8(struct TStringBuilder builder)
 {
-#if TSTR_ENABLE_STRING_SSO
-    return tstr_builder_mode(*bref) == TSTRING_STORAGE_SMALL ? bref->small_utf16 : (uint16_t const *)bref->buffer;
-#else
-    return (uint16_t const *)bref->buffer;
-#endif
+    return (char *)tstr_builder_mut_buffer(builder);
 }
 
-// Returns the mutable UTF8 buffer.
-TH_INLINE char *tstr_builder_mut_buf_utf8(struct TStringBuilder *bref)
+TH_INLINE uint16_t *tstr_builder_mut_buf_utf16(struct TStringBuilder builder)
 {
-#if TSTR_ENABLE_STRING_SSO
-    return tstr_builder_mode(*bref) == TSTRING_STORAGE_SMALL ? bref->small_utf8 : (char *)bref->buffer;
-#else
-    return (char *)bref->buffer;
-#endif
+    return (uint16_t *)tstr_builder_mut_buffer(builder);
 }
 
-// Returns the mutable UTF16 buffer.
-TH_INLINE uint16_t *tstr_builder_mut_buf_utf16(struct TStringBuilder *bref)
+TH_INLINE size_t tstr_builder_byte_capacity(struct TStringBuilder builder)
 {
-#if TSTR_ENABLE_STRING_SSO
-    return tstr_builder_mode(*bref) == TSTRING_STORAGE_SMALL ? bref->small_utf16 : (uint16_t *)bref->buffer;
-#else
-    return (uint16_t *)bref->buffer;
-#endif
+    return builder.byte_capacity;
 }
 
-// Returns the UTF8 capacity in bytes.
 TH_INLINE size_t tstr_builder_cap_utf8(struct TStringBuilder builder)
 {
-    return builder.byte_capacity / sizeof(char);
+    return tstr_builder_byte_capacity(builder) / sizeof(char);
 }
 
-// Returns the UTF16 capacity in code units.
 TH_INLINE size_t tstr_builder_cap_utf16(struct TStringBuilder builder)
 {
-    return builder.byte_capacity / sizeof(uint16_t);
+    return tstr_builder_byte_capacity(builder) / sizeof(uint16_t);
 }
 
+TH_EXPORT struct TStringBuilder tstr_builder_new_invalid();
+
+// Creates a UTF8 builder holder.
+//
+// # Arguments
+// - `capacity`: The buffer capacity in bytes.
+//
+// # Returns
+// - A builder holder, or an invalid builder holder if allocation fails.
 TH_EXPORT struct TStringBuilder tstr_builder_new_utf8(size_t capacity);
+
+// Creates a UTF16 builder holder.
+//
+// # Arguments
+// - `capacity`: The buffer capacity in UTF16 code units.
+//
+// # Returns
+// - A builder holder, or an invalid builder holder if allocation fails.
 TH_EXPORT struct TStringBuilder tstr_builder_new_utf16(size_t capacity);
+
+// Replaces a UTF8 builder holder with one of the requested capacity.
+//
+// # Arguments
+// - `builder_ptr`: Pointer to a valid UTF8 builder holder.
+// - `capacity`: The new capacity in bytes.
+// - `length`: The initialized prefix length in bytes. At most the old and new
+//   capacities are preserved.
+//
+// # Returns
+// - True on success. On failure, the original holder remains unchanged.
+//
+// # Notes
+// - All previously obtained buffer pointers are invalid after success.
 TH_EXPORT bool tstr_builder_reallocate_utf8(struct TStringBuilder *builder_ptr, size_t capacity, size_t length);
+
+// Replaces a UTF16 builder holder with one of the requested capacity.
+//
+// # Arguments
+// - `builder_ptr`: Pointer to a valid UTF16 builder holder.
+// - `capacity`: The new capacity in UTF16 code units.
+// - `length`: The initialized prefix length in UTF16 code units. At most the
+//   old and new capacities are preserved.
+//
+// # Returns
+// - True on success. On failure, the original holder remains unchanged.
+//
+// # Notes
+// - All previously obtained buffer pointers are invalid after success.
 TH_EXPORT bool tstr_builder_reallocate_utf16(struct TStringBuilder *builder_ptr, size_t capacity, size_t length);
+
+// Consumes a UTF8 builder holder and returns its initialized prefix as a holder.
+//
+// # Arguments
+// - `builder`: The UTF8 builder holder to consume.
+// - `length`: The initialized prefix length in bytes.
+//
+// # Returns
+// - A UTF8 holder, or an invalid holder if the builder or length is invalid.
+//
+// # Notes
+// - The builder is consumed on both success and failure.
 TH_EXPORT struct TString tstr_builder_finish_utf8(struct TStringBuilder builder, size_t length);
+
+// Consumes a UTF16 builder holder and returns its initialized prefix as a holder.
+//
+// # Arguments
+// - `builder`: The UTF16 builder holder to consume.
+// - `length`: The initialized prefix length in UTF16 code units.
+//
+// # Returns
+// - A UTF16 holder, or an invalid holder if the builder or length is invalid.
+//
+// # Notes
+// - The builder is consumed on both success and failure.
 TH_EXPORT struct TString tstr_builder_finish_utf16(struct TStringBuilder builder, size_t length);
+
+// Fulfills the drop responsibility of one builder holder.
 TH_EXPORT void tstr_builder_drop(struct TStringBuilder builder);
 
 #endif  // TAIHE_STRING_BUILDER_H

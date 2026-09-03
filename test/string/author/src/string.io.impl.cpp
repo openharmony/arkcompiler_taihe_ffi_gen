@@ -30,9 +30,9 @@ template<bool endl>
 void ohos_print_str(taihe::string_view pstr)
 {
     if (endl) {
-        std::cout << pstr.c_str() << std::endl;
+        std::cout << pstr << std::endl;
     } else {
-        std::cout << pstr.c_str() << std::flush;
+        std::cout << pstr << std::flush;
     }
 }
 
