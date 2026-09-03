@@ -1796,9 +1796,9 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"ani_size size = {{}};",
                 f"TH_ANI_CHECKED_CALL(env, FixedArray_GetLength, ani_value, &size);",
-                f"{item_ty_cpp_info.as_owner}* buffer = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc(size * sizeof({item_ty_cpp_info.as_owner})));",
-                f"TH_ANI_CHECKED_CALL(env, FixedArray_GetRegion_{item_ty_ani_info.ani_type.suffix}, ani_value, 0, size, reinterpret_cast<{item_ty_ani_info.ani_type}*>(buffer));",
-                f"return {self.cpp_info.as_owner}(buffer, size);",
+                f"::taihe::array<{item_ty_cpp_info.as_owner}> result(size);",
+                f"TH_ANI_CHECKED_CALL(env, FixedArray_GetRegion_{item_ty_ani_info.ani_type.suffix}, ani_value, 0, size, reinterpret_cast<{item_ty_ani_info.ani_type}*>(result.data()));",
+                f"return result;",
             )
 
     @override
@@ -1856,7 +1856,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"ani_size size = {{}};",
                 f"TH_ANI_CHECKED_CALL(env, FixedArray_GetLength, ani_value, &size);",
-                f"{item_ty_cpp_info.as_owner}* buffer = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc(size * sizeof({item_ty_cpp_info.as_owner})));",
+                f"::taihe::array_builder<{item_ty_cpp_info.as_owner}> buffer(size);",
             )
             with target.indented(
                 f"for (size_t i = 0; i < size; i++) {{",
@@ -1868,10 +1868,10 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
                 )
                 item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"new (&buffer[i]) {item_ty_cpp_info.as_owner}(item_from_ani(env, ani_item));",
+                    f"buffer.push_back(item_from_ani(env, ani_item));",
                 )
             target.writelns(
-                f"return {self.cpp_info.as_owner}(buffer, size);",
+                f"return std::move(buffer).finish();",
             )
 
     @override
@@ -1934,7 +1934,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"ani_size size = {{}};",
                 f"TH_ANI_CHECKED_CALL(env, Array_GetLength, ani_value, &size);",
-                f"{item_ty_cpp_info.as_owner}* buffer = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc(size * sizeof({item_ty_cpp_info.as_owner})));",
+                f"::taihe::array_builder<{item_ty_cpp_info.as_owner}> buffer(size);",
             )
             with target.indented(
                 f"for (size_t i = 0; i < size; i++) {{",
@@ -1946,10 +1946,10 @@ class ArrayTypeAniInfo(TypeAniInfo):
                 )
                 item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"new (&buffer[i]) {item_ty_cpp_info.as_owner}(item_from_ani(env, ani_item));",
+                    f"buffer.push_back(item_from_ani(env, ani_item));",
                 )
             target.writelns(
-                f"return {self.cpp_info.as_owner}(buffer, size);",
+                f"return std::move(buffer).finish();",
             )
 
     @override

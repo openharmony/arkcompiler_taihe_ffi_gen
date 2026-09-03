@@ -1228,7 +1228,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
             target.writelns(
                 f"uint32_t size;",
                 f"NAPI_CALL(env, napi_get_array_length(env, napi_input, &size));",
-                f"{item_ty_cpp_info.as_owner}* cpp_buffer = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc(size * sizeof({item_ty_cpp_info.as_owner})));",
+                f"::taihe::array_builder<{item_ty_cpp_info.as_owner}> cpp_buffer(size);",
             )
             with target.indented(
                 f"for (uint32_t i = 0; i < size; i++) {{",
@@ -1237,10 +1237,10 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
                 target.writelns(
                     f"napi_value napi_item;",
                     f"NAPI_CALL(env, napi_get_element(env, napi_input, i, &napi_item));",
-                    f"new (&cpp_buffer[i]) {item_ty_napi_info.cpp_info.as_owner}({item_from_napi}(env, napi_item));",
+                    f"cpp_buffer.push_back({item_from_napi}(env, napi_item));",
                 )
             target.writelns(
-                f"return {self.cpp_info.as_owner}(cpp_buffer, size);",
+                f"return std::move(cpp_buffer).finish();",
             )
 
     @override
