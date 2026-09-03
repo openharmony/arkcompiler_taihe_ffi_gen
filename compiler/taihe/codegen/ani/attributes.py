@@ -745,11 +745,10 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         dm: DiagnosticsManager,
     ) -> None:
         if self.name:
+            prefix = self.name
             if self.type is None:
-                parent_name_lower = parent.name.casefold()
-                prefix_name_lower = self.name.casefold()
-                if parent_name_lower.startswith(prefix_name_lower):
-                    self.func_suffix = parent_name_lower[len(prefix_name_lower) :]
+                if parent.name.casefold().startswith(prefix.casefold()):
+                    self.func_suffix = parent.name[len(prefix) :]
                 else:
                     dm.emit(
                         AdhocError(
@@ -759,12 +758,10 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                     )
         else:
             for prefix in ("on", "off"):
-                parent_name_lower = parent.name.casefold()
-                prefix_name_lower = prefix.casefold()
-                if parent_name_lower.startswith(prefix_name_lower):
+                if parent.name.casefold().startswith(prefix.casefold()):
                     self.name = prefix
                     if self.type is None:
-                        self.func_suffix = parent_name_lower[len(prefix_name_lower) :]
+                        self.func_suffix = parent.name[len(prefix) :]
                     break
             else:
                 dm.emit(
