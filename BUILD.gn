@@ -346,6 +346,8 @@ if (sdk_build_arkts) {
       sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-arm64" ]
     } else if (current_toolchain == "//build/toolchain/mac:clang_x64") {
       sources = [ "$target_out_dir/tmp_taihe/taihe-darwin-x86_64" ]
+    } else {
+      sources = [ "//arkcompiler/taihe_ffi_gen/LICENSE" ]
     }
     outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
     module_source_dir = target_out_dir + "/$target_name"
