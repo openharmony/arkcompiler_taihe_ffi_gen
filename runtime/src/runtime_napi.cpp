@@ -14,6 +14,10 @@
  */
 
 #include <taihe/runtime_napi.hpp>
+#include <taihe/parse_napi_error_code.hpp>
+
+#include <iostream>
+#include <string>
 
 namespace taihe {
 
@@ -86,7 +90,11 @@ taihe::error from_napi_error(napi_env env, napi_value err)
                 size_t error_code_napi_copied;
                 NAPI_CALL(env, napi_get_value_string_utf8(env, error_code_napi, error_code_napi_buffer.data(),
                                                           error_code_napi_buffer.size(), &error_code_napi_copied));
-                error_code_cpp = std::stoi(error_code_napi_buffer);
+                error_code_napi_buffer.resize(error_code_napi_copied);
+                if (!ParseNapiErrorCode(error_code_napi_buffer, error_code_cpp)) {
+                    std::cerr << "[taihe] invalid napi error code '" << error_code_napi_buffer << "'" << std::endl;
+                    return taihe::error(error_message_cpp);
+                }
                 break;
             }
             case napi_number: {
