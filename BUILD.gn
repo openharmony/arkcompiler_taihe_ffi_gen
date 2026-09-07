@@ -138,6 +138,8 @@ action("build_taihe") {
     "--output",
     rebase_path("$target_out_dir/dist"),
     "--strip_version",
+    "--cache-path",
+    rebase_path("//../openharmony_prebuilts/taihe_cache"),
   ]
   outputs = [
     "$target_out_dir/dist/taihe-linux-x86_64.tar.gz",

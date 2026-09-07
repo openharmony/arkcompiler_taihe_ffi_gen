@@ -166,9 +166,8 @@ class PythonBundle:
     def install_package(self, wheel: Path):
         # TODO: rm dummy scripts / fix shebang paths
         env = os.environ.copy()
-        env['UV_HTTP_TIMEOUT'] = '300'
-        env['UV_CONNECT_TIMEOUT'] = '300'
-        env['UV_NO_INSTALLER_METADATA'] = '1'
+        env["UV_CACHE_DIR"] = str(ResourceContext.instance().cache_dir / "uv-wheels")
+        env["UV_NO_INSTALLER_METADATA"] = '1'
         uv_args = ["uv", "pip", "install", f"--target={self.sitepkg_dir}"]
         uv_args += ["--", str(wheel)]
         subprocess.run(uv_args, check=True, env=env)
@@ -242,10 +241,13 @@ class Builder:
         if self._has_built_compiler:
             return  # Only build once.
         self._has_built_compiler = True
+        env = os.environ.copy()
+        env["TAIHE_CACHE_DIR"] = str(ResourceContext.instance().cache_dir)
         subprocess.run(
             ["uv", "build", "--wheel", "--out-dir", str(self.dist_dir)],
             cwd=self.pyproject_dir,
             check=True,
+            env=env,
         )
 
     def build(self, platform: Platform, strip_version: bool):
@@ -358,12 +360,18 @@ def main():
         action='store_true',
         help='Strip version number and date from the output package name, producing a generic package.'
     )
+    parser.add_argument(
+        '--cache-path',
+        type=Path,
+        default=None,
+        help='Specify a custom cache directory for resources. Uses default path if not set.'
+    )
     args = parser.parse_args()
     
     clean_directory(args.dst_dir)
 
     build_mode = BuildMode(args.mode)
-    ResourceContext.initialize()
+    ResourceContext.initialize(cache_dir=args.cache_path)
     builder = Builder(g_repo_dir, args.dst_dir, build_mode)
     for p in args.system or Platform:
         builder.build(Platform(p), args.strip_version)

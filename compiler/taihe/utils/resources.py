@@ -155,10 +155,13 @@ class ResourceContext:
         cls,
         cli_args: Namespace | None = None,
         resources: Sequence[ResourceT] | None = None,
+        cache_dir: Path | None = None,
     ) -> Self:
         if cls._singleton is not None:
             raise ValueError("already constructed")
         cls._singleton = cls.from_path(__file__)
+        if cache_dir is not None:
+            cls._singleton.cache_dir = cache_dir
         if cli_args:
             cls._singleton.apply_cli_args(
                 ALL_RESOURCES if resources is None else resources,
@@ -346,7 +349,10 @@ class CachedResource(Resource, ABC):
     def construct(cls, ctx: ResourceContext) -> Self:
         self = cls(cls.locate(ctx))
         if not self.exists():
+            logging.info("Cache miss for %s, downloading...", cls.CLI_NAME)
             self.fetch()
+        else:
+            logging.info("Cache hit for %s, using cached resource", cls.CLI_NAME)
         return self
 
 
@@ -630,22 +636,20 @@ class PythonBuild(CachedResource):
     def construct(cls, ctx: ResourceContext) -> Self:
         self = cls(cls.locate(ctx))
         if not self.exists():
+            logging.info("Cache miss for %s, downloading...", cls.CLI_NAME)
             self.fetch()
+        else:
+            logging.info("Cache hit for %s, using cached resource", cls.CLI_NAME)
         return self
 
 
 class Antlr(CachedResource):
     CLI_NAME = "antlr"
+    PATH_CACHE = "antlr/antlr4-4.11.1-complete.jar"
 
     VERSION: Final = "4.11.1"
     MAVEN_REMOTE: Final = "https://mirrors.huaweicloud.com/repository/maven"
-    MAVEN_LOCAL: Final = "~/.m2/repository"
     MAVEN_PATH: Final = f"org/antlr/antlr4/{VERSION}/antlr4-{VERSION}-complete.jar"
-
-    @override
-    @classmethod
-    def locate(cls, ctx: ResourceContext) -> Path:
-        return Path(f"{cls.MAVEN_LOCAL}/{cls.MAVEN_PATH}").expanduser()
 
     @override
     def fetch(self):
