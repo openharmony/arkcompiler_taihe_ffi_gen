@@ -114,6 +114,10 @@ from taihe.semantics.types import (
     ScalarKinds,
     ScalarType,
     SetType,
+    SharedArrayType,
+    SharedMapType,
+    SharedSetType,
+    SharedVectorType,
     StringType,
     StructType,
     UnionType,
@@ -1101,11 +1105,23 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     @abstractmethod
     def sts_type_in(self, target: ArkTsImportManager) -> str: ...
 
-    @abstractmethod
-    def gen_from_ani(self, target: CSourceWriter, name: str): ...
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f'TH_THROW(std::runtime_error, "Conversion from {self.ets_type.sig} to {self.cpp_info.as_owner} is not supported.");'
+            )
 
-    @abstractmethod
-    def gen_into_ani(self, target: CSourceWriter, name: str): ...
+    def gen_into_ani(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
+            f"}};",
+        ):
+            target.writelns(
+                f'TH_THROW(std::runtime_error, "Conversion from {self.cpp_info.as_param} to {self.ets_type.sig} is not supported.");',
+            )
 
     def gen_check_ani_ref(self, target: CSourceWriter, name: str):
         with target.indented(
@@ -2223,15 +2239,7 @@ class RecordTypeAniInfo(TypeAniInfo):
                     f"ani_boolean done = {{}};",
                     f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
                     f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
-                )
-                with target.indented(
-                    f"if (done) {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"break;",
-                    )
-                target.writelns(
+                    f"if (done) {{ break; }}",
                     f"ani_object item = {{}};",
                     f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&item));',
                     f"ani_ref ani_key = {{}};",
@@ -2258,7 +2266,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"ani_object ani_result = {{}};",
-                f'TH_ANI_ASSUME_INVOKE(env, Object_New, TH_ANI_FIND_CLASS(env, "std.core.Record"), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "<ctor>", ":"), &ani_result);',
+                f'TH_ANI_ASSUME_INVOKE(env, Object_New, TH_ANI_FIND_CLASS(env, "std.core.Record"), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "<ctor>", "i:"), &ani_result, 0);',
             )
             with target.indented(
                 f"for (auto&& [cpp_key, cpp_val] : cpp_value) {{",
@@ -2267,7 +2275,8 @@ class RecordTypeAniInfo(TypeAniInfo):
                 key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
                 val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
                 target.writelns(
-                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "set", "YY:C{{std.core.Map}}"), reinterpret_cast<ani_ref*>(&ani_result), key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
+                    f"ani_ref ignored = {{}};",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "set", "YY:C{{std.core.Map}}"), &ignored, key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2320,15 +2329,7 @@ class MapTypeAniInfo(TypeAniInfo):
                     f"ani_boolean done = {{}};",
                     f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
                     f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
-                )
-                with target.indented(
-                    f"if (done) {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"break;",
-                    )
-                target.writelns(
+                    f"if (done) {{ break; }}",
                     f"ani_object item = {{}};",
                     f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&item));',
                     f"ani_ref ani_key = {{}};",
@@ -2364,7 +2365,8 @@ class MapTypeAniInfo(TypeAniInfo):
                 key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
                 val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
                 target.writelns(
-                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "set", "YY:C{{std.core.Map}}"), reinterpret_cast<ani_ref*>(&ani_result), key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
+                    f"ani_ref ignored = {{}};",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "set", "YY:C{{std.core.Map}}"), &ignored, key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2402,7 +2404,7 @@ class SetTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"ani_object iter = {{}};",
-                f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_value, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+                f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_value, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "keys", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
                 f"{self.cpp_info.as_owner} cpp_result;",
             )
             with target.indented(
@@ -2414,21 +2416,13 @@ class SetTypeAniInfo(TypeAniInfo):
                     f"ani_boolean done = {{}};",
                     f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
                     f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
                 )
-                with target.indented(
-                    f"if (done) {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"break;",
-                    )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
                 target.writelns(
-                    f"ani_ref ani_val = {{}};",
-                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_val);',
-                )
-                key_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
-                target.writelns(
-                    f"cpp_result.emplace(val_from_ani(env, ani_val));",
+                    f"cpp_result.emplace(key_from_ani(env, ani_key));",
                 )
             target.writelns(
                 f"return cpp_result;",
@@ -2451,7 +2445,8 @@ class SetTypeAniInfo(TypeAniInfo):
             ):
                 key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
                 target.writelns(
-                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "add", "Y:C{{std.core.Set}}"), reinterpret_cast<ani_ref*>(&ani_result), key_into_ani(env, cpp_item));',
+                    f"ani_ref ignored = {{}};",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "add", "Y:C{{std.core.Set}}"), &ignored, key_into_ani(env, cpp_item));',
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2467,7 +2462,7 @@ class VectorTypeAniInfo(TypeAniInfo):
     @property
     @override
     def ani_type(self) -> AniType:
-        return ANI_ARRAY
+        return ANI_OBJECT
 
     @property
     @override
@@ -2488,22 +2483,26 @@ class VectorTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"ani_size size = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, Array_GetLength, ani_value, &size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_value, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
                 f"{self.cpp_info.as_owner} cpp_result;",
-                f"cpp_result.reserve(size);",
             )
             with target.indented(
-                f"for (size_t i = 0; i < size; i++) {{",
+                f"while (true) {{",
                 f"}}",
             ):
                 target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
                     f"ani_ref ani_item = {{}};",
-                    f"TH_ANI_ASSUME_INVOKE(env, Array_Get, ani_value, i, &ani_item);",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_item);',
                 )
                 item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
-                    f"cpp_result.push_back(item_from_ani(env, ani_item));",
+                    f"cpp_result.emplace_back(item_from_ani(env, ani_item));",
                 )
             target.writelns(
                 f"return cpp_result;",
@@ -2517,22 +2516,1619 @@ class VectorTypeAniInfo(TypeAniInfo):
             f"}};",
         ):
             target.writelns(
-                f"size_t size = cpp_value.size();",
-                f"ani_array ani_result = {{}};",
-                f"ani_ref ani_init = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, GetUndefined, &ani_init);",
-                f"TH_ANI_ASSUME_INVOKE(env, Array_New, size, ani_init, &ani_result);",
+                f"ani_object ani_result = {{}};",
+                f'TH_ANI_ASSUME_INVOKE(env, Object_New, TH_ANI_FIND_CLASS(env, "std.core.Array"), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "<ctor>", ":"), &ani_result);',
+            )
+            with target.indented(
+                f"for (auto&& cpp_item : cpp_value) {{",
+                f"}}",
+            ):
+                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
+                target.writelns(
+                    f"ani_int new_size = {{}};",
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Int, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "pushOne", "Y:i"), &new_size, item_into_ani(env, cpp_item));',
+                )
+            target.writelns(
+                f"return ani_result;",
+            )
+
+
+class SharedValueArrayTypeAniInfo(TypeAniInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: SharedArrayType,
+        valuearray_attr: ValueArrayAttr | None = None,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type_inner = {
+            ScalarKinds.BOOL: ANI_FIXEDARRAY_BOOLEAN,
+            ScalarKinds.F32: ANI_FIXEDARRAY_FLOAT,
+            ScalarKinds.F64: ANI_FIXEDARRAY_DOUBLE,
+            ScalarKinds.I8: ANI_FIXEDARRAY_BYTE,
+            ScalarKinds.I16: ANI_FIXEDARRAY_SHORT,
+            ScalarKinds.I32: ANI_FIXEDARRAY_INT,
+            ScalarKinds.I64: ANI_FIXEDARRAY_LONG,
+            ScalarKinds.U8: ANI_FIXEDARRAY_BYTE,
+            ScalarKinds.U16: ANI_FIXEDARRAY_SHORT,
+            ScalarKinds.U32: ANI_FIXEDARRAY_INT,
+            ScalarKinds.U64: ANI_FIXEDARRAY_LONG,
+        }[t.item_ty.kind]
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return self.ani_type_inner
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        item_ty_ani_info = ScalarTypeAniInfo.get(self.am, self.t.item_ty)
+        return EtsValueArrayType(item_ty_ani_info.ets_type)
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        item_ty_ani_info = ScalarTypeAniInfo.get(self.am, self.t.item_ty)
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"ValueArray<{item_sts_type}>"
+
+
+class SharedArrayBufferTypeAniInfo(TypeAniInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: SharedArrayType,
+        arraybuffer_attr: ArrayBufferAttr,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_ARRAYBUFFER
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.ArrayBuffer")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        return "ArrayBuffer"
+
+    @override
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        cached_view_type = (
+            f"::taihe::acquire_cached_shared_array_view<{item_ty_cpp_info.as_owner}>"
+        )
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) {{",
+            f"}};",
+        ):
+            with target.indented(
+                f"struct impl_t : {cached_view_type} {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"ani_env* env;",
+                    f"ani_ref val;",
+                )
+                with target.indented(
+                    f"impl_t(ani_env* env, ani_ref val, {item_ty_cpp_info.as_owner}* data, size_t length) :",
+                    f"{{}}",
+                ):
+                    target.writelns(
+                        f"{cached_view_type}(data, length, TSharedArrayLocalRefContext {{",
+                        f"    .ref = this,",
+                        f"    .acquire = [](void* ref) {{",
+                        f"        auto self = static_cast<impl_t*>(ref);",
+                        f"        ani_ref global_ref = {{}};",
+                        f"        TH_ANI_ASSUME_INVOKE(self->env, GlobalReference_Create, self->val, &global_ref);",
+                        f"        return TSharedArrayGlobalRefContext {{",
+                        f"            .ref = global_ref,",
+                        f"            .release = [](void* ref) {{",
+                        f"                ::taihe::env_guard guard;",
+                        f"                ani_env* env = guard.get_env();",
+                        f"                TH_ANI_ASSUME_INVOKE(env, GlobalReference_Delete, static_cast<ani_ref>(ref));",
+                        f"            }},",
+                        f"        }};",
+                        f"    }},",
+                        f"}}), env(env), val(val)",
+                    )
+            target.writelns(
+                f"void* data = {{}};",
+                f"ani_size byte_length = {{}};",
+                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, ani_value, &data, &byte_length);",
+                f"return impl_t(env, ani_value, reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), byte_length / sizeof({item_ty_cpp_info.as_owner}));",
+            )
+
+
+class SharedTypedArrayTypeAniInfo(TypeAniInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: SharedArrayType,
+        typedarray_attr: TypedArrayAttr,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.sts_type = {
+            ScalarKinds.F32: "Float32Array",
+            ScalarKinds.F64: "Float64Array",
+            ScalarKinds.I8: "Int8Array",
+            ScalarKinds.I16: "Int16Array",
+            ScalarKinds.I32: "Int32Array",
+            ScalarKinds.I64: "BigInt64Array",
+            ScalarKinds.U8: "Uint8Array",
+            ScalarKinds.U16: "Uint16Array",
+            ScalarKinds.U32: "Uint32Array",
+            ScalarKinds.U64: "BigUint64Array",
+        }[typedarray_attr.item_ty.kind]
+        self.ets_desc = f"escompat.{self.sts_type}"
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType(self.ets_desc)
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        return self.sts_type
+
+    @override
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        cached_view_type = (
+            f"::taihe::acquire_cached_shared_array_view<{item_ty_cpp_info.as_owner}>"
+        )
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) {{",
+            f"}};",
+        ):
+            with target.indented(
+                f"struct impl_t : {cached_view_type} {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"ani_env* env;",
+                    f"ani_ref val;",
+                )
+                with target.indented(
+                    f"impl_t(ani_env* env, ani_ref val, {item_ty_cpp_info.as_owner}* data, size_t length) :",
+                    f"{{}}",
+                ):
+                    target.writelns(
+                        f"{cached_view_type}(data, length, TSharedArrayLocalRefContext {{",
+                        f"    .ref = this,",
+                        f"    .acquire = [](void* ref) {{",
+                        f"        auto self = static_cast<impl_t*>(ref);",
+                        f"        ani_ref global_ref = {{}};",
+                        f"        TH_ANI_ASSUME_INVOKE(self->env, GlobalReference_Create, self->val, &global_ref);",
+                        f"        return TSharedArrayGlobalRefContext {{",
+                        f"            .ref = global_ref,",
+                        f"            .release = [](void* ref) {{",
+                        f"                ::taihe::env_guard guard;",
+                        f"                ani_env* env = guard.get_env();",
+                        f"                TH_ANI_ASSUME_INVOKE(env, GlobalReference_Delete, static_cast<ani_ref>(ref));",
+                        f"            }},",
+                        f"        }};",
+                        f"    }},",
+                        f"}}), env(env), val(val)",
+                    )
+            target.writelns(
+                f"ani_int byte_length = {{}};",
+                f"ani_int byte_offset = {{}};",
+                f"ani_arraybuffer arrbuf = {{}};",
+            )
+            if self.t.item_ty.kind.is_signed():
+                target.writelns(
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Int, ani_value, TH_ANI_FIND_CLASS_FIELD(env, "{self.ets_desc}", "byteLength"), &byte_length);',
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Int, ani_value, TH_ANI_FIND_CLASS_FIELD(env, "{self.ets_desc}", "byteOffset"), &byte_offset);',
+                )
+            else:
+                target.writelns(
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Int, ani_value, TH_ANI_FIND_CLASS_METHOD(env, "{self.ets_desc}", "%%get-byteLength", ":i"), &byte_length);',
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Int, ani_value, TH_ANI_FIND_CLASS_METHOD(env, "{self.ets_desc}", "%%get-byteOffset", ":i"), &byte_offset);',
+                )
+            target.writelns(
+                f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, ani_value, TH_ANI_FIND_CLASS_FIELD(env, "{self.ets_desc}", "buffer"), reinterpret_cast<ani_ref*>(&arrbuf));',
+                f"void* data = {{}};",
+                f"ani_size byte_full_length = {{}};",
+                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, arrbuf, &data, &byte_full_length);",
+                f"return impl_t(env, arrbuf, reinterpret_cast<{item_ty_cpp_info.as_owner}*>(reinterpret_cast<std::byte *>(data) + byte_offset), byte_length / sizeof({item_ty_cpp_info.as_owner}));",
+            )
+
+
+class SharedVectorTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: SharedVectorType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Array")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        return f"Array<{item_ty_ani_info.sts_type_in(target)}>"
+
+    @override
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            with target.indented(
+                f"struct impl_t : ::taihe::dref_guard {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"impl_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
+                )
+                self.gen_get_size(target)
+                self.gen_get_items(target)
+                self.gen_for_each_item(target)
+                self.gen_get(target)
+                self.gen_set(target)
+                self.gen_get_and_set(target)
+                self.gen_insert(target)
+                self.gen_insert_last(target)
+                self.gen_remove(target)
+                self.gen_remove_last(target)
+                self.gen_get_and_remove(target)
+                self.gen_get_and_remove_last(target)
+                self.gen_clear(target)
+                with target.indented(
+                    f"uintptr_t getGlobalReference() const {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return reinterpret_cast<uintptr_t>(this->ref);",
+                    )
+            target.writelns(
+                f"return ::taihe::make_holder<impl_t, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_value);",
+            )
+
+    def gen_get_size(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<uint64_t, ::taihe::error> getSize() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_int result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), &result);',
+                f"return result;",
+            )
+
+    def gen_get_items(self, target: CSourceWriter):
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{item_ty_cpp_info.as_owner}>, ::taihe::error> getItems() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{item_ty_cpp_info.as_owner}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
             )
             with target.indented(
                 f"for (size_t i = 0; i < size; i++) {{",
                 f"}}",
             ):
-                item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"TH_ANI_ASSUME_INVOKE(env, Array_Set, ani_result, i, item_into_ani(env, cpp_value[i]));",
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_ref ani_item = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_item);',
+                )
+                item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(item_from_ani(env, ani_item));",
                 )
             target.writelns(
-                f"return ani_result;",
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_item(self, target: CSourceWriter):
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::value_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachItem({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0;; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_item = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_item);',
+                )
+                item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(i, item_from_ani(env, ani_item));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_get(self, target: CSourceWriter):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        with target.indented(
+            f"::taihe::expected<{item_ty_cpp_info.as_owner}, ::taihe::error> get(uint64_t index) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_ref ani_item = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_get", "i:Y"), &ani_item, index);',
+            )
+            item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
+            target.writelns(
+                f"return item_from_ani(env, ani_item);",
+            )
+
+    def gen_set(self, target: CSourceWriter):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> set(uint64_t index, {item_ty_cpp_info.as_param} cpp_item) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
+            target.writelns(
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_set", "iY:"), index, item_into_ani(env, cpp_item));',
+                f"return {{}};",
+            )
+
+    def gen_get_and_set(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t getAndSet() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_insert(self, target: CSourceWriter):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> insert(uint64_t index, {item_ty_cpp_info.as_param} cpp_item) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f'if (index > size) return ::taihe::unexpected<::taihe::error>(::taihe::error("Index out of range"));',
+            )
+            item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
+            target.writelns(
+                f"ani_ref ani_item = item_into_ani(env, cpp_item);",
+                f"ani_int new_size = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "pushOne", "Y:i"), &new_size, ani_item);',
+            )
+            with target.indented(
+                f"for (size_t i = size; i > index; i--) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_ref previous = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_get", "i:Y"), &previous, i - 1);',
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_set", "iY:"), i, previous);',
+                )
+            target.writelns(
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_set", "iY:"), index, ani_item);',
+                f"return {{}};",
+            )
+
+    def gen_insert_last(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t insertLast() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_remove(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> remove(uint64_t index) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f'if (index >= size) return ::taihe::unexpected<::taihe::error>(::taihe::error("Index out of range"));',
+            )
+            with target.indented(
+                f"for (size_t i = index + 1; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_ref next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_get", "i:Y"), &next, i);',
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "$_set", "iY:"), i - 1, next);',
+                )
+            target.writelns(
+                f"ani_ref removed = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "pop", nullptr), &removed);',
+                f"return {{}};",
+            )
+
+    def gen_remove_last(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t removeLast() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_get_and_remove(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t getAndRemove() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_get_and_remove_last(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t getAndRemoveLast() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_clear(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> clear() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), reinterpret_cast<ani_int*>(&size));',
+            )
+            with target.indented(
+                f"while (size-- > 0) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_ref removed = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "pop", nullptr), &removed);',
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+
+class SharedMapTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: SharedMapType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Map")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        return f"Map<{key_ty_ani_info.sts_type_in(target)}, {val_ty_ani_info.sts_type_in(target)}>"
+
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            with target.indented(
+                f"struct impl_t : ::taihe::dref_guard {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"impl_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
+                )
+                self.gen_get_size(target)
+                self.gen_get_keys(target)
+                self.gen_for_each_key(target)
+                self.gen_get_values(target)
+                self.gen_for_each_value(target)
+                self.gen_get_entries(target)
+                self.gen_for_each_entry(target)
+                self.gen_has(target)
+                self.gen_try_get(target)
+                self.gen_upsert(target)
+                self.gen_checked_insert(target)
+                self.gen_try_get_and_upsert(target)
+                self.gen_try_get_and_insert(target)
+                self.gen_remove(target)
+                self.gen_checked_remove(target)
+                self.gen_try_get_and_remove(target)
+                self.gen_clear(target)
+                with target.indented(
+                    f"uintptr_t getGlobalReference() const {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return reinterpret_cast<uintptr_t>(this->ref);",
+                    )
+            target.writelns(
+                f"return ::taihe::make_holder<impl_t, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_value);",
+            )
+
+    def gen_get_size(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<uint64_t, ::taihe::error> getSize() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_int result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "%%get-size", ":i"), &result);',
+                f"return result;",
+            )
+
+    def gen_get_keys(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{key_ty_cpp_info.as_owner}>, ::taihe::error> getKeys() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{key_ty_cpp_info.as_owner}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "keys", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(key_from_ani(env, ani_key));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_key(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::key_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachKey({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "keys", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_get_values(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{key_ty_cpp_info.as_owner}>, ::taihe::error> getValues() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{key_ty_cpp_info.as_owner}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(key_from_ani(env, ani_key));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_value(self, target: CSourceWriter):
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::value_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachValue({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_val);',
+                )
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(val_from_ani(env, ani_val));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_get_entries(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        entry_type = f"typename {self.cpp_info.as_owner}::entry_type"
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{entry_type}>, ::taihe::error> getEntries() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{entry_type}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "entries", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_object item = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&item));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$0"), &ani_key);',
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$1"), &ani_val);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_entry(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::entry_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachEntry({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "entries", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_object item = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&item));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$0"), &ani_key);',
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$1"), &ani_val);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_has(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<bool, ::taihe::error> has({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "has", "Y:z"), &result, key_into_ani(env, cpp_key));',
+                f"return result;",
+            )
+
+    def gen_try_get(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::optional<{val_ty_cpp_info.as_owner}>, ::taihe::error> tryGet({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_ref ani_key = key_into_ani(env, cpp_key);",
+                f"ani_boolean present = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "has", "Y:z"), &present, ani_key);',
+                f"if (!present) return ::taihe::optional<{val_ty_cpp_info.as_owner}>();",
+                f"ani_ref ani_val = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "get", "Y:Y"), &ani_val, ani_key);',
+            )
+            val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+            target.writelns(
+                f"return ::taihe::optional<{val_ty_cpp_info.as_owner}>(std::in_place, val_from_ani(env, ani_val));",
+            )
+
+    def gen_upsert(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> upsert({key_ty_cpp_info.as_param} cpp_key, {val_ty_cpp_info.as_param} cpp_val) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
+            target.writelns(
+                f"ani_ref ignored = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "set", "YY:C{{std.core.Map}}"), &ignored, key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
+                f"return {{}};",
+            )
+
+    def gen_checked_insert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t checkedInsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_try_get_and_upsert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t tryGetAndUpsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_try_get_and_insert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t tryGetAndInsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_remove(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> remove({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean ignored = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "delete", "Y:z"), &ignored, key_into_ani(env, cpp_key));',
+                f"return {{}};",
+            )
+
+    def gen_checked_remove(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<bool, ::taihe::error> checkedRemove({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "delete", "Y:z"), &result, key_into_ani(env, cpp_key));',
+                f"return result;",
+            )
+
+    def gen_try_get_and_remove(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t tryGetAndRemove() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_clear(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> clear() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Map", "clear", ":"));',
+                f"return {{}};",
+            )
+
+
+class SharedRecordTypeAniInfo(TypeAniInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: SharedMapType,
+        record_attr: RecordAttr,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Record")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        return f"Record<{key_ty_ani_info.sts_type_in(target)}, {val_ty_ani_info.sts_type_in(target)}>"
+
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            with target.indented(
+                f"struct impl_t : ::taihe::dref_guard {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"impl_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
+                )
+                self.gen_get_size(target)
+                self.gen_get_keys(target)
+                self.gen_for_each_key(target)
+                self.gen_get_values(target)
+                self.gen_for_each_value(target)
+                self.gen_get_entries(target)
+                self.gen_for_each_entry(target)
+                self.gen_has(target)
+                self.gen_try_get(target)
+                self.gen_upsert(target)
+                self.gen_checked_insert(target)
+                self.gen_try_get_and_upsert(target)
+                self.gen_try_get_and_insert(target)
+                self.gen_remove(target)
+                self.gen_checked_remove(target)
+                self.gen_try_get_and_remove(target)
+                self.gen_clear(target)
+                with target.indented(
+                    f"uintptr_t getGlobalReference() const {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return reinterpret_cast<uintptr_t>(this->ref);",
+                    )
+            target.writelns(
+                f"return ::taihe::make_holder<impl_t, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_value);",
+            )
+
+    def gen_get_size(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<uint64_t, ::taihe::error> getSize() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_int result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "%%get-size", ":i"), &result);',
+                f"return result;",
+            )
+
+    def gen_get_keys(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{key_ty_cpp_info.as_owner}>, ::taihe::error> getKeys() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{key_ty_cpp_info.as_owner}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "keys", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(key_from_ani(env, ani_key));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_key(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::key_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachKey({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "keys", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_get_values(self, target: CSourceWriter):
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{val_ty_cpp_info.as_owner}>, ::taihe::error> getValues() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{val_ty_cpp_info.as_owner}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_val);',
+                )
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(val_from_ani(env, ani_val));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_value(self, target: CSourceWriter):
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::value_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachValue({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_val);',
+                )
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(val_from_ani(env, ani_val));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_get_entries(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        entry_type = f"typename {self.cpp_info.as_owner}::entry_type"
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{entry_type}>, ::taihe::error> getEntries() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{entry_type}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "entries", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_object item = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&item));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$0"), &ani_key);',
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$1"), &ani_val);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_entry(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::entry_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachEntry({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "entries", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_object item = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&item));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$0"), &ani_key);',
+                    f"ani_ref ani_val = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, item, TH_ANI_FIND_CLASS_FIELD(env, "std.core.Tuple2", "$1"), &ani_val);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_has(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<bool, ::taihe::error> has({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "has", "Y:z"), &result, key_into_ani(env, cpp_key));',
+                f"return result;",
+            )
+
+    def gen_try_get(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::optional<{val_ty_cpp_info.as_owner}>, ::taihe::error> tryGet({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_ref ani_key = key_into_ani(env, cpp_key);",
+                f"ani_boolean present = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "has", "Y:z"), &present, ani_key);',
+                f"if (!present) return ::taihe::optional<{val_ty_cpp_info.as_owner}>();",
+                f"ani_ref ani_val = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "get", "Y:Y"), &ani_val, ani_key);',
+            )
+            val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
+            target.writelns(
+                f"return ::taihe::optional<{val_ty_cpp_info.as_owner}>(std::in_place, val_from_ani(env, ani_val));",
+            )
+
+    def gen_upsert(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> upsert({key_ty_cpp_info.as_param} cpp_key, {val_ty_cpp_info.as_param} cpp_val) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
+            target.writelns(
+                f"ani_ref ignored = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "set", "YY:C{{std.core.Map}}"), &ignored, key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
+                f"return {{}};",
+            )
+
+    def gen_checked_insert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t checkedInsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_try_get_and_upsert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t tryGetAndUpsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_try_get_and_insert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t tryGetAndInsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_remove(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> remove({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean ignored = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "delete", "Y:z"), &ignored, key_into_ani(env, cpp_key));',
+                f"return {{}};",
+            )
+
+    def gen_checked_remove(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<bool, ::taihe::error> checkedRemove({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "delete", "Y:z"), &result, key_into_ani(env, cpp_key));',
+                f"return result;",
+            )
+
+    def gen_try_get_and_remove(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t tryGetAndRemove() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_clear(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> clear() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "clear", ":"));',
+                f"return {{}};",
+            )
+
+
+class SharedSetTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: SharedSetType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+
+    @property
+    @override
+    def ani_type(self) -> AniType:
+        return ANI_OBJECT
+
+    @property
+    @override
+    def ets_type(self) -> EtsType:
+        return EtsClassType("std.core.Set")
+
+    @override
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        return f"Set<{key_ty_ani_info.sts_type_in(target)}>"
+
+    @override
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        with target.indented(
+            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
+            f"}};",
+        ):
+            with target.indented(
+                f"struct impl_t : ::taihe::dref_guard {{",
+                f"}};",
+            ):
+                target.writelns(
+                    f"impl_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
+                )
+                self.gen_get_size(target)
+                self.gen_get_keys(target)
+                self.gen_for_each_key(target)
+                self.gen_has(target)
+                self.gen_insert(target)
+                self.gen_checked_insert(target)
+                self.gen_remove(target)
+                self.gen_checked_remove(target)
+                self.gen_clear(target)
+                with target.indented(
+                    f"uintptr_t getGlobalReference() const {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return reinterpret_cast<uintptr_t>(this->ref);",
+                    )
+            target.writelns(
+                f"return ::taihe::make_holder<impl_t, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_value);",
+            )
+
+    def gen_get_size(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<uint64_t, ::taihe::error> getSize() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_int result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "%%get-size", ":i"), &result);',
+                f"return result;",
+            )
+
+    def gen_get_keys(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<::taihe::array<{key_ty_cpp_info.as_owner}>, ::taihe::error> getKeys() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"size_t size = 0;",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "%%get-size", ":i"), reinterpret_cast<ani_int*>(&size));',
+                f"::taihe::array_builder<{key_ty_cpp_info.as_owner}> buffer(size);",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"for (size_t i = 0; i < size; i++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"buffer.emplace_back(key_from_ani(env, ani_key));",
+                )
+            target.writelns(
+                f"return std::move(buffer).finish();",
+            )
+
+    def gen_for_each_key(self, target: CSourceWriter):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        visitor_type = f"typename {self.cpp_info.as_owner}::key_visitor_type"
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> forEachKey({visitor_type} visitor) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f"ani_object iter = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&iter));',
+            )
+            with target.indented(
+                f"while (true) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"ani_object next = {{}};",
+                    f"ani_boolean done = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, iter, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&next));',
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Boolean, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "done"), &done);',
+                    f"if (done) {{ break; }}",
+                    f"ani_ref ani_key = {{}};",
+                    f'TH_ANI_TRY_INVOKE(env, Object_GetField_Ref, next, TH_ANI_FIND_CLASS_FIELD(env, "std.core.IteratorResult", "value"), &ani_key);',
+                )
+                key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
+                target.writelns(
+                    f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key));",
+                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.value()) break;",
+                )
+            target.writelns(
+                f"return {{}};",
+            )
+
+    def gen_has(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<bool, ::taihe::error> has({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "has", "Y:z"), &result, key_into_ani(env, cpp_key));',
+                f"return result;",
+            )
+
+    def gen_insert(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> insert({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_ref ignored = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Ref, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "add", "Y:C{{std.core.Set}}"), &ignored, key_into_ani(env, cpp_key));',
+                f"return {{}};",
+            )
+
+    def gen_checked_insert(self, target: CSourceWriter):
+        target.writelns(
+            f"static ::taihe::use_default_t checkedInsert() {{ return ::taihe::use_default; }}",
+        )
+
+    def gen_remove(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> remove({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean ignored = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "delete", "Y:z"), &ignored, key_into_ani(env, cpp_key));',
+                f"return {{}};",
+            )
+
+    def gen_checked_remove(self, target: CSourceWriter):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        with target.indented(
+            f"::taihe::expected<bool, ::taihe::error> checkedRemove({key_ty_cpp_info.as_param} cpp_key) const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+            )
+            key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
+            target.writelns(
+                f"ani_boolean result = {{}};",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Boolean, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "delete", "Y:z"), &result, key_into_ani(env, cpp_key));',
+                f"return result;",
+            )
+
+    def gen_clear(self, target: CSourceWriter):
+        with target.indented(
+            f"::taihe::expected<void, ::taihe::error> clear() const {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env* env = guard.get_env();",
+                f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Void, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Set", "clear", ":"));',
+                f"return {{}};",
             )
 
 
@@ -3200,6 +4796,30 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
     @override
     def visit_future_type(self, t: FutureType) -> TypeAniInfo:
         return FutureTypeAniInfo(self.am, t)
+
+    @override
+    def visit_shared_array_type(self, t: SharedArrayType) -> TypeAniInfo:
+        if typedarray_attr := TypedArrayAttr.get(t.ref):
+            return SharedTypedArrayTypeAniInfo(self.am, t, typedarray_attr)
+        if arraybuffer_attr := ArrayBufferAttr.get(t.ref):
+            return SharedArrayBufferTypeAniInfo(self.am, t, arraybuffer_attr)
+        if valuearray_attr := ValueArrayAttr.get(t.ref):
+            return SharedValueArrayTypeAniInfo(self.am, t, valuearray_attr)
+        return SharedValueArrayTypeAniInfo(self.am, t)
+
+    @override
+    def visit_shared_vector_type(self, t: SharedVectorType) -> TypeAniInfo:
+        return SharedVectorTypeAniInfo(self.am, t)
+
+    @override
+    def visit_shared_map_type(self, t: SharedMapType) -> TypeAniInfo:
+        if record_attr := RecordAttr.get(t.ref):
+            return SharedRecordTypeAniInfo(self.am, t, record_attr)
+        return SharedMapTypeAniInfo(self.am, t)
+
+    @override
+    def visit_shared_set_type(self, t: SharedSetType) -> TypeAniInfo:
+        return SharedSetTypeAniInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAniInfo:

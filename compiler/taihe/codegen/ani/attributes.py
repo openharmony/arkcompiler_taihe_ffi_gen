@@ -45,6 +45,8 @@ from taihe.semantics.types import (
     NonVoidType,
     OptionalType,
     ScalarType,
+    SharedArrayType,
+    SharedMapType,
     StructType,
     UnitType,
 )
@@ -362,7 +364,7 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
-            isinstance(array_ty := parent.resolved_ty, ArrayType)
+            isinstance(array_ty := parent.resolved_ty, ArrayType | SharedArrayType)
             and isinstance(item_ty := array_ty.item_ty, IntegerType)
             and item_ty.kind.width == 8
         ):
@@ -389,7 +391,7 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
-            isinstance(array_ty := parent.resolved_ty, ArrayType)
+            isinstance(array_ty := parent.resolved_ty, ArrayType | SharedArrayType)
             and isinstance(item_ty := array_ty.item_ty, IntegerType | FloatingPointType)
         ):
             dm.emit(
@@ -434,7 +436,7 @@ class ValueArrayAttr(TypedAttribute[TypeRefDecl]):
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
-            isinstance(parent.resolved_ty, ArrayType)
+            isinstance(parent.resolved_ty, ArrayType | SharedArrayType)
             and isinstance(parent.resolved_ty.item_ty, ScalarType)
         ):
             dm.emit(
@@ -456,7 +458,7 @@ class RecordAttr(TypedAttribute[TypeRefDecl]):
 
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
-        if not isinstance(parent.resolved_ty, MapType):
+        if not isinstance(parent.resolved_ty, MapType | SharedMapType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to map types.",
