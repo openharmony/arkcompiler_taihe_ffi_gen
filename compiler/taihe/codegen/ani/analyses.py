@@ -1999,9 +1999,9 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"void* data = {{}};",
-                f"ani_size length = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, ani_value, &data, &length);",
-                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), length);",
+                f"ani_size byte_length = {{}};",
+                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, ani_value, &data, &byte_length);",
+                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), byte_length / sizeof({item_ty_cpp_info.as_owner}));",
             )
 
     @override
@@ -2014,7 +2014,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"void* data = {{}};",
                 f"ani_arraybuffer ani_result = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, CreateArrayBuffer, cpp_value.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &data, &ani_result);",
+                f"TH_ANI_ASSUME_INVOKE(env, CreateArrayBuffer, cpp_value.size() * sizeof({item_ty_cpp_info.as_owner}), &data, &ani_result);",
                 f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
                 f"return ani_result;",
             )
@@ -2084,9 +2084,9 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, ani_value, TH_ANI_FIND_CLASS_FIELD(env, "{self.ets_desc}", "buffer"), reinterpret_cast<ani_ref*>(&arrbuf));',
                 f"void* data = {{}};",
-                f"ani_size length = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, arrbuf, &data, &length);",
-                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data) + byte_offset, byte_length / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+                f"ani_size byte_full_length = {{}};",
+                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, arrbuf, &data, &byte_full_length);",
+                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(static_cast<std::byte*>(data) + byte_offset), byte_length / sizeof({item_ty_cpp_info.as_owner}));",
             )
 
     @override
@@ -2099,7 +2099,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"void* data = {{}};",
                 f"ani_arraybuffer arrbuf = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, CreateArrayBuffer, cpp_value.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &data, &arrbuf);",
+                f"TH_ANI_ASSUME_INVOKE(env, CreateArrayBuffer, cpp_value.size() * sizeof({item_ty_cpp_info.as_owner}), &data, &arrbuf);",
                 f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
                 f"ani_ref byte_length = {{}};",
                 f"TH_ANI_ASSUME_INVOKE(env, GetUndefined, &byte_length);",
@@ -2146,11 +2146,11 @@ class BigIntTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"ani_arraybuffer arrbuf = {{}};",
-                f'TH_ANI_ASSUME_INVOKE(env, Function_Call_Ref, TH_ANI_FIND_MODULE_FUNCTION(env, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.bigint_to_arrbuf}", "C{{std.core.BigInt}}i:C{{std.core.ArrayBuffer}}"), reinterpret_cast<ani_ref*>(&arrbuf), ani_value, static_cast<ani_int>(sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));',
+                f'TH_ANI_ASSUME_INVOKE(env, Function_Call_Ref, TH_ANI_FIND_MODULE_FUNCTION(env, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.bigint_to_arrbuf}", "C{{std.core.BigInt}}i:C{{std.core.ArrayBuffer}}"), reinterpret_cast<ani_ref*>(&arrbuf), ani_value, static_cast<ani_int>(sizeof({item_ty_cpp_info.as_owner})));',
                 f"void* data = {{}};",
-                f"ani_size length = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, arrbuf, &data, &length);",
-                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), length / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+                f"ani_size byte_length = {{}};",
+                f"TH_ANI_ASSUME_INVOKE(env, ArrayBuffer_GetInfo, arrbuf, &data, &byte_length);",
+                f"return {self.cpp_info.as_param}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data), byte_length / sizeof({item_ty_cpp_info.as_owner}));",
             )
 
     @override
@@ -2164,7 +2164,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"void* data = {{}};",
                 f"ani_arraybuffer arrbuf = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, CreateArrayBuffer, cpp_value.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &data, &arrbuf);",
+                f"TH_ANI_ASSUME_INVOKE(env, CreateArrayBuffer, cpp_value.size() * sizeof({item_ty_cpp_info.as_owner}), &data, &arrbuf);",
                 f"std::copy(cpp_value.begin(), cpp_value.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>(data));",
                 f"ani_object ani_result = {{}};",
                 f'TH_ANI_ASSUME_INVOKE(env, Function_Call_Ref, TH_ANI_FIND_MODULE_FUNCTION(env, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.arrbuf_to_bigint}", "C{{std.core.ArrayBuffer}}:C{{std.core.BigInt}}"), reinterpret_cast<ani_ref*>(&ani_result), arrbuf);',
@@ -2267,7 +2267,7 @@ class RecordTypeAniInfo(TypeAniInfo):
                 key_ty_ani_info.gen_into_ani_ref(target, "key_into_ani")
                 val_ty_ani_info.gen_into_ani_ref(target, "val_into_ani")
                 target.writelns(
-                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Void, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "$_set", "X{{C{{std.core.BaseEnum}}C{{std.core.Numeric}}C{{std.core.String}}}}Y:"), key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_Ref, ani_result, TH_ANI_FIND_CLASS_METHOD(env, "std.core.Record", "set", "YY:C{{std.core.Map}}"), reinterpret_cast<ani_ref*>(&ani_result), key_into_ani(env, cpp_key), val_into_ani(env, cpp_val));',
                 )
             target.writelns(
                 f"return ani_result;",
