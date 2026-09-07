@@ -48,6 +48,10 @@ from taihe.semantics.types import (
     ScalarKinds,
     ScalarType,
     SetType,
+    SharedArrayType,
+    SharedMapType,
+    SharedSetType,
+    SharedVectorType,
     StringType,
     StructType,
     UnionType,
@@ -356,6 +360,38 @@ class SetTypeAbiInfo(TypeAbiInfo):
         self.as_param = "struct TSet"
 
 
+class SharedVectorTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: SharedVectorType) -> None:
+        self.defn_headers = ["taihe/shared_vector.abi.h"]
+        self.impl_headers = ["taihe/shared_vector.abi.h"]
+        self.as_owner = "struct TSharedVector"
+        self.as_param = "struct TSharedVector"
+
+
+class SharedMapTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: SharedMapType) -> None:
+        self.defn_headers = ["taihe/shared_map.abi.h"]
+        self.impl_headers = ["taihe/shared_map.abi.h"]
+        self.as_owner = "struct TSharedMap"
+        self.as_param = "struct TSharedMap"
+
+
+class SharedSetTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: SharedSetType) -> None:
+        self.defn_headers = ["taihe/shared_set.abi.h"]
+        self.impl_headers = ["taihe/shared_set.abi.h"]
+        self.as_owner = "struct TSharedSet"
+        self.as_param = "struct TSharedSet"
+
+
+class SharedArrayTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: SharedArrayType) -> None:
+        self.defn_headers = ["taihe/shared_array.abi.h"]
+        self.impl_headers = ["taihe/shared_array.abi.h"]
+        self.as_owner = "struct TSharedArray"
+        self.as_param = "struct TSharedArray"
+
+
 class CompleterTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: CompleterType) -> None:
         self.defn_headers = ["taihe/async.abi.h"]
@@ -435,6 +471,22 @@ class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeAbiInfo:
         return SetTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_shared_vector_type(self, t: SharedVectorType) -> TypeAbiInfo:
+        return SharedVectorTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_shared_map_type(self, t: SharedMapType) -> TypeAbiInfo:
+        return SharedMapTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_shared_set_type(self, t: SharedSetType) -> TypeAbiInfo:
+        return SharedSetTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_shared_array_type(self, t: SharedArrayType) -> TypeAbiInfo:
+        return SharedArrayTypeAbiInfo(self.am, t)
 
     @override
     def visit_completer_type(self, t: CompleterType) -> TypeAbiInfo:

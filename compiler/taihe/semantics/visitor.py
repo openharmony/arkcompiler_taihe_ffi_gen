@@ -72,6 +72,10 @@ if TYPE_CHECKING:
         OptionalType,
         ScalarType,
         SetType,
+        SharedArrayType,
+        SharedMapType,
+        SharedSetType,
+        SharedVectorType,
         StringType,
         StructType,
         Type,
@@ -190,6 +194,26 @@ class SetTypeVisitor(Generic[_R]):
         raise NotImplementedError
 
 
+class SharedVectorTypeVisitor(Generic[_R]):
+    def visit_shared_vector_type(self, t: "SharedVectorType") -> _R:
+        raise NotImplementedError
+
+
+class SharedMapTypeVisitor(Generic[_R]):
+    def visit_shared_map_type(self, t: "SharedMapType") -> _R:
+        raise NotImplementedError
+
+
+class SharedSetTypeVisitor(Generic[_R]):
+    def visit_shared_set_type(self, t: "SharedSetType") -> _R:
+        raise NotImplementedError
+
+
+class SharedArrayTypeVisitor(Generic[_R]):
+    def visit_shared_array_type(self, t: "SharedArrayType") -> _R:
+        raise NotImplementedError
+
+
 class CompleterTypeVisitor(Generic[_R]):
     def visit_completer_type(self, t: "CompleterType") -> _R:
         raise NotImplementedError
@@ -207,6 +231,10 @@ class GenericTypeVisitor(
     VectorTypeVisitor[_R],
     MapTypeVisitor[_R],
     SetTypeVisitor[_R],
+    SharedVectorTypeVisitor[_R],
+    SharedMapTypeVisitor[_R],
+    SharedSetTypeVisitor[_R],
+    SharedArrayTypeVisitor[_R],
     CompleterTypeVisitor[_R],
     FutureTypeVisitor[_R],
 ):
@@ -231,6 +259,22 @@ class GenericTypeVisitor(
 
     @override
     def visit_set_type(self, t: "SetType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_shared_vector_type(self, t: "SharedVectorType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_shared_map_type(self, t: "SharedMapType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_shared_set_type(self, t: "SharedSetType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_shared_array_type(self, t: "SharedArrayType") -> _R:
         return self.visit_generic_type(t)
 
     @override

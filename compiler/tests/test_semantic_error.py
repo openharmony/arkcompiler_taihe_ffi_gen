@@ -403,6 +403,35 @@ def test_generic_arg_count():
     test_instance.assert_has_error(GenericArgumentsError)
 
 
+def test_shared_container_types():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "struct SharedTypes {\n"
+        "    vector: SharedVector<String>;\n"
+        "    map: SharedMap<String, i32>;\n"
+        "    set: SharedSet<String>;\n"
+        "    array: SharedArray<i32>;\n"
+        "}\n",
+    )
+    test_instance.run()
+    test_instance.assert_no_error()
+
+
+def test_shared_array_rejects_non_scalar_item():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "struct BadSharedArray {\n"
+        "    value: SharedArray<String>;\n"
+        "}\n",
+    )
+    test_instance.run()
+    test_instance.assert_has_error(TypeUsageError)
+
+
 def test_duplicate_extends():
     # fmt: off
     test_instance = SemanticTestCompilerInstance(pre_invocation)
