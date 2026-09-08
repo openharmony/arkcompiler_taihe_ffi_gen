@@ -21,9 +21,9 @@ from taihe.codegen.abi.analyses import (
 from taihe.codegen.abi.writer import (
     CHeaderWriter,
     CSourceWriter,
-    render_c_value,
 )
 from taihe.codegen.cpp.analyses import (
+    EnumCppInfo,
     GlobFuncCppUserInfo,
     IfaceCppInfo,
     IfaceMethodCppInfo,
@@ -1532,6 +1532,7 @@ class NapiCodeGenerator:
             f"inline void create(napi_env env, [[maybe_unused]] napi_value exports) {{",
             f"}}",
         ):
+            enum_cpp_info = EnumCppInfo.get(self.am, enum)
             enum_napi_info = EnumNapiInfo.get(self.am, enum)
             item_ty_napi_info = TypeNapiInfo.get(self.am, enum.ty)
             item_ty_napi_info.gen_into_napi(target, "into_napi_enum_item")
@@ -1539,7 +1540,7 @@ class NapiCodeGenerator:
                 for item in enum.items:
                     value = f"value_{item.name}"
                     target.writelns(
-                        f"napi_value {value} = into_napi_enum_item(env, {render_c_value(item.typed_value)});",
+                        f"napi_value {value} = into_napi_enum_item(env, {enum_cpp_info.full_name}({enum_cpp_info.full_name}::key_t::{item.name}).get_owner());",
                     )
                     target.writelns(
                         f'TH_NAPI_ASSUME_CALL(env, napi_set_named_property(env, exports, "{item.name}", {value}));',
@@ -1553,7 +1554,7 @@ class NapiCodeGenerator:
                 for item in enum.items:
                     value = f"value_{item.name}"
                     target.writelns(
-                        f"napi_value {value} = into_napi_enum_item(env, {render_c_value(item.typed_value)});",
+                        f"napi_value {value} = into_napi_enum_item(env, {enum_cpp_info.full_name}({enum_cpp_info.full_name}::key_t::{item.name}).get_owner());",
                     )
                     target.writelns(
                         f'TH_NAPI_ASSUME_CALL(env, napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key));',

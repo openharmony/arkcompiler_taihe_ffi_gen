@@ -1108,7 +1108,7 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         ):
             item_ty_napi_info.gen_from_napi(target, "from_napi_item")
             target.writelns(
-                f"return {self.cpp_info.as_owner}::from_value(TH_TRY(from_napi_item(env, napi_input)));",
+                f"return {self.cpp_info.as_owner}::from_param(TH_TRY(from_napi_item(env, napi_input)));",
             )
 
     @override
@@ -1120,7 +1120,7 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         ):
             item_ty_napi_info.gen_into_napi(target, "into_napi_item")
             target.writelns(
-                f"return into_napi_item(env, cpp_value.get_value());",
+                f"return into_napi_item(env, cpp_value.get_owner());",
             )
 
 
@@ -1736,7 +1736,7 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         ):
             item_ty_napi_info.gen_from_napi(target, "from_napi_item")
             target.writelns(
-                f"return {self.cpp_info.as_owner}::from_value(TH_TRY(from_napi_item(env, napi_input)));",
+                f"return {self.cpp_info.as_owner}::from_param(TH_TRY(from_napi_item(env, napi_input)));",
             )
 
     @override
@@ -1748,7 +1748,7 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         ):
             item_ty_napi_info.gen_into_napi(target, "into_napi_item")
             target.writelns(
-                f"return into_napi_item(env, cpp_value.get_value());",
+                f"return into_napi_item(env, cpp_value.get_owner());",
             )
 
 

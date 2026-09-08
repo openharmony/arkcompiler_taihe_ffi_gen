@@ -652,7 +652,7 @@ class AniEnumImplGenerator:
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
             enum_ty_ani_info.gen_from_ani(self.target, "value_from_ani")
             self.target.writelns(
-                f"return {enum_cpp_info.full_name}::from_value(value_from_ani(env, ani_obj));",
+                f"return {enum_cpp_info.full_name}::from_param(value_from_ani(env, ani_obj));",
             )
 
     def gen_enum_const_into_ani_func(self, enum_ani_info: EnumConstAniInfo):
@@ -664,7 +664,7 @@ class AniEnumImplGenerator:
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
             enum_ty_ani_info.gen_into_ani(self.target, "value_into_ani")
             self.target.writelns(
-                f"return value_into_ani(env, cpp_obj.get_value());",
+                f"return value_into_ani(env, cpp_obj.get_owner());",
             )
 
 

@@ -265,14 +265,16 @@ class CppEnumDefnGenerator:
         enum_ty_cpp_info = TypeCppInfo.get(self.am, self.enum.ty)
         match self.enum.ty:
             case StringType():
-                as_owner = "char const*"
-                as_param = enum_ty_cpp_info.as_param
+                enum_ty_as_raw = "char const*"
+                enum_ty_as_holder = "::taihe::string"
+                enum_ty_as_view = "::taihe::string_view"
             case ScalarType():
-                as_owner = enum_ty_cpp_info.as_owner
-                as_param = enum_ty_cpp_info.as_param
+                enum_ty_as_raw = enum_ty_cpp_info.as_owner
+                enum_ty_as_holder = enum_ty_cpp_info.as_owner
+                enum_ty_as_view = enum_ty_cpp_info.as_param
         # table
         with self.target.indented(
-            f"static constexpr {as_owner} table[] = {{",
+            f"static constexpr {enum_ty_as_raw} table[] = {{",
             f"}};",
         ):
             for item in self.enum.items:
@@ -281,7 +283,7 @@ class CppEnumDefnGenerator:
                 )
         # value getter
         with self.target.indented(
-            f"{as_owner} get_value() const {{",
+            f"{enum_ty_as_raw} get_value() const {{",
             f"}}",
         ):
             self.target.writelns(
@@ -289,15 +291,15 @@ class CppEnumDefnGenerator:
             )
         # value converter
         with self.target.indented(
-            f"operator {as_owner}() const {{",
+            f"operator {enum_ty_as_raw}() const {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return table[static_cast<{enum_abi_info.abi_type}>(key)];",
+                f"return get_value();",
             )
         # creator from value
         with self.target.indented(
-            f"static {enum_cpp_info.as_owner} from_value({as_param} value) {{",
+            f"static {enum_cpp_info.as_owner} from_value({enum_ty_as_view} value) {{",
             f"}}",
         ):
             for i, item in enumerate(self.enum.items):
@@ -310,6 +312,22 @@ class CppEnumDefnGenerator:
                     )
             self.target.writelns(
                 f"return {enum_cpp_info.as_owner}(static_cast<key_t>(-1));",
+            )
+        # owner getter
+        with self.target.indented(
+            f"{enum_ty_cpp_info.as_owner} get_owner() const {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"return static_cast<{enum_ty_cpp_info.as_owner}>(get_value());",
+            )
+        # creator from param
+        with self.target.indented(
+            f"static {enum_cpp_info.as_owner} from_param({enum_ty_cpp_info.as_param} value) {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"return from_value(static_cast<{enum_ty_as_holder}>(value));",
             )
 
     def gen_enum_same(self):
