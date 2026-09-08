@@ -30,7 +30,7 @@ class MyAbility extends UIAbility {
 function main() {
     let my_uiability: UIAbility = new MyAbility();
     useUIAbility(my_uiability);
-    UIAbility.logLifecycle('using uiability')
+    UIAbility.logLifecycle("using uiability")
 
     // Static method
     let staticMsg = MyStruct.staticFunc();

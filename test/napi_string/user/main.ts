@@ -31,6 +31,14 @@ function main() {
   let str_show = lib.show();
   console.log("function show: ", str_show);
 
+  let utf16 = lib.echo_utf16("Taihe 你好 😀");
+  if (utf16 !== "Taihe 你好 😀") throw new Error(`Unexpected result`);
+  console.log("function echo_utf16: ", utf16);
+
+  let common = lib.echo_common("Common 你好 😀");
+  if (common !== "Common 你好 😀") throw new Error(`Unexpected result`);
+  console.log("function echo_common: ", common);
+
   let add_show = lib.add(2, 3);
   if (add_show !== 5) throw new Error(`Unexpected result`);
   console.log("function add: ", add_show);
@@ -38,6 +46,18 @@ function main() {
   let sum_show = lib.sum(2, 3);
   if (sum_show !== 6) throw new Error(`Unexpected result`);
   console.log("function sum: ", sum_show);
+
+  let u8_enum = lib.U8StringEnumTest(lib.U8StringEnum.FOO);
+  if (u8_enum !== lib.U8StringEnum.BAR) throw new Error(`Unexpected result`);
+  console.log("result: ", u8_enum);
+
+  let u16_enum = lib.U16StringEnumTest(lib.U16StringEnum.FOO);
+  if (u16_enum !== lib.U16StringEnum.BAR) throw new Error(`Unexpected result`);
+  console.log("result: ", u16_enum);
+
+  let common_enum = lib.CommonStringEnumTest(lib.CommonStringEnum.FOO);
+  if (common_enum !== lib.CommonStringEnum.BAR) throw new Error(`Unexpected result`);
+  console.log("result: ", common_enum);
 }
 
 main();

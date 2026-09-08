@@ -27,7 +27,9 @@
 #include "taihe/string.hpp"
 
 namespace {
-using ExpectedString = ::taihe::expected<::taihe::string, ::taihe::error>;
+using ExpectedCommonString = ::taihe::expected<::taihe::common_string, ::taihe::error>;
+using ExpectedUtf8String = ::taihe::expected<::taihe::string, ::taihe::error>;
+using ExpectedUtf16String = ::taihe::expected<::taihe::u16string, ::taihe::error>;
 
 constexpr std::size_t FIRST_INDEX = 0;
 constexpr std::size_t UTF16_HEX_WIDTH = 4;
@@ -88,12 +90,52 @@ void RequireInvalidArgument(Func &&func, char const *message)
     throw std::runtime_error(message);
 }
 
-ExpectedString StringTest(::taihe::string_view input)
+::taihe::expected<::stringTest::U8StringEnum, ::taihe::error> U8StringEnumTest(::stringTest::U8StringEnum e)
+{
+    switch (e.get_key()) {
+        case stringTest::U8StringEnum::key_t::FOO:
+            return stringTest::U8StringEnum::key_t::BAR;
+        case stringTest::U8StringEnum::key_t::BAR:
+            return stringTest::U8StringEnum::key_t::FOO;
+    }
+}
+
+::taihe::expected<::stringTest::U16StringEnum, ::taihe::error> U16StringEnumTest(::stringTest::U16StringEnum e)
+{
+    switch (e.get_key()) {
+        case stringTest::U16StringEnum::key_t::FOO:
+            return stringTest::U16StringEnum::key_t::BAR;
+        case stringTest::U16StringEnum::key_t::BAR:
+            return stringTest::U16StringEnum::key_t::FOO;
+    }
+}
+
+::taihe::expected<::stringTest::CommonStringEnum, ::taihe::error> CommonStringEnumTest(::stringTest::CommonStringEnum e)
+{
+    switch (e.get_key()) {
+        case stringTest::CommonStringEnum::key_t::FOO:
+            return stringTest::CommonStringEnum::key_t::BAR;
+        case stringTest::CommonStringEnum::key_t::BAR:
+            return stringTest::CommonStringEnum::key_t::FOO;
+    }
+}
+
+ExpectedUtf8String StringTest(::taihe::string_view input)
 {
     return input;
 }
 
-ExpectedString TaiheU8StrTest()
+ExpectedUtf16String U16StringTest(::taihe::u16string_view input)
+{
+    return ::taihe::u16string(input);
+}
+
+ExpectedCommonString CommonStringConvert(::taihe::common_string_view input)
+{
+    return ::taihe::common_string(input);
+}
+
+ExpectedUtf8String TaiheU8StrTest()
 {
     try {
         ::taihe::string text("taihe-42");
@@ -130,7 +172,7 @@ ExpectedString TaiheU8StrTest()
     }
 }
 
-ExpectedString TaiheU16StrTest()
+ExpectedUtf16String TaiheU16StrTest()
 {
     try {
         ::taihe::u16string text(std::u16string_view(u"taihe", FIVE_CODE_UNITS));
@@ -176,13 +218,13 @@ ExpectedString TaiheU16StrTest()
                           std::u16string_view(surrogatePairs),
                           "UTF-16 concatenated surrogate string substr() mismatch");
 
-        return ::taihe::string("Taihe UTF-16 string test passed");
+        return ::taihe::u16string(std::u16string_view(u"Taihe UTF-16 string test passed"));
     } catch (std::exception const &error) {
         return ::taihe::unexpected<::taihe::error>(::taihe::error(error.what()));
     }
 }
 
-ExpectedString CommonStringTest()
+ExpectedCommonString CommonStringTest()
 {
     try {
         ::taihe::string text("abcdef");
@@ -289,7 +331,7 @@ ExpectedString CommonStringTest()
         Require(std::string_view(::taihe::to_string(NEGATIVE_TO_STRING_VALUE)) == "-7",
                 "to_string(negative int) returned unexpected value");
 
-        return ::taihe::string("common string test passed");
+        return ::taihe::common_string("common string test passed");
     } catch (std::exception const &error) {
         return ::taihe::unexpected<::taihe::error>(::taihe::error(error.what()));
     }
@@ -299,7 +341,12 @@ ExpectedString CommonStringTest()
 
 // Since these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
+TH_EXPORT_CPP_API_U8StringEnumTest(U8StringEnumTest);
+TH_EXPORT_CPP_API_U16StringEnumTest(U16StringEnumTest);
+TH_EXPORT_CPP_API_CommonStringEnumTest(CommonStringEnumTest);
 TH_EXPORT_CPP_API_StringTest(StringTest);
+TH_EXPORT_CPP_API_U16StringTest(U16StringTest);
+TH_EXPORT_CPP_API_CommonStringConvert(CommonStringConvert);
 TH_EXPORT_CPP_API_TaiheU8StrTest(TaiheU8StrTest);
 TH_EXPORT_CPP_API_TaiheU16StrTest(TaiheU16StrTest);
 TH_EXPORT_CPP_API_CommonStringTest(CommonStringTest);
