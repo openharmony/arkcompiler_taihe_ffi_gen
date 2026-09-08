@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import re
 import shutil
 import subprocess
@@ -249,7 +250,12 @@ class TaiheBuildHook(build_py):
             return
 
         print("ANTLR: generating parser and lexer...")
-        ResourceContext.initialize()
+        cache_dir = (
+            Path(os.environ["TAIHE_CACHE_DIR"])
+            if "TAIHE_CACHE_DIR" in os.environ
+            else None
+        )
+        ResourceContext.initialize(cache_dir=cache_dir)
         antlr_opts = ["-Dlanguage=Python3", "-no-listener"]
         antlr_opts += [str(self.antlr_in), "-o", str(self.antlr_dir)]
         Antlr.resolve().run_tool(antlr_opts)
