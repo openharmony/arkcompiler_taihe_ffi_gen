@@ -156,6 +156,15 @@ struct common_string_view {
     friend struct u16string_view;
     friend struct u16string;
 
+    friend bool operator==(common_string_view lhs, common_string_view rhs);
+    friend bool operator!=(common_string_view lhs, common_string_view rhs);
+    friend bool operator<(common_string_view lhs, common_string_view rhs);
+    friend bool operator<=(common_string_view lhs, common_string_view rhs);
+    friend bool operator>(common_string_view lhs, common_string_view rhs);
+    friend bool operator>=(common_string_view lhs, common_string_view rhs);
+
+    friend struct std::hash<common_string>;
+
 protected:
     struct TString m_handle;
 
@@ -353,6 +362,46 @@ private:
     }
 };
 
+inline bool operator==(common_string_view lhs, common_string_view rhs)
+{
+    return tstr_compare(lhs.m_handle, rhs.m_handle) == 0;
+}
+
+inline bool operator!=(common_string_view lhs, common_string_view rhs)
+{
+    return tstr_compare(lhs.m_handle, rhs.m_handle) != 0;
+}
+
+inline bool operator<(common_string_view lhs, common_string_view rhs)
+{
+    return tstr_compare(lhs.m_handle, rhs.m_handle) < 0;
+}
+
+inline bool operator<=(common_string_view lhs, common_string_view rhs)
+{
+    return tstr_compare(lhs.m_handle, rhs.m_handle) <= 0;
+}
+
+inline bool operator>(common_string_view lhs, common_string_view rhs)
+{
+    return tstr_compare(lhs.m_handle, rhs.m_handle) > 0;
+}
+
+inline bool operator>=(common_string_view lhs, common_string_view rhs)
+{
+    return tstr_compare(lhs.m_handle, rhs.m_handle) >= 0;
+}
+}  // namespace taihe
+
+template<>
+struct std::hash<taihe::common_string> {
+    std::size_t operator()(taihe::common_string_view val) const
+    {
+        return tstr_hash(val.m_handle);
+    }
+};
+
+namespace taihe {
 struct string_view {
     using value_type = char;
     using size_type = std::size_t;
@@ -828,43 +877,13 @@ inline taihe::string operator""_ts(char const *value, size_t size)
     return taihe::string(static_flag, value, size);
 }
 }  // namespace literals
-
-inline bool operator==(string_view lhs, string_view rhs)
-{
-    return std::string_view(lhs) == std::string_view(rhs);
-}
-
-inline bool operator!=(string_view lhs, string_view rhs)
-{
-    return std::string_view(lhs) != std::string_view(rhs);
-}
-
-inline bool operator<(string_view lhs, string_view rhs)
-{
-    return std::string_view(lhs) < std::string_view(rhs);
-}
-
-inline bool operator>(string_view lhs, string_view rhs)
-{
-    return std::string_view(lhs) > std::string_view(rhs);
-}
-
-inline bool operator<=(string_view lhs, string_view rhs)
-{
-    return std::string_view(lhs) <= std::string_view(rhs);
-}
-
-inline bool operator>=(string_view lhs, string_view rhs)
-{
-    return std::string_view(lhs) >= std::string_view(rhs);
-}
 }  // namespace taihe
 
 template<>
 struct std::hash<taihe::string> {
     std::size_t operator()(taihe::string_view sv) const noexcept
     {
-        return std::hash<std::string_view>()(std::string_view(sv));
+        return std::hash<taihe::common_string>()(sv);
     }
 };
 
@@ -1347,43 +1366,13 @@ inline taihe::u16string operator""_ts(char16_t const *value, size_t size)
     return taihe::u16string(static_flag, value, size);
 }
 }  // namespace literals
-
-inline bool operator==(u16string_view lhs, u16string_view rhs)
-{
-    return std::u16string_view(lhs) == std::u16string_view(rhs);
-}
-
-inline bool operator!=(u16string_view lhs, u16string_view rhs)
-{
-    return std::u16string_view(lhs) != std::u16string_view(rhs);
-}
-
-inline bool operator<(u16string_view lhs, u16string_view rhs)
-{
-    return std::u16string_view(lhs) < std::u16string_view(rhs);
-}
-
-inline bool operator>(u16string_view lhs, u16string_view rhs)
-{
-    return std::u16string_view(lhs) > std::u16string_view(rhs);
-}
-
-inline bool operator<=(u16string_view lhs, u16string_view rhs)
-{
-    return std::u16string_view(lhs) <= std::u16string_view(rhs);
-}
-
-inline bool operator>=(u16string_view lhs, u16string_view rhs)
-{
-    return std::u16string_view(lhs) >= std::u16string_view(rhs);
-}
 }  // namespace taihe
 
 template<>
 struct std::hash<taihe::u16string> {
     std::size_t operator()(taihe::u16string_view sv) const noexcept
     {
-        return std::hash<std::u16string_view>()(std::u16string_view(sv));
+        return std::hash<taihe::common_string>()(sv);
     }
 };
 

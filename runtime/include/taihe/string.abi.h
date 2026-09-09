@@ -382,6 +382,27 @@ TH_EXPORT void tstr_copy_cache_drop(struct TStringCopyCache const *cache TH_NONN
 // once after all borrowed views that depend on it have ended their lifetimes.
 TH_EXPORT void tstr_acquire_cache_drop(struct TStringAcquireCache const *cache TH_NONNULL);
 
+// Compares two TString values lexicographically by decoded Unicode code point.
+//
+// # Returns
+// - A negative value if `left` is less than `right`.
+// - Zero if both values have the same decoded code points.
+// - A positive value if `left` is greater than `right`.
+//
+// # Notes
+// - UTF8 and UTF16 values compare equal when they encode the same code points.
+TH_EXPORT int tstr_compare(struct TString left, struct TString right);
+
+// Computes a hash of the decoded Unicode code points of a TString.
+//
+// # Returns
+// - A hash value for the decoded code points of `tstr`.
+//
+// # Notes
+// - UTF8 and UTF16 values that decode to the same code points produce the same
+//   hash value.
+TH_EXPORT size_t tstr_hash(struct TString tstr);
+
 // Creates a holder by copying a UTF8 string.
 //
 // # Arguments
