@@ -38,3 +38,6 @@ function CommonStringConvert(input: @encoding("common") String): @encoding("comm
 function TaiheU8StrTest(): @encoding("utf-8") String;
 function TaiheU16StrTest(): @encoding("utf-16") String;
 function CommonStringTest(): @encoding("common") String;
+function EqualProjectedStrings(utf8: @encoding("utf-8") String, utf16: @encoding("utf-16") String): bool;
+function Utf8ToUtf16(input: @encoding("utf-8") String): @encoding("utf-16") String;
+function Utf16ToUtf8(input: @encoding("utf-16") String): @encoding("utf-8") String;

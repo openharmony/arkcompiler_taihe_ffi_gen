@@ -49,6 +49,22 @@ function check_common_string() {
     arktest.assertEQ(output, "common string test passed")
 }
 
+const crossEncodingText = "Taihe 你好 😀 𠀀";
+
+function check_projected_string_equality_and_hash() {
+    arktest.assertTrue(stringTest.equalProjectedStrings(crossEncodingText, crossEncodingText))
+}
+
+function check_utf8_to_utf16_round_trip() {
+    const output: string = stringTest.utf8ToUtf16(crossEncodingText);
+    arktest.assertEQ(output, crossEncodingText)
+}
+
+function check_utf16_to_utf8_round_trip() {
+    const output: string = stringTest.utf16ToUtf8(crossEncodingText);
+    arktest.assertEQ(output, crossEncodingText)
+}
+
 function check_enums() {
     arktest.assertEQ(
         stringTest.u8StringEnumTest(stringTest.U8StringEnum.FOO),
@@ -69,6 +85,9 @@ function main() {
     suite.addTest("check taihe::string func", check_u8_string)
     suite.addTest("check taihe::u16string func", check_u16_string)
     suite.addTest("check common string", check_common_string)
+    suite.addTest("check projected string equality and hash", check_projected_string_equality_and_hash)
+    suite.addTest("check UTF-8 to UTF-16 round trip", check_utf8_to_utf16_round_trip)
+    suite.addTest("check UTF-16 to UTF-8 round trip", check_utf16_to_utf8_round_trip)
     suite.addTest("check enums", check_enums)
     exit(suite.run())
 }
