@@ -37,9 +37,6 @@ void set_error(taihe::string_view msg, taihe::string_view errcode = "");
 void set_type_error(taihe::string_view msg, taihe::string_view errcode = "");
 void set_range_error(taihe::string_view msg, taihe::string_view errcode = "");
 bool has_error();
-
-taihe::error from_napi_error(napi_env env, napi_value err);
-napi_value into_napi_error(napi_env env, taihe::error const &err);
 }  // namespace taihe
 
 #define NAPI_CALL(env, call)                                                                \
@@ -59,19 +56,14 @@ napi_value into_napi_error(napi_env env, taihe::error const &err);
     } while (0)
 
 namespace taihe {
-// convert between napi types and taihe types
+taihe::string from_napi_string(napi_env env, napi_value str);
+napi_value into_napi_string(napi_env env, taihe::string_view str);
 
-template<typename cpp_owner_t>
-struct from_napi_t;
+taihe::error from_napi_error(napi_env env, napi_value err);
+napi_value into_napi_error(napi_env env, taihe::error const &err);
 
-template<typename cpp_owner_t>
-struct into_napi_t;
-
-template<typename cpp_owner_t>
-constexpr inline from_napi_t<cpp_owner_t> from_napi;
-
-template<typename cpp_owner_t>
-constexpr inline into_napi_t<cpp_owner_t> into_napi;
+taihe::error catch_napi_error(napi_env env);
+void throw_napi_error(napi_env env, taihe::error const &err);
 }  // namespace taihe
 
 #endif  // TAIHE_RUNTIME_NAPI_HPP

@@ -16,7 +16,6 @@
 #include <taihe/runtime_napi.hpp>
 
 namespace taihe {
-
 namespace {
 thread_local napi_env thread_env = nullptr;
 }  // namespace
@@ -59,17 +58,30 @@ bool has_error()
     napi_is_exception_pending(env, &has_error);
     return has_error;
 }
+}  // namespace taihe
+
+namespace taihe {
+taihe::string from_napi_string(napi_env env, napi_value str)
+{
+    size_t strLength = 0;
+    NAPI_CALL(env, napi_get_value_string_utf8(env, str, nullptr, 0, &strLength));
+    taihe::string_builder strBuilder(strLength + 1);
+    NAPI_CALL(env, napi_get_value_string_utf8(env, str, strBuilder.data(), strBuilder.capacity(), &strLength));
+    return std::move(strBuilder).finish(strLength);
+}
+
+napi_value into_napi_string(napi_env env, taihe::string_view str)
+{
+    napi_value napiStr = nullptr;
+    NAPI_CALL(env, napi_create_string_utf8(env, str.data(), str.size(), &napiStr));
+    return napiStr;
+}
 
 taihe::error from_napi_error(napi_env env, napi_value err)
 {
     napi_value error_message_napi;
     NAPI_CALL(env, napi_get_named_property(env, err, "message", &error_message_napi));
-    size_t error_message_cpp_len = 0;
-    NAPI_CALL(env, napi_get_value_string_utf8(env, error_message_napi, nullptr, 0, &error_message_cpp_len));
-    taihe::string_builder error_message_builder(error_message_cpp_len + 1);
-    NAPI_CALL(env, napi_get_value_string_utf8(env, error_message_napi, error_message_builder.data(),
-                                              error_message_builder.capacity(), &error_message_cpp_len));
-    taihe::string error_message_cpp = std::move(error_message_builder).finish(error_message_cpp_len);
+    taihe::string error_message_cpp = from_napi_string(env, error_message_napi);
     bool error_has_code;
     NAPI_CALL(env, napi_has_named_property(env, err, "code", &error_has_code));
     if (error_has_code) {
@@ -83,9 +95,8 @@ taihe::error from_napi_error(napi_env env, napi_value err)
                 size_t error_code_napi_len = 0;
                 NAPI_CALL(env, napi_get_value_string_utf8(env, error_code_napi, nullptr, 0, &error_code_napi_len));
                 std::string error_code_napi_buffer(error_code_napi_len + 1, '\0');
-                size_t error_code_napi_copied;
                 NAPI_CALL(env, napi_get_value_string_utf8(env, error_code_napi, error_code_napi_buffer.data(),
-                                                          error_code_napi_buffer.size(), &error_code_napi_copied));
+                                                          error_code_napi_buffer.size(), &error_code_napi_len));
                 error_code_cpp = std::stoi(error_code_napi_buffer);
                 break;
             }
@@ -105,18 +116,14 @@ taihe::error from_napi_error(napi_env env, napi_value err)
 
 napi_value into_napi_error(napi_env env, taihe::error const &err)
 {
-    napi_value errorMessage = nullptr;
-    napi_create_string_utf8(env, err.message().c_str(), NAPI_AUTO_LENGTH, &errorMessage);
-    napi_value error = nullptr;
+    napi_value errorMessage = into_napi_string(env, err.message());
+    napi_value errorCode = nullptr;
     if (err.code() != 0) {
-        std::string code_str = std::to_string(err.code());
-        char const *code = code_str.c_str();
-        napi_value errorCode = nullptr;
-        napi_create_string_utf8(env, code, NAPI_AUTO_LENGTH, &errorCode);
-        napi_create_error(env, errorCode, errorMessage, &error);
-    } else {
-        napi_create_error(env, nullptr, errorMessage, &error);
+        std::string errorCodeStr = std::to_string(err.code());
+        NAPI_CALL(env, napi_create_string_utf8(env, errorCodeStr.c_str(), NAPI_AUTO_LENGTH, &errorCode));
     }
+    napi_value error = nullptr;
+    NAPI_CALL(env, napi_create_error(env, errorCode, errorMessage, &error));
     return error;
 }
 }  // namespace taihe

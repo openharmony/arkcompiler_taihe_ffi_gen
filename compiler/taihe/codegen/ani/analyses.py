@@ -1599,29 +1599,15 @@ class StringTypeAniInfo(TypeAniInfo):
 
     @override
     def gen_from_ani(self, target: CSourceWriter, name: str):
-        with target.indented(
-            f"static constexpr auto {name} = [](ani_env* env, {self.ani_type} ani_value) -> {self.cpp_info.as_owner} {{",
-            f"}};",
-        ):
-            target.writelns(
-                f"ani_size size = {{}};",
-                f"TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, ani_value, &size);",
-                f"taihe::string_builder builder(size + 1);",
-                f"TH_ANI_CHECKED_CALL(env, String_GetUTF8, ani_value, builder.data(), builder.capacity(), &size);",
-                f"return std::move(builder).finish(size);",
-            )
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::from_ani_taihe_string;",
+        )
 
     @override
     def gen_into_ani(self, target: CSourceWriter, name: str):
-        with target.indented(
-            f"static constexpr auto {name} = [](ani_env* env, {self.cpp_info.as_param} cpp_value) -> {self.ani_type} {{",
-            f"}};",
-        ):
-            target.writelns(
-                f"ani_string ani_value = {{}};",
-                f"TH_ANI_CHECKED_CALL(env, String_NewUTF8, cpp_value.c_str(), cpp_value.size(), &ani_value);",
-                f"return ani_value;",
-            )
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::into_ani_taihe_string;",
+        )
 
 
 class OpaqueTypeAniInfo(TypeAniInfo):

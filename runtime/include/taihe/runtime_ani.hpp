@@ -166,9 +166,13 @@ bool has_error();
 namespace taihe {
 // Internal Error handling functions
 
-taihe::error catch_ani_taihe_error(ani_env *env);
+taihe::string from_ani_taihe_string(ani_env *env, ani_string str);
+ani_string into_ani_taihe_string(ani_env *env, taihe::string_view str);
+
 taihe::error from_ani_taihe_error(ani_env *env, ani_error err);
 ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err);
+
+taihe::error catch_ani_taihe_error(ani_env *env);
 void throw_ani_taihe_error(ani_env *env, taihe::error const &err);
 }  // namespace taihe
 

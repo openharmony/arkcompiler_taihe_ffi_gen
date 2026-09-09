@@ -129,6 +129,25 @@ env_guard::~env_guard()
 }  // namespace taihe
 
 namespace taihe {
+taihe::string from_ani_taihe_string(ani_env *env, ani_string str)
+{
+    ani_size strLength;
+    TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, str, &strLength);
+    taihe::string_builder strBuilder(strLength + 1);
+    TH_ANI_CHECKED_CALL(env, String_GetUTF8, str, strBuilder.data(), strBuilder.capacity(), &strLength);
+    return std::move(strBuilder).finish(strLength);
+}
+
+ani_string into_ani_taihe_string(ani_env *env, taihe::string_view str)
+{
+    ani_string aniStr = nullptr;
+    if (ANI_OK != env->String_NewUTF8(str.data(), str.size(), &aniStr)) {
+        TH_ANI_LOG_ERROR("Failed to create ANI string from C++ string");
+        return nullptr;
+    }
+    return aniStr;
+}
+
 static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
 {
     ani_class errCls;
@@ -144,11 +163,7 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
         return nullptr;
     }
 
-    ani_string errMsg {};
-    if (ANI_OK != env->String_NewUTF8(msg.c_str(), msg.size(), &errMsg)) {
-        TH_ANI_LOG_ERROR("Failed to create error message string");
-        return nullptr;
-    }
+    ani_string errMsg = into_ani_taihe_string(env, msg);
 
     ani_ref undefined;
     if (ANI_OK != env->GetUndefined(&undefined)) {
@@ -248,12 +263,7 @@ taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
 {
     ani_string errMsg {};
     TH_ANI_CHECKED_CALL(env, Object_GetPropertyByName_Ref, errObj, "message", reinterpret_cast<ani_ref *>(&errMsg));
-    ani_size msgLength;
-    TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, errMsg, &msgLength);
-    taihe::string_builder msgBuilder(msgLength + 1);
-    TH_ANI_CHECKED_CALL(env, String_GetUTF8, errMsg, msgBuilder.data(), msgBuilder.capacity(), &msgLength);
-    taihe::string msg = std::move(msgBuilder).finish(msgLength);
-
+    taihe::string msg = from_ani_taihe_string(env, errMsg);
     ani_int code = 0;
     if (ANI_OK == env->Object_GetPropertyByName_Int(errObj, "code", &code)) {
         return taihe::error(msg, code);

@@ -648,29 +648,15 @@ class StringTypeNapiInfo(TypeNapiInfo):
 
     @override
     def gen_from_napi(self, target: CSourceWriter, name: str):
-        with target.indented(
-            f"static constexpr auto {name} = [](napi_env env, napi_value napi_input) -> {self.cpp_info.as_owner} {{",
-            f"}};",
-        ):
-            target.writelns(
-                f"size_t cpp_result_len = 0;",
-                f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, nullptr, 0, &cpp_result_len));",
-                f"taihe::string_builder cpp_result_builder(cpp_result_len + 1);",
-                f"NAPI_CALL(env, napi_get_value_string_utf8(env, napi_input, cpp_result_builder.data(), cpp_result_builder.capacity(), &cpp_result_len));",
-                f"return std::move(cpp_result_builder).finish(cpp_result_len);",
-            )
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::from_napi_string;",
+        )
 
     @override
     def gen_into_napi(self, target: CSourceWriter, name: str):
-        with target.indented(
-            f"static constexpr auto {name} = [](napi_env env, {self.cpp_info.as_param} cpp_value) -> napi_value {{",
-            f"}};",
-        ):
-            target.writelns(
-                f"napi_value napi_result = nullptr;",
-                f"NAPI_CALL(env, napi_create_string_utf8(env, cpp_value.c_str(), cpp_value.size(), &napi_result));",
-                f"return napi_result;",
-            )
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::into_napi_string;",
+        )
 
 
 class StructTypeNapiInfo(TypeNapiInfo):
@@ -1845,7 +1831,7 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
 
     @override
     def visit_enum_type(self, t: EnumType) -> TypeNapiInfo:
-        if const_attr := ConstAttr.get(t.decl):
+        if ConstAttr.get(t.decl):
             return ConstEnumTypeNapiInfo(self.am, t)
         return EnumTypeNapiInfo(self.am, t)
 
