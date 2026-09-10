@@ -24,14 +24,14 @@ namespace taihe {
 class error {
 private:
     int32_t code_;
-    taihe::string message_;
+    taihe::common_string message_;
 
 public:
-    explicit error(taihe::string_view message) : code_(0), message_(message)
+    explicit error(taihe::common_string message) : code_(0), message_(std::move(message))
     {
     }
 
-    explicit error(taihe::string_view message, int32_t code) : code_(code), message_(message)
+    explicit error(taihe::common_string message, int32_t code) : code_(code), message_(std::move(message))
     {
     }
 
@@ -40,14 +40,20 @@ public:
     error &operator=(error const &) = default;
     error &operator=(error &&) = default;
 
-    taihe::string const &message() const noexcept
+    int32_t code() const noexcept
+    {
+        return code_;
+    }
+
+    taihe::common_string_view common_message() const noexcept
     {
         return message_;
     }
 
-    int32_t code() const noexcept
+    // To be deprecated
+    taihe::string message() const noexcept
     {
-        return code_;
+        return taihe::string(common_message());
     }
 
     friend bool operator==(error const &lhs, error const &rhs) noexcept

@@ -170,8 +170,8 @@ public:
 namespace taihe {
 // Error handling functions
 
-void set_error(taihe::string_view msg);
-void set_business_error(int32_t err_code, taihe::string_view msg);
+void set_error(taihe::common_string_view msg);
+void set_business_error(int32_t err_code, taihe::common_string_view msg);
 void reset_error();
 bool has_error();
 }  // namespace taihe
@@ -180,7 +180,11 @@ namespace taihe {
 // Internal Error handling functions
 
 taihe::string from_ani_taihe_string(ani_env *env, ani_string str);
+taihe::u16string from_ani_taihe_u16string(ani_env *env, ani_string str);
+taihe::common_string from_ani_taihe_common_string(ani_env *env, ani_string str);
 ani_string into_ani_taihe_string(ani_env *env, taihe::string_view str);
+ani_string into_ani_taihe_u16string(ani_env *env, taihe::u16string_view str);
+ani_string into_ani_taihe_common_string(ani_env *env, taihe::common_string_view str);
 
 taihe::error from_ani_taihe_error(ani_env *env, ani_error err);
 ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err);

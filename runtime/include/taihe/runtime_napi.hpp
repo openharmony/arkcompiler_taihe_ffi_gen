@@ -78,7 +78,11 @@ napi_env get_env();
 
 namespace taihe {
 taihe::expected<taihe::string, taihe::error> from_napi_string(napi_env env, napi_value str);
+taihe::expected<taihe::u16string, taihe::error> from_napi_u16string(napi_env env, napi_value str);
+taihe::expected<taihe::common_string, taihe::error> from_napi_common_string(napi_env env, napi_value str);
 napi_value into_napi_string(napi_env env, taihe::string_view str);
+napi_value into_napi_u16string(napi_env env, taihe::u16string_view str);
+napi_value into_napi_common_string(napi_env env, taihe::common_string_view str);
 
 taihe::error from_napi_exception(napi_env env, napi_value err);
 napi_value into_napi_exception(napi_env env, taihe::error const &err);

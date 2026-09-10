@@ -138,6 +138,21 @@ taihe::string from_ani_taihe_string(ani_env *env, ani_string str)
     return std::move(strBuilder).finish(strLength);
 }
 
+taihe::u16string from_ani_taihe_u16string(ani_env *env, ani_string str)
+{
+    ani_size strLength;
+    TH_ANI_ASSUME_INVOKE(env, String_GetUTF16Size, str, &strLength);
+    taihe::u16string_builder strBuilder(strLength + 1);
+    TH_ANI_ASSUME_INVOKE(env, String_GetUTF16, str, reinterpret_cast<uint16_t *>(strBuilder.data()),
+                         strBuilder.capacity(), &strLength);
+    return std::move(strBuilder).finish(strLength);
+}
+
+taihe::common_string from_ani_taihe_common_string(ani_env *env, ani_string str)
+{
+    return from_ani_taihe_u16string(env, str);
+}
+
 ani_string into_ani_taihe_string(ani_env *env, taihe::string_view str)
 {
     ani_string aniStr = nullptr;
@@ -148,7 +163,29 @@ ani_string into_ani_taihe_string(ani_env *env, taihe::string_view str)
     return aniStr;
 }
 
-static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
+ani_string into_ani_taihe_u16string(ani_env *env, taihe::u16string_view str)
+{
+    ani_string aniStr = nullptr;
+    if (ANI_OK != env->String_NewUTF16(reinterpret_cast<uint16_t const *>(str.data()), str.size(), &aniStr)) {
+        TH_ANI_LOG_ERROR("Failed to create ANI string from C++ u16string");
+        return nullptr;
+    }
+    return aniStr;
+}
+
+ani_string into_ani_taihe_common_string(ani_env *env, taihe::common_string_view str)
+{
+    if (str.is_utf8()) {
+        return into_ani_taihe_string(env, taihe::string_view(str));
+    }
+    if (str.is_utf16()) {
+        return into_ani_taihe_u16string(env, taihe::u16string_view(str));
+    }
+    TH_ANI_LOG_ERROR("Unsupported common string encoding");
+    return nullptr;
+}
+
+static ani_error create_ani_error(ani_env *env, taihe::common_string_view msg)
 {
     ani_class errCls;
     char const *className = "escompat.Error";
@@ -163,7 +200,7 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
         return nullptr;
     }
 
-    ani_string errMsg = into_ani_taihe_string(env, msg);
+    ani_string errMsg = into_ani_taihe_common_string(env, msg);
 
     ani_ref undefined;
     if (ANI_OK != env->GetUndefined(&undefined)) {
@@ -179,7 +216,7 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg)
     return errObj;
 }
 
-static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::string_view msg)
+static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::common_string_view msg)
 {
     ani_class errCls;
     char const *className = "@ohos.base.BusinessError";
@@ -205,13 +242,13 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
     return businessErrObj;
 }
 
-static void set_ani_error(ani_env *env, taihe::string_view msg)
+static void set_ani_error(ani_env *env, taihe::common_string_view msg)
 {
     ani_error errObj = create_ani_error(env, msg);
     TH_ANI_ASSUME_INVOKE(env, ThrowError, errObj);
 }
 
-static void set_ani_business_error(ani_env *env, int32_t code, taihe::string_view msg)
+static void set_ani_business_error(ani_env *env, int32_t code, taihe::common_string_view msg)
 {
     ani_error businessErrObj = create_ani_business_error(env, code, msg);
     TH_ANI_ASSUME_INVOKE(env, ThrowError, businessErrObj);
@@ -229,14 +266,14 @@ static bool has_ani_error(ani_env *env)
     return res;
 }
 
-void set_error(taihe::string_view msg)
+void set_error(taihe::common_string_view msg)
 {
     env_guard guard;
     ani_env *env = guard.get_env();
     set_ani_error(env, msg);
 }
 
-void set_business_error(int32_t code, taihe::string_view msg)
+void set_business_error(int32_t code, taihe::common_string_view msg)
 {
     env_guard guard;
     ani_env *env = guard.get_env();
@@ -263,18 +300,18 @@ taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
 {
     ani_string errMsg {};
     TH_ANI_ASSUME_INVOKE(env, Object_GetPropertyByName_Ref, errObj, "message", reinterpret_cast<ani_ref *>(&errMsg));
-    taihe::string msg = from_ani_taihe_string(env, errMsg);
+    taihe::common_string msg = from_ani_taihe_common_string(env, errMsg);
     ani_int code = 0;
     if (ANI_OK == env->Object_GetPropertyByName_Int(errObj, "code", &code)) {
-        return taihe::error(msg, code);
+        return taihe::error(std::move(msg), code);
     } else {
-        return taihe::error(msg);
+        return taihe::error(std::move(msg));
     }
 }
 
 ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err)
 {
-    return create_ani_business_error(env, err.code(), err.message());
+    return create_ani_business_error(env, err.code(), err.common_message());
 }
 
 void throw_ani_taihe_error(ani_env *env, taihe::error const &err)

@@ -41,6 +41,20 @@ taihe::expected<taihe::string, taihe::error> from_napi_string(napi_env env, napi
     return std::move(strBuilder).finish(strLength);
 }
 
+taihe::expected<taihe::u16string, taihe::error> from_napi_u16string(napi_env env, napi_value str)
+{
+    size_t strLength = 0;
+    TH_NAPI_TRY_CALL(env, napi_get_value_string_utf16(env, str, nullptr, 0, &strLength));
+    taihe::u16string_builder strBuilder(strLength + 1);
+    TH_NAPI_TRY_CALL(env, napi_get_value_string_utf16(env, str, strBuilder.data(), strBuilder.capacity(), &strLength));
+    return std::move(strBuilder).finish(strLength);
+}
+
+taihe::expected<taihe::common_string, taihe::error> from_napi_common_string(napi_env env, napi_value str)
+{
+    return from_napi_u16string(env, str);
+}
+
 napi_value into_napi_string(napi_env env, taihe::string_view str)
 {
     napi_value napiStr = nullptr;
@@ -48,13 +62,33 @@ napi_value into_napi_string(napi_env env, taihe::string_view str)
     return napiStr;
 }
 
+napi_value into_napi_u16string(napi_env env, taihe::u16string_view str)
+{
+    napi_value napiStr = nullptr;
+    TH_NAPI_ASSUME_CALL(env, napi_create_string_utf16(env, str.data(), str.size(), &napiStr));
+    return napiStr;
+}
+
+napi_value into_napi_common_string(napi_env env, taihe::common_string_view str)
+{
+    if (str.is_utf8()) {
+        return into_napi_string(env, taihe::string_view(str));
+    }
+    if (str.is_utf16()) {
+        return into_napi_u16string(env, taihe::u16string_view(str));
+    }
+    napi_value undefined;
+    TH_NAPI_ASSUME_CALL(env, napi_get_undefined(env, &undefined));
+    return undefined;
+}
+
 taihe::error from_napi_exception(napi_env env, napi_value err)
 {
     napi_value error_message_napi;
     TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, err, "message", &error_message_napi));
-    auto error_message_cpp = from_napi_string(env, error_message_napi);
+    auto error_message_cpp = from_napi_common_string(env, error_message_napi);
     if (!error_message_cpp) {
-        return error_message_cpp.error();
+        return std::move(error_message_cpp.error());
     }
     bool error_has_code;
     TH_NAPI_ASSUME_CALL(env, napi_has_named_property(env, err, "code", &error_has_code));
@@ -81,18 +115,18 @@ taihe::error from_napi_exception(napi_env env, napi_value err)
                 break;
             }
             default: {
-                return taihe::error(error_message_cpp.value());
+                return taihe::error(std::move(error_message_cpp.value()));
             }
         }
-        return taihe::error(error_message_cpp.value(), error_code_cpp);
+        return taihe::error(std::move(error_message_cpp.value()), error_code_cpp);
     } else {
-        return taihe::error(error_message_cpp.value());
+        return taihe::error(std::move(error_message_cpp.value()));
     }
 }
 
 napi_value into_napi_exception(napi_env env, taihe::error const &err)
 {
-    napi_value errorMessage = into_napi_string(env, err.message());
+    napi_value errorMessage = into_napi_common_string(env, err.common_message());
     napi_value errorCode = nullptr;
     if (err.code() != 0) {
         std::string errorCodeStr = std::to_string(err.code());
