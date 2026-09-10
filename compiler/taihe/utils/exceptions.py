@@ -17,7 +17,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
 from json import dumps
-from types import UnionType
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
     from taihe.semantics.attributes import (
         AnyAttribute,
         Argument,
+        ConversionFailure,
     )
     from taihe.semantics.declarations import (
         Decl,
@@ -95,15 +95,10 @@ class AttrArgRedefError(DiagError):
 class AttrArgMissingError(DiagError):
     attr_name: str
     arg_name: str
-    kw_only: bool = False
 
     @override
     def describe(self) -> str:
-        if self.kw_only:
-            kind = "keyword-only"
-        else:
-            kind = "positional or keyword"
-        return f"Missing {kind} argument {self.arg_name!r} in attribute {self.attr_name!r}."
+        return f"Missing argument {self.arg_name!r} in attribute {self.attr_name!r}."
 
 
 @dataclass
@@ -126,32 +121,56 @@ class AttrArgUnrequiredError(DiagError):
 
 
 @dataclass
+class AttrArgTypeNote(DiagNote):
+    error: "ConversionFailure"
+
+    def __init__(
+        self,
+        arg: "Argument",
+        error: "ConversionFailure",
+    ):
+        super().__init__(loc=arg.loc)
+        self.arg = arg
+        self.error = error
+
+    @override
+    def describe(self) -> str:
+        return f"Conversion failure: {self.error.message}"
+
+    @override
+    def notes(self):
+        for note in self.error.children:
+            yield AttrArgTypeNote(self.arg, note)
+
+
+@dataclass
 class AttrArgTypeError(DiagError):
     attr_name: str
     arg_name: str
-    arg_type: type | UnionType
-    attr_arg: "Argument"
+    arg: "Argument"
+    error: "ConversionFailure"
 
     def __init__(
         self,
         attr_name: str,
         arg_name: str,
-        arg_type: type | UnionType,
         arg: "Argument",
+        error: "ConversionFailure",
     ):
         super().__init__(loc=arg.loc)
         self.attr_name = attr_name
         self.arg_name = arg_name
-        self.arg_type = arg_type
-        self.attr_arg = arg
+        self.arg = arg
+        self.error = error
 
     @override
     def describe(self) -> str:
-        if isinstance(self.arg_type, UnionType):
-            readable_type = " or ".join(t.__name__ for t in self.arg_type.__args__)
-        else:
-            readable_type = self.arg_type.__name__
-        return f"Argument {self.arg_name!r} in attribute {self.attr_name} must be of type {readable_type}, but got {dumps(self.attr_arg.value)}"
+        return f"Argument {self.arg_name!r} in attribute {self.attr_name!r} has invalid type: {self.error.message}"
+
+    @override
+    def notes(self):
+        for note in self.error.children:
+            yield AttrArgTypeNote(self.arg, note)
 
 
 @dataclass
