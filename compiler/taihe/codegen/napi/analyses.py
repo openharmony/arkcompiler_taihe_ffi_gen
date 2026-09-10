@@ -29,6 +29,10 @@ from taihe.codegen.cpp.analyses import (
     TypeCppInfo,
     UnionCppInfo,
 )
+from taihe.codegen.cpp.attributes import (
+    Encoding,
+    EncodingAttr,
+)
 from taihe.codegen.napi.attributes import (
     ArrayBufferAttr,
     AsyncAttribute,
@@ -647,6 +651,8 @@ class StringTypeNapiInfo(TypeNapiInfo):
     def dts_type_in(self, target: DtsWriter) -> str:
         return "string"
 
+
+class Utf8StringTypeNapiInfo(StringTypeNapiInfo):
     @override
     def gen_from_napi(self, target: CSourceWriter, name: str):
         target.writelns(
@@ -657,6 +663,34 @@ class StringTypeNapiInfo(TypeNapiInfo):
     def gen_into_napi(self, target: CSourceWriter, name: str):
         target.writelns(
             f"static constexpr auto {name} = ::taihe::into_napi_string;",
+        )
+
+
+class Utf16StringTypeNapiInfo(StringTypeNapiInfo):
+    @override
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::from_napi_u16string;",
+        )
+
+    @override
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::into_napi_u16string;",
+        )
+
+
+class CommonStringTypeNapiInfo(StringTypeNapiInfo):
+    @override
+    def gen_from_napi(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::from_napi_common_string;",
+        )
+
+    @override
+    def gen_into_napi(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::into_napi_common_string;",
         )
 
 
@@ -1813,7 +1847,15 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
 
     @override
     def visit_string_type(self, t: StringType) -> TypeNapiInfo:
-        return StringTypeNapiInfo(self.am, t)
+        if encoding_attr := EncodingAttr.get(t.ref):
+            match encoding_attr.value:
+                case Encoding.UTF8:
+                    return Utf8StringTypeNapiInfo(self.am, t)
+                case Encoding.UTF16:
+                    return Utf16StringTypeNapiInfo(self.am, t)
+                case Encoding.COMMON:
+                    return CommonStringTypeNapiInfo(self.am, t)
+        return Utf8StringTypeNapiInfo(self.am, t)
 
     @override
     def visit_struct_type(self, t: StructType) -> TypeNapiInfo:

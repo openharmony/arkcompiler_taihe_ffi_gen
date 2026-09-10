@@ -18,6 +18,10 @@ from abc import ABC
 from typing_extensions import override
 
 from taihe.codegen.abi.analyses import CallbackAbiInfo
+from taihe.codegen.cpp.attributes import (
+    Encoding,
+    EncodingAttr,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -248,13 +252,31 @@ class OpaqueTypeCppInfo(TypeCppInfo):
         self.as_owner = "uintptr_t"
 
 
-class StringTypeCppInfo(TypeCppInfo):
+class Utf8StringTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         self.decl_headers = ["taihe/string.hpp"]
         self.defn_headers = ["taihe/string.hpp"]
         self.impl_headers = ["taihe/string.hpp"]
         self.as_owner = "::taihe::string"
         self.as_param = "::taihe::string_view"
+
+
+class Utf16StringTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: StringType):
+        self.decl_headers = ["taihe/string.hpp"]
+        self.defn_headers = ["taihe/string.hpp"]
+        self.impl_headers = ["taihe/string.hpp"]
+        self.as_owner = "::taihe::u16string"
+        self.as_param = "::taihe::u16string_view"
+
+
+class CommonStringTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: StringType):
+        self.decl_headers = ["taihe/string.hpp"]
+        self.defn_headers = ["taihe/string.hpp"]
+        self.impl_headers = ["taihe/string.hpp"]
+        self.as_owner = "::taihe::common_string"
+        self.as_param = "::taihe::common_string_view"
 
 
 class ArrayTypeCppInfo(TypeCppInfo):
@@ -487,7 +509,15 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
 
     @override
     def visit_string_type(self, t: StringType) -> TypeCppInfo:
-        return StringTypeCppInfo(self.am, t)
+        if encoding_attr := EncodingAttr.get(t.ref):
+            match encoding_attr.value:
+                case Encoding.UTF8:
+                    return Utf8StringTypeCppInfo(self.am, t)
+                case Encoding.UTF16:
+                    return Utf16StringTypeCppInfo(self.am, t)
+                case Encoding.COMMON:
+                    return CommonStringTypeCppInfo(self.am, t)
+        return Utf8StringTypeCppInfo(self.am, t)
 
     @override
     def visit_array_type(self, t: ArrayType) -> TypeCppInfo:

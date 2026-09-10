@@ -84,6 +84,10 @@ from taihe.codegen.cpp.analyses import (
     TypeCppInfo,
     UnionCppInfo,
 )
+from taihe.codegen.cpp.attributes import (
+    Encoding,
+    EncodingAttr,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     EnumItemDecl,
@@ -1613,6 +1617,8 @@ class StringTypeAniInfo(TypeAniInfo):
     def sts_type_in(self, target: ArkTsImportManager) -> str:
         return "string"
 
+
+class Utf8StringTypeAniInfo(StringTypeAniInfo):
     @override
     def gen_from_ani(self, target: CSourceWriter, name: str):
         target.writelns(
@@ -1623,6 +1629,34 @@ class StringTypeAniInfo(TypeAniInfo):
     def gen_into_ani(self, target: CSourceWriter, name: str):
         target.writelns(
             f"static constexpr auto {name} = ::taihe::into_ani_taihe_string;",
+        )
+
+
+class Utf16StringTypeAniInfo(StringTypeAniInfo):
+    @override
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::from_ani_taihe_u16string;",
+        )
+
+    @override
+    def gen_into_ani(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::into_ani_taihe_u16string;",
+        )
+
+
+class CommonStringTypeAniInfo(StringTypeAniInfo):
+    @override
+    def gen_from_ani(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::from_ani_taihe_common_string;",
+        )
+
+    @override
+    def gen_into_ani(self, target: CSourceWriter, name: str):
+        target.writelns(
+            f"static constexpr auto {name} = ::taihe::into_ani_taihe_common_string;",
         )
 
 
@@ -4755,7 +4789,15 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
 
     @override
     def visit_string_type(self, t: StringType) -> TypeAniInfo:
-        return StringTypeAniInfo(self.am, t)
+        if encoding_attr := EncodingAttr.get(t.ref):
+            match encoding_attr.value:
+                case Encoding.UTF8:
+                    return Utf8StringTypeAniInfo(self.am, t)
+                case Encoding.UTF16:
+                    return Utf16StringTypeAniInfo(self.am, t)
+                case Encoding.COMMON:
+                    return CommonStringTypeAniInfo(self.am, t)
+        return Utf8StringTypeAniInfo(self.am, t)
 
     @override
     def visit_array_type(self, t: ArrayType) -> TypeAniInfo:
