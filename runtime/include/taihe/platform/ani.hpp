@@ -47,7 +47,7 @@ protected:
 public:
     sref_guard(ani_env *env, ani_ref val)
     {
-        TH_ANI_CHECKED_CALL(env, GlobalReference_Create, val, &ref);
+        TH_ANI_ASSUME_INVOKE(env, GlobalReference_Create, val, &ref);
     }
 
     ~sref_guard()
@@ -72,14 +72,14 @@ protected:
 public:
     dref_guard(ani_env *env, ani_ref val)
     {
-        TH_ANI_CHECKED_CALL(env, GlobalReference_Create, val, &ref);
+        TH_ANI_ASSUME_INVOKE(env, GlobalReference_Create, val, &ref);
     }
 
     ~dref_guard()
     {
         env_guard guard;
         ani_env *env = guard.get_env();
-        TH_ANI_CHECKED_CALL(env, GlobalReference_Delete, ref);
+        TH_ANI_ASSUME_INVOKE(env, GlobalReference_Delete, ref);
     }
 
     dref_guard(dref_guard const &) = delete;

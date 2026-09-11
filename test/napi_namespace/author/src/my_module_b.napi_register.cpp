@@ -24,7 +24,7 @@ napi_value Init(napi_env env, napi_value exports)
     napi_value exports_functiontest;
     napi_create_object(env, &exports_functiontest);
     my_module_b::functiontest::NapiInit(env, exports_functiontest);
-    NAPI_CALL(env, napi_set_named_property(env, exports, "functiontest", exports_functiontest));
+    napi_set_named_property(env, exports, "functiontest", exports_functiontest);
     return exports;
 }
 

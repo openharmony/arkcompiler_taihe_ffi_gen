@@ -82,8 +82,7 @@
 #endif
 
 #ifndef TH_ANI_ENABLE_CHECKED_CALL
-#define TH_ANI_ASSERT(cond, msg, ...) (void)0
-#define TH_ANI_CHECKED_CALL(env, func, ...) (void)(env)->func(__VA_ARGS__)
+#define TH_ANI_ASSERT(cond, msg, ...) (void)(cond)
 #else
 #define TH_ANI_ASSERT(cond, msg, ...)                                  \
     do {                                                               \
@@ -92,12 +91,26 @@
             std::abort();                                              \
         }                                                              \
     } while (0)
-#define TH_ANI_CHECKED_CALL(env, func, ...)                                                                   \
-    do {                                                                                                      \
-        ani_status status = env->func(__VA_ARGS__);                                                           \
-        TH_ANI_ASSERT(status == ANI_OK, "ANI call " #func " failed with status " TH_ANI_LOG_FMT_INT, status); \
-    } while (0)
 #endif
+
+#define TH_ANI_ASSUME_CALL(env, call)                                                                             \
+    do {                                                                                                          \
+        ani_status __status = (call);                                                                             \
+        TH_ANI_ASSERT(__status == ANI_OK, "ANI call " #call " failed with status " TH_ANI_LOG_FMT_INT, __status); \
+    } while (0)
+
+#define TH_ANI_ASSUME_INVOKE(env, func, ...) TH_ANI_ASSUME_CALL(env, env->func(__VA_ARGS__))
+
+#define TH_ANI_TRY_CALL(env, call)                                                                                \
+    do {                                                                                                          \
+        ani_status __status = (call);                                                                             \
+        if (__status == ANI_PENDING_ERROR) {                                                                      \
+            return ::taihe::unexpected(::taihe::catch_ani_taihe_error(env));                                      \
+        }                                                                                                         \
+        TH_ANI_ASSERT(__status == ANI_OK, "ANI call " #call " failed with status " TH_ANI_LOG_FMT_INT, __status); \
+    } while (0)
+
+#define TH_ANI_TRY_INVOKE(env, func, ...) TH_ANI_TRY_CALL(env, env->func(__VA_ARGS__))
 
 #ifndef TH_ANI_ENABLE_PERF_TRACE
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) (void)0

@@ -27,7 +27,7 @@ napi_value Init(napi_env env, napi_value exports)
     napi_value exports_huks;
     napi_create_object(env, &exports_huks);
     ohos::security::huks::huks::NapiInit(env, exports_huks);
-    NAPI_CALL(env, napi_set_named_property(env, exports, "huks", exports_huks));
+    napi_set_named_property(env, exports, "huks", exports_huks);
     return exports;
 }
 

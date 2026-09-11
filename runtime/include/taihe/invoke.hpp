@@ -273,7 +273,7 @@ struct call_abi_func_t<taihe::expected<Return, Error>, Params...> {
         if (abi_err) {
             Error err = from_abi<Error>(*abi_err);
             free(abi_err);
-            return taihe::unexpected<Error>(err);
+            return taihe::unexpected<Error>(std::forward<Error>(err));
         } else {
             return from_abi<Return>(abi_ret);
         }
@@ -290,7 +290,7 @@ struct call_abi_func_t<taihe::expected<void, Error>, Params...> {
         if (abi_err) {
             Error err = from_abi<Error>(*abi_err);
             free(abi_err);
-            return taihe::unexpected<Error>(err);
+            return taihe::unexpected<Error>(std::forward<Error>(err));
         } else {
             return {};
         }

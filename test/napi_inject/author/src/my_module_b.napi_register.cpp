@@ -80,7 +80,7 @@ napi_value Init(napi_env env, napi_value exports)
     napi_create_double(env, OFFSET, &value_rate);
     napi_set_named_property(env, exports, "rate", value_rate);
 
-    NAPI_CALL(env, napi_set_named_property(env, exports, "functiontest", exports_functiontest));
+    napi_set_named_property(env, exports, "functiontest", exports_functiontest);
     return exports;
 }
 

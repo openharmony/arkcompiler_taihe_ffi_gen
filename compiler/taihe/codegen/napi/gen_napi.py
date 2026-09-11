@@ -123,7 +123,7 @@ class NapiCodeGenerator:
             )
             self.gen_ns_register(child_ns, child_reg_obj, target)
             target.writelns(
-                f'NAPI_CALL(env, napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {child_reg_obj}));',
+                f'napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {child_reg_obj});',
             )
         for pkg in ns.packages:
             pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
@@ -373,7 +373,7 @@ class NapiCodeGenerator:
             from_napi = f"from_napi_arg_{param.name}"
             param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             param_ty_napi_info.gen_from_napi(target, from_napi)
-            cpp_exprs.append(f"{from_napi}(env, {args}[{index}])")
+            cpp_exprs.append(f"TH_TRY_INTO_NAPI(env, {from_napi}(env, {args}[{index}]))")  # fmt: skip
         return cpp_exprs
 
     def _gen_async_func_content(
@@ -391,7 +391,7 @@ class NapiCodeGenerator:
         target.writelns(
             f"size_t argc = {argc};",
             f"napi_value args[{argc}] = {{}};",
-            f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+            f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
         )
         cpp_exprs = self._read_func_params(func, target, "args")
         cpp_result_type = self._get_cpp_result_type(func, is_noexcept)
@@ -445,19 +445,19 @@ class NapiCodeGenerator:
         if is_promise:
             target.writelns(
                 f"napi_value promise = nullptr;",
-                f"NAPI_CALL(env, napi_create_promise(env, &cb_data->defer, &promise));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_promise(env, &cb_data->defer, &promise));",
             )
         else:
             target.writelns(
-                f"NAPI_CALL(env, napi_create_reference(env, args[{len(func.params)}], 1, &cb_data->cb_ref));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_reference(env, args[{len(func.params)}], 1, &cb_data->cb_ref));",
             )
         target.writelns(
             f"napi_value napi_resname;",
-            f'NAPI_CALL(env, napi_create_string_utf8(env, "AsyncCallback", NAPI_AUTO_LENGTH, &napi_resname));',
+            f'TH_NAPI_ASSUME_CALL(env, napi_create_string_utf8(env, "AsyncCallback", NAPI_AUTO_LENGTH, &napi_resname));',
         )
         with target.indented(
-            f"napi_create_async_work(",
-            f");",
+            f"TH_NAPI_ASSUME_CALL(env, napi_create_async_work(",
+            f"));",
         ):
             target.writelns(
                 f"env,",
@@ -483,7 +483,7 @@ class NapiCodeGenerator:
                 f"&cb_data->work",
             )
         target.writelns(
-            f"NAPI_CALL(env, napi_queue_async_work(env, cb_data->work));",
+            f"TH_NAPI_ASSUME_CALL(env, napi_queue_async_work(env, cb_data->work));",
         )
         if is_promise:
             target.writelns(
@@ -544,57 +544,59 @@ class NapiCodeGenerator:
             )
             if is_promise:
                 reject = lambda error: target.writelns(
-                    f"NAPI_CALL(env, napi_reject_deferred(env, cb_data->defer, {error}));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_reject_deferred(env, cb_data->defer, {error}));",
                 )
                 resolve = lambda value: target.writelns(
-                    f"NAPI_CALL(env, napi_resolve_deferred(env, cb_data->defer, {value}));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_resolve_deferred(env, cb_data->defer, {value}));",
                 )
             else:
                 reject = lambda error: target.writelns(
                     f"napi_value js_cb;",
-                    f"NAPI_CALL(env, napi_get_reference_value(env, cb_data->cb_ref, &js_cb));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_reference_value(env, cb_data->cb_ref, &js_cb));",
                     f"napi_value undefined_value;",
-                    f"NAPI_CALL(env, napi_get_undefined(env, &undefined_value));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_undefined(env, &undefined_value));",
                     f"napi_value argv[1] = {{ {error} }};",
-                    f"NAPI_CALL(env, napi_call_function(env, undefined_value, js_cb, 1, argv, nullptr));",
-                    f"NAPI_CALL(env, napi_delete_reference(env, cb_data->cb_ref));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, undefined_value, js_cb, 1, argv, nullptr));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_delete_reference(env, cb_data->cb_ref));",
                 )
                 resolve = lambda value: target.writelns(
                     f"napi_value js_cb;",
-                    f"NAPI_CALL(env, napi_get_reference_value(env, cb_data->cb_ref, &js_cb));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_reference_value(env, cb_data->cb_ref, &js_cb));",
                     f"napi_value undefined_value;",
-                    f"NAPI_CALL(env, napi_get_undefined(env, &undefined_value));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_undefined(env, &undefined_value));",
                     f"napi_value null_value;",
-                    f"napi_get_null(env, &null_value);",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_null(env, &null_value));",
                     f"napi_value argv[2] = {{ null_value, {value} }};",
-                    f"NAPI_CALL(env, napi_call_function(env, undefined_value, js_cb, 2, argv, nullptr));",
-                    f"NAPI_CALL(env, napi_delete_reference(env, cb_data->cb_ref));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, undefined_value, js_cb, 2, argv, nullptr));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_delete_reference(env, cb_data->cb_ref));",
                 )
             with target.indented(
                 f"do {{",
                 f"}} while (false);",
             ):
                 with target.indented(
-                    f"if (status == napi_pending_exception) {{",
+                    f"if (status == napi_cancelled) {{",
                     f"}}",
                 ):
                     target.writelns(
+                        f"napi_value error;",
+                        f'TH_NAPI_ASSUME_CALL(env, napi_create_string_utf8(env, "Async operation was cancelled", NAPI_AUTO_LENGTH, &error));',
                         f"napi_value error_obj;",
-                        f"napi_get_and_clear_last_exception(env, &error_obj);",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_create_error(env, nullptr, error, &error_obj));",
                     )
                     reject("error_obj")
                     target.writelns(
                         f"break;",
                     )
                 with target.indented(
-                    f"if (status == napi_cancelled) {{",
+                    f"if (status != napi_ok) {{",
                     f"}}",
                 ):
                     target.writelns(
                         f"napi_value error;",
-                        f'napi_create_string_utf8(env, "Async operation was cancelled", NAPI_AUTO_LENGTH, &error);',
+                        f'TH_NAPI_ASSUME_CALL(env, napi_create_string_utf8(env, "Async operation failed", NAPI_AUTO_LENGTH, &error));',
                         f"napi_value error_obj;",
-                        f"napi_create_error(env, nullptr, error, &error_obj);",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_create_error(env, nullptr, error, &error_obj));",
                     )
                     reject("error_obj")
                     target.writelns(
@@ -607,7 +609,7 @@ class NapiCodeGenerator:
                         f"}}",
                     ):
                         target.writelns(
-                            f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
+                            f"napi_value error_obj = taihe::into_napi_exception(env, {result}.error());",
                         )
                         reject("error_obj")
                         target.writelns(
@@ -623,11 +625,11 @@ class NapiCodeGenerator:
                 else:
                     target.writelns(
                         f"napi_value napi_result;",
-                        f"napi_get_undefined(env, &napi_result);",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_get_undefined(env, &napi_result));",
                     )
                 resolve("napi_result")
             target.writelns(
-                f"napi_delete_async_work(env, cb_data->work);",
+                f"TH_NAPI_ASSUME_CALL(env, napi_delete_async_work(env, cb_data->work));",
                 f"delete cb_data;",
             )
 
@@ -643,7 +645,7 @@ class NapiCodeGenerator:
         target.writelns(
             f"size_t argc = {argc};",
             f"napi_value args[{argc}] = {{}};",
-            f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+            f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
         )
         cpp_exprs = self._read_func_params(func, target, "args")
         cpp_result_type = self._get_cpp_result_type(func, is_noexcept)
@@ -664,8 +666,7 @@ class NapiCodeGenerator:
                 f"}}",
             ):
                 target.writelns(
-                    f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
-                    f"napi_throw(env, error_obj);",
+                    f"::taihe::throw_napi_exception(env, {result}.error());",
                     f"return nullptr;",
                 )
             result = f"{result}.value()"
@@ -713,7 +714,7 @@ class NapiCodeGenerator:
                 f"}};",
             ):
                 target.writelns(
-                    f"inline {struct_cpp_info.as_owner} operator()(napi_env env, napi_value napi_obj) const;",
+                    f"inline ::taihe::expected<{struct_cpp_info.as_owner}, ::taihe::error> operator()(napi_env env, napi_value napi_obj) const;",
                 )
             with target.indented(
                 f"template<> struct ::taihe::into_napi_t<{struct_cpp_info.as_owner}> {{",
@@ -749,24 +750,24 @@ class NapiCodeGenerator:
         struct_cpp_info = StructCppInfo.get(self.am, struct)
         struct_napi_info = StructNapiInfo.get(self.am, struct)
         with target.indented(
-            f"inline {struct_cpp_info.as_owner} taihe::from_napi_t<{struct_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
+            f"inline ::taihe::expected<{struct_cpp_info.as_owner}, ::taihe::error> taihe::from_napi_t<{struct_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
-            cpp_field_results = []
+            cpp_fields = []
             for i, parts in enumerate(struct_napi_info.dts_final_fields):
                 final = parts[-1]
-                napi_field_value = f"napi_field_{i}"
+                napi_field = f"napi_field_{i}"
                 target.writelns(
-                    f"napi_value {napi_field_value} = nullptr;",
-                    f'NAPI_CALL(env, napi_get_named_property(env, napi_obj, "{final.name}", &{napi_field_value}));',
+                    f"napi_value {napi_field} = nullptr;",
+                    f'TH_NAPI_TRY_CALL(env, napi_get_named_property(env, napi_obj, "{final.name}", &{napi_field}));',
                 )
                 from_napi = f"from_napi_field_{i}"
                 type_napi_info = TypeNapiInfo.get(self.am, final.ty)
                 type_napi_info.gen_from_napi(target, from_napi)
-                cpp_field_results.append(f"{from_napi}(env, {napi_field_value})")
-            cpp_moved_fields_str = ", ".join(cpp_field_results)
+                cpp_fields.append(f"TH_TRY({from_napi}(env, {napi_field}))")
+            cpp_fields_str = ", ".join(cpp_fields)
             target.writelns(
-                f"return {struct_cpp_info.as_owner}{{{cpp_moved_fields_str}}};",
+                f"return {struct_cpp_info.as_owner}{{{cpp_fields_str}}};",
             )
 
     def gen_struct_into_napi_func(
@@ -795,8 +796,8 @@ class NapiCodeGenerator:
             target.writelns(
                 f"napi_value napi_obj = nullptr;",
                 f"napi_value inner_ctor = nullptr;",
-                f"NAPI_CALL(env, napi_get_reference_value(env, inner_ctor_ref, &inner_ctor));",
-                f"NAPI_CALL(env, napi_new_instance(env, inner_ctor, {argc}, args, &napi_obj));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_reference_value(env, inner_ctor_ref, &inner_ctor));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_new_instance(env, inner_ctor, {argc}, args, &napi_obj));",
                 f"return napi_obj;",
             )
 
@@ -820,9 +821,9 @@ class NapiCodeGenerator:
                 ):
                     target.writelns(
                         f"napi_value thisobj;",
-                        f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                         f"{struct_cpp_info.as_owner}* cpp_ptr;",
-                        f"NAPI_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr)));",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr)));",
                     )
                     field_into_napi = f"into_napi_field_{i}"
                     field_ty_napi_info.gen_into_napi(target, field_into_napi)
@@ -844,14 +845,14 @@ class NapiCodeGenerator:
                         f"size_t argc = 1;",
                         f"napi_value args[1] = {{nullptr}};",
                         f"napi_value thisobj;",
-                        f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr));",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr));",
                         f"{struct_cpp_info.as_owner}* cpp_ptr;",
-                        f"NAPI_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr)));",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr)));",
                     )
                     field_from_napi = f"from_napi_field_{i}"
                     field_ty_napi_info.gen_from_napi(target, field_from_napi)
                     target.writelns(
-                        f"cpp_ptr->{'.'.join(part.name for part in parts)} = {field_from_napi}(env, args[0]);",
+                        f"cpp_ptr->{'.'.join(part.name for part in parts)} = TH_TRY_INTO_NAPI(env, {field_from_napi}(env, args[0]));",
                         f"return nullptr;",
                     )
 
@@ -870,7 +871,7 @@ class NapiCodeGenerator:
             target.writelns(
                 f"size_t argc = {argc};",
                 f"napi_value args[{argc}];",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
             )
             cpp_exprs = []
             for i, parts in enumerate(struct_napi_info.dts_final_fields):
@@ -878,27 +879,27 @@ class NapiCodeGenerator:
                 from_napi = f"from_napi_field_{i}"
                 type_napi_info = TypeNapiInfo.get(self.am, final.ty)
                 type_napi_info.gen_from_napi(target, from_napi)
-                cpp_exprs.append(f"{from_napi}(env, args[{i}])")
+                cpp_exprs.append(f"TH_TRY_INTO_NAPI(env, {from_napi}(env, args[{i}]))")
             cpp_exprs_str = ", ".join(cpp_exprs)
             target.writelns(
                 f"napi_value thisobj;",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                 f"auto* cpp_ptr = new {struct_cpp_info.as_owner}{{{cpp_exprs_str}}};",
             )
             with target.indented(
-                f"napi_status _status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"napi_status status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 target.writelns(
                     f"delete static_cast<{struct_cpp_info.as_owner}*>(finalize_data);",
                 )
             with target.indented(
-                f"if (_status != napi_ok) {{",
+                f"if (status != napi_ok) {{",
                 f"}}",
             ):
                 target.writelns(
                     f"delete cpp_ptr;",
-                    f'napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str());',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(status) + ")").c_str()));',
                     f"return nullptr;",
                 )
             target.writelns(
@@ -918,7 +919,7 @@ class NapiCodeGenerator:
         ):
             if (ctor := struct_napi_info.ctor) is None:
                 target.writelns(
-                    f'napi_throw_error(env, nullptr, "Constructor does not exist for class {struct_napi_info.dts_type_name}");',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_throw_error(env, nullptr, "Constructor does not exist for class {struct_napi_info.dts_type_name}"));',
                     f"return nullptr;",
                 )
                 return
@@ -928,7 +929,7 @@ class NapiCodeGenerator:
             target.writelns(
                 f"size_t argc = {argc};",
                 f"napi_value args[{argc}];",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
             )
             cpp_exprs = self._read_func_params(ctor, target, "args")
             cpp_result_type = self._get_cpp_result_type(ctor, ctor_abi_info.is_noexcept)
@@ -943,30 +944,29 @@ class NapiCodeGenerator:
                     f"}}",
                 ):
                     target.writelns(
-                        f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
-                        f"napi_throw(env, error_obj);",
+                        f"::taihe::throw_napi_exception(env, {result}.error());",
                         f"return nullptr;",
                     )
                 result = f"{result}.value()"
             target.writelns(
                 f"napi_value thisobj;",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                 f"auto* cpp_ptr = new {struct_cpp_info.as_owner}(std::move({result}));",
             )
             with target.indented(
-                f"napi_status _status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"napi_status status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 target.writelns(
                     f"delete static_cast<{struct_cpp_info.as_owner}*>(finalize_data);",
                 )
             with target.indented(
-                f"if (_status != napi_ok) {{",
+                f"if (status != napi_ok) {{",
                 f"}}",
             ):
                 target.writelns(
                     f"delete cpp_ptr;",
-                    f'napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str());',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(status) + ")").c_str()));',
                     f"return nullptr;",
                 )
             target.writelns(
@@ -1008,35 +1008,35 @@ class NapiCodeGenerator:
                     )
             target.writelns(
                 f"napi_value global;",
-                f"NAPI_CALL(env, napi_get_global(env, &global));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_global(env, &global));",
                 f"napi_value object_ctor;",
-                f'NAPI_CALL(env, napi_get_named_property(env, global, "Object", &object_ctor));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, global, "Object", &object_ctor));',
                 f"napi_value set_proto_fn;",
-                f'NAPI_CALL(env, napi_get_named_property(env, object_ctor, "setPrototypeOf", &set_proto_fn));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, object_ctor, "setPrototypeOf", &set_proto_fn));',
             )
             target.writelns(
                 f"napi_value ctor = nullptr;",
-                f'NAPI_CALL(env, napi_define_class(env, "{struct_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, constructor, nullptr, {len(struct_napi_info.register_infos) + len(struct_napi_info.static_register_infos)}, desc, &ctor));',
-                f"NAPI_CALL(env, napi_create_reference(env, ctor, 1, &::taihe::into_napi_t<{struct_cpp_info.as_owner}>::ctor_ref));",
+                f'TH_NAPI_ASSUME_CALL(env, napi_define_class(env, "{struct_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, constructor, nullptr, {len(struct_napi_info.register_infos) + len(struct_napi_info.static_register_infos)}, desc, &ctor));',
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_reference(env, ctor, 1, &::taihe::into_napi_t<{struct_cpp_info.as_owner}>::ctor_ref));",
             )
             if struct_napi_info.is_class():
                 target.writelns(
-                    f'NAPI_CALL(env, napi_set_named_property(env, exports, "{struct_napi_info.dts_type_name}", ctor));',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_set_named_property(env, exports, "{struct_napi_info.dts_type_name}", ctor));',
                 )
             target.writelns(
                 f"napi_value inner_ctor = nullptr;",
-                f'NAPI_CALL(env, napi_define_class(env, "{struct_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, inner_constructor, nullptr, 0, nullptr, &inner_ctor));',
-                f"NAPI_CALL(env, napi_create_reference(env, inner_ctor, 1, &::taihe::into_napi_t<{struct_cpp_info.as_owner}>::inner_ctor_ref));",
+                f'TH_NAPI_ASSUME_CALL(env, napi_define_class(env, "{struct_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, inner_constructor, nullptr, 0, nullptr, &inner_ctor));',
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_reference(env, inner_ctor, 1, &::taihe::into_napi_t<{struct_cpp_info.as_owner}>::inner_ctor_ref));",
                 f"napi_value proto;",
-                f'NAPI_CALL(env, napi_get_named_property(env, ctor, "prototype", &proto));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, ctor, "prototype", &proto));',
                 f"napi_value inner_proto;",
-                f'NAPI_CALL(env, napi_get_named_property(env, inner_ctor, "prototype", &inner_proto));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, inner_ctor, "prototype", &inner_proto));',
                 f"napi_value inner_proto_set_proto_args[2] = {{inner_proto, proto}};",
                 f"napi_value inner_proto_set_proto_result;",
-                f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_proto_set_proto_args, &inner_proto_set_proto_result));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_proto_set_proto_args, &inner_proto_set_proto_result));",
                 f"napi_value inner_ctor_set_proto_args[2] = {{inner_ctor, ctor}};",
                 f"napi_value inner_ctor_set_proto_result;",
-                f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_ctor_set_proto_args, &inner_ctor_set_proto_result));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_ctor_set_proto_args, &inner_ctor_set_proto_result));",
             )
             if parent := struct_napi_info.dts_class_parent:
                 parent_cpp_info = StructCppInfo.get(self.am, parent.ty.decl)  # type: ignore
@@ -1044,15 +1044,15 @@ class NapiCodeGenerator:
                 target.add_include(parent_napi_info.decl_header)
                 target.writelns(
                     f"napi_value parent_ctor;",
-                    f"NAPI_CALL(env, napi_get_reference_value(env, ::taihe::into_napi_t<{parent_cpp_info.as_owner}>::ctor_ref, &parent_ctor));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_reference_value(env, ::taihe::into_napi_t<{parent_cpp_info.as_owner}>::ctor_ref, &parent_ctor));",
                     f"napi_value parent_proto;",
-                    f'NAPI_CALL(env, napi_get_named_property(env, parent_ctor, "prototype", &parent_proto));',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, parent_ctor, "prototype", &parent_proto));',
                     f"napi_value proto_set_proto_args[2] = {{proto, parent_proto}};",
                     f"napi_value proto_set_proto_result;",
-                    f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, proto_set_proto_args, &proto_set_proto_result));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, proto_set_proto_args, &proto_set_proto_result));",
                     f"napi_value ctor_set_proto_args[2] = {{ctor, parent_ctor}};",
                     f"napi_value ctor_set_proto_result;",
-                    f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, ctor_set_proto_args, &ctor_set_proto_result));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, ctor_set_proto_args, &ctor_set_proto_result));",
                 )
 
     def gen_iface(
@@ -1088,7 +1088,7 @@ class NapiCodeGenerator:
                 f"}};",
             ):
                 target.writelns(
-                    f"inline {iface_cpp_info.as_owner} operator()(napi_env env, napi_value napi_obj) const;",
+                    f"inline ::taihe::expected<{iface_cpp_info.as_owner}, ::taihe::error> operator()(napi_env env, napi_value napi_obj) const;",
                 )
             with target.indented(
                 f"template<> struct ::taihe::into_napi_t<{iface_cpp_info.as_owner}> {{",
@@ -1124,7 +1124,7 @@ class NapiCodeGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         with target.indented(
-            f"inline {iface_cpp_info.as_owner} taihe::from_napi_t<{iface_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
+            f"inline ::taihe::expected<{iface_cpp_info.as_owner}, ::taihe::error> taihe::from_napi_t<{iface_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
             with target.indented(
@@ -1226,33 +1226,25 @@ class NapiCodeGenerator:
                 target.writelns(
                     f"args[{index}] = {into_napi}(env, std::forward<decltype({method_arg})>({method_arg}));",
                 )
+            if method_abi_info.is_noexcept:
+                napi_call_macro = "TH_NAPI_ASSUME_CALL"
+                return_macro = "TH_NAPI_ASSUME"
+            else:
+                napi_call_macro = "TH_NAPI_TRY_CALL"
+                return_macro = "TH_TRY"
             target.writelns(
                 f"napi_value org_napi_obj;",
-                f"NAPI_CALL(env, napi_get_reference_value(env, ref, &org_napi_obj));",
+                f"{napi_call_macro}(env, napi_get_reference_value(env, ref, &org_napi_obj));",
                 f"napi_value ts_method;",
-                f'NAPI_CALL(env, napi_get_named_property(env, org_napi_obj, "{napi_name}", &ts_method));',
+                f'{napi_call_macro}(env, napi_get_named_property(env, org_napi_obj, "{napi_name}", &ts_method));',
                 f"napi_value method_result_napi;",
-                f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, ts_method, {len(method.params)}, args, &method_result_napi));",
+                f"{napi_call_macro}(env, napi_call_function(env, org_napi_obj, ts_method, {len(method.params)}, args, &method_result_napi));",
             )
-            if not method_abi_info.is_noexcept:
-                target.writelns(
-                    f"bool has_error = false;",
-                    f"napi_is_exception_pending(env, &has_error);",
-                )
-                with target.indented(
-                    f"if (has_error) {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"napi_value exception = nullptr;",
-                        f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::from_napi_error(env, exception));",
-                    )
             if isinstance(return_ty := method.return_ty, NonVoidType):
                 return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
                 return_ty_napi_info.gen_from_napi(target, "from_napi_result")
                 target.writelns(
-                    f"return from_napi_result(env, method_result_napi);",
+                    f"return {return_macro}(from_napi_result(env, method_result_napi));",
                 )
             elif not method_abi_info.is_noexcept:
                 target.writelns(
@@ -1281,14 +1273,14 @@ class NapiCodeGenerator:
                 f"int64_t cpp_vtbl_ptr = reinterpret_cast<int64_t>(cpp_obj.m_handle.vtbl_ptr);",
                 f"int64_t cpp_data_ptr = reinterpret_cast<int64_t>(cpp_obj.m_handle.data_ptr);",
                 f"cpp_obj.m_handle.data_ptr = nullptr;",
-                f"napi_create_int64(env, cpp_vtbl_ptr, &args[0]);",
-                f"napi_create_int64(env, cpp_data_ptr, &args[1]);",
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_int64(env, cpp_vtbl_ptr, &args[0]));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_int64(env, cpp_data_ptr, &args[1]));",
             )
             target.writelns(
                 f"napi_value napi_obj = nullptr;",
                 f"napi_value inner_ctor = nullptr;",
-                f"NAPI_CALL(env, napi_get_reference_value(env, inner_ctor_ref, &inner_ctor));",
-                f"NAPI_CALL(env, napi_new_instance(env, inner_ctor, {argc}, args, &napi_obj));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_reference_value(env, inner_ctor_ref, &inner_ctor));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_new_instance(env, inner_ctor, {argc}, args, &napi_obj));",
                 f"return napi_obj;",
             )
 
@@ -1307,35 +1299,35 @@ class NapiCodeGenerator:
             target.writelns(
                 f"size_t argc = {argc};",
                 f"napi_value args[{argc}];",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
             )
             target.writelns(
                 f"int64_t vtbl_ptr;",
-                f"napi_get_value_int64(env, args[0], &vtbl_ptr);",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_value_int64(env, args[0], &vtbl_ptr));",
                 f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(vtbl_ptr);",
                 f"int64_t data_ptr;",
-                f"napi_get_value_int64(env, args[1], &data_ptr);",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_value_int64(env, args[1], &data_ptr));",
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(data_ptr);",
             )
             target.writelns(
                 f"napi_value thisobj;",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                 f"auto* cpp_ptr = new {iface_cpp_info.as_owner}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
             with target.indented(
-                f"napi_status _status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"napi_status status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 target.writelns(
                     f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
                 )
             with target.indented(
-                f"if (_status != napi_ok) {{",
+                f"if (status != napi_ok) {{",
                 f"}}",
             ):
                 target.writelns(
                     f"delete cpp_ptr;",
-                    f'napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str());',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(status) + ")").c_str()));',
                     f"return nullptr;",
                 )
             target.writelns(
@@ -1355,7 +1347,7 @@ class NapiCodeGenerator:
         ):
             if (ctor := iface_napi_info.ctor) is None:
                 target.writelns(
-                    f'napi_throw_error(env, nullptr, "Constructor does not exist for class {iface_napi_info.dts_type_name}");',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_throw_error(env, nullptr, "Constructor does not exist for class {iface_napi_info.dts_type_name}"));',
                     f"return nullptr;",
                 )
                 return
@@ -1365,7 +1357,7 @@ class NapiCodeGenerator:
             target.writelns(
                 f"size_t argc = {argc};",
                 f"napi_value args[{argc}];",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
             )
             cpp_exprs = self._read_func_params(ctor, target, "args")
             cpp_result_type = self._get_cpp_result_type(ctor, ctor_abi_info.is_noexcept)
@@ -1380,30 +1372,29 @@ class NapiCodeGenerator:
                     f"}}",
                 ):
                     target.writelns(
-                        f"napi_value error_obj = taihe::into_napi_error(env, {result}.error());",
-                        f"napi_throw(env, error_obj);",
+                        f"::taihe::throw_napi_exception(env, {result}.error());",
                         f"return nullptr;",
                     )
                 result = f"{result}.value()"
             target.writelns(
                 f"napi_value thisobj;",
-                f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                 f"auto* cpp_ptr = new {iface_cpp_info.as_owner}(std::move({result}));",
             )
             with target.indented(
-                f"napi_status _status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"napi_status status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 target.writelns(
                     f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
                 )
             with target.indented(
-                f"if (_status != napi_ok) {{",
+                f"if (status != napi_ok) {{",
                 f"}}",
             ):
                 target.writelns(
                     f"delete cpp_ptr;",
-                    f'napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str());',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_throw_error(env, nullptr, ("Native object wrapping failed (status " + std::to_string(status) + ")").c_str()));',
                     f"return nullptr;",
                 )
             target.writelns(
@@ -1445,35 +1436,35 @@ class NapiCodeGenerator:
                     )
             target.writelns(
                 f"napi_value global;",
-                f"NAPI_CALL(env, napi_get_global(env, &global));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_get_global(env, &global));",
                 f"napi_value object_ctor;",
-                f'NAPI_CALL(env, napi_get_named_property(env, global, "Object", &object_ctor));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, global, "Object", &object_ctor));',
                 f"napi_value set_proto_fn;",
-                f'NAPI_CALL(env, napi_get_named_property(env, object_ctor, "setPrototypeOf", &set_proto_fn));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, object_ctor, "setPrototypeOf", &set_proto_fn));',
             )
             target.writelns(
                 f"napi_value ctor = nullptr;",
-                f'NAPI_CALL(env, napi_define_class(env, "{iface_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, constructor, nullptr, {len(iface_napi_info.register_infos) + len(iface_napi_info.static_register_infos)}, desc, &ctor));',
-                f"NAPI_CALL(env, napi_create_reference(env, ctor, 1, &::taihe::into_napi_t<{iface_cpp_info.as_owner}>::ctor_ref));",
+                f'TH_NAPI_ASSUME_CALL(env, napi_define_class(env, "{iface_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, constructor, nullptr, {len(iface_napi_info.register_infos) + len(iface_napi_info.static_register_infos)}, desc, &ctor));',
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_reference(env, ctor, 1, &::taihe::into_napi_t<{iface_cpp_info.as_owner}>::ctor_ref));",
             )
             if iface_napi_info.is_class():
                 target.writelns(
-                    f'NAPI_CALL(env, napi_set_named_property(env, exports, "{iface_napi_info.dts_type_name}", ctor));',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_set_named_property(env, exports, "{iface_napi_info.dts_type_name}", ctor));',
                 )
             target.writelns(
                 f"napi_value inner_ctor = nullptr;",
-                f'NAPI_CALL(env, napi_define_class(env, "{iface_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, inner_constructor, nullptr, 0, nullptr, &inner_ctor));',
-                f"NAPI_CALL(env, napi_create_reference(env, inner_ctor, 1, &::taihe::into_napi_t<{iface_cpp_info.as_owner}>::inner_ctor_ref));",
+                f'TH_NAPI_ASSUME_CALL(env, napi_define_class(env, "{iface_napi_info.dts_type_name}", NAPI_AUTO_LENGTH, inner_constructor, nullptr, 0, nullptr, &inner_ctor));',
+                f"TH_NAPI_ASSUME_CALL(env, napi_create_reference(env, inner_ctor, 1, &::taihe::into_napi_t<{iface_cpp_info.as_owner}>::inner_ctor_ref));",
                 f"napi_value proto;",
-                f'NAPI_CALL(env, napi_get_named_property(env, ctor, "prototype", &proto));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, ctor, "prototype", &proto));',
                 f"napi_value inner_proto;",
-                f'NAPI_CALL(env, napi_get_named_property(env, inner_ctor, "prototype", &inner_proto));',
+                f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, inner_ctor, "prototype", &inner_proto));',
                 f"napi_value inner_proto_set_proto_args[2] = {{inner_proto, proto}};",
                 f"napi_value inner_proto_set_proto_result;",
-                f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_proto_set_proto_args, &inner_proto_set_proto_result));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_proto_set_proto_args, &inner_proto_set_proto_result));",
                 f"napi_value inner_ctor_set_proto_args[2] = {{inner_ctor, ctor}};",
                 f"napi_value inner_ctor_set_proto_result;",
-                f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_ctor_set_proto_args, &inner_ctor_set_proto_result));",
+                f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, inner_ctor_set_proto_args, &inner_ctor_set_proto_result));",
             )
             if parent := iface_napi_info.dts_class_parent:
                 parent_cpp_info = IfaceCppInfo.get(self.am, parent.ty.decl)
@@ -1481,15 +1472,15 @@ class NapiCodeGenerator:
                 target.add_include(parent_napi_info.decl_header)
                 target.writelns(
                     f"napi_value parent_ctor;",
-                    f"NAPI_CALL(env, napi_get_reference_value(env, ::taihe::into_napi_t<{parent_cpp_info.as_owner}>::ctor_ref, &parent_ctor));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_reference_value(env, ::taihe::into_napi_t<{parent_cpp_info.as_owner}>::ctor_ref, &parent_ctor));",
                     f"napi_value parent_proto;",
-                    f'NAPI_CALL(env, napi_get_named_property(env, parent_ctor, "prototype", &parent_proto));',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_get_named_property(env, parent_ctor, "prototype", &parent_proto));',
                     f"napi_value proto_set_proto_args[2] = {{proto, parent_proto}};",
                     f"napi_value proto_set_proto_result;",
-                    f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, proto_set_proto_args, &proto_set_proto_result));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, proto_set_proto_args, &proto_set_proto_result));",
                     f"napi_value ctor_set_proto_args[2] = {{ctor, parent_ctor}};",
                     f"napi_value ctor_set_proto_result;",
-                    f"NAPI_CALL(env, napi_call_function(env, global, set_proto_fn, 2, ctor_set_proto_args, &ctor_set_proto_result));",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_call_function(env, global, set_proto_fn, 2, ctor_set_proto_args, &ctor_set_proto_result));",
                 )
 
     def gen_iface_method_impls(
@@ -1511,9 +1502,9 @@ class NapiCodeGenerator:
                 ):
                     target.writelns(
                         f"napi_value thisobj;",
-                        f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                         f"{iface_cpp_info.as_owner}* obj_ptr;",
-                        f"NAPI_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void**>(&obj_ptr)));",
+                        f"TH_NAPI_ASSUME_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void**>(&obj_ptr)));",
                     )
                     self.gen_func_content(
                         method,
@@ -1551,12 +1542,12 @@ class NapiCodeGenerator:
                         f"napi_value {value} = into_napi_enum_item(env, {render_c_value(item.typed_value)});",
                     )
                     target.writelns(
-                        f'NAPI_CALL(env, napi_set_named_property(env, exports, "{item.name}", {value}));',
+                        f'TH_NAPI_ASSUME_CALL(env, napi_set_named_property(env, exports, "{item.name}", {value}));',
                     )
             else:
                 target.writelns(
                     f"napi_value enum_obj;",
-                    f"napi_create_object(env, &enum_obj);",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_create_object(env, &enum_obj));",
                     f"napi_value key;",
                 )
                 for item in enum.items:
@@ -1565,12 +1556,12 @@ class NapiCodeGenerator:
                         f"napi_value {value} = into_napi_enum_item(env, {render_c_value(item.typed_value)});",
                     )
                     target.writelns(
-                        f'NAPI_CALL(env, napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key));',
-                        f'NAPI_CALL(env, napi_set_named_property(env, enum_obj, "{item.name}", {value}));',
-                        f"NAPI_CALL(env, napi_set_property(env, enum_obj, {value}, key));",
+                        f'TH_NAPI_ASSUME_CALL(env, napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key));',
+                        f'TH_NAPI_ASSUME_CALL(env, napi_set_named_property(env, enum_obj, "{item.name}", {value}));',
+                        f"TH_NAPI_ASSUME_CALL(env, napi_set_property(env, enum_obj, {value}, key));",
                     )
                 target.writelns(
-                    f'NAPI_CALL(env, napi_set_named_property(env, exports, "{enum_napi_info.dts_type_name}", enum_obj));',
+                    f'TH_NAPI_ASSUME_CALL(env, napi_set_named_property(env, exports, "{enum_napi_info.dts_type_name}", enum_obj));',
                 )
 
     def gen_union_conv_decl_file(
@@ -1591,7 +1582,7 @@ class NapiCodeGenerator:
                 f"}};",
             ):
                 target.writelns(
-                    f"inline {union_cpp_info.as_owner} operator()(napi_env env, napi_value napi_obj) const;",
+                    f"inline ::taihe::expected<{union_cpp_info.as_owner}, ::taihe::error> operator()(napi_env env, napi_value napi_obj) const;",
                 )
             with target.indented(
                 f"template<> struct ::taihe::into_napi_t<{union_cpp_info.as_owner}> {{",
@@ -1625,7 +1616,7 @@ class NapiCodeGenerator:
         union_cpp_info = UnionCppInfo.get(self.am, union)
         union_napi_info = UnionNapiInfo.get(self.am, union)
         with target.indented(
-            f"inline {union_cpp_info.as_owner} taihe::from_napi_t<{union_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
+            f"inline ::taihe::expected<{union_cpp_info.as_owner}, ::taihe::error> taihe::from_napi_t<{union_cpp_info.as_owner}>::operator()(napi_env env, napi_value napi_obj) const {{",
             f"}}",
         ):
             for i, parts in enumerate(union_napi_info.dts_final_fields):
@@ -1647,7 +1638,7 @@ class NapiCodeGenerator:
                     from_napi = f"from_napi_kind_{i}"
                     type_napi_info.gen_from_napi(target, from_napi)
                     target.writelns(
-                        f"return {union_cpp_info.full_name}({static_tags_str}, {from_napi}(env, napi_obj));",
+                        f"return {union_cpp_info.full_name}({static_tags_str}, TH_TRY({from_napi}(env, napi_obj)));",
                     )
 
     def gen_union_into_napi_func(

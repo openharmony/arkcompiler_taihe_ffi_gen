@@ -132,9 +132,9 @@ namespace taihe {
 taihe::string from_ani_taihe_string(ani_env *env, ani_string str)
 {
     ani_size strLength;
-    TH_ANI_CHECKED_CALL(env, String_GetUTF8Size, str, &strLength);
+    TH_ANI_ASSUME_INVOKE(env, String_GetUTF8Size, str, &strLength);
     taihe::string_builder strBuilder(strLength + 1);
-    TH_ANI_CHECKED_CALL(env, String_GetUTF8, str, strBuilder.data(), strBuilder.capacity(), &strLength);
+    TH_ANI_ASSUME_INVOKE(env, String_GetUTF8, str, strBuilder.data(), strBuilder.capacity(), &strLength);
     return std::move(strBuilder).finish(strLength);
 }
 
@@ -208,24 +208,24 @@ static ani_error create_ani_business_error(ani_env *env, int32_t code, taihe::st
 static void set_ani_error(ani_env *env, taihe::string_view msg)
 {
     ani_error errObj = create_ani_error(env, msg);
-    TH_ANI_CHECKED_CALL(env, ThrowError, errObj);
+    TH_ANI_ASSUME_INVOKE(env, ThrowError, errObj);
 }
 
 static void set_ani_business_error(ani_env *env, int32_t code, taihe::string_view msg)
 {
     ani_error businessErrObj = create_ani_business_error(env, code, msg);
-    TH_ANI_CHECKED_CALL(env, ThrowError, businessErrObj);
+    TH_ANI_ASSUME_INVOKE(env, ThrowError, businessErrObj);
 }
 
 static void reset_ani_error(ani_env *env)
 {
-    TH_ANI_CHECKED_CALL(env, ResetError);
+    TH_ANI_ASSUME_INVOKE(env, ResetError);
 }
 
 static bool has_ani_error(ani_env *env)
 {
     ani_boolean res;
-    TH_ANI_CHECKED_CALL(env, ExistUnhandledError, &res);
+    TH_ANI_ASSUME_INVOKE(env, ExistUnhandledError, &res);
     return res;
 }
 
@@ -262,7 +262,7 @@ namespace taihe {
 taihe::error from_ani_taihe_error(ani_env *env, ani_error errObj)
 {
     ani_string errMsg {};
-    TH_ANI_CHECKED_CALL(env, Object_GetPropertyByName_Ref, errObj, "message", reinterpret_cast<ani_ref *>(&errMsg));
+    TH_ANI_ASSUME_INVOKE(env, Object_GetPropertyByName_Ref, errObj, "message", reinterpret_cast<ani_ref *>(&errMsg));
     taihe::string msg = from_ani_taihe_string(env, errMsg);
     ani_int code = 0;
     if (ANI_OK == env->Object_GetPropertyByName_Int(errObj, "code", &code)) {
@@ -280,14 +280,14 @@ ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err)
 void throw_ani_taihe_error(ani_env *env, taihe::error const &err)
 {
     ani_error errObj = into_ani_taihe_error(env, err);
-    TH_ANI_CHECKED_CALL(env, ThrowError, errObj);
+    TH_ANI_ASSUME_INVOKE(env, ThrowError, errObj);
 }
 
 taihe::error catch_ani_taihe_error(ani_env *env)
 {
     ani_error errObj;
-    TH_ANI_CHECKED_CALL(env, GetUnhandledError, &errObj);
-    TH_ANI_CHECKED_CALL(env, ResetError);
+    TH_ANI_ASSUME_INVOKE(env, GetUnhandledError, &errObj);
+    TH_ANI_ASSUME_INVOKE(env, ResetError);
     return from_ani_taihe_error(env, errObj);
 }
 }  // namespace taihe
