@@ -1,0 +1,185 @@
+// Test methods of interface containers
+
+interface VectorWrapper {
+  getSize(): u64;
+  getItems(): Array<String>;
+  forEachItem(visitor: (i: u64, v: String) => bool);
+  get(i: u64): String;
+  set(i: u64, v: String);
+  getAndSet(i: u64, v: String): String;
+  insert(i: u64, v: String);
+  insertLast(v: String);
+  remove(i: u64);
+  removeLast();
+  getAndRemove(i: u64): String;
+  getAndRemoveLast(): String;
+  clear();
+}
+
+function makeVectorWrapper(v: SharedVector<String>): VectorWrapper;
+
+interface SetWrapper {
+  getSize(): u64;
+  getKeys(): Array<String>;
+  forEachKey(visitor: (k: String) => bool);
+  has(k: String): bool;
+  insert(k: String);
+  checkedInsert(k: String): bool;
+  remove(k: String);
+  checkedRemove(k: String): bool;
+  clear();
+}
+
+function makeSetWrapper(s: SharedSet<String>): SetWrapper;
+
+@tuple
+struct MapEntry {
+  k: String;
+  v: String;
+}
+
+interface MapWrapper {
+  getSize(): u64;
+  getKeys(): Array<String>;
+  forEachKey(visitor: (k: String) => bool);
+  getValues(): Array<String>;
+  forEachValue(visitor: (v: String) => bool);
+  getEntries(): Array<MapEntry>;
+  forEachEntry(visitor: (k: String, v: String) => bool);
+  has(k: String): bool;
+  tryGet(k: String): Optional<String>;
+  upsert(k: String, v: String);
+  checkedInsert(k: String, v: String): bool;
+  tryGetAndUpsert(k: String, v: String): Optional<String>;
+  tryGetAndInsert(k: String, v: String): Optional<String>;
+  remove(k: String);
+  checkedRemove(k: String): bool;
+  tryGetAndRemove(k: String): Optional<String>;
+  clear();
+}
+
+function makeMapWrapper(m: SharedMap<String, String>): MapWrapper;
+
+@tuple
+struct RecordEntry {
+  k: i32;
+  v: String;
+}
+
+interface RecordWrapper {
+  getSize(): u64;
+  getKeys(): Array<i32>;
+  forEachKey(visitor: (k: i32) => bool);
+  getValues(): Array<String>;
+  forEachValue(visitor: (v: String) => bool);
+  getEntries(): Array<RecordEntry>;
+  forEachEntry(visitor: (k: i32, v: String) => bool);
+  has(k: i32): bool;
+  tryGet(k: i32): Optional<String>;
+  upsert(k: i32, v: String);
+  checkedInsert(k: i32, v: String): bool;
+  tryGetAndUpsert(k: i32, v: String): Optional<String>;
+  tryGetAndInsert(k: i32, v: String): Optional<String>;
+  remove(k: i32);
+  checkedRemove(k: i32): bool;
+  tryGetAndRemove(k: i32): Optional<String>;
+  clear();
+}
+
+function makeRecordWrapper(m: @record SharedMap<i32, String>): RecordWrapper;
+
+interface ArrayI8Wrapper {
+  @noexcept size(): u64;
+  get(i: u64): i8;
+  set(i: u64, v: i8);
+}
+
+function makeArrayBufferI8Wrapper(a: @arraybuffer SharedArray<i8>): ArrayI8Wrapper;
+function makeInt8ArrayWrapper(a: @typedarray SharedArray<i8>): ArrayI8Wrapper;
+
+// Test SharedArray
+
+interface ArrayU8Wrapper {
+  @noexcept size(): u64;
+  get(i: u64): i16;
+  set(i: u64, v: i16);
+}
+
+function makeArrayBufferU8Wrapper(a: @arraybuffer SharedArray<u8>): ArrayU8Wrapper;
+function makeUint8ArrayWrapper(a: @typedarray SharedArray<u8>): ArrayU8Wrapper;
+
+interface ArrayI32Wrapper {
+  @noexcept size(): u64;
+  get(i: u64): i32;
+  set(i: u64, v: i32);
+}
+
+function makeInt32ArrayWrapper(a: @typedarray SharedArray<i32>): ArrayI32Wrapper;
+
+interface ArrayU32Wrapper {
+  @noexcept size(): u64;
+  get(i: u64): i64;
+  set(i: u64, v: i64);
+}
+
+function makeUint32ArrayWrapper(a: @typedarray SharedArray<u32>): ArrayU32Wrapper;
+
+interface ArrayF64Wrapper {
+  @noexcept size(): u64;
+  get(i: u64): f64;
+  set(i: u64, v: f64);
+}
+
+function makeFloat64ArrayWrapper(a: @typedarray SharedArray<f64>): ArrayF64Wrapper;
+
+// Test shared containers in union
+
+union ContainerUnion {
+  recordValue: @record SharedMap<i32, String>;
+  mapValue: SharedMap<String, String>;
+  setValue: SharedSet<String>;
+  vectorValue: SharedVector<String>;
+  arraybufferValue: @arraybuffer SharedArray<u8>;
+  typedarrayValue: @typedarray SharedArray<i64>;
+}
+
+// Test shared containers as paramerter of interface method
+
+interface ContainerSerializer {
+  serialize(u: ContainerUnion): String;
+}
+
+function getSerializer(): ContainerSerializer;
+
+// Test shared containers as return value of interface method
+
+interface ContainerGenerator {
+  generate(): ContainerUnion;
+}
+
+function testGenerator(generator: ContainerGenerator, count: u64): Array<String>;
+
+// Test modify shared containers in struct
+
+struct ContainerStruct {
+  recordValue: @record SharedMap<i32, String>;
+  mapValue: SharedMap<String, String>;
+  setValue: SharedSet<String>;
+  vectorValue: SharedVector<String>;
+  arraybufferValue: @arraybuffer SharedArray<u8>;
+  typedarrayValue: @typedarray SharedArray<i64>;
+}
+
+function clearAllInStruct(containers: ContainerStruct);
+
+// Test modify shared container in union
+
+function clearAnyInUnion(container: ContainerUnion);
+
+// Test modify shared containers in array
+
+function clearAllInArray(containers: Array<ContainerUnion>);
+
+// Test modify shared containers in other shared container
+
+function clearAllInSharedVector(containers: SharedVector<ContainerUnion>);
