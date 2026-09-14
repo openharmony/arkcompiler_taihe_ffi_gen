@@ -123,6 +123,8 @@ def create_tar(strip_version: bool, in_dir: Path, out_tgz: Path, rename_root: st
                 tar_cmd = ["tar", "--create", "--gzip", "--file", str(out_tgz)]
                 # Rename the root directory.
                 tar_cmd += ["--transform", f"s/^{in_dir.name}/{rename_root}/"]
+                # Ignore "file changed as we read it" — harmless race with post-install
+                tar_cmd += ["--warning=no-file-changed"]
                 # Pass the root dir now.
                 tar_cmd += ["-C", str(in_dir.parent), in_dir.name]
             subprocess.run(tar_cmd, check=True, capture_output=True, text=True)
@@ -134,6 +136,8 @@ def create_tar(strip_version: bool, in_dir: Path, out_tgz: Path, rename_root: st
             tar_cmd += ["--sort=name", f"--mtime=@{timestamp}"]
             # Rename the root directory.
             tar_cmd += [f"--transform=s#^{in_dir.name}#{rename_root}#"]
+            # Ignore "file changed as we read it" — harmless race with post-install
+            tar_cmd += ["--warning=no-file-changed"]
             # Pass the root dir now.
             tar_cmd += ["-C", in_dir.parent, in_dir.name]
             subprocess.run(tar_cmd, check=True, capture_output=True, text=True)
