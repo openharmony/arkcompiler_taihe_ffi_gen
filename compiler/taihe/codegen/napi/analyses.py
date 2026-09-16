@@ -198,8 +198,40 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
         pg_napi_info = PackageGroupNapiInfo.get(am, p.parent_group)
         self.ns = pg_napi_info.get_namespace(p)
 
+        self.ctors_map: dict[str, GlobFuncDecl] = {}
+        self.non_ctor_funcs: list[GlobFuncDecl] = []
+
+        self.static_register_infos: dict[str, dict[str, tuple[str, str, str]]] = {}
+        self.static_funcs: dict[str, list[GlobFuncDecl]] = {}
         self.global_register_infos: dict[str, tuple[str, str, str]] = {}
         self.global_funcs: list[GlobFuncDecl] = []
+
+        for func in p.functions:
+            func_napi_info = GlobFuncNapiInfo.get(self.am, func)
+            if class_name := func_napi_info.ctor_class_name:
+                # TODO: raise special error
+                if class_name in self.ctors_map:
+                    raise ValueError(
+                        f"Error: class_name '{class_name}' already have a constructor."
+                    )
+                self.ctors_map[class_name] = func
+                continue
+            self.non_ctor_funcs.append(func)
+            full_name = f"::method::{func.name}"
+            if class_name := func_napi_info.static_class_name:
+                self.static_funcs.setdefault(class_name, []).append(func)
+                self.static_register_infos.setdefault(class_name, {})[func.name] = (
+                    full_name,
+                    "nullptr",
+                    "nullptr",
+                )
+            else:
+                self.global_funcs.append(func)
+                self.global_register_infos[func.name] = (
+                    full_name,
+                    "nullptr",
+                    "nullptr",
+                )
 
     @classmethod
     @override
@@ -226,9 +258,12 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         for class_injected in DtsInjectIntoClazzAttr.get_all(d):
             self.class_dts_injected_codes.append(class_injected.dts_code)
 
-        self.ctor: GlobFuncDecl | None = None
-        self.static_register_infos: dict[str, tuple[str, str, str]] = {}
-        self.static_funcs: list[GlobFuncDecl] = []
+        self.ctor = self.pkg_napi_info.ctors_map.get(d.name)
+        self.static_funcs = self.pkg_napi_info.static_funcs.get(d.name, [])
+        self.static_register_infos = self.pkg_napi_info.static_register_infos.get(
+            d.name,
+            {},
+        )
 
         self.dts_iface_parents: list[StructFieldDecl] = []
         self.dts_class_parent: StructFieldDecl | None = None
@@ -255,10 +290,10 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         self.setters: list[tuple[str, list[StructFieldDecl]]] = []
         for parts in self.dts_final_fields:
             final = parts[-1]
-            getter = f"getter::{final.name}"
+            getter = f"::local::{d.name}::getter::{final.name}"
             self.getters.append((final.name, parts))
             if ReadOnlyAttr.get(final) is None:
-                setter = f"setter::{final.name}"
+                setter = f"::local::{d.name}::setter::{final.name}"
                 self.setters.append((final.name, parts))
             else:
                 setter = "nullptr"
@@ -309,7 +344,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
                 local_name = method.name
                 self.methods.append((local_name, method))
                 iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
-                mangled_name = f"method::{local_name}"
+                mangled_name = f"::local::{d.name}::method::{local_name}"
                 if get_name := iface_meth_napi_info.get_name:
                     caller, _, setter = self.register_infos[get_name]
                     self.register_infos[get_name] = (caller, mangled_name, setter)
@@ -321,9 +356,13 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
                 method_name = method.name
                 _, getter, setter = self.register_infos[method_name]
                 self.register_infos[method_name] = (mangled_name, getter, setter)
-        self.ctor: GlobFuncDecl | None = None
-        self.static_register_infos: dict[str, tuple[str, str, str]] = {}
-        self.static_funcs: list[GlobFuncDecl] = []
+
+        self.ctor = self.pkg_napi_info.ctors_map.get(d.name)
+        self.static_funcs = self.pkg_napi_info.static_funcs.get(d.name, [])
+        self.static_register_infos = self.pkg_napi_info.static_register_infos.get(
+            d.name,
+            {},
+        )
 
         self.dts_class_parent: IfaceExtendDecl | None = None
         self.dts_iface_parents: list[IfaceExtendDecl] = []
@@ -916,10 +955,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"return ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}, ::taihe::platform::napi::NapiObject>(env, napi_input);;",
             )
 
-    def gen_invoke_operator(
-        self,
-        target: CSourceWriter,
-    ):
+    def gen_invoke_operator(self, target: CSourceWriter):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
         method_params = []
         method_args = []
@@ -952,10 +988,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f", std::forward<decltype({method_arg})>({method_arg})",
                     )
 
-    def write_sync_call_lambda(
-        self,
-        target: CSourceWriter,
-    ):
+    def write_sync_call_lambda(self, target: CSourceWriter):
         cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
         method_params = ["napi_env env", "napi_ref ref"]
         method_args = []
@@ -1033,7 +1066,14 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"TH_NAPI_ASSUME_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, []([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) -> napi_value {{",
                 f"}}, cpp_ptr, &napi_result));",
             ):
-                self.gen_func_content(target)
+                target.writelns(
+                    f"{self.cpp_info.as_owner}* cpp_cb;",
+                    f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, nullptr, reinterpret_cast<void**>(&cpp_cb)));",
+                )
+                self.gen_func_content(
+                    target,
+                    "cpp_cb",
+                )
             with target.indented(
                 f"TH_NAPI_ASSUME_CALL(env, napi_add_finalizer(env, napi_result, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr));",
@@ -1048,29 +1088,61 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
     def gen_func_content(
         self,
         target: CSourceWriter,
+        obj_ptr: str,
     ):
-        is_noexcept = CallbackAbiInfo.get(self.am, self.type).is_noexcept
-        target.writelns(
-            f"{self.cpp_info.as_owner}* cpp_cb;",
-            f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, nullptr, reinterpret_cast<void**>(&cpp_cb)));",
+        cb_abi_info = CallbackAbiInfo.get(self.am, self.type)
+        self.gen_sync_func_content(
+            target,
+            obj_ptr,
+            is_noexcept=cb_abi_info.is_noexcept,
         )
+
+    def get_cpp_func_invoke(self, obj_ptr: str, cpp_exprs: list[str]):
+        cpp_exprs_str = ", ".join(cpp_exprs)
+        return f"(*{obj_ptr})({cpp_exprs_str})"
+
+    def get_cpp_result_type(self, is_noexcept: bool) -> str:
+        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+            cpp_ty = TypeCppInfo.get(self.am, return_ty).as_owner
+        else:
+            cpp_ty = "void"
+        if not is_noexcept:
+            cpp_ty = f"::taihe::expected<{cpp_ty}, ::taihe::error>"
+        return cpp_ty
+
+    def gen_read_func_params(self, target: CSourceWriter, args: str) -> list[str]:
+        cpp_exprs = []
+        for index, param in enumerate(self.type.ref.params):
+            from_napi = f"from_napi_arg_{param.name}"
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+            param_ty_napi_info.gen_from_napi(target, from_napi)
+            cpp_exprs.append(f"TH_TRY_INTO_NAPI(env, {from_napi}(env, {args}[{index}]))")  # fmt: skip
+        return cpp_exprs
+
+    def gen_sync_func_content(
+        self,
+        target: CSourceWriter,
+        obj_ptr: str,
+        *,
+        is_noexcept: bool,
+    ):
         argc = len(self.type.ref.params)
         target.writelns(
             f"size_t argc = {argc};",
             f"napi_value args[{argc}] = {{}};",
             f"TH_NAPI_ASSUME_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));",
         )
-        cpp_exprs = self._read_func_params(target, "args")
-        result_storage_type = self._get_cpp_result_type(is_noexcept)
-        cpp_exprs_str = ", ".join(cpp_exprs)
+        cpp_exprs = self.gen_read_func_params(target, "args")
+        result_storage_type = self.get_cpp_result_type(is_noexcept)
+        func_call = self.get_cpp_func_invoke(obj_ptr, cpp_exprs)
         result = "cpp_result"
         if result_storage_type == "void":
             target.writelns(
-                f"(*cpp_cb)({cpp_exprs_str});",
+                f"{func_call};",
             )
         else:
             target.writelns(
-                f"{result_storage_type} {result} = (*cpp_cb)({cpp_exprs_str});",
+                f"{result_storage_type} {result} = {func_call};",
             )
         if not is_noexcept:
             with target.indented(
@@ -1093,31 +1165,6 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
             target.writelns(
                 f"return nullptr;",
             )
-
-    def _get_cpp_result_type(
-        self,
-        is_noexcept: bool,
-    ) -> str:
-        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-            cpp_ty = TypeCppInfo.get(self.am, return_ty).as_owner
-        else:
-            cpp_ty = "void"
-        if not is_noexcept:
-            cpp_ty = f"::taihe::expected<{cpp_ty}, ::taihe::error>"
-        return cpp_ty
-
-    def _read_func_params(
-        self,
-        target: CSourceWriter,
-        args: str,
-    ) -> list[str]:
-        cpp_exprs = []
-        for index, param in enumerate(self.type.ref.params):
-            from_napi = f"from_napi_arg_{param.name}"
-            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
-            param_ty_napi_info.gen_from_napi(target, from_napi)
-            cpp_exprs.append(f"TH_TRY_INTO_NAPI(env, {from_napi}(env, {args}[{index}]))")  # fmt: skip
-        return cpp_exprs
 
 
 class EnumTypeNapiInfo(TypeNapiInfo):
