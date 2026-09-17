@@ -312,9 +312,9 @@ public:
     }
 
     template<typename Handler>
-    void on_complete(Handler &&handler) const &
+    void on_complete(Handler handler) const &
     {
-        return on_complete<Handler, Handler>(std::forward<Handler>(handler));
+        return on_complete<Handler, Handler>(std::move(handler));
     }
 
     template<typename Handler, typename... Args>
@@ -325,9 +325,9 @@ public:
     }
 
     template<typename Handler>
-    void on_complete(Handler &&handler) &&
+    void on_complete(Handler handler) &&
     {
-        return std::move(*this).template on_complete<Handler, Handler>(std::forward<Handler>(handler));
+        return std::move(*this).template on_complete<Handler, Handler>(std::move(handler));
     }
 };
 
@@ -410,9 +410,9 @@ future<Result> make_ready_future(Args &&...args)
 }
 
 template<typename Result>
-future<Result> make_ready_future(Result &&result)
+future<Result> make_ready_future(Result result)
 {
-    return make_ready_future<Result, Result>(std::forward<Result>(result));
+    return make_ready_future<Result, Result>(std::move(result));
 }
 
 template<typename Result, typename Handler, typename... Args>
@@ -424,9 +424,9 @@ completer<Result> make_callback_completer(Args &&...args)
 }
 
 template<typename Result, typename Handler>
-completer<Result> make_callback_completer(Handler &&handler)
+completer<Result> make_callback_completer(Handler handler)
 {
-    return make_callback_completer<Result, Handler, Handler>(std::forward<Handler>(handler));
+    return make_callback_completer<Result, Handler, Handler>(std::move(handler));
 }
 }  // namespace taihe
 

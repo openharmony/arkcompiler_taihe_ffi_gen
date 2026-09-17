@@ -13,7 +13,31 @@
  * limitations under the License.
  */
 
-function StringTest(input: String): String;
-function TaiheU8StrTest(): String;
-function TaiheU16StrTest(): String;
-function CommonStringTest(): String;
+enum U8StringEnum: @encoding("utf-8") String {
+    FOO = "foo",
+    BAR = "bar",
+}
+
+enum U16StringEnum: @encoding("utf-16") String {
+    FOO = "foo",
+    BAR = "bar",
+}
+
+enum CommonStringEnum: @encoding("common") String {
+    FOO = "foo",
+    BAR = "bar",
+}
+
+function U8StringEnumTest(e: U8StringEnum): U8StringEnum;
+function U16StringEnumTest(e: U16StringEnum): U16StringEnum;
+function CommonStringEnumTest(e: CommonStringEnum): CommonStringEnum;
+
+function StringTest(input: @encoding("utf-8") String): @encoding("utf-8") String;
+function U16StringTest(input: @encoding("utf-16") String): @encoding("utf-16") String;
+function CommonStringConvert(input: @encoding("common") String): @encoding("common") String;
+function TaiheU8StrTest(): @encoding("utf-8") String;
+function TaiheU16StrTest(): @encoding("utf-16") String;
+function CommonStringTest(): @encoding("common") String;
+function EqualProjectedStrings(utf8: @encoding("utf-8") String, utf16: @encoding("utf-16") String): bool;
+function Utf8ToUtf16(input: @encoding("utf-8") String): @encoding("utf-16") String;
+function Utf16ToUtf8(input: @encoding("utf-16") String): @encoding("utf-8") String;

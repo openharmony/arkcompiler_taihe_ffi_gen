@@ -44,13 +44,14 @@ AnyAttribute
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
-from dataclasses import MISSING, dataclass, fields
+from collections.abc import Callable, Iterable
+from dataclasses import MISSING, Field, dataclass, fields
 from dataclasses import field as datafield
 from difflib import get_close_matches
+from enum import Enum
 from itertools import chain
 from types import UnionType
-from typing import Any, ClassVar, Generic, TypeVar, cast
+from typing import Any, ClassVar, Generic, Literal, TypeVar, Union, get_args, get_origin
 
 from typing_extensions import Self, override
 
@@ -68,6 +69,8 @@ from taihe.utils.exceptions import (
     AttrTargetError,
 )
 from taihe.utils.sources import SourceLocation
+
+RawValueType = float | bool | int | str
 
 
 @dataclass
@@ -99,7 +102,7 @@ class Argument:
     key: str | None
     """The name of the argument if it is a keyword argument, or None for positional arguments."""
 
-    value: float | bool | int | str
+    value: RawValueType
     """The evaluated constant value of the argument."""
 
 
@@ -248,6 +251,126 @@ class AbstractCheckedAttribute(AnyAttribute, ABC):
         """
 
 
+@dataclass(frozen=True)
+class ConversionFailure:
+    message: str
+    children: tuple["ConversionFailure", ...] = ()
+
+
+class CustomConvertible(ABC):
+    @classmethod
+    @abstractmethod
+    def from_value(cls, value: RawValueType) -> Self | ConversionFailure: ...
+
+    @abstractmethod
+    def to_value(self) -> RawValueType: ...
+
+
+_FromValue = Callable[[RawValueType], Any | ConversionFailure]
+_FieldInfo = tuple[Field[Any], _FromValue]
+
+
+def _from_value_from_hint(hint: Any) -> _FromValue:
+    if isinstance(hint, type):
+        if issubclass(hint, CustomConvertible):
+            return hint.from_value
+
+        if issubclass(hint, Enum):
+            args = [member.value for member in hint]
+            if not args:
+                raise TypeError(f"Enum {hint.__name__} has no members")
+            if any(not isinstance(arg, RawValueType) for arg in args):
+                raise TypeError(f"Enum {hint.__name__} has non-primitive values")
+
+            def enum_from_value(
+                value: RawValueType,
+            ) -> Enum | ConversionFailure:
+                if any(type(value) is type(arg) and value == arg for arg in args):
+                    return hint(value)
+                members = ", ".join(map(repr, args))
+                return ConversionFailure(
+                    message=f"Value is not compatible with any valid member of enum {hint.__name__}: {members}",
+                )
+
+            return enum_from_value
+
+        if hint in (bool, int, str, float):
+
+            def value_from_value(
+                value: RawValueType,
+            ) -> RawValueType | ConversionFailure:
+                # Do not use isinstance here because bool is subclass of int
+                if type(value) is hint:
+                    return value
+                return ConversionFailure(
+                    message=f"Value is not of type {hint.__name__}",
+                )
+
+            return value_from_value
+
+    if origin := get_origin(hint):
+        args = get_args(hint)
+
+        if origin is Union or origin is UnionType:
+            args = [arg for arg in args if arg is not type(None)]
+            if not args:
+                raise TypeError(f"Union type {hint} has no valid types")
+            from_values = [_from_value_from_hint(arg) for arg in args]
+            if len(args) == 1:
+                return from_values[0]
+
+            def union_from_value(
+                value: RawValueType,
+            ) -> Any | ConversionFailure:
+                children: list[ConversionFailure] = []
+                for from_value in from_values:
+                    result = from_value(value)
+                    if not isinstance(result, ConversionFailure):
+                        return result
+                    children.append(result)
+                return ConversionFailure(
+                    message="Value is not compatible with any type in Union",
+                    children=tuple(children),
+                )
+
+            return union_from_value
+
+        if origin is Literal:
+            args = [arg for arg in args if arg is not None]
+            if not args:
+                raise TypeError(f"Literal type {hint} has no valid values")
+            if any(not isinstance(arg, RawValueType) for arg in args):
+                raise TypeError(f"Literal type {hint} has non-primitive values")
+
+            def literal_from_value(
+                value: RawValueType,
+            ) -> Any | ConversionFailure:
+                if any(type(value) is type(arg) and value == arg for arg in args):
+                    return value
+                members = ", ".join(map(repr, args))
+                return ConversionFailure(
+                    message=f"Value is not one of the allowed literals: {members}",
+                )
+
+            return literal_from_value
+
+    raise TypeError(f"Unsupported type hint: {hint}")
+
+
+def _to_value(attr: Any) -> RawValueType | None:
+    if attr is None:
+        return None
+    if isinstance(attr, CustomConvertible):
+        return attr.to_value()
+    if isinstance(attr, Enum):
+        value = attr.value
+    else:
+        value = attr
+    if type(value) in (float, bool, int, str):
+        return value
+    raise TypeError(f"Unsupported attribute value type: {type(attr).__name__}")
+
+
 class AttributeGroupTag:
     pass
 
@@ -334,50 +457,54 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[_D]):
         Returns:
             An instance of the attribute on success, None on failure
         """
-        dataclass_arguments: dict[str, Any] = {}
-
+        args_fields: list[_FieldInfo] = []
+        kwargs_fields: dict[str, _FieldInfo] = {}
         for field in fields(cls):
-            if field.name == "loc":
-                # Special handling for the 'loc' field
-                dataclass_arguments["loc"] = loc
+            if field.name == "loc" or not field.init:
                 continue
-            if field.init is False:
-                # Skip fields that are not intended for initialization
-                continue
-            if field.name in kwargs:
-                # If the field is in keyword arguments, use that value
-                arg = kwargs.pop(field.name)
-            elif field.kw_only:
-                # If no value is provided and no default, emit an error
-                if field.default is not MISSING or field.default_factory is not MISSING:
-                    continue
-                dm.emit(AttrArgMissingError(cls.NAME, field.name, False, loc=loc))
-                return None
-            elif args:
-                # If the field is positional, pop the first positional argument
-                arg = args.pop(0)
+            from_value = _from_value_from_hint(field.type)
+            field_info = field, from_value
+            if field.kw_only is True:
+                kwargs_fields[field.name] = field_info
             else:
-                # If no value is provided and no default, emit an error
-                if field.default is not MISSING or field.default_factory is not MISSING:
-                    continue
-                dm.emit(AttrArgMissingError(cls.NAME, field.name, False, loc=loc))
+                args_fields.append(field_info)
+
+        dataclass_args: list[Any] = []
+        for arg in args:
+            if not args_fields:
+                dm.emit(AttrArgUnrequiredError(cls.NAME, arg))
                 return None
-
-            # Validate the type of the provided value
-            field_type = cast(type | UnionType, field.type)
-            if not isinstance(arg.value, field_type):
-                dm.emit(AttrArgTypeError(cls.NAME, field.name, field_type, arg))
+            field, from_value = args_fields.pop(0)
+            attr = from_value(arg.value)
+            if isinstance(attr, ConversionFailure):
+                dm.emit(AttrArgTypeError(cls.NAME, field.name, arg, attr))
                 return None
+            dataclass_args.append(attr)
 
-            # Store the validated value in the dataclass kwargs
-            dataclass_arguments[field.name] = arg.value
+        for field_info in args_fields:
+            kwargs_fields[field_info[0].name] = field_info
 
-        # If there are any remaining keyword arguments, emit an error
-        for attr_arg in chain(args, kwargs.values()):
-            dm.emit(AttrArgUnrequiredError(cls.NAME, attr_arg))
+        dataclass_kwargs: dict[str, Any] = {}
+        for name, arg in kwargs.items():
+            if name not in kwargs_fields:
+                dm.emit(AttrArgUnrequiredError(cls.NAME, arg))
+                return None
+            field, from_value = kwargs_fields.pop(name)
+            attr = from_value(arg.value)
+            if isinstance(attr, ConversionFailure):
+                dm.emit(AttrArgTypeError(cls.NAME, field.name, arg, attr))
+                return None
+            dataclass_kwargs[field.name] = attr
+
+        has_missing = False
+        for field, _ in kwargs_fields.values():
+            if field.default is MISSING and field.default_factory is MISSING:
+                dm.emit(AttrArgMissingError(cls.NAME, field.name, loc=loc))
+                has_missing = True
+        if has_missing:
             return None
 
-        return cls(**dataclass_arguments)
+        return cls(*dataclass_args, **dataclass_kwargs, loc=loc)
 
     @override
     def check_context(self, parent: Decl, dm: DiagnosticsManager) -> None:
@@ -413,24 +540,33 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[_D]):
 
     @override
     def get_args(self) -> Iterable[Argument]:
-        positional_args: list[Argument] = []
-        keyword_args: list[Argument] = []
+        args: list[tuple[str, float | int | str | bool]] = []
+        kwargs: list[tuple[str, float | int | str | bool]] = []
+        dfargs: list[tuple[str, float | int | str | bool]] = []
+        has_skipped_default_value = False
         for field in fields(self):
-            if field.name == "loc":
-                # Skip the 'loc' field in the argument list
+            if field.name == "loc" or not field.init:
                 continue
-            if field.init is False:
-                # Skip fields that are not intended for initialization
-                continue
-            value = getattr(self, field.name, None)
+            attr = getattr(self, field.name, None)
+            value = _to_value(attr)
             if value is None:
+                has_skipped_default_value = True
                 continue
-            if field.kw_only:
-                keyword_args.append(Argument(field.name, value, loc=None))
+            pair = field.name, value
+            if field.kw_only is True:
+                kwargs.append(pair)
+            elif field.default is MISSING and field.default_factory is MISSING:
+                args.append(pair)
             else:
-                positional_args.append(Argument(None, value, loc=None))
-        yield from positional_args
-        yield from keyword_args
+                dfargs.append(pair)
+        if has_skipped_default_value:
+            kwargs.extend(dfargs)
+        else:
+            args.extend(dfargs)
+        for _, value in args:
+            yield Argument(None, value, loc=None)
+        for name, value in kwargs:
+            yield Argument(name, value, loc=None)
 
 
 class TypedAttribute(AutoCheckedAttribute[_D]):

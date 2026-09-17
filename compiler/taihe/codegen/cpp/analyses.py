@@ -18,6 +18,10 @@ from abc import ABC
 from typing_extensions import override
 
 from taihe.codegen.abi.analyses import CallbackAbiInfo
+from taihe.codegen.cpp.attributes import (
+    Encoding,
+    EncodingAttr,
+)
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -41,6 +45,10 @@ from taihe.semantics.types import (
     ScalarKinds,
     ScalarType,
     SetType,
+    SharedArrayType,
+    SharedMapType,
+    SharedSetType,
+    SharedVectorType,
     StringType,
     StructType,
     UnionType,
@@ -244,13 +252,31 @@ class OpaqueTypeCppInfo(TypeCppInfo):
         self.as_owner = "uintptr_t"
 
 
-class StringTypeCppInfo(TypeCppInfo):
+class Utf8StringTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         self.decl_headers = ["taihe/string.hpp"]
         self.defn_headers = ["taihe/string.hpp"]
         self.impl_headers = ["taihe/string.hpp"]
         self.as_owner = "::taihe::string"
         self.as_param = "::taihe::string_view"
+
+
+class Utf16StringTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: StringType):
+        self.decl_headers = ["taihe/string.hpp"]
+        self.defn_headers = ["taihe/string.hpp"]
+        self.impl_headers = ["taihe/string.hpp"]
+        self.as_owner = "::taihe::u16string"
+        self.as_param = "::taihe::u16string_view"
+
+
+class CommonStringTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: StringType):
+        self.decl_headers = ["taihe/string.hpp"]
+        self.defn_headers = ["taihe/string.hpp"]
+        self.impl_headers = ["taihe/string.hpp"]
+        self.as_owner = "::taihe::common_string"
+        self.as_param = "::taihe::common_string_view"
 
 
 class ArrayTypeCppInfo(TypeCppInfo):
@@ -318,6 +344,59 @@ class SetTypeCppInfo(TypeCppInfo):
         self.impl_headers = ["taihe/set.hpp", *key_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::set<{key_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
+
+
+class SharedVectorTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: SharedVectorType) -> None:
+        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+        self.decl_headers = ["taihe/shared_vector.hpp", *item_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/shared_vector.hpp", *item_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/shared_vector.hpp", *item_ty_cpp_info.impl_headers]
+        self.as_owner = f"::taihe::shared_vector<{item_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::shared_vector_view<{item_ty_cpp_info.as_owner}>"
+
+
+class SharedMapTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: SharedMapType) -> None:
+        key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
+        val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
+        self.decl_headers = [
+            "taihe/shared_map.hpp",
+            *key_ty_cpp_info.decl_headers,
+            *val_ty_cpp_info.decl_headers,
+        ]
+        self.defn_headers = [
+            "taihe/shared_map.hpp",
+            *key_ty_cpp_info.decl_headers,
+            *val_ty_cpp_info.decl_headers,
+        ]
+        self.impl_headers = [
+            "taihe/shared_map.hpp",
+            *key_ty_cpp_info.impl_headers,
+            *val_ty_cpp_info.impl_headers,
+        ]
+        self.as_owner = f"::taihe::shared_map<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::shared_map_view<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
+
+
+class SharedSetTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: SharedSetType) -> None:
+        key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
+        self.decl_headers = ["taihe/shared_set.hpp", *key_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/shared_set.hpp", *key_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/shared_set.hpp", *key_ty_cpp_info.impl_headers]
+        self.as_owner = f"::taihe::shared_set<{key_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::shared_set_view<{key_ty_cpp_info.as_owner}>"
+
+
+class SharedArrayTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: SharedArrayType) -> None:
+        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+        self.decl_headers = ["taihe/shared_array.hpp"]
+        self.defn_headers = ["taihe/shared_array.hpp"]
+        self.impl_headers = ["taihe/shared_array.hpp"]
+        self.as_owner = f"::taihe::shared_array<{item_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::shared_array_view<{item_ty_cpp_info.as_owner}>"
 
 
 class CompleterTypeCppInfo(TypeCppInfo):
@@ -430,7 +509,15 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
 
     @override
     def visit_string_type(self, t: StringType) -> TypeCppInfo:
-        return StringTypeCppInfo(self.am, t)
+        if encoding_attr := EncodingAttr.get(t.ref):
+            match encoding_attr.value:
+                case Encoding.UTF8:
+                    return Utf8StringTypeCppInfo(self.am, t)
+                case Encoding.UTF16:
+                    return Utf16StringTypeCppInfo(self.am, t)
+                case Encoding.COMMON:
+                    return CommonStringTypeCppInfo(self.am, t)
+        return Utf8StringTypeCppInfo(self.am, t)
 
     @override
     def visit_array_type(self, t: ArrayType) -> TypeCppInfo:
@@ -451,6 +538,22 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeCppInfo:
         return SetTypeCppInfo(self.am, t)
+
+    @override
+    def visit_shared_vector_type(self, t: SharedVectorType) -> TypeCppInfo:
+        return SharedVectorTypeCppInfo(self.am, t)
+
+    @override
+    def visit_shared_map_type(self, t: SharedMapType) -> TypeCppInfo:
+        return SharedMapTypeCppInfo(self.am, t)
+
+    @override
+    def visit_shared_set_type(self, t: SharedSetType) -> TypeCppInfo:
+        return SharedSetTypeCppInfo(self.am, t)
+
+    @override
+    def visit_shared_array_type(self, t: SharedArrayType) -> TypeCppInfo:
+        return SharedArrayTypeCppInfo(self.am, t)
 
     @override
     def visit_completer_type(self, t: CompleterType) -> TypeCppInfo:

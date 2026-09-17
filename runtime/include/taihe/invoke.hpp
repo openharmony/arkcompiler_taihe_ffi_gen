@@ -109,9 +109,10 @@ template<auto function, typename Return, typename Error, typename... Params>
 struct function_calling_convention<function, taihe::expected<Return, Error>, Params...> {
     static void abi_func(as_abi_t<Params>... abi_params, as_abi_t<Error> **abi_err, as_abi_t<Return> *abi_ret)
     {
+        // taihe::expected<Return, Error> can be implicitly converted from Return
         taihe::expected<Return, Error> res = function(from_abi<Params>(abi_params)...);
         if (!res.has_value()) {
-            *abi_err = new as_abi_t<Error>;
+            *abi_err = reinterpret_cast<as_abi_t<Error> *>(malloc(sizeof(as_abi_t<Error>)));
             **abi_err = into_abi<Error>(res.error());
         } else {
             *abi_ret = into_abi<Return>(res.value());
@@ -130,38 +131,61 @@ struct function_calling_convention<function, taihe::expected<void, Error>, Param
         } else {
             taihe::expected<void, Error> res = function(from_abi<Params>(abi_params)...);
             if (!res.has_value()) {
-                *abi_err = new as_abi_t<Error>;
+                *abi_err = reinterpret_cast<as_abi_t<Error> *>(malloc(sizeof(as_abi_t<Error>)));
                 **abi_err = into_abi<Error>(res.error());
             }
         }
     }
 };
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+template<typename ImplBlock, auto method, typename InterfaceView>
+struct impl_method_invoker {
+    object_view<ImplBlock, InterfaceView> self;
+
+    explicit impl_method_invoker(InterfaceView obj)
+        : self(static_cast<ImplBlock *>(obj.m_handle.data_ptr), obj.m_handle.vtbl_ptr)
+    {
+    }
+
+    template<typename... Params>
+    decltype(auto) operator()(Params &&...params) const
+    {
+        if constexpr (std::is_member_function_pointer_v<decltype(method)>) {
+            return (*self.*method)(std::forward<Params>(params)...);
+        } else {
+            return method(self, std::forward<Params>(params)...);
+        }
+    }
+};
+
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
 struct method_calling_convention {
     static void abi_func(as_abi_t<InterfaceView> abi_obj, as_abi_t<Params>... abi_params, as_abi_t<Return> *abi_ret)
     {
-        *abi_ret = into_abi<Return>((cast_data_ptr<Impl>(abi_obj.data_ptr)->*method)(from_abi<Params>(abi_params)...));
+        impl_method_invoker<ImplBlock, method, InterfaceView> function(from_abi<InterfaceView>(abi_obj));
+        *abi_ret = into_abi<Return>(function(from_abi<Params>(abi_params)...));
     }
 };
 
-template<typename Impl, auto method, typename InterfaceView, typename... Params>
-struct method_calling_convention<Impl, method, void, InterfaceView, Params...> {
+template<typename ImplBlock, auto method, typename InterfaceView, typename... Params>
+struct method_calling_convention<ImplBlock, method, void, InterfaceView, Params...> {
     static void abi_func(as_abi_t<InterfaceView> abi_obj, as_abi_t<Params>... abi_params)
     {
-        (cast_data_ptr<Impl>(abi_obj.data_ptr)->*method)(from_abi<Params>(abi_params)...);
+        impl_method_invoker<ImplBlock, method, InterfaceView> function(from_abi<InterfaceView>(abi_obj));
+        function(from_abi<Params>(abi_params)...);
     }
 };
 
-template<typename Impl, auto method, typename Return, typename Error, typename InterfaceView, typename... Params>
-struct method_calling_convention<Impl, method, taihe::expected<Return, Error>, InterfaceView, Params...> {
+template<typename ImplBlock, auto method, typename Return, typename Error, typename InterfaceView, typename... Params>
+struct method_calling_convention<ImplBlock, method, taihe::expected<Return, Error>, InterfaceView, Params...> {
     static void abi_func(as_abi_t<InterfaceView> abi_obj, as_abi_t<Params>... abi_params, as_abi_t<Error> **abi_err,
                          as_abi_t<Return> *abi_ret)
     {
-        taihe::expected<Return, Error> res =
-            (cast_data_ptr<Impl>(abi_obj.data_ptr)->*method)(from_abi<Params>(abi_params)...);
+        impl_method_invoker<ImplBlock, method, InterfaceView> function(from_abi<InterfaceView>(abi_obj));
+        // taihe::expected<Return, Error> can be implicitly converted from Return
+        taihe::expected<Return, Error> res = function(from_abi<Params>(abi_params)...);
         if (!res.has_value()) {
-            *abi_err = new as_abi_t<Error>;
+            *abi_err = reinterpret_cast<as_abi_t<Error> *>(malloc(sizeof(as_abi_t<Error>)));
             **abi_err = into_abi<Error>(res.error());
         } else {
             *abi_ret = into_abi<Return>(res.value());
@@ -169,53 +193,55 @@ struct method_calling_convention<Impl, method, taihe::expected<Return, Error>, I
     }
 };
 
-template<typename Impl, auto method, typename Error, typename InterfaceView, typename... Params>
-struct method_calling_convention<Impl, method, taihe::expected<void, Error>, InterfaceView, Params...> {
+template<typename ImplBlock, auto method, typename Error, typename InterfaceView, typename... Params>
+struct method_calling_convention<ImplBlock, method, taihe::expected<void, Error>, InterfaceView, Params...> {
     static void abi_func(as_abi_t<InterfaceView> abi_obj, as_abi_t<Params>... abi_params, as_abi_t<Error> **abi_err)
     {
-        using return_t = decltype((cast_data_ptr<Impl>(abi_obj.data_ptr)->*method)(from_abi<Params>(abi_params)...));
+        impl_method_invoker<ImplBlock, method, InterfaceView> function(from_abi<InterfaceView>(abi_obj));
+        using return_t = decltype(function(from_abi<Params>(abi_params)...));
         if constexpr (std::is_same_v<return_t, void>) {
-            (cast_data_ptr<Impl>(abi_obj.data_ptr)->*method)(from_abi<Params>(abi_params)...);
+            function(from_abi<Params>(abi_params)...);
             return;
         } else {
-            taihe::expected<void, Error> res =
-                (cast_data_ptr<Impl>(abi_obj.data_ptr)->*method)(from_abi<Params>(abi_params)...);
+            taihe::expected<void, Error> res = function(from_abi<Params>(abi_params)...);
             if (!res.has_value()) {
-                *abi_err = new as_abi_t<Error>;
+                *abi_err = reinterpret_cast<as_abi_t<Error> *>(malloc(sizeof(as_abi_t<Error>)));
                 **abi_err = into_abi<Error>(res.error());
             }
         }
     }
 };
 
-template<bool use_default, typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+template<bool use_default, typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
 struct method_as_abi_func;
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
-struct method_as_abi_func<false, Impl, method, Return, InterfaceView, Params...> {
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
+struct method_as_abi_func<false, ImplBlock, method, Return, InterfaceView, Params...> {
     static constexpr as_abi_func_t<Return, InterfaceView, Params...> value =
-        &method_calling_convention<Impl, method, Return, InterfaceView, Params...>::abi_func;
+        &method_calling_convention<ImplBlock, method, Return, InterfaceView, Params...>::abi_func;
 };
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
-struct method_as_abi_func<true, Impl, method, Return, InterfaceView, Params...> {
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
+struct method_as_abi_func<true, ImplBlock, method, Return, InterfaceView, Params...> {
     static constexpr as_abi_func_t<Return, InterfaceView, Params...> value = nullptr;
 };
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
-using method_as_abi_func_required = method_as_abi_func<false, Impl, method, Return, InterfaceView, Params...>;
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
+using method_as_abi_func_required = method_as_abi_func<false, ImplBlock, method, Return, InterfaceView, Params...>;
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
-using method_as_abi_func_optional = method_as_abi_func<std::is_same_v<decltype(method), taihe::use_default_t const *>,
-                                                       Impl, method, Return, InterfaceView, Params...>;
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
+using method_as_abi_func_optional = method_as_abi_func<std::is_invocable_r_v<use_default_t, decltype(method)>,
+                                                       ImplBlock, method, Return, InterfaceView, Params...>;
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+// usage: taihe::method_as_abi_func_required<FooImpl, &FooImpl::method, Return, IFoo, Params...>
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
 constexpr as_abi_func_t<Return, InterfaceView, Params...> method_as_abi_func_required_v =
-    method_as_abi_func_required<Impl, method, Return, InterfaceView, Params...>::value;
+    method_as_abi_func_required<ImplBlock, method, Return, InterfaceView, Params...>::value;
 
-template<typename Impl, auto method, typename Return, typename InterfaceView, typename... Params>
+// usage: taihe::method_as_abi_func_optional<FooImpl, &FooImpl::method, Return, IFoo, Params...>
+template<typename ImplBlock, auto method, typename Return, typename InterfaceView, typename... Params>
 constexpr as_abi_func_t<Return, InterfaceView, Params...> method_as_abi_func_optional_v =
-    method_as_abi_func_optional<Impl, method, Return, InterfaceView, Params...>::value;
+    method_as_abi_func_optional<ImplBlock, method, Return, InterfaceView, Params...>::value;
 
 template<typename Return, typename... Params>
 struct call_abi_func_t {
@@ -246,8 +272,8 @@ struct call_abi_func_t<taihe::expected<Return, Error>, Params...> {
         abi_func(into_abi<Params>(params)..., &abi_err, &abi_ret);
         if (abi_err) {
             Error err = from_abi<Error>(*abi_err);
-            delete abi_err;
-            return taihe::unexpected<Error>(err);
+            free(abi_err);
+            return taihe::unexpected<Error>(std::forward<Error>(err));
         } else {
             return from_abi<Return>(abi_ret);
         }
@@ -263,8 +289,8 @@ struct call_abi_func_t<taihe::expected<void, Error>, Params...> {
         abi_func(into_abi<Params>(params)..., &abi_err);
         if (abi_err) {
             Error err = from_abi<Error>(*abi_err);
-            delete abi_err;
-            return taihe::unexpected<Error>(err);
+            free(abi_err);
+            return taihe::unexpected<Error>(std::forward<Error>(err));
         } else {
             return {};
         }

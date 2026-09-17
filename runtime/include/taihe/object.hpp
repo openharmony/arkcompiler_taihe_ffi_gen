@@ -21,52 +21,414 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
-//////////////////////
-// Raw Data Handler //
-//////////////////////
+//////////////////////////////////////////
+// Interface Type Traits Implementation //
+//////////////////////////////////////////
 
 namespace taihe {
-struct data_view;
-struct data_holder;
+template<typename T, typename = void>
+struct is_interface_type : std::false_type {};
 
-struct data_view {
-    DataBlockHead *data_ptr;
+template<typename T>
+struct is_interface_type<
+    T, std::void_t<typename T::view_type, typename T::holder_type, typename T::vtable_type, typename T::abi_type,
+                   decltype(typename T::abi_type {
+                       std::declval<typename T::vtable_type const *>(),
+                       std::declval<DataBlockHead *>(),
+                   }),
+                   decltype(std::declval<typename T::abi_type>().vtbl_ptr),
+                   decltype(std::declval<typename T::abi_type>().data_ptr),
+                   decltype(T(std::declval<typename T::abi_type>())), decltype(std::declval<T>().m_handle)>>
+    : std::conjunction<
+          // handle type member checks
+          std::is_same<decltype(std::declval<typename T::abi_type>().vtbl_ptr), typename T::vtable_type const *>,
+          std::is_same<decltype(std::declval<typename T::abi_type>().data_ptr), DataBlockHead *>,
+          // interface type member checks
+          std::is_same<decltype(std::declval<T>().m_handle), typename T::abi_type>> {};
 
-    explicit data_view(DataBlockHead *other_data_ptr) : data_ptr(other_data_ptr)
+template<typename T>
+constexpr inline bool is_interface_type_v = is_interface_type<T>::value;
+
+template<typename T, typename = void>
+struct is_interface_view_type : std::false_type {};
+
+template<typename InterfaceType>
+struct is_interface_view_type<InterfaceType, std::enable_if_t<is_interface_type_v<InterfaceType>>>
+    : std::is_same<typename InterfaceType::view_type, InterfaceType> {};
+
+template<typename T>
+constexpr inline bool is_interface_view_type_v = is_interface_view_type<T>::value;
+
+template<typename T, typename = void>
+struct is_interface_holder_type : std::false_type {};
+
+template<typename InterfaceType>
+struct is_interface_holder_type<InterfaceType, std::enable_if_t<is_interface_type_v<InterfaceType>>>
+    : std::is_same<typename InterfaceType::holder_type, InterfaceType> {};
+
+template<typename T>
+constexpr inline bool is_interface_holder_type_v = is_interface_holder_type<T>::value;
+
+template<typename T, typename = void>
+struct is_impl_block_type : std::false_type {};
+
+template<typename T>
+struct is_impl_block_type<T, std::void_t<typename T::impl_type, decltype(std::declval<T>().get_impl_ptr())>>
+    : std::conjunction<std::is_base_of<DataBlockHead, T>,
+                       std::is_same<decltype(std::declval<T>().get_impl_ptr()), typename T::impl_type *>> {};
+
+template<typename T>
+constexpr inline bool is_impl_block_type_v = is_impl_block_type<T>::value;
+
+template<typename VTableType>
+struct vtable_helper {
+    template<typename VTableDest>
+    static VTableDest const &as_ref(VTableDest const &vtbl_ref)
     {
+        return vtbl_ref;
+    }
+
+    template<typename VTableDest>
+    static VTableDest const &as_ref(VTableDest &&vtbl_ref) = delete;
+
+    template<typename VTableDest, typename = void>
+    struct is_static_castable_to : std::false_type {};
+
+    template<typename VTableDest>
+    struct is_static_castable_to<VTableDest,
+                                 std::void_t<decltype(as_ref<VTableDest>(std::declval<VTableType const &>()))>>
+        : std::true_type {};
+
+    template<typename VTableDest, std::enable_if_t<is_static_castable_to<VTableDest>::value, int> = 0>
+    static VTableDest const *static_cast_to(VTableType const *vtbl_ptr)
+    {
+        if (vtbl_ptr == nullptr) {
+            return nullptr;
+        }
+        return &as_ref<VTableDest>(*vtbl_ptr);
     }
 };
 
-struct data_holder : public data_view {
-    explicit data_holder(DataBlockHead *other_data_ptr) : data_view(other_data_ptr)
+template<typename VTableType, typename = void>
+struct is_vtable_dynamic_castable_to : std::false_type {};
+
+template<typename VTableType>
+struct is_vtable_dynamic_castable_to<
+    VTableType, std::void_t<decltype(vtable_helper<VTableType>::dynamic_cast_from(std::declval<DataBlockHead *>()))>>
+    : std::is_same<decltype(vtable_helper<VTableType>::dynamic_cast_from(std::declval<DataBlockHead *>())),
+                   VTableType const *> {};
+
+template<typename VTableType>
+constexpr inline bool is_vtable_dynamic_castable_to_v = is_vtable_dynamic_castable_to<VTableType>::value;
+
+template<typename VTableType, typename VTableDest, typename = void>
+struct is_vtable_static_castable_from_to : std::false_type {};
+
+template<typename VTableType, typename VTableDest>
+struct is_vtable_static_castable_from_to<VTableType, VTableDest,
+                                         std::void_t<decltype(vtable_helper<VTableType>::template static_cast_to<
+                                                              VTableDest>(std::declval<VTableType const *>()))>>
+    : std::is_same<decltype(vtable_helper<VTableType>::template static_cast_to<VTableDest>(
+                       std::declval<VTableType const *>())),
+                   VTableDest const *> {};
+
+template<typename VTableType, typename VTableDest>
+constexpr inline bool is_vtable_static_castable_from_to_v =
+    is_vtable_static_castable_from_to<VTableType, VTableDest>::value;
+
+template<typename VTableDest, typename... VTableTypes>
+struct is_vtable_static_castable_to_from_any
+    : std::bool_constant<(is_vtable_static_castable_from_to_v<VTableTypes, VTableDest> || ...)> {};
+
+template<typename VTableDest, typename... VTableTypes>
+constexpr inline bool is_vtable_static_castable_to_from_any_v =
+    is_vtable_static_castable_to_from_any<VTableDest, VTableTypes...>::value;
+
+template<typename VTableDest, typename... VTableTypes,
+         std::enable_if_t<(is_vtable_static_castable_from_to_v<VTableTypes, VTableDest> || ...), int> = 0>
+VTableDest const *vtable_static_cast_to_from_any(VTableTypes const *...vtbl_ptrs)
+{
+    VTableDest const *dest_vtbl_ptr = nullptr;
+    bool success = ([&dest_vtbl_ptr, vtbl_ptrs] {
+        if constexpr (is_vtable_static_castable_from_to_v<VTableTypes, VTableDest>) {
+            dest_vtbl_ptr = vtable_helper<VTableTypes>::template static_cast_to<VTableDest>(vtbl_ptrs);
+            return true;
+        }
+        return false;
+    }() || ...);
+    return success ? dest_vtbl_ptr : nullptr;
+}
+}  // namespace taihe
+
+////////////////////////////////////////
+// Object View and Holder Definitions //
+////////////////////////////////////////
+
+namespace taihe {
+template<typename DataBlock, typename... InterfaceTypes>
+struct object_view;
+template<typename DataBlock, typename... InterfaceTypes>
+struct object_holder;
+
+template<typename DataBlock, typename... InterfaceTypes>
+struct object_view {
+    static_assert(std::is_base_of_v<DataBlockHead, DataBlock>, "DataBlock must be subclass of DataBlockHead.");
+    static_assert((is_interface_type_v<InterfaceTypes> && ...), "All InterfaceTypes must be interfaces.");
+
+    using data_block_type = DataBlock;
+    using view_type = object_view<DataBlock, InterfaceTypes...>;
+    using holder_type = object_holder<DataBlock, InterfaceTypes...>;
+
+    DataBlock *data_ptr;
+    std::tuple<typename InterfaceTypes::vtable_type const *...> vtbl_ptr_tuple;
+
+    template<typename InterfaceDest>
+    struct is_interface_static_castable_to
+        : is_vtable_static_castable_to_from_any<typename InterfaceDest::vtable_type,
+                                                typename InterfaceTypes::vtable_type...> {};
+
+    template<typename InterfaceDest>
+    static constexpr bool is_interface_static_castable_to_v = is_interface_static_castable_to<InterfaceDest>::value;
+
+    template<typename InterfaceDest>
+    typename InterfaceDest::vtable_type const *interface_static_cast_to() const
+    {
+        return std::apply(vtable_static_cast_to_from_any<typename InterfaceDest::vtable_type,
+                                                         typename InterfaceTypes::vtable_type...>,
+                          this->vtbl_ptr_tuple);
+    }
+
+    object_view() : data_ptr(nullptr), vtbl_ptr_tuple()
     {
     }
 
-    data_holder &operator=(data_holder other)
+    object_view(DataBlock *other_data_ptr,
+                std::tuple<typename InterfaceTypes::vtable_type const *...> other_vtbl_ptr_tuple)
+        : data_ptr(other_data_ptr), vtbl_ptr_tuple(other_vtbl_ptr_tuple)
+    {
+    }
+
+    explicit object_view(DataBlock *other_data_ptr, typename InterfaceTypes::vtable_type const *...other_vtbl_ptrs)
+        : data_ptr(other_data_ptr), vtbl_ptr_tuple(other_vtbl_ptrs...)
+    {
+    }
+
+    template<typename InterfaceView,
+             std::enable_if_t<std::conjunction_v<is_interface_view_type<InterfaceView>,
+                                                 is_interface_static_castable_to<InterfaceView>>,
+                              int> = 0>
+    operator InterfaceView() const &
+    {
+        typename InterfaceView::abi_type handle = {
+            this->interface_static_cast_to<InterfaceView>(),
+            this->data_ptr,
+        };
+        return InterfaceView(handle);
+    }
+
+    template<typename InterfaceHolder,
+             std::enable_if_t<std::conjunction_v<is_interface_holder_type<InterfaceHolder>,
+                                                 is_interface_static_castable_to<InterfaceHolder>>,
+                              int> = 0>
+    operator InterfaceHolder() const &
+    {
+        typename InterfaceHolder::abi_type handle = {
+            this->interface_static_cast_to<InterfaceHolder>(),
+            tobj_dup(this->data_ptr),
+        };
+        return InterfaceHolder(handle);
+    }
+
+    template<typename BaseBlock, typename... InterfaceBases,
+             std::enable_if_t<std::is_base_of_v<BaseBlock, DataBlock> &&
+                                  (is_interface_static_castable_to_v<InterfaceBases> && ...),
+                              int> = 0>
+    operator object_view<BaseBlock, InterfaceBases...>() const &
+    {
+        return object_view<BaseBlock, InterfaceBases...>(this->data_ptr,
+                                                         this->interface_static_cast_to<InterfaceBases>()...);
+    }
+
+    template<typename BaseBlock, typename... InterfaceBases,
+             std::enable_if_t<std::is_base_of_v<BaseBlock, DataBlock> &&
+                                  (is_interface_static_castable_to_v<InterfaceBases> && ...),
+                              int> = 0>
+    operator object_holder<BaseBlock, InterfaceBases...>() const &
+    {
+        return object_holder<BaseBlock, InterfaceBases...>(static_cast<DataBlock *>(tobj_dup(this->data_ptr)),
+                                                           this->interface_static_cast_to<InterfaceBases>()...);
+    }
+
+public:
+    explicit operator bool() const &
+    {
+        return this->data_ptr != nullptr;
+    }
+
+    template<typename T = DataBlock, std::enable_if_t<is_impl_block_type_v<T>, int> = 0>
+    typename T::impl_type *get() const
+    {
+        return this->data_ptr->get_impl_ptr();
+    }
+
+    template<typename T = DataBlock, std::enable_if_t<is_impl_block_type_v<T>, int> = 0>
+    typename T::impl_type *operator->() const
+    {
+        return this->get();
+    }
+
+    template<typename T = DataBlock, std::enable_if_t<is_impl_block_type_v<T>, int> = 0>
+    typename T::impl_type &operator*() const
+    {
+        return *this->get();
+    }
+
+    template<typename... Args>
+    decltype(auto) operator()(Args &&...args) const
+    {
+        return this->get()->operator()(std::forward<Args>(args)...);
+    }
+};
+
+template<typename DataBlock, typename... InterfaceTypes>
+struct object_holder : public object_view<DataBlock, InterfaceTypes...> {
+    template<typename InterfaceDest>
+    struct is_interface_static_castable_to
+        : is_vtable_static_castable_to_from_any<typename InterfaceDest::vtable_type,
+                                                typename InterfaceTypes::vtable_type...> {};
+
+    template<typename InterfaceDest>
+    static constexpr bool is_interface_static_castable_to_v = is_interface_static_castable_to<InterfaceDest>::value;
+
+    template<typename InterfaceDest>
+    typename InterfaceDest::vtable_type const *interface_static_cast_to() const
+    {
+        return std::apply(vtable_static_cast_to_from_any<typename InterfaceDest::vtable_type,
+                                                         typename InterfaceTypes::vtable_type...>,
+                          this->vtbl_ptr_tuple);
+    }
+
+    object_holder() : object_view<DataBlock, InterfaceTypes...>()
+    {
+    }
+
+    object_holder(DataBlock *other_data_ptr,
+                  std::tuple<typename InterfaceTypes::vtable_type const *...> other_vtbl_ptr_tuple)
+        : object_view<DataBlock, InterfaceTypes...>(other_data_ptr, other_vtbl_ptr_tuple)
+    {
+    }
+
+    explicit object_holder(DataBlock *other_data_ptr, typename InterfaceTypes::vtable_type const *...other_vtbl_ptrs)
+        : object_view<DataBlock, InterfaceTypes...>(other_data_ptr, other_vtbl_ptrs...)
+    {
+    }
+
+    object_holder &operator=(object_holder other)
     {
         std::swap(this->data_ptr, other.data_ptr);
+        std::swap(this->vtbl_ptr_tuple, other.vtbl_ptr_tuple);
         return *this;
     }
 
-    ~data_holder()
+    ~object_holder()
     {
         tobj_drop(this->data_ptr);
     }
 
-    data_holder(data_view const &other) : data_holder(tobj_dup(other.data_ptr))
+    object_holder(object_view<DataBlock, InterfaceTypes...> const &other)
+        : object_holder(static_cast<DataBlock *>(tobj_dup(other.data_ptr)), other.vtbl_ptr_tuple)
     {
     }
 
-    data_holder(data_holder const &other) : data_holder(tobj_dup(other.data_ptr))
+    object_holder(object_holder<DataBlock, InterfaceTypes...> const &other)
+        : object_holder(static_cast<DataBlock *>(tobj_dup(other.data_ptr)), other.vtbl_ptr_tuple)
     {
     }
 
-    data_holder(data_holder &&other) : data_holder(other.data_ptr)
+    object_holder(object_holder<DataBlock, InterfaceTypes...> &&other)
+        : object_holder(std::exchange(other.data_ptr, nullptr), other.vtbl_ptr_tuple)
     {
-        other.data_ptr = nullptr;
+    }
+
+    template<typename InterfaceView,
+             std::enable_if_t<std::conjunction_v<is_interface_view_type<InterfaceView>,
+                                                 is_interface_static_castable_to<InterfaceView>>,
+                              int> = 0>
+    operator InterfaceView() const &
+    {
+        typename InterfaceView::abi_type handle = {
+            this->interface_static_cast_to<InterfaceView>(),
+            this->data_ptr,
+        };
+        return InterfaceView(handle);
+    }
+
+    template<typename InterfaceHolder,
+             std::enable_if_t<std::conjunction_v<is_interface_holder_type<InterfaceHolder>,
+                                                 is_interface_static_castable_to<InterfaceHolder>>,
+                              int> = 0>
+    operator InterfaceHolder() const &
+    {
+        typename InterfaceHolder::abi_type handle = {
+            this->interface_static_cast_to<InterfaceHolder>(),
+            tobj_dup(this->data_ptr),
+        };
+        return InterfaceHolder(handle);
+    }
+
+    template<typename InterfaceHolder,
+             std::enable_if_t<std::conjunction_v<is_interface_holder_type<InterfaceHolder>,
+                                                 is_interface_static_castable_to<InterfaceHolder>>,
+                              int> = 0>
+    operator InterfaceHolder() &&
+    {
+        typename InterfaceHolder::abi_type handle = {
+            this->interface_static_cast_to<InterfaceHolder>(),
+            std::exchange(this->data_ptr, nullptr),
+        };
+        return InterfaceHolder(handle);
+    }
+
+    template<typename BaseBlock, typename... InterfaceBases,
+             std::enable_if_t<std::is_base_of_v<BaseBlock, DataBlock> &&
+                                  (is_interface_static_castable_to_v<InterfaceBases> && ...),
+                              int> = 0>
+    operator object_view<BaseBlock, InterfaceBases...>() const &
+    {
+        return object_view<BaseBlock, InterfaceBases...>(this->data_ptr,
+                                                         this->interface_static_cast_to<InterfaceBases>()...);
+    }
+
+    template<typename BaseBlock, typename... InterfaceBases,
+             std::enable_if_t<std::is_base_of_v<BaseBlock, DataBlock> &&
+                                  (is_interface_static_castable_to_v<InterfaceBases> && ...),
+                              int> = 0>
+    operator object_holder<BaseBlock, InterfaceBases...>() const &
+    {
+        return object_holder<BaseBlock, InterfaceBases...>(static_cast<DataBlock *>(tobj_dup(this->data_ptr)),
+                                                           this->interface_static_cast_to<InterfaceBases>()...);
+    }
+
+    template<typename BaseBlock, typename... InterfaceBases,
+             std::enable_if_t<std::is_base_of_v<BaseBlock, DataBlock> &&
+                                  (is_interface_static_castable_to_v<InterfaceBases> && ...),
+                              int> = 0>
+    operator object_holder<BaseBlock, InterfaceBases...>() &&
+    {
+        return object_holder<BaseBlock, InterfaceBases...>(std::exchange(this->data_ptr, nullptr),
+                                                           this->interface_static_cast_to<InterfaceBases>()...);
     }
 };
+
+template<typename... InterfaceTypes>
+using interface_view = object_view<DataBlockHead, InterfaceTypes...>;
+template<typename... InterfaceTypes>
+using interface_holder = object_holder<DataBlockHead, InterfaceTypes...>;
+
+using data_view = interface_view<>;
+using data_holder = interface_holder<>;
 
 inline bool operator==(data_view lhs, data_view rhs)
 {
@@ -74,159 +436,162 @@ inline bool operator==(data_view lhs, data_view rhs)
 }
 }  // namespace taihe
 
-template<>
-struct std::hash<taihe::data_holder> {
-    std::size_t operator()(taihe::data_view val) const
+template<typename Impl, typename... InterfaceTypes>
+struct std::hash<taihe::object_holder<Impl, InterfaceTypes...>> {
+    std::size_t operator()(taihe::object_view<Impl, InterfaceTypes...> val) const noexcept
     {
         return val.data_ptr->rtti_ptr->hash_fptr(val.data_ptr);
     }
 };
 
-////////////////////////////////////////////////
-// Data Block Definition And Helper Functions //
-////////////////////////////////////////////////
-
 namespace taihe {
-template<typename Impl>
-struct data_block : DataBlockHead {
-    Impl impl;
+template<typename StaticDataBlock>
+struct static_object_factory {
+private:
+    template<typename Holder>
+    struct pack_unpacker;
 
-    template<typename... Args>
-    data_block(TypeInfo const *rtti_ptr, Args &&...args) : impl(std::forward<Args>(args)...)
-    {
-        tobj_init(this, rtti_ptr);
-    }
-};
+    template<typename DataBlock, typename... InterfaceTypes>
+    struct pack_unpacker<object_view<DataBlock, InterfaceTypes...>> {
+        static constexpr TypeInfo static_rtti = {
+            .hash_fptr = [](DataBlockHead *data_ptr) -> size_t {
+                return static_cast<StaticDataBlock *>(data_ptr)->hash_impl();
+            },
+            .same_fptr = [](DataBlockHead *data_ptr, DataBlockHead *other_data_ptr) -> bool {
+                return static_cast<StaticDataBlock *>(data_ptr)->same_impl(data_view(other_data_ptr));
+            },
+            .qivp_fptr = [](DataBlockHead *data_ptr, InterfaceId id) -> void const * {
+                return static_cast<StaticDataBlock *>(data_ptr)->qivp_impl(id);
+            },
+        };
 
-template<typename Impl, typename... Args>
-inline DataBlockHead *make_data_ptr(TypeInfo const *rtti_ptr, Args &&...args)
-{
-    return new data_block<Impl>(rtti_ptr, std::forward<Args>(args)...);
-}
+        static auto make_view(StaticDataBlock &ref)
+        {
+            StaticDataBlock *ptr = &ref;
+            tobj_init_static(ptr, &static_rtti);
+            return object_view<DataBlock, InterfaceTypes...>(ptr, ptr->template get_vtbl_ptr<InterfaceTypes>()...);
+        }
 
-template<typename Impl>
-inline void free_data_ptr(struct DataBlockHead *data_ptr)
-{
-    delete static_cast<data_block<Impl> *>(data_ptr);
-}
-
-template<typename Impl>
-inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr)
-{
-    return &static_cast<data_block<Impl> *>(data_ptr)->impl;
-}
-}  // namespace taihe
-
-///////////////////////////////////////
-// Specific Impl Type Object Handler //
-///////////////////////////////////////
-
-namespace taihe {
-template<typename Impl>
-struct type_view;
-template<typename Impl>
-struct type_holder;
-
-template<typename Impl>
-struct type_view {
-    DataBlockHead *data_ptr;
-
-    explicit type_view(DataBlockHead *other_data_ptr) : data_ptr(other_data_ptr)
-    {
-    }
-
-    operator data_view() const &
-    {
-        return data_view(this->data_ptr);
-    }
-
-    operator data_holder() const &
-    {
-        return data_holder(tobj_dup(this->data_ptr));
-    }
+        static auto make_holder(StaticDataBlock &ref)
+        {
+            StaticDataBlock *ptr = &ref;
+            tobj_init_static(ptr, &static_rtti);
+            return object_holder<DataBlock, InterfaceTypes...>(ptr, ptr->template get_vtbl_ptr<InterfaceTypes>()...);
+        }
+    };
 
 public:
-    Impl *operator->() const
+    static auto make_view(StaticDataBlock &ref)
     {
-        return cast_data_ptr<Impl>(this->data_ptr);
+        return pack_unpacker<typename StaticDataBlock::view_type>::make_view(ref);
     }
 
-    Impl &operator*() const
+    static auto make_holder(StaticDataBlock &ref)
     {
-        return *cast_data_ptr<Impl>(this->data_ptr);
+        return pack_unpacker<typename StaticDataBlock::view_type>::make_holder(ref);
     }
+};
 
+template<typename ShareableDataBlock>
+struct shareable_object_factory {
+private:
+    template<typename Holder>
+    struct pack_unpacker;
+
+    template<typename DataBlock, typename... InterfaceTypes>
+    struct pack_unpacker<object_view<DataBlock, InterfaceTypes...>> {
+        static constexpr TypeInfo shareable_rtti = {
+            .hash_fptr = [](DataBlockHead *data_ptr) -> size_t {
+                return static_cast<ShareableDataBlock *>(data_ptr)->hash_impl();
+            },
+            .same_fptr = [](DataBlockHead *data_ptr, DataBlockHead *other_data_ptr) -> bool {
+                return static_cast<ShareableDataBlock *>(data_ptr)->same_impl(data_view(other_data_ptr));
+            },
+            .qivp_fptr = [](DataBlockHead *data_ptr, InterfaceId id) -> void const * {
+                return static_cast<ShareableDataBlock *>(data_ptr)->qivp_impl(id);
+            },
+            .free_fptr = [](DataBlockHead *data_ptr) -> void {
+                delete static_cast<ShareableDataBlock *>(data_ptr);
+            },
+        };
+
+        template<typename... Args>
+        static auto make_holder(Args &&...args)
+        {
+            ShareableDataBlock *ptr = new ShareableDataBlock(std::forward<Args>(args)...);
+            tobj_init_shareable(ptr, &shareable_rtti);
+            return object_holder<DataBlock, InterfaceTypes...>(ptr, ptr->template get_vtbl_ptr<InterfaceTypes>()...);
+        }
+    };
+
+public:
     template<typename... Args>
-    decltype(auto) operator()(Args &&...args) const
+    static auto make_holder(Args &&...args)
     {
-        return cast_data_ptr<Impl>(this->data_ptr)->operator()(std::forward<Args>(args)...);
+        return pack_unpacker<typename ShareableDataBlock::view_type>::make_holder(std::forward<Args>(args)...);
     }
 };
 
-template<typename Impl>
-struct type_holder : public type_view<Impl> {
-    explicit type_holder(DataBlockHead *other_data_ptr) : type_view<Impl>(other_data_ptr)
-    {
-    }
+template<typename PromotableDataBlock>
+struct promotable_object_factory {
+private:
+    template<typename Holder>
+    struct pack_unpacker;
 
-    type_holder &operator=(type_holder other)
-    {
-        std::swap(this->data_ptr, other.data_ptr);
-        return *this;
-    }
+    template<typename DataBlock, typename... InterfaceTypes>
+    struct pack_unpacker<object_view<DataBlock, InterfaceTypes...>> {
+        static constexpr TypeInfo promotable_rtti = {
+            .hash_fptr = [](DataBlockHead *data_ptr) -> size_t {
+                return static_cast<PromotableDataBlock *>(data_ptr)->hash_impl();
+            },
+            .same_fptr = [](DataBlockHead *data_ptr, DataBlockHead *other_data_ptr) -> bool {
+                return static_cast<PromotableDataBlock *>(data_ptr)->same_impl(data_view(other_data_ptr));
+            },
+            .qivp_fptr = [](DataBlockHead *data_ptr, InterfaceId id) -> void const * {
+                return static_cast<PromotableDataBlock *>(data_ptr)->qivp_impl(id);
+            },
+            .promote_fptr = [](DataBlockHead *data_ptr) -> DataBlockHead * {
+                object_holder<DataBlock> promoted = static_cast<PromotableDataBlock *>(data_ptr)->get_promoted();
+                return std::exchange(promoted.data_ptr, nullptr);
+            },
+        };
 
-    ~type_holder()
-    {
-        tobj_drop(this->data_ptr);
-    }
+        static auto make_view(PromotableDataBlock &ref)
+        {
+            PromotableDataBlock *ptr = &ref;
+            tobj_init_promotable(ptr, &promotable_rtti);
+            return object_view<DataBlock, InterfaceTypes...>(ptr, ptr->template get_vtbl_ptr<InterfaceTypes>()...);
+        }
+    };
 
-    type_holder(type_view<Impl> const &other) : type_holder(tobj_dup(other.data_ptr))
+public:
+    static auto make_view(PromotableDataBlock &promotable_ref)
     {
-    }
-
-    type_holder(type_holder<Impl> const &other) : type_holder(tobj_dup(other.data_ptr))
-    {
-    }
-
-    type_holder(type_holder<Impl> &&other) : type_holder(other.data_ptr)
-    {
-        other.data_ptr = nullptr;
-    }
-
-    operator data_view() const &
-    {
-        return data_view(this->data_ptr);
-    }
-
-    operator data_holder() const &
-    {
-        return data_holder(tobj_dup(this->data_ptr));
-    }
-
-    operator data_holder() &&
-    {
-        return data_holder(std::exchange(this->data_ptr, nullptr));
+        return pack_unpacker<typename PromotableDataBlock::view_type>::make_view(promotable_ref);
     }
 };
 
-template<typename Impl>
-inline bool operator==(type_view<Impl> lhs, type_view<Impl> rhs)
-{
-    return lhs.data_ptr->rtti_ptr->same_fptr(lhs.data_ptr, rhs.data_ptr);
-}
+template<typename PromotableDataBlock>
+struct scoped_view
+    : private PromotableDataBlock
+    , public PromotableDataBlock::view_type {
+    template<typename... Args>
+    explicit scoped_view(Args &&...args)
+        : PromotableDataBlock(std::forward<Args>(args)...)
+        , PromotableDataBlock::view_type(promotable_object_factory<PromotableDataBlock>::make_view(*this))
+    {
+    }
+
+    scoped_view(scoped_view const &) = delete;
+    scoped_view(scoped_view &&) = delete;
+    scoped_view &operator=(scoped_view const &) = delete;
+    scoped_view &operator=(scoped_view &&) = delete;
+};
 }  // namespace taihe
 
-template<typename Impl>
-struct std::hash<taihe::type_holder<Impl>> {
-    std::size_t operator()(taihe::type_view<Impl> val) const
-    {
-        return val.data_ptr->rtti_ptr->hash_fptr(val.data_ptr);
-    }
-};
-
-/////////////////////////////////////////////////
-// Hash And Same Impl For Data Pointer Handler //
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+// Customization point for hash and same implementations //
+///////////////////////////////////////////////////////////
 
 namespace taihe {
 template<typename Impl, typename Enabled = void>
@@ -250,100 +615,38 @@ constexpr inline hash_impl_t<Impl> hash_impl;
 
 template<typename Impl>
 constexpr inline same_impl_t<Impl> same_impl;
-
-template<typename Impl>
-inline std::size_t hash_data_ptr(struct DataBlockHead *val_data_ptr)
-{
-    return hash_impl<Impl>(data_view(val_data_ptr));
-}
-
-template<typename Impl>
-inline bool same_data_ptr(struct DataBlockHead *lhs_data_ptr, struct DataBlockHead *rhs_data_ptr)
-{
-    return same_impl<Impl>(data_view(lhs_data_ptr), data_view(rhs_data_ptr));
-}
 }  // namespace taihe
 
-//////////////////////////////////////////////////////
-// Specific Impl Type With Interface Object Handler //
-//////////////////////////////////////////////////////
+//////////////////////////////////////////////////
+// Helper Function To Create Impl Holder Object //
+//////////////////////////////////////////////////
 
 namespace taihe {
-template<typename Impl, typename... InterfaceTypes>
-struct impl_view;
-template<typename Impl, typename... InterfaceTypes>
-struct impl_holder;
+template<typename ImplBlock, typename... RichInterfaceTypes>
+struct with_typeinfo : ImplBlock {
+    static_assert(is_impl_block_type_v<ImplBlock>, "ImplBlock must be a valid impl block type.");
 
-template<typename Impl, typename... InterfaceTypes>
-struct impl_view {
-    DataBlockHead *data_ptr;
-
-    explicit impl_view(DataBlockHead *other_data_ptr) : data_ptr(other_data_ptr)
-    {
-    }
-
-    template<typename InterfaceView, std::enable_if_t<!InterfaceView::is_holder, int> = 0>
-    operator InterfaceView() const &
-    {
-        return InterfaceView({
-            this->template get_vtbl_ptr<InterfaceView>(),
-            this->data_ptr,
-        });
-    }
-
-    template<typename InterfaceHolder, std::enable_if_t<InterfaceHolder::is_holder, int> = 0>
-    operator InterfaceHolder() const &
-    {
-        return InterfaceHolder({
-            this->template get_vtbl_ptr<InterfaceHolder>(),
-            tobj_dup(this->data_ptr),
-        });
-    }
-
-    operator data_view() const &
-    {
-        return data_view(this->data_ptr);
-    }
-
-    operator data_holder() const &
-    {
-        return data_holder(tobj_dup(this->data_ptr));
-    }
-
-    operator type_view<Impl>() const &
-    {
-        return type_view<Impl>(this->data_ptr);
-    }
-
-    operator type_holder<Impl>() const &
-    {
-        return type_holder<Impl>(tobj_dup(this->data_ptr));
-    }
-
-public:
-    Impl *operator->() const
-    {
-        return cast_data_ptr<Impl>(this->data_ptr);
-    }
-
-    Impl &operator*() const
-    {
-        return *cast_data_ptr<Impl>(this->data_ptr);
-    }
+    using view_type = object_view<ImplBlock, RichInterfaceTypes...>;
 
     template<typename... Args>
-    decltype(auto) operator()(Args &&...args) const
+    explicit with_typeinfo(Args &&...args) : ImplBlock(std::forward<Args>(args)...)
     {
-        return cast_data_ptr<Impl>(this->data_ptr)->operator()(std::forward<Args>(args)...);
     }
 
-public:
-    static inline void const *qiid(InterfaceId id)
+    template<typename RichInterfaceType>
+    typename RichInterfaceType::vtable_type const *get_vtbl_ptr() const
     {
-        void const *dest_vtbl_ptr;
-        bool success = ([&] {
-            using InterfaceType = InterfaceTypes;
-            void const *cand_vtbl_ptr = InterfaceType::template qiid_impl<Impl>(id);
+        static_assert((std::is_same_v<RichInterfaceType, RichInterfaceTypes> || ...),
+                      "Only can use supported interface types.");
+
+        return &RichInterfaceType::template vtbl_impl<ImplBlock>;
+    }
+
+    void const *qivp_impl(InterfaceId id) const
+    {
+        void const *dest_vtbl_ptr = nullptr;
+        bool success = ([&dest_vtbl_ptr, id] {
+            void const *cand_vtbl_ptr = RichInterfaceTypes::template qivp_impl<ImplBlock>(id);
             if (cand_vtbl_ptr) {
                 dest_vtbl_ptr = cand_vtbl_ptr;
                 return true;
@@ -353,160 +656,99 @@ public:
         return success ? dest_vtbl_ptr : nullptr;
     }
 
-    static constexpr TypeInfo rtti = {
-        .free_fptr = &free_data_ptr<Impl>,
-        .hash_fptr = &hash_data_ptr<Impl>,
-        .same_fptr = &same_data_ptr<Impl>,
-        .qiid_fptr = &qiid,
-    };
-
-    template<typename InterfaceDest,
-             std::enable_if_t<
-                 (std::is_convertible_v<typename InterfaceTypes::view_type, typename InterfaceDest::view_type> || ...),
-                 int> = 0>
-    static inline typename InterfaceDest::vtable_type const *get_vtbl_ptr()
+    size_t hash_impl()
     {
-        typename InterfaceDest::vtable_type const *dest_vtbl_ptr;
-        bool success = ([&] {
-            using InterfaceType = InterfaceTypes;
-            if constexpr (std::is_convertible_v<typename InterfaceType::view_type, typename InterfaceDest::view_type>) {
-                typename InterfaceType::vtable_type const *type_vtbl_ptr = &InterfaceType::template vtbl_impl<Impl>;
-                typename InterfaceType::view_type type_obj({type_vtbl_ptr, nullptr});
-                typename InterfaceDest::view_type dest_obj = type_obj;
-                dest_vtbl_ptr = dest_obj.m_handle.vtbl_ptr;
-                return true;
-            }
-            return false;
-        }() || ...);
-        return success ? dest_vtbl_ptr : nullptr;
+        return taihe::hash_impl<typename ImplBlock::impl_type>(object_view<ImplBlock>(this));
+    }
+
+    bool same_impl(data_view other)
+    {
+        return taihe::same_impl<typename ImplBlock::impl_type>(object_view<ImplBlock>(this), other);
     }
 };
 
-template<typename Impl, typename... InterfaceTypes>
-struct impl_holder : public impl_view<Impl, InterfaceTypes...> {
-    using impl_view<Impl, InterfaceTypes...>::rtti;
-
-    explicit impl_holder(DataBlockHead *other_data_ptr) : impl_view<Impl, InterfaceTypes...>(other_data_ptr)
-    {
-    }
+template<typename Impl>
+struct impl_block : DataBlockHead {
+    using impl_type = Impl;
 
     template<typename... Args>
-    static impl_holder make(Args &&...args)
-    {
-        return impl_holder(make_data_ptr<Impl>(&rtti, std::forward<Args>(args)...));
-    }
-
-    impl_holder &operator=(impl_holder other)
-    {
-        std::swap(this->data_ptr, other.data_ptr);
-        return *this;
-    }
-
-    ~impl_holder()
-    {
-        tobj_drop(this->data_ptr);
-    }
-
-    impl_holder(impl_view<Impl, InterfaceTypes...> const &other) : impl_holder(tobj_dup(other.data_ptr))
+    explicit impl_block(std::in_place_t, Args &&...args) : impl(std::forward<Args>(args)...)
     {
     }
 
-    impl_holder(impl_holder<Impl, InterfaceTypes...> const &other) : impl_holder(tobj_dup(other.data_ptr))
+    impl_type *get_impl_ptr()
     {
+        return &impl;
     }
 
-    impl_holder(impl_holder<Impl, InterfaceTypes...> &&other) : impl_holder(std::exchange(other.data_ptr, nullptr))
-    {
-    }
-
-    template<typename InterfaceView, std::enable_if_t<!InterfaceView::is_holder, int> = 0>
-    operator InterfaceView() const &
-    {
-        return InterfaceView({
-            this->template get_vtbl_ptr<InterfaceView>(),
-            this->data_ptr,
-        });
-    }
-
-    template<typename InterfaceHolder, std::enable_if_t<InterfaceHolder::is_holder, int> = 0>
-    operator InterfaceHolder() const &
-    {
-        return InterfaceHolder({
-            this->template get_vtbl_ptr<InterfaceHolder>(),
-            tobj_dup(this->data_ptr),
-        });
-    }
-
-    template<typename InterfaceHolder, std::enable_if_t<InterfaceHolder::is_holder, int> = 0>
-    operator InterfaceHolder() &&
-    {
-        return InterfaceHolder({
-            this->template get_vtbl_ptr<InterfaceHolder>(),
-            std::exchange(this->data_ptr, nullptr),
-        });
-    }
-
-    operator data_view() const &
-    {
-        return data_view(this->data_ptr);
-    }
-
-    operator data_holder() const &
-    {
-        return data_holder(tobj_dup(this->data_ptr));
-    }
-
-    operator data_holder() &&
-    {
-        return data_holder(std::exchange(this->data_ptr, nullptr));
-    }
-
-    operator type_view<Impl>() const &
-    {
-        return type_view<Impl>(this->data_ptr);
-    }
-
-    operator type_holder<Impl>() const &
-    {
-        return type_holder<Impl>(tobj_dup(this->data_ptr));
-    }
-
-    operator type_holder<Impl>() &&
-    {
-        return type_holder<Impl>(std::exchange(this->data_ptr, nullptr));
-    }
+private:
+    Impl impl;
 };
 
 template<typename Impl, typename... InterfaceTypes>
-inline bool operator==(impl_view<Impl, InterfaceTypes...> lhs, impl_view<Impl, InterfaceTypes...> rhs)
-{
-    return data_view(lhs) == data_view(rhs);
-}
-}  // namespace taihe
+using impl_block_with_typeinfo = with_typeinfo<impl_block<Impl>, InterfaceTypes...>;
 
 template<typename Impl, typename... InterfaceTypes>
-struct std::hash<taihe::impl_holder<Impl, InterfaceTypes...>> {
-    std::size_t operator()(taihe::data_view val) const noexcept
+using impl_view = object_view<impl_block<Impl>, InterfaceTypes...>;
+template<typename Impl, typename... InterfaceTypes>
+using impl_holder = object_holder<impl_block<Impl>, InterfaceTypes...>;
+
+template<typename PromotableDataBlock, typename DataBlock>
+struct enable_cached {
+    object_holder<DataBlock> cache;
+
+    object_holder<DataBlock> get_promoted()
     {
-        return std::hash<taihe::data_holder>()(val);
+        if (!cache) {
+            cache = static_cast<PromotableDataBlock *>(this)->create_promoted();
+        }
+        return cache;
     }
 };
 
-//////////////////////////////////////////////////
-// Helper Function To Create Impl Holder Object //
-//////////////////////////////////////////////////
+template<typename PromotableDataBlock, typename DataBlock, typename ShareableDataBlock = PromotableDataBlock>
+struct enable_cached_copy_promotable : enable_cached<PromotableDataBlock, DataBlock> {
+    object_holder<DataBlock> create_promoted()
+    {
+        return shareable_object_factory<ShareableDataBlock>::make_holder(*static_cast<PromotableDataBlock *>(this));
+    }
+};
 
-namespace taihe {
 template<typename Impl, typename... InterfaceTypes, typename... Args>
-inline auto make_holder(Args &&...args)
+auto make_holder(Args &&...args)
 {
-    return impl_holder<Impl, InterfaceTypes...>::make(std::forward<Args>(args)...);
+    return shareable_object_factory<impl_block_with_typeinfo<Impl, InterfaceTypes...>>::make_holder(
+        std::in_place, std::forward<Args>(args)...);
 }
 
 template<typename... InterfaceTypes, typename Impl>
-inline auto as_holder(Impl &&impl)
+auto into_holder(Impl impl)
 {
-    return make_holder<Impl, InterfaceTypes...>(std::forward<Impl>(impl));
+    return make_holder<Impl, InterfaceTypes...>(std::move(impl));
+}
+
+template<typename ShareableDataBlock>
+struct cached_copy_promotable
+    : ShareableDataBlock
+    , enable_cached_copy_promotable<cached_copy_promotable<ShareableDataBlock>,
+                                    typename ShareableDataBlock::view_type::data_block_type, ShareableDataBlock> {
+    template<typename... Args>
+    explicit cached_copy_promotable(Args &&...args) : ShareableDataBlock(std::forward<Args>(args)...)
+    {
+    }
+};
+
+template<typename Impl, typename... InterfaceTypes, typename... Args>
+auto make_view(Args &&...args)
+{
+    return scoped_view<cached_copy_promotable<impl_block_with_typeinfo<Impl, InterfaceTypes...>>>(
+        std::in_place, std::forward<Args>(args)...);
+}
+
+template<typename... InterfaceTypes, typename Impl>
+auto into_view(Impl impl)
+{
+    return make_view<Impl, InterfaceTypes...>(std::move(impl));
 }
 }  // namespace taihe
 

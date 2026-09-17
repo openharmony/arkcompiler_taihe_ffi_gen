@@ -25,8 +25,8 @@ napi_value Init(napi_env env, napi_value exports)
     napi_value exports_bundle_bundleManager;
     napi_create_object(env, &exports_bundle_bundleManager);
     ohos::bundle::bundleManager::NapiInit(env, exports_bundle_bundleManager);
-    NAPI_CALL(env, napi_set_named_property(env, exports_bundle, "bundleManager", exports_bundle_bundleManager));
-    NAPI_CALL(env, napi_set_named_property(env, exports, "bundle", exports_bundle));
+    napi_set_named_property(env, exports_bundle, "bundleManager", exports_bundle_bundleManager);
+    napi_set_named_property(env, exports, "bundle", exports_bundle);
     return exports;
 }
 

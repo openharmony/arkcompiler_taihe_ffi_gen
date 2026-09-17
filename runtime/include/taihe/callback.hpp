@@ -32,8 +32,6 @@ struct callback;
 
 template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
-    static constexpr bool is_holder = false;
-
     using view_type = callback_view<Return(Params...)>;
     using holder_type = callback<Return(Params...)>;
 
@@ -58,14 +56,28 @@ struct callback_view<Return(Params...)> {
     {
     }
 
-    operator data_view() const &
+    template<
+        typename... InterfaceBases,
+        std::enable_if_t<
+            (is_vtable_static_castable_from_to_v<vtable_type, typename InterfaceBases::vtable_type> && ...), int> = 0>
+    operator interface_view<InterfaceBases...>() const &
     {
-        return data_view(this->m_handle.data_ptr);
+        return interface_view<InterfaceBases...>(
+            this->m_handle.data_ptr,
+            vtable_helper<vtable_type>::template static_cast_to<typename InterfaceBases::vtable_type>(
+                this->m_handle.vtbl_ptr)...);
     }
 
-    operator data_holder() const &
+    template<
+        typename... InterfaceBases,
+        std::enable_if_t<
+            (is_vtable_static_castable_from_to_v<vtable_type, typename InterfaceBases::vtable_type> && ...), int> = 0>
+    operator interface_holder<InterfaceBases...>() const &
     {
-        return data_holder(tobj_dup(this->m_handle.data_ptr));
+        return interface_holder<InterfaceBases...>(
+            tobj_dup(this->m_handle.data_ptr),
+            vtable_helper<vtable_type>::template static_cast_to<typename InterfaceBases::vtable_type>(
+                this->m_handle.vtbl_ptr)...);
     }
 
 public:
@@ -81,22 +93,24 @@ public:
     }
 
 public:
-    template<typename Impl>
+    // clang-format off
+    template<typename ImplBlock>
     static constexpr ftable_type ftbl_impl = {
         .version = 0,
-        .methods =
-            {
-                .invoke = taihe::method_as_abi_func_required_v<Impl, &Impl::operator(), Return, view_type, Params...>,
-            },
+        .methods = {
+            .invoke = taihe::method_as_abi_func_required_v<ImplBlock, &ImplBlock::impl_type::operator(),
+                Return, view_type, Params...>,
+        },
     };
+    // clang-format on
 
-    template<typename Impl>
+    template<typename ImplBlock>
     static constexpr vtable_type vtbl_impl = {
-        .ftbl_ptr_0 = &ftbl_impl<Impl>,
+        .ftbl_ptr_0 = &ftbl_impl<ImplBlock>,
     };
 
-    template<typename Impl>
-    static constexpr void const *qiid_impl([[maybe_unused]] InterfaceId id)
+    template<typename ImplBlock>
+    static constexpr void const *qivp_impl([[maybe_unused]] InterfaceId id)
     {
         return nullptr;
     }
@@ -104,8 +118,7 @@ public:
 
 template<typename Return, typename... Params>
 struct callback<Return(Params...)> : callback_view<Return(Params...)> {
-    static constexpr bool is_holder = true;
-
+    using typename callback_view<Return(Params...)>::vtable_type;
     using typename callback_view<Return(Params...)>::abi_type;
 
     explicit callback(abi_type handle) : callback_view<Return(Params...)>(handle)
@@ -147,19 +160,40 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
     {
     }
 
-    operator data_view() const &
+    template<
+        typename... InterfaceBases,
+        std::enable_if_t<
+            (is_vtable_static_castable_from_to_v<vtable_type, typename InterfaceBases::vtable_type> && ...), int> = 0>
+    operator interface_view<InterfaceBases...>() const &
     {
-        return data_view(this->m_handle.data_ptr);
+        return interface_view<InterfaceBases...>(
+            this->m_handle.data_ptr,
+            vtable_helper<vtable_type>::template static_cast_to<typename InterfaceBases::vtable_type>(
+                this->m_handle.vtbl_ptr)...);
     }
 
-    operator data_holder() const &
+    template<
+        typename... InterfaceBases,
+        std::enable_if_t<
+            (is_vtable_static_castable_from_to_v<vtable_type, typename InterfaceBases::vtable_type> && ...), int> = 0>
+    operator interface_holder<InterfaceBases...>() const &
     {
-        return data_holder(tobj_dup(this->m_handle.data_ptr));
+        return interface_holder<InterfaceBases...>(
+            tobj_dup(this->m_handle.data_ptr),
+            vtable_helper<vtable_type>::template static_cast_to<typename InterfaceBases::vtable_type>(
+                this->m_handle.vtbl_ptr)...);
     }
 
-    operator data_holder() &&
+    template<
+        typename... InterfaceBases,
+        std::enable_if_t<
+            (is_vtable_static_castable_from_to_v<vtable_type, typename InterfaceBases::vtable_type> && ...), int> = 0>
+    operator interface_holder<InterfaceBases...>() &&
     {
-        return data_holder(std::exchange(this->m_handle.data_ptr, nullptr));
+        return interface_holder<InterfaceBases...>(
+            std::exchange(this->m_handle.data_ptr, nullptr),
+            vtable_helper<vtable_type>::template static_cast_to<typename InterfaceBases::vtable_type>(
+                this->m_handle.vtbl_ptr)...);
     }
 };
 
@@ -177,12 +211,6 @@ template<typename Return, typename... Params>
 struct as_param<callback<Return(Params...)>> {
     using type = callback_view<Return(Params...)>;
 };
-
-template<typename Return, typename... Params>
-inline bool operator==(callback_view<Return(Params...)> lhs, callback_view<Return(Params...)> rhs)
-{
-    return data_view(lhs) == data_view(rhs);
-}
 }  // namespace taihe
 
 template<typename Return, typename... Params>

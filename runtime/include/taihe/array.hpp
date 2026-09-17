@@ -29,6 +29,21 @@
 #include <vector>
 
 namespace taihe {
+namespace __detail {
+template<typename T>
+T *malloc_raw(size_t size)
+{
+    size_t required = size * sizeof(T);
+    return reinterpret_cast<T *>(malloc(required));
+}
+
+template<typename T>
+void free_raw(T *data)
+{
+    free(data);
+}
+}  // namespace __detail
+
 template<typename cpp_owner_t>
 struct array_view;
 
@@ -209,31 +224,30 @@ struct array : public array_view<cpp_owner_t> {
     using typename array_view<cpp_owner_t>::pointer;
     using typename array_view<cpp_owner_t>::size_type;
 
-    explicit array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size)
+    array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size)
     {
     }  // main constructor
 
     template<typename InputIt>
     array(copy_data_t, InputIt begin, size_type size) noexcept
-        : array_view<cpp_owner_t>(reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))), size)
+        : array_view<cpp_owner_t>(__detail::malloc_raw<cpp_owner_t>(size), size)
     {
         std::uninitialized_copy_n(begin, size, this->m_data);
     }
 
     template<typename InputIt>
     array(move_data_t, InputIt begin, size_type size) noexcept
-        : array_view<cpp_owner_t>(reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))), size)
+        : array_view<cpp_owner_t>(__detail::malloc_raw<cpp_owner_t>(size), size)
     {
         std::uninitialized_move_n(begin, size, this->m_data);
     }
 
-    explicit array(size_type size) : array(reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))), size)
+    explicit array(size_type size) : array(__detail::malloc_raw<cpp_owner_t>(size), size)
     {
         std::uninitialized_default_construct_n(this->m_data, size);
     }
 
-    explicit array(size_type size, cpp_owner_t const &value)
-        : array(reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))), size)
+    explicit array(size_type size, cpp_owner_t const &value) : array(__detail::malloc_raw<cpp_owner_t>(size), size)
     {
         std::uninitialized_fill_n(this->m_data, size, value);
     }
@@ -277,11 +291,73 @@ struct array : public array_view<cpp_owner_t> {
     {
         if (this->m_data) {
             std::destroy_n(this->m_data, this->m_size);
-            free(this->m_data);
-            this->m_size = 0;
-            this->m_data = nullptr;
+            __detail::free_raw(this->m_data);
         }
     }
+};
+
+template<typename cpp_owner_t>
+struct array_builder {
+    using value_type = cpp_owner_t;
+    using size_type = std::size_t;
+
+    explicit array_builder(size_type capacity)
+        : m_data(__detail::malloc_raw<cpp_owner_t>(capacity)), m_capacity(capacity), m_size(0)
+    {
+    }
+
+    array_builder(array_builder const &) = delete;
+
+    array_builder(array_builder &&other) noexcept
+        : m_data(std::exchange(other.m_data, nullptr)), m_capacity(0), m_size(0)
+    {
+    }
+
+    array_builder &operator=(array_builder other) noexcept
+    {
+        std::swap(this->m_data, other.m_data);
+        std::swap(this->m_capacity, other.m_capacity);
+        std::swap(this->m_size, other.m_size);
+        return *this;
+    }
+
+    ~array_builder()
+    {
+        if (this->m_data) {
+            std::destroy_n(this->m_data, this->m_size);
+            __detail::free_raw(this->m_data);
+        }
+    }
+
+    template<typename... Args>
+    void emplace_back(Args &&...args)
+    {
+        if (m_size >= m_capacity) {
+            TH_THROW(std::length_error, "array_builder capacity exceeded");
+        }
+        new (&m_data[m_size]) cpp_owner_t(std::forward<Args>(args)...);
+        ++m_size;
+    }
+
+    void push_back(cpp_owner_t const &value)
+    {
+        emplace_back(value);
+    }
+
+    void push_back(cpp_owner_t &&value)
+    {
+        emplace_back(std::move(value));
+    }
+
+    array<cpp_owner_t> finish() &&
+    {
+        return array<cpp_owner_t>(std::exchange(m_data, nullptr), m_size);
+    }
+
+private:
+    cpp_owner_t *m_data;
+    size_type m_capacity;
+    size_type m_size;
 };
 
 template<typename cpp_owner_t>

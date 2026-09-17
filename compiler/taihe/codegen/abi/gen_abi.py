@@ -61,12 +61,11 @@ class AbiHeadersGenerator:
 
 class AbiStructDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_abi_info = StructAbiInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_abi_info.decl_header}",
             group=None,
         )
@@ -82,12 +81,11 @@ class AbiStructDeclGenerator:
 
 class AbiStructDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_abi_info = StructAbiInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_abi_info.defn_header}",
             group=None,
         )
@@ -116,12 +114,11 @@ class AbiStructDefnGenerator:
 
 class AbiStructImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_abi_info = StructAbiInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_abi_info.impl_header}",
             group=None,
         )
@@ -137,12 +134,11 @@ class AbiStructImplGenerator:
 
 class AbiUnionDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_abi_info.decl_header}",
             group=None,
         )
@@ -158,12 +154,11 @@ class AbiUnionDeclGenerator:
 
 class AbiUnionDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_abi_info.defn_header}",
             group=None,
         )
@@ -200,12 +195,11 @@ class AbiUnionDefnGenerator:
 
 class AbiUnionImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_abi_info = UnionAbiInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_abi_info.impl_header}",
             group=None,
         )
@@ -221,12 +215,11 @@ class AbiUnionImplGenerator:
 
 class AbiIfaceDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_abi_info.decl_header}",
             group=None,
         )
@@ -242,12 +235,11 @@ class AbiIfaceDeclGenerator:
 
 class AbiIfaceDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_abi_info.defn_header}",
             group=None,
         )
@@ -299,8 +291,6 @@ class AbiIfaceDefnGenerator:
     def gen_iface_static_cast(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         for ancestor, ancestor_info in iface_abi_info.ancestor_infos.items():
-            if ancestor is self.iface:
-                continue
             ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
             with self.target.indented(
                 f"TH_INLINE struct {ancestor_abi_info.vtable} const* {ancestor_info.static_cast}(struct {iface_abi_info.vtable} const* vtbl_ptr) {{",
@@ -313,22 +303,21 @@ class AbiIfaceDefnGenerator:
     def gen_iface_dynamic_cast(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target.indented(
-            f"TH_INLINE struct {iface_abi_info.vtable} const* {iface_abi_info.dynamic_cast}(struct TypeInfo const* rtti_ptr) {{",
+            f"TH_INLINE struct {iface_abi_info.vtable} const* {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{",
             f"}}",
         ):
             self.target.writelns(
-                f"return (struct {iface_abi_info.vtable} const*)rtti_ptr->qiid_fptr({iface_abi_info.iid});",
+                f"return (struct {iface_abi_info.vtable} const*)data_ptr->rtti_ptr->qivp_fptr(data_ptr, {iface_abi_info.iid});",
             )
 
 
 class AbiIfaceImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_abi_info.impl_header}",
             group=None,
         )
@@ -452,7 +441,6 @@ class AbiIfaceImplGenerator:
         if not method_abi_info.has_default:
             return
 
-        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         params.append(f"{iface_abi_info.as_param} tobj")
@@ -474,12 +462,11 @@ class AbiIfaceImplGenerator:
 
 class AbiPackageHeaderGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_abi_info = PackageAbiInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_abi_info.header}",
             group=None,
         )
@@ -539,12 +526,11 @@ class AbiSourcesGenerator:
 
 class AbiPackageSourceGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_abi_info = PackageAbiInfo.get(self.am, self.pkg)
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"src/{pkg_abi_info.source}",
             group=GEN_C_SRC_GROUP,
         )

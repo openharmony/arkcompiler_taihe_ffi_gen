@@ -34,12 +34,12 @@ napi_value Init(napi_env env, napi_value exports)
     napi_value exports_ns1_ns2_ns3_ns4_ns5;
     napi_create_object(env, &exports_ns1_ns2_ns3_ns4_ns5);
     my_module_a::ns1::ns2::ns3::ns4::ns5::NapiInit(env, exports_ns1_ns2_ns3_ns4_ns5);
-    NAPI_CALL(env, napi_set_named_property(env, exports_ns1_ns2_ns3_ns4, "ns5", exports_ns1_ns2_ns3_ns4_ns5));
-    NAPI_CALL(env, napi_set_named_property(env, exports_ns1_ns2_ns3, "ns4", exports_ns1_ns2_ns3_ns4));
-    NAPI_CALL(env, napi_set_named_property(env, exports_ns1_ns2, "ns3", exports_ns1_ns2_ns3));
-    NAPI_CALL(env, napi_set_named_property(env, exports_ns1, "ns2", exports_ns1_ns2));
+    napi_set_named_property(env, exports_ns1_ns2_ns3_ns4, "ns5", exports_ns1_ns2_ns3_ns4_ns5);
+    napi_set_named_property(env, exports_ns1_ns2_ns3, "ns4", exports_ns1_ns2_ns3_ns4);
+    napi_set_named_property(env, exports_ns1_ns2, "ns3", exports_ns1_ns2_ns3);
+    napi_set_named_property(env, exports_ns1, "ns2", exports_ns1_ns2);
     my_module_a::ns1::NapiInit(env, exports_ns1);
-    NAPI_CALL(env, napi_set_named_property(env, exports, "ns1", exports_ns1));
+    napi_set_named_property(env, exports, "ns1", exports_ns1);
     my_module_a::NapiInit(env, exports);
     return exports;
 }

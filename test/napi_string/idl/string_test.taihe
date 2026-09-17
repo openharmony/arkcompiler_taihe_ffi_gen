@@ -13,9 +13,30 @@
  * limitations under the License.
  */
 
-function concat(a: String, b: String): String;
-function to_i32(a: String): i32;
-function from_i32(a: i32): String;
-function show(): String;
+enum U8StringEnum: @encoding("utf-8") String {
+    FOO = "foo",
+    BAR = "bar",
+}
+
+enum U16StringEnum: @encoding("utf-16") String {
+    FOO = "foo",
+    BAR = "bar",
+}
+
+enum CommonStringEnum: @encoding("common") String {
+    FOO = "foo",
+    BAR = "bar",
+}
+
+function U8StringEnumTest(e: U8StringEnum): U8StringEnum;
+function U16StringEnumTest(e: U16StringEnum): U16StringEnum;
+function CommonStringEnumTest(e: CommonStringEnum): CommonStringEnum;
+
+function concat(a: @encoding("utf-8") String, b: @encoding("utf-8") String): @encoding("utf-8") String;
+function to_i32(a: @encoding("utf-8") String): i32;
+function from_i32(a: i32): @encoding("utf-8") String;
+function show(): @encoding("utf-8") String;
+function echo_utf16(value: @encoding("utf-16") String): @encoding("utf-16") String;
+function echo_common(value: @encoding("common") String): @encoding("common") String;
 function add(a: i32, b: i32): i32;
 function sum(a: u32, b: u32): u32;

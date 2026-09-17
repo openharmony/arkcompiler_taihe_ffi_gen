@@ -90,11 +90,10 @@ class AniCodeGenerator:
 
 class AniConstructorGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pg: PackageGroup):
-        self.om = om
         self.am = am
         self.pg = pg
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"temp/ani_constructor.cpp",
             group=None,
             is_template=True,
@@ -147,12 +146,11 @@ class AniConstructorGenerator:
 
 class AniPackageHeaderGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_ani_info.header}",
             group=None,
         )
@@ -173,12 +171,11 @@ class AniPackageHeaderGenerator:
 
 class AniPackageSourceGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"src/{pkg_ani_info.source}",
             group=GEN_CXX_SRC_GROUP,
         )
@@ -572,12 +569,11 @@ class AniPackageSourceGenerator:
 
 class AniEnumImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, enum: EnumDecl):
-        self.om = om
         self.am = am
         self.enum = enum
         enum_ani_info = EnumAniInfo.get(self.am, self.enum)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{enum_ani_info.impl_header}",
             group=None,
         )
@@ -627,7 +623,7 @@ class AniEnumImplGenerator:
         ):
             self.target.writelns(
                 f"ani_size ani_index = {{}};",
-                f"TH_ANI_CHECKED_CALL(env, EnumItem_GetIndex, ani_obj, &ani_index);",
+                f"TH_ANI_ASSUME_INVOKE(env, EnumItem_GetIndex, ani_obj, &ani_index);",
                 f"return {enum_cpp_info.full_name}(static_cast<{enum_cpp_info.full_name}::key_t>(ani_index));",
             )
 
@@ -639,7 +635,7 @@ class AniEnumImplGenerator:
         ):
             self.target.writelns(
                 f"ani_enum_item ani_result = {{}};",
-                f'TH_ANI_CHECKED_CALL(env, Enum_GetEnumItemByIndex, TH_ANI_FIND_ENUM(env, "{enum_ani_info.type_desc}"), static_cast<ani_size>(cpp_obj.get_key()), &ani_result);',
+                f'TH_ANI_ASSUME_INVOKE(env, Enum_GetEnumItemByIndex, TH_ANI_FIND_ENUM(env, "{enum_ani_info.type_desc}"), static_cast<ani_size>(cpp_obj.get_key()), &ani_result);',
                 f"return ani_result;",
             )
 
@@ -652,7 +648,7 @@ class AniEnumImplGenerator:
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
             enum_ty_ani_info.gen_from_ani(self.target, "value_from_ani")
             self.target.writelns(
-                f"return {enum_cpp_info.full_name}::from_value(value_from_ani(env, ani_obj));",
+                f"return {enum_cpp_info.full_name}::from_param(value_from_ani(env, ani_obj));",
             )
 
     def gen_enum_const_into_ani_func(self, enum_ani_info: EnumConstAniInfo):
@@ -664,18 +660,17 @@ class AniEnumImplGenerator:
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
             enum_ty_ani_info.gen_into_ani(self.target, "value_into_ani")
             self.target.writelns(
-                f"return value_into_ani(env, cpp_obj.get_value());",
+                f"return value_into_ani(env, cpp_obj.get_owner());",
             )
 
 
 class AniIfaceDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_ani_info.decl_header}",
             group=None,
         )
@@ -704,12 +699,11 @@ class AniIfaceDeclGenerator:
 
 class AniIfaceImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_ani_info.impl_header}",
             group=None,
         )
@@ -798,6 +792,10 @@ class AniIfaceImplGenerator:
                 args_ani.append(arg_ani)
             args_ani_sum = "".join(", " + arg_ani for arg_ani in args_ani)
             # invoke ANI function
+            if method_abi_info.is_noexcept:
+                ani_call_macro = "TH_ANI_ASSUME_INVOKE"
+            else:
+                ani_call_macro = "TH_ANI_TRY_INVOKE"
             pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
             function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.sts_reverse}", nullptr)'
             if isinstance(return_ty := method.return_ty, NonVoidType):
@@ -805,23 +803,12 @@ class AniIfaceImplGenerator:
                 return_ty_ani_name = return_ty_ani_info.ani_type
                 self.target.writelns(
                     f"{return_ty_ani_name} ani_result = {{}};",
-                    f"ani_status ani_ret = env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&ani_result), static_cast<ani_object>(this->ref){args_ani_sum});",
+                    f"{ani_call_macro}(env, Function_Call_{return_ty_ani_info.ani_type.suffix}, {function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&ani_result), static_cast<ani_object>(this->ref){args_ani_sum});",
                 )
             else:
                 self.target.writelns(
-                    f"ani_status ani_ret = env->Function_Call_Void({function}, static_cast<ani_object>(this->ref){args_ani_sum});",
+                    f"{ani_call_macro}(env, Function_Call_Void, {function}, static_cast<ani_object>(this->ref){args_ani_sum});",
                 )
-            if not method_abi_info.is_noexcept:
-                with self.target.indented(
-                    f"if (ani_ret == ANI_PENDING_ERROR) {{",
-                    f"}}",
-                ):
-                    self.target.writelns(
-                        f"return ::taihe::unexpected<::taihe::error>(::taihe::catch_ani_taihe_error(env));",
-                    )
-            self.target.writelns(
-                f'TH_ANI_ASSERT(ani_ret == ANI_OK, "{method_ani_info.perf_id} failed with status " TH_ANI_LOG_FMT_INT, ani_ret);',
-            )
             # return value from ANI
             if isinstance(return_ty := method.return_ty, NonVoidType):
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -858,9 +845,9 @@ class AniIfaceImplGenerator:
                 self.target.writelns(
                     f"ani_ref global_ref = reinterpret_cast<ani_ref>(wrapper->getGlobalReference());",
                     f"ani_wref wref = {{}};",
-                    f"TH_ANI_CHECKED_CALL(env, WeakReference_Create, global_ref, &wref);",
+                    f"TH_ANI_ASSUME_INVOKE(env, WeakReference_Create, global_ref, &wref);",
                     f"ani_boolean released = {{}};",
-                    f"TH_ANI_CHECKED_CALL(env, WeakReference_GetReference, wref, &released, reinterpret_cast<ani_ref*>(&ani_obj));",
+                    f"TH_ANI_ASSUME_INVOKE(env, WeakReference_GetReference, wref, &released, reinterpret_cast<ani_ref*>(&ani_obj));",
                 )
             with self.target.indented(
                 f"else {{",
@@ -870,7 +857,7 @@ class AniIfaceImplGenerator:
                     f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
                     f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                     f"cpp_obj.m_handle.data_ptr = nullptr;",
-                    f'TH_ANI_CHECKED_CALL(env, Function_Call_Ref, TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
+                    f'TH_ANI_ASSUME_INVOKE(env, Function_Call_Ref, TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
                 )
             self.target.writelns(
                 f"return ani_obj;",
@@ -879,12 +866,11 @@ class AniIfaceImplGenerator:
 
 class AniStructDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_ani_info.decl_header}",
             group=None,
         )
@@ -913,12 +899,11 @@ class AniStructDeclGenerator:
 
 class AniStructImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_ani_info.impl_header}",
             group=None,
         )
@@ -963,11 +948,11 @@ class AniStructImplGenerator:
                 )
                 if struct_ani_info.is_class():
                     self.target.writelns(
-                        f'TH_ANI_CHECKED_CALL(env, Object_GetField_{final_ty_ani_info.ani_type.suffix}, ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final_ani_info.sts_name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{final_ani}));',
+                        f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_{final_ty_ani_info.ani_type.suffix}, ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final_ani_info.sts_name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{final_ani}));',
                     )
                 else:
                     self.target.writelns(
-                        f'TH_ANI_CHECKED_CALL(env, Object_CallMethod_{final_ty_ani_info.ani_type.suffix}, ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{final_ani}));',
+                        f'TH_ANI_ASSUME_INVOKE(env, Object_CallMethod_{final_ty_ani_info.ani_type.suffix}, ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{final_ani}));',
                     )
                 final_from_ani = f"field_{i}_from_ani"
                 final_ty_ani_info.gen_from_ani(self.target, final_from_ani)
@@ -993,7 +978,7 @@ class AniStructImplGenerator:
             finals_ani_sum = "".join(", " + final_ani for final_ani in finals_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
-                f'TH_ANI_CHECKED_CALL(env, Function_Call_Ref, TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){finals_ani_sum});',
+                f'TH_ANI_ASSUME_INVOKE(env, Function_Call_Ref, TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_factory}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){finals_ani_sum});',
                 f"return ani_obj;",
             )
 
@@ -1009,7 +994,7 @@ class AniStructImplGenerator:
                 field_ani = f"ani_field_{field.name}"
                 self.target.writelns(
                     f"ani_ref {field_ani} = {{}};",
-                    f'TH_ANI_CHECKED_CALL(env, Object_GetField_Ref, ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "${i}"), &{field_ani});',
+                    f'TH_ANI_ASSUME_INVOKE(env, Object_GetField_Ref, ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "${i}"), &{field_ani});',
                 )
                 field_from_ani = f"field_{field.name}_from_ani"
                 field_ty_ani_info.gen_from_ani_ref(self.target, field_from_ani)
@@ -1036,19 +1021,18 @@ class AniStructImplGenerator:
             fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
-                f'TH_ANI_CHECKED_CALL(env, Object_New, TH_ANI_FIND_CLASS(env, "{struct_ani_info.type_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "<ctor>", nullptr), &ani_obj{fields_ani_sum});',
+                f'TH_ANI_ASSUME_INVOKE(env, Object_New, TH_ANI_FIND_CLASS(env, "{struct_ani_info.type_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "<ctor>", nullptr), &ani_obj{fields_ani_sum});',
                 f"return ani_obj;",
             )
 
 
 class AniUnionDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_ani_info = UnionAniInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_ani_info.decl_header}",
             group=None,
         )
@@ -1077,12 +1061,11 @@ class AniUnionDeclGenerator:
 
 class AniUnionImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_ani_info = UnionAniInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_ani_info.impl_header}",
             group=None,
         )

@@ -24,54 +24,72 @@
 #error "Please ensure the napi is correctly installed."
 #endif
 
-#include <sstream>
-
 #include <taihe/string.hpp>
 #include <taihe/error.hpp>
+#include <taihe/expected.hpp>
 
 namespace taihe {
 void set_env(napi_env env);
 napi_env get_env();
-
-void set_error(taihe::string_view msg, taihe::string_view errcode = "");
-void set_type_error(taihe::string_view msg, taihe::string_view errcode = "");
-void set_range_error(taihe::string_view msg, taihe::string_view errcode = "");
-bool has_error();
-
-taihe::error from_napi_error(napi_env env, napi_value err);
-napi_value into_napi_error(napi_env env, taihe::error const &err);
 }  // namespace taihe
 
-#define NAPI_CALL(env, call)                                                                \
-    do {                                                                                    \
-        napi_status status = (call);                                                        \
-        if (status != napi_ok && status != napi_pending_exception) {                        \
-            const napi_extended_error_info *error_info;                                     \
-            napi_get_last_error_info(env, &error_info);                                     \
-            const char *message = error_info ? error_info->error_message : "Unknown error"; \
-            std::ostringstream oss;                                                         \
-            oss << "N-API call failed at " << __FILE__ << ":" << __LINE__ << "\n"           \
-                << "Call: " << #call << "\n"                                                \
-                << "Status: " << status << "\n"                                             \
-                << "Message: " << message;                                                  \
-            napi_throw_error(env, nullptr, oss.str().c_str());                              \
-        }                                                                                   \
+#define TH_NAPI_ASSERT(cond, msg, ...)                                      \
+    do {                                                                    \
+        if (!(cond)) {                                                      \
+            fprintf(stderr, "N-API Assertion failed: " msg, ##__VA_ARGS__); \
+            std::abort();                                                   \
+        }                                                                   \
     } while (0)
 
+#define TH_NAPI_ASSUME_CALL(env, call)                                                               \
+    do {                                                                                             \
+        napi_status __status = (call);                                                               \
+        TH_NAPI_ASSERT(__status == napi_ok, "N-API call " #call " failed with status %d", __status); \
+    } while (0)
+
+#define TH_NAPI_TRY_CALL(env, call)                                         \
+    do {                                                                    \
+        napi_status __status = (call);                                      \
+        if (__status == napi_pending_exception) {                           \
+            return ::taihe::unexpected(::taihe::catch_napi_exception(env)); \
+        }                                                                   \
+        if (__status != napi_ok) {                                          \
+            return ::taihe::unexpected(::taihe::catch_napi_error(env));     \
+        }                                                                   \
+    } while (0)
+
+#define TH_NAPI_ASSUME(expr)                                                                     \
+    ({                                                                                           \
+        auto &&__result = (expr);                                                                \
+        TH_NAPI_ASSERT(__result.has_value(), "In expression " #expr ", status: %d, message: %s", \
+                       __result.error().code(), __result.error().message().c_str());             \
+        *::std::forward<decltype(__result)>(__result);                                           \
+    })
+
+#define TH_TRY_INTO_NAPI(env, expr)                               \
+    ({                                                            \
+        auto &&__result = (expr);                                 \
+        if (!__result.has_value()) {                              \
+            ::taihe::throw_napi_exception(env, __result.error()); \
+            return nullptr;                                       \
+        }                                                         \
+        *::std::forward<decltype(__result)>(__result);            \
+    })
+
 namespace taihe {
-// convert between napi types and taihe types
+taihe::expected<taihe::string, taihe::error> from_napi_string(napi_env env, napi_value str);
+taihe::expected<taihe::u16string, taihe::error> from_napi_u16string(napi_env env, napi_value str);
+taihe::expected<taihe::common_string, taihe::error> from_napi_common_string(napi_env env, napi_value str);
+napi_value into_napi_string(napi_env env, taihe::string_view str);
+napi_value into_napi_u16string(napi_env env, taihe::u16string_view str);
+napi_value into_napi_common_string(napi_env env, taihe::common_string_view str);
 
-template<typename cpp_owner_t>
-struct from_napi_t;
+taihe::error from_napi_exception(napi_env env, napi_value err);
+napi_value into_napi_exception(napi_env env, taihe::error const &err);
 
-template<typename cpp_owner_t>
-struct into_napi_t;
-
-template<typename cpp_owner_t>
-constexpr inline from_napi_t<cpp_owner_t> from_napi;
-
-template<typename cpp_owner_t>
-constexpr inline into_napi_t<cpp_owner_t> into_napi;
+void throw_napi_exception(napi_env env, taihe::error const &err);
+taihe::error catch_napi_exception(napi_env env);
+taihe::error catch_napi_error(napi_env env);
 }  // namespace taihe
 
 #endif  // TAIHE_RUNTIME_NAPI_HPP

@@ -381,8 +381,8 @@ class StsNamespaceGenerator:
         for pkg in self.ns.packages:
             package_generator = StsPackageGenerator(self.am, self.target, pkg)
             package_generator.gen_package()
-        for child_ns_name, child_ns in self.ns.children.items():
-            sts_decl = f"namespace {child_ns_name}"
+        for _, child_ns in self.ns.children.items():
+            sts_decl = f"namespace {child_ns.ns_name}"
             if child_ns.is_default:
                 sts_decl = f"export default {sts_decl}"
             else:

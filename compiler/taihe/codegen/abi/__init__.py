@@ -136,8 +136,9 @@ class AbiSourcesBackendConfig(BackendConfig):
                 self._ci = ci
 
             def generate(self):
-                self._ci.output_manager.record_runtime_cxx_src("string.cpp")
                 self._ci.output_manager.record_runtime_cxx_src("object.cpp")
+                self._ci.output_manager.record_runtime_cxx_src("string.cpp")
+                self._ci.output_manager.record_runtime_cxx_src("shared_array.cpp")
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group

@@ -82,8 +82,7 @@
 #endif
 
 #ifndef TH_ANI_ENABLE_CHECKED_CALL
-#define TH_ANI_ASSERT(cond, msg, ...) (void)0
-#define TH_ANI_CHECKED_CALL(env, func, ...) (void)(env)->func(__VA_ARGS__)
+#define TH_ANI_ASSERT(cond, msg, ...) (void)(cond)
 #else
 #define TH_ANI_ASSERT(cond, msg, ...)                                  \
     do {                                                               \
@@ -92,12 +91,26 @@
             std::abort();                                              \
         }                                                              \
     } while (0)
-#define TH_ANI_CHECKED_CALL(env, func, ...)                                                                   \
-    do {                                                                                                      \
-        ani_status status = env->func(__VA_ARGS__);                                                           \
-        TH_ANI_ASSERT(status == ANI_OK, "ANI call " #func " failed with status " TH_ANI_LOG_FMT_INT, status); \
-    } while (0)
 #endif
+
+#define TH_ANI_ASSUME_CALL(env, call)                                                                             \
+    do {                                                                                                          \
+        ani_status __status = (call);                                                                             \
+        TH_ANI_ASSERT(__status == ANI_OK, "ANI call " #call " failed with status " TH_ANI_LOG_FMT_INT, __status); \
+    } while (0)
+
+#define TH_ANI_ASSUME_INVOKE(env, func, ...) TH_ANI_ASSUME_CALL(env, env->func(__VA_ARGS__))
+
+#define TH_ANI_TRY_CALL(env, call)                                                                                \
+    do {                                                                                                          \
+        ani_status __status = (call);                                                                             \
+        if (__status == ANI_PENDING_ERROR) {                                                                      \
+            return ::taihe::unexpected(::taihe::catch_ani_taihe_error(env));                                      \
+        }                                                                                                         \
+        TH_ANI_ASSERT(__status == ANI_OK, "ANI call " #call " failed with status " TH_ANI_LOG_FMT_INT, __status); \
+    } while (0)
+
+#define TH_ANI_TRY_INVOKE(env, func, ...) TH_ANI_TRY_CALL(env, env->func(__VA_ARGS__))
 
 #ifndef TH_ANI_ENABLE_PERF_TRACE
 #define TH_ANI_PERF_TRACE_BEGIN(perf_id) (void)0
@@ -157,8 +170,8 @@ public:
 namespace taihe {
 // Error handling functions
 
-void set_error(taihe::string_view msg);
-void set_business_error(int32_t err_code, taihe::string_view msg);
+void set_error(taihe::common_string_view msg);
+void set_business_error(int32_t err_code, taihe::common_string_view msg);
 void reset_error();
 bool has_error();
 }  // namespace taihe
@@ -166,9 +179,17 @@ bool has_error();
 namespace taihe {
 // Internal Error handling functions
 
-taihe::error catch_ani_taihe_error(ani_env *env);
+taihe::string from_ani_taihe_string(ani_env *env, ani_string str);
+taihe::u16string from_ani_taihe_u16string(ani_env *env, ani_string str);
+taihe::common_string from_ani_taihe_common_string(ani_env *env, ani_string str);
+ani_string into_ani_taihe_string(ani_env *env, taihe::string_view str);
+ani_string into_ani_taihe_u16string(ani_env *env, taihe::u16string_view str);
+ani_string into_ani_taihe_common_string(ani_env *env, taihe::common_string_view str);
+
 taihe::error from_ani_taihe_error(ani_env *env, ani_error err);
 ani_error into_ani_taihe_error(ani_env *env, taihe::error const &err);
+
+taihe::error catch_ani_taihe_error(ani_env *env);
 void throw_ani_taihe_error(ani_env *env, taihe::error const &err);
 }  // namespace taihe
 

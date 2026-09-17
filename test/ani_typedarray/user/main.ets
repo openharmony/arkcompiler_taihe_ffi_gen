@@ -73,6 +73,10 @@ function checkInt32Array() {
     arktest.assertEQ(arr.at(1), 0x01234567);
     let res = bar.sumInt32Array(arr);
     arktest.assertEQ(res, 0x01234567 * 2);
+
+    let buffer = new Int32Array([100, 7, 11, 100, 200, 300]);
+    let view = new Int32Array(buffer.buffer as ArrayBuffer, 4, 2);
+    arktest.assertEQ(bar.sumInt32Array(view), 18);
 }
 
 function checkBigInt64Array() {

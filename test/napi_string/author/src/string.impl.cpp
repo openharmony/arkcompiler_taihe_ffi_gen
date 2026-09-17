@@ -18,6 +18,36 @@
 #include "string_test.impl.hpp"
 
 namespace {
+::taihe::expected<::string_test::U8StringEnum, ::taihe::error> U8StringEnumTest(::string_test::U8StringEnum e)
+{
+    switch (e.get_key()) {
+        case string_test::U8StringEnum::key_t::FOO:
+            return string_test::U8StringEnum::key_t::BAR;
+        case string_test::U8StringEnum::key_t::BAR:
+            return string_test::U8StringEnum::key_t::FOO;
+    }
+}
+
+::taihe::expected<::string_test::U16StringEnum, ::taihe::error> U16StringEnumTest(::string_test::U16StringEnum e)
+{
+    switch (e.get_key()) {
+        case string_test::U16StringEnum::key_t::FOO:
+            return string_test::U16StringEnum::key_t::BAR;
+        case string_test::U16StringEnum::key_t::BAR:
+            return string_test::U16StringEnum::key_t::FOO;
+    }
+}
+
+::taihe::expected<::string_test::CommonStringEnum, ::taihe::error> CommonStringEnumTest(
+    ::string_test::CommonStringEnum e)
+{
+    switch (e.get_key()) {
+        case string_test::CommonStringEnum::key_t::FOO:
+            return string_test::CommonStringEnum::key_t::BAR;
+        case string_test::CommonStringEnum::key_t::BAR:
+            return string_test::CommonStringEnum::key_t::FOO;
+    }
+}
 
 ::taihe::expected<taihe::string, ::taihe::error> ohos_concat_str(taihe::string_view a, taihe::string_view b)
 {
@@ -39,6 +69,16 @@ namespace {
     return "success";
 }
 
+::taihe::expected<taihe::u16string, ::taihe::error> echo_utf16(taihe::u16string_view value)
+{
+    return ::taihe::u16string(value);
+}
+
+::taihe::expected<taihe::common_string, ::taihe::error> echo_common(taihe::common_string_view value)
+{
+    return ::taihe::common_string(value);
+}
+
 ::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b)
 {
     return a + b;
@@ -52,10 +92,15 @@ namespace {
 
 // Since these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
+TH_EXPORT_CPP_API_U8StringEnumTest(U8StringEnumTest);
+TH_EXPORT_CPP_API_U16StringEnumTest(U16StringEnumTest);
+TH_EXPORT_CPP_API_CommonStringEnumTest(CommonStringEnumTest);
 TH_EXPORT_CPP_API_concat(ohos_concat_str);
 TH_EXPORT_CPP_API_to_i32(ohos_str_to_int);
 TH_EXPORT_CPP_API_from_i32(ohos_int_to_str);
 TH_EXPORT_CPP_API_show(ohos_show);
+TH_EXPORT_CPP_API_echo_utf16(echo_utf16);
+TH_EXPORT_CPP_API_echo_common(echo_common);
 TH_EXPORT_CPP_API_add(add);
 TH_EXPORT_CPP_API_sum(sum);
 // NOLINTEND

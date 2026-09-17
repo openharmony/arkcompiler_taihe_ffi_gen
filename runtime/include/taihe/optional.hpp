@@ -69,6 +69,9 @@ struct optional_view {
 
     cpp_owner_t const &value() const
     {
+        if (!m_handle) {
+            TH_THROW(std::runtime_error, "is empty");
+        }
         return *m_handle;
     }
 

@@ -54,6 +54,10 @@ if TYPE_CHECKING:
         OpaqueTypeVisitor,
         OptionalTypeVisitor,
         SetTypeVisitor,
+        SharedArrayTypeVisitor,
+        SharedMapTypeVisitor,
+        SharedSetTypeVisitor,
+        SharedVectorTypeVisitor,
         StringTypeVisitor,
         StructTypeVisitor,
         TypeVisitor,
@@ -504,6 +508,127 @@ class SetType(GenericType):
 
 
 @dataclass(frozen=True, repr=False)
+class SharedVectorType(GenericType):
+    item_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"SharedVector<{self.item_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "SharedVectorType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        item_ty = ref.args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
+            return None
+        return cls(ref, item_ty)
+
+    @override
+    def accept(self, v: "SharedVectorTypeVisitor[_R]") -> _R:
+        return v.visit_shared_vector_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class SharedMapType(GenericType):
+    key_ty: NonVoidType
+    val_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"SharedMap<{self.key_ty.signature}, {self.val_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "SharedMapType | None":
+        if len(ref.args) != 2:
+            dm.emit(GenericArgumentsError(ref, 2, len(ref.args)))
+            return None
+        key_ty = ref.args[0].ty
+        if not isinstance(key_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, key_ty))
+            return None
+        val_ty = ref.args[1].ty
+        if not isinstance(val_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[1].ty_ref, val_ty))
+            return None
+        return cls(ref, key_ty, val_ty)
+
+    @override
+    def accept(self, v: "SharedMapTypeVisitor[_R]") -> _R:
+        return v.visit_shared_map_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class SharedSetType(GenericType):
+    key_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"SharedSet<{self.key_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "SharedSetType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        key_ty = ref.args[0].ty
+        if not isinstance(key_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, key_ty))
+            return None
+        return cls(ref, key_ty)
+
+    @override
+    def accept(self, v: "SharedSetTypeVisitor[_R]") -> _R:
+        return v.visit_shared_set_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class SharedArrayType(GenericType):
+    item_ty: ScalarType
+
+    @property
+    @override
+    def signature(self):
+        return f"SharedArray<{self.item_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "SharedArrayType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        item_ty = ref.args[0].ty
+        if not isinstance(item_ty, ScalarType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
+            return None
+        return cls(ref, item_ty)
+
+    @override
+    def accept(self, v: "SharedArrayTypeVisitor[_R]") -> _R:
+        return v.visit_shared_array_type(self)
+
+
+@dataclass(frozen=True, repr=False)
 class CompleterType(GenericType):
     item_ty: Type
 
@@ -562,6 +687,10 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
     "Vector": VectorType,
     "Map": MapType,
     "Set": SetType,
+    "SharedVector": SharedVectorType,
+    "SharedMap": SharedMapType,
+    "SharedSet": SharedSetType,
+    "SharedArray": SharedArrayType,
     "Completer": CompleterType,
     "Future": FutureType,
 }

@@ -34,11 +34,15 @@ class CppCommonHeadersBackendConfig(BackendConfig):
         return CppCommonHeadersBackendConfig()
 
     def build(self, instance: "CompilerInstance"):
+        from taihe.codegen.cpp.attributes import all_attr_types
         from taihe.codegen.cpp.gen_common import CppHeadersGenerator
 
         class CppCommonHeadersBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
                 self._ci = ci
+
+            def setup(self):
+                self._ci.attribute_registry.register(*all_attr_types)
 
             def generate(self):
                 om = self._ci.output_manager
