@@ -90,11 +90,10 @@ class AniCodeGenerator:
 
 class AniConstructorGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pg: PackageGroup):
-        self.om = om
         self.am = am
         self.pg = pg
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"temp/ani_constructor.cpp",
             group=None,
             is_template=True,
@@ -147,12 +146,11 @@ class AniConstructorGenerator:
 
 class AniPackageHeaderGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_ani_info.header}",
             group=None,
         )
@@ -173,12 +171,11 @@ class AniPackageHeaderGenerator:
 
 class AniPackageSourceGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_ani_info = PackageAniInfo.get(self.am, self.pkg)
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"src/{pkg_ani_info.source}",
             group=GEN_CXX_SRC_GROUP,
         )
@@ -572,12 +569,11 @@ class AniPackageSourceGenerator:
 
 class AniEnumImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, enum: EnumDecl):
-        self.om = om
         self.am = am
         self.enum = enum
         enum_ani_info = EnumAniInfo.get(self.am, self.enum)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{enum_ani_info.impl_header}",
             group=None,
         )
@@ -670,12 +666,11 @@ class AniEnumImplGenerator:
 
 class AniIfaceDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_ani_info.decl_header}",
             group=None,
         )
@@ -704,12 +699,11 @@ class AniIfaceDeclGenerator:
 
 class AniIfaceImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_ani_info.impl_header}",
             group=None,
         )
@@ -872,12 +866,11 @@ class AniIfaceImplGenerator:
 
 class AniStructDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_ani_info.decl_header}",
             group=None,
         )
@@ -906,12 +899,11 @@ class AniStructDeclGenerator:
 
 class AniStructImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_ani_info = StructAniInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_ani_info.impl_header}",
             group=None,
         )
@@ -1036,12 +1028,11 @@ class AniStructImplGenerator:
 
 class AniUnionDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_ani_info = UnionAniInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_ani_info.decl_header}",
             group=None,
         )
@@ -1070,12 +1061,11 @@ class AniUnionDeclGenerator:
 
 class AniUnionImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_ani_info = UnionAniInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_ani_info.impl_header}",
             group=None,
         )

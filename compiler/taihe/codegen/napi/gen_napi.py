@@ -92,8 +92,8 @@ class NapiCodeGenerator:
             NapiPackageHeaderGenerator(self.oc, self.am, pkg).gen_package_header()
             NapiPackageSourceGenerator(self.oc, self.am, pkg).gen_package_source()
         pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
-        for module, ns in pg_napi_info.module_dict.items():
-            NapiModuleRegisterGenerator(self.oc, self.am, module, ns).gen_register()
+        for _, ns in pg_napi_info.module_dict.items():
+            NapiModuleRegisterGenerator(self.oc, self.am, ns).gen_register()
 
 
 class NapiModuleRegisterGenerator:
@@ -101,16 +101,13 @@ class NapiModuleRegisterGenerator:
         self,
         oc: OutputManager,
         am: AnalysisManager,
-        module: str,
         ns: Namespace,
     ):
-        self.oc = oc
         self.am = am
-        self.module = module
         self.ns = ns
         self.target = CSourceWriter(
-            self.oc,
-            f"temp/{self.module}.napi_register.cpp",
+            oc,
+            f"temp/{self.ns.name}.napi_register.cpp",
             group=None,
             is_template=True,
         )
@@ -142,15 +139,15 @@ class NapiModuleRegisterGenerator:
             )
 
     def gen_ns_register(self, ns: Namespace, reg_obj: str):
-        for child_ns_name, child_ns in ns.children.items():
-            child_reg_obj = f"{reg_obj}_{child_ns_name}"
+        for _, child_ns in ns.children.items():
+            child_reg_obj = f"{reg_obj}_{child_ns.name}"
             self.target.writelns(
                 f"napi_value {child_reg_obj};",
                 f"napi_create_object(env, &{child_reg_obj});",
             )
             self.gen_ns_register(child_ns, child_reg_obj)
             self.target.writelns(
-                f'napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {child_reg_obj});',
+                f'napi_set_named_property(env, {reg_obj}, "{child_ns.name}", {child_reg_obj});',
             )
         for pkg in self.ns.packages:
             pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
@@ -162,12 +159,11 @@ class NapiModuleRegisterGenerator:
 
 class NapiPackageHeaderGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.oc = oc
         self.am = am
         self.pkg = pkg
         pkg_napi_info = PackageNapiInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{pkg_napi_info.header}",
             group=None,
         )
@@ -198,12 +194,11 @@ class NapiPackageHeaderGenerator:
 
 class NapiPackageSourceGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.oc = oc
         self.am = am
         self.pkg = pkg
         pkg_napi_info = PackageNapiInfo.get(self.am, self.pkg)
         self.target = CSourceWriter(
-            self.oc,
+            oc,
             f"src/{pkg_napi_info.source}",
             group=GEN_CXX_SRC_GROUP,
         )
@@ -1176,12 +1171,11 @@ class NapiPackageSourceGenerator:
 
 class NapiStructDeclGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.oc = oc
         self.am = am
         self.struct = struct
         struct_napi_info = StructNapiInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{struct_napi_info.decl_header}",
             group=None,
         )
@@ -1212,12 +1206,11 @@ class NapiStructDeclGenerator:
 
 class NapiStructImplGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.oc = oc
         self.am = am
         self.struct = struct
         struct_napi_info = StructNapiInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{struct_napi_info.impl_header}",
             group=None,
         )
@@ -1285,12 +1278,11 @@ class NapiStructImplGenerator:
 
 class NapiUnionDeclGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.oc = oc
         self.am = am
         self.union = union
         union_napi_info = UnionNapiInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{union_napi_info.decl_header}",
             group=None,
         )
@@ -1318,12 +1310,11 @@ class NapiUnionDeclGenerator:
 
 class NapiUnionImplGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.oc = oc
         self.am = am
         self.union = union
         union_napi_info = UnionNapiInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{union_napi_info.impl_header}",
             group=None,
         )
@@ -1393,12 +1384,11 @@ class NapiUnionImplGenerator:
 
 class NapiIfaceDeclGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.oc = oc
         self.am = am
         self.iface = iface
         iface_napi_info = IfaceNapiInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{iface_napi_info.decl_header}",
             group=None,
         )
@@ -1429,12 +1419,11 @@ class NapiIfaceDeclGenerator:
 
 class NapiIfaceImplGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.oc = oc
         self.am = am
         self.iface = iface
         iface_napi_info = IfaceNapiInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.oc,
+            oc,
             f"include/{iface_napi_info.impl_header}",
             group=None,
         )

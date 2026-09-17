@@ -78,12 +78,11 @@ class CppHeadersGenerator:
 
 class CppPackageGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_cpp_info = PackageCppInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_cpp_info.header}",
             group=None,
         )
@@ -106,12 +105,11 @@ class CppPackageGenerator:
 
 class CppEnumDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, enum: EnumDecl):
-        self.om = om
         self.am = am
         self.enum = enum
         enum_cpp_info = EnumCppInfo.get(self.am, self.enum)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{enum_cpp_info.decl_header}",
             group=None,
         )
@@ -158,12 +156,11 @@ class CppEnumDeclGenerator:
 
 class CppEnumDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, enum: EnumDecl):
-        self.om = om
         self.am = am
         self.enum = enum
         enum_cpp_info = EnumCppInfo.get(self.am, self.enum)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{enum_cpp_info.defn_header}",
             group=None,
         )
@@ -365,12 +362,11 @@ class CppEnumDefnGenerator:
 
 class CppUnionDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_cpp_info = UnionCppInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_cpp_info.decl_header}",
             group=None,
         )
@@ -428,12 +424,11 @@ class CppUnionDeclGenerator:
 
 class CppUnionDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_cpp_info = UnionCppInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_cpp_info.defn_header}",
             group=None,
         )
@@ -882,12 +877,11 @@ class CppUnionDefnGenerator:
 
 class CppUnionImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, union: UnionDecl):
-        self.om = om
         self.am = am
         self.union = union
         union_cpp_info = UnionCppInfo.get(self.am, self.union)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{union_cpp_info.impl_header}",
             group=None,
         )
@@ -905,12 +899,11 @@ class CppUnionImplGenerator:
 
 class CppStructDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_cpp_info.decl_header}",
             group=None,
         )
@@ -968,12 +961,11 @@ class CppStructDeclGenerator:
 
 class CppStructDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_cpp_info.defn_header}",
             group=None,
         )
@@ -1053,12 +1045,11 @@ class CppStructDefnGenerator:
 
 class CppStructImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, struct: StructDecl):
-        self.om = om
         self.am = am
         self.struct = struct
         struct_cpp_info = StructCppInfo.get(self.am, self.struct)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{struct_cpp_info.impl_header}",
             group=None,
         )
@@ -1076,12 +1067,11 @@ class CppStructImplGenerator:
 
 class CppIfaceDeclGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_cpp_info.decl_header}",
             group=None,
         )
@@ -1147,12 +1137,11 @@ class CppIfaceDeclGenerator:
 
 class CppIfaceDefnGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_cpp_info.defn_header}",
             group=None,
         )
@@ -1559,12 +1548,11 @@ class CppIfaceDefnGenerator:
 
 class CppIfaceImplGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_cpp_info.impl_header}",
             group=None,
         )

@@ -46,12 +46,11 @@ class CppUserHeadersGenerator:
 
 class CppUserPackageGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_cpp_user_info = PackageCppUserInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_cpp_user_info.header}",
             group=None,
         )

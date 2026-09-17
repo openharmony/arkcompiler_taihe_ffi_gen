@@ -58,12 +58,11 @@ class CppImplHeadersGenerator:
 
 class CppMacroPackageGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_cpp_impl_info.header}",
             group=None,
         )
@@ -132,12 +131,11 @@ class CppMacroPackageGenerator:
 
 class CppMacroIfaceGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_cpp_impl_info = IfaceCppImplInfo.get(self.am, iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_cpp_impl_info.header}",
             group=None,
         )
@@ -240,14 +238,12 @@ class CppImplSourcesGenerator:
 class CppTemplateBaseWriterGenerator:
     def __init__(
         self,
-        om: OutputManager,
-        am: AnalysisManager,
         target: CSourceWriter,
+        am: AnalysisManager,
         using_namespaces: list[str],
     ):
-        self.om = om
-        self.am = am
         self.target = target
+        self.am = am
         self.using_namespaces = using_namespaces
 
     @property
@@ -295,7 +291,7 @@ class CppTemplatePackageGenerator(CppTemplateBaseWriterGenerator):
             group=None,
             is_template=True,
         )
-        super().__init__(om, am, target, [])
+        super().__init__(target, am, [])
 
     def gen_package_file(self):
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, self.pkg)
@@ -374,7 +370,7 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
             group=None,
             is_template=True,
         )
-        super().__init__(om, am, target, [])
+        super().__init__(target, am, [])
 
     def gen_iface_file(self):
         methods: list[IfaceMethodDecl] = []
@@ -456,12 +452,11 @@ class CppTemplateIfaceGenerator(CppTemplateBaseWriterGenerator):
 
 class CppTemplateClassHeaderGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_cpp_impl_info = IfaceCppImplInfo.get(self.am, iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"temp/{iface_cpp_impl_info.template_header}",
             group=None,
             is_template=True,
@@ -532,7 +527,7 @@ class CppTemplateClassSourceGenerator(CppTemplateBaseWriterGenerator):
             group=None,
             is_template=True,
         )
-        super().__init__(om, am, target, [])
+        super().__init__(target, am, [])
 
     def gen_file(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)

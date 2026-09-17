@@ -54,8 +54,8 @@ class DtsCodeGenerator:
 
     def generate(self, pg: PackageGroup):
         pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
-        for module, ns in pg_napi_info.module_dict.items():
-            DtsModuleGenerator(self.oc, self.am, module, ns).gen_module_file()
+        for _, ns in pg_napi_info.module_dict.items():
+            DtsModuleGenerator(self.oc, self.am, ns).gen_module_file()
 
 
 class DtsModuleGenerator:
@@ -63,37 +63,43 @@ class DtsModuleGenerator:
         self,
         oc: OutputManager,
         am: AnalysisManager,
-        module: str,
         ns: Namespace,
     ):
-        self.oc = oc
         self.am = am
-        self.module = module
         self.ns = ns
-        self.target = DtsWriter(
-            self.oc,
-            f"{self.module}.d.ts",
-        )
+        self.target = DtsWriter(oc, f"{self.ns.name}.d.ts")
 
     def gen_module_file(self):
         with self.target:
             for head in self.ns.dts_injected_heads:
                 self.target.write_block(head)
-            self.gen_namespace(self.ns)
+            DtsNamespaceGenerator(self.target, self.am, self.ns).gen_namespace()
 
-    def gen_namespace(self, ns: Namespace):
-        for code in ns.dts_injected_codes:
+
+class DtsNamespaceGenerator:
+    def __init__(
+        self,
+        target: DtsWriter,
+        am: AnalysisManager,
+        ns: Namespace,
+    ):
+        self.am = am
+        self.ns = ns
+        self.target = target
+
+    def gen_namespace(self):
+        for code in self.ns.dts_injected_codes:
             self.target.write_block(code)
-        for pkg in ns.packages:
+        for pkg in self.ns.packages:
             self.gen_package(pkg)
-        for child_ns_name, child_ns in ns.children.items():
-            dts_decl = f"namespace {child_ns_name}"
+        for _, child_ns in self.ns.children.items():
+            dts_decl = f"namespace {child_ns.name}"
             dts_decl = f"export {dts_decl}"
             with self.target.indented(
                 f"{dts_decl} {{",
                 f"}}",
             ):
-                self.gen_namespace(child_ns)
+                DtsNamespaceGenerator(self.target, self.am, child_ns).gen_namespace()
 
     def gen_package(self, pkg: PackageDecl):
         self.gen_utils()

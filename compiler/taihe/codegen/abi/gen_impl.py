@@ -51,12 +51,11 @@ class CImplHeadersGenerator:
 
 class CMacroPackageGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_c_impl_info = PackageCImplInfo.get(self.am, self.pkg)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{pkg_c_impl_info.header}",
             group=None,
         )
@@ -109,12 +108,11 @@ class CMacroPackageGenerator:
 
 class CMacroIfaceGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_c_impl_info = IfaceCImplInfo.get(self.am, self.iface)
         self.target = CHeaderWriter(
-            self.om,
+            om,
             f"include/{iface_c_impl_info.header}",
             group=None,
         )
@@ -190,12 +188,11 @@ class CImplSourcesGenerator:
 
 class CTemplatePackageGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
-        self.om = om
         self.am = am
         self.pkg = pkg
         pkg_c_impl_info = PackageCImplInfo.get(self.am, self.pkg)
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"temp/{pkg_c_impl_info.source}",
             group=None,
             is_template=True,
@@ -237,12 +234,11 @@ class CTemplatePackageGenerator:
 
 class CTemplateIfaceGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager, iface: IfaceDecl):
-        self.om = om
         self.am = am
         self.iface = iface
         iface_c_impl_info = IfaceCImplInfo.get(self.am, self.iface)
         self.target = CSourceWriter(
-            self.om,
+            om,
             f"temp/{iface_c_impl_info.source}",
             group=None,
             is_template=True,
