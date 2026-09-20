@@ -69,11 +69,14 @@ _BUILD_CONFIGS = {
         ],
     ),
     "sdk": BuildModeConfig(
-        exclude_runtime=["taihe/cli/tryit.py"],
+        exclude_compiler=[
+            "taihe/cli/tryit.py",
+        ],
     ),
     "lite": BuildModeConfig(
         exclude_compiler=[
             "taihe/codegen/modobj",
+            "taihe/cli/tryit.py",
         ],
     ),
     "full": BuildModeConfig(),
@@ -109,11 +112,17 @@ class Platform(Enum):
         return self.value.startswith("windows-")
 
 
-def create_tar(strip_version: bool, in_dir: Path, out_tgz: Path, rename_root: str, timestamp: float):
+def create_tar(
+    strip_version: bool,
+    in_dir: Path,
+    out_tgz: Path,
+    rename_root: str,
+    timestamp: float,
+):
     out_tgz.unlink(missing_ok=True)
     try:
         if strip_version:
-            if platform.system() == 'Darwin':
+            if platform.system() == "Darwin":
                 tar_cmd = ["tar", "--create", "--gzip", "--file", out_tgz]
                 # Rename the root directory.
                 tar_cmd += ["-s", f"/^{in_dir.name}/{rename_root}/"]
@@ -171,7 +180,7 @@ class PythonBundle:
         # TODO: rm dummy scripts / fix shebang paths
         env = os.environ.copy()
         env["UV_CACHE_DIR"] = str(ResourceContext.instance().cache_dir / "uv-wheels")
-        env["UV_NO_INSTALLER_METADATA"] = '1'
+        env["UV_NO_INSTALLER_METADATA"] = "1"
         uv_args = ["uv", "pip", "install", f"--target={self.sitepkg_dir}"]
         uv_args += ["--", str(wheel)]
         subprocess.run(uv_args, check=True, env=env)
@@ -261,15 +270,10 @@ class Builder:
         bundle_root = self.dist_dir / dist_prefix  # repo/dist/taihe-linux-x86_64
         # bundle_out = repo/dist/taihe-linux-x86_64-0.35.0-20250701.tar.gz # adapt to pre built download scripts
         if strip_version:
-            bundle_out = (
-                self.dist_dir
-                / f"{dist_prefix}.tar.gz"
-            )
+            bundle_name = f"{dist_prefix}.tar.gz"
         else:
-            bundle_out = (
-                self.dist_dir
-                / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tar.gz"
-            )
+            bundle_name = f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tar.gz"
+        bundle_out = self.dist_dir / bundle_name
 
         # Clean up previous build ###
         shutil.rmtree(bundle_root, ignore_errors=True)
@@ -280,7 +284,11 @@ class Builder:
         bundle.extract()
         bundle.install_package(self.wheel)
         bundle.create_script("taihec", "taihe.cli.compiler")
-        if platform == Platform.LINUX_X86_64 and self.build_mode != BuildMode.CORE and self.build_mode != BuildMode.SDK:
+        if (
+            platform == Platform.LINUX_X86_64
+            and self.build_mode != BuildMode.CORE
+            and self.build_mode != BuildMode.SDK
+        ):
             bundle.create_script("taihe-tryit", "taihe.cli.tryit")
 
         ### Remove excluded compiler files ###
@@ -327,8 +335,8 @@ class Builder:
             rename_root=self.brand,
             timestamp=self.metadata.build_time_utc,
         )
-        
-        
+
+
 def clean_directory(directory: Path) -> None:
     if not directory.exists():
         return
@@ -360,18 +368,18 @@ def main():
         help="directory for build files",
     )
     parser.add_argument(
-        '--strip_version',
-        action='store_true',
-        help='Strip version number and date from the output package name, producing a generic package.'
+        "--strip_version",
+        action="store_true",
+        help="Strip version number and date from the output package name, producing a generic package.",
     )
     parser.add_argument(
-        '--cache-path',
+        "--cache-path",
         type=Path,
         default=None,
-        help='Specify a custom cache directory for resources. Uses default path if not set.'
+        help="Specify a custom cache directory for resources. Uses default path if not set.",
     )
     args = parser.parse_args()
-    
+
     clean_directory(args.dst_dir)
 
     build_mode = BuildMode(args.mode)

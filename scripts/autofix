@@ -73,7 +73,9 @@ if "$run_cpp"; then
     # Cpp, tests
     find test cookbook \
          \( -name '*.c' -or -name '*.cpp' -or -name '*.h' -or -name '*.hpp' \) \
-         -not -path '*generated*' -type f |
+         -not -path '*generated*' \
+         -not -path '*build*' \
+         -type f |
         clang-format-19 --verbose -i @/dev/stdin
 fi
 

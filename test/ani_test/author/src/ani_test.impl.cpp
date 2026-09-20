@@ -77,7 +77,7 @@ namespace {
     } else if (u.holds_uValue()) {
         std::cout << "U" << std::endl;
     } else {
-        return taihe::unexpected<taihe::error>("Invalid union state");
+        return taihe::unexpected(::taihe::error("Invalid union state"));
     }
     return {};
 }

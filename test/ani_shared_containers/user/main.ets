@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { BusinessError } from "@ohos.base";
+import {BusinessError} from "@ohos.base";
 import * as shared from "shared_containers";
 
 loadLibrary("ani_shared_containers");
@@ -44,7 +44,7 @@ function assertMapEntryArrayContains(
     entries: Array<[string, string]>,
     k: string,
     v: string,
-): boolean {
+    ): boolean {
     for (let i: int = 0; i < entries.length; i++) {
         if (entries[i][0] === k && entries[i][1] === v) {
             return true;
@@ -57,7 +57,7 @@ function assertRecordEntryArrayContains(
     entries: Array<[int, string]>,
     k: int,
     v: string,
-): boolean {
+    ): boolean {
     for (let i: int = 0; i < entries.length; i++) {
         if (entries[i][0] === k && entries[i][1] === v) {
             return true;
@@ -400,19 +400,20 @@ function testMapBasic() {
     assertTrue(wrapper.checkedInsert("y", "100"));
     arktest.assertEQ(m.get("y"), "100");
 
-    let old1: string | undefined = wrapper.tryGetAndUpsert("a", "111");
+    let old1: string|undefined = wrapper.tryGetAndUpsert("a", "111");
     arktest.assertEQ(old1, "11");
     arktest.assertEQ(m.get("a"), "111");
 
-    let old2: string | undefined = wrapper.tryGetAndUpsert("new", "n");
+    let old2: string|undefined = wrapper.tryGetAndUpsert("new", "n");
     arktest.assertEQ(old2, undefined);
     arktest.assertEQ(m.get("new"), "n");
 
-    let old3: string | undefined = wrapper.tryGetAndInsert("a", "should-not-insert");
+    let old3: string|undefined =
+        wrapper.tryGetAndInsert("a", "should-not-insert");
     arktest.assertEQ(old3, "111");
     arktest.assertEQ(m.get("a"), "111");
 
-    let old4: string | undefined = wrapper.tryGetAndInsert("inserted", "iv");
+    let old4: string|undefined = wrapper.tryGetAndInsert("inserted", "iv");
     arktest.assertEQ(old4, undefined);
     arktest.assertEQ(m.get("inserted"), "iv");
 
@@ -423,11 +424,11 @@ function testMapBasic() {
     assertTrue(wrapper.checkedRemove("y"));
     assertFalse(m.has("y"));
 
-    let removed: string | undefined = wrapper.tryGetAndRemove("a");
+    let removed: string|undefined = wrapper.tryGetAndRemove("a");
     arktest.assertEQ(removed, "111");
     assertFalse(m.has("a"));
 
-    let removed2: string | undefined = wrapper.tryGetAndRemove("a");
+    let removed2: string|undefined = wrapper.tryGetAndRemove("a");
     arktest.assertEQ(removed2, undefined);
 
     wrapper.clear();
@@ -555,19 +556,20 @@ function testRecordBasic() {
     assertTrue(wrapper.checkedInsert(100, "hundred"));
     arktest.assertEQ(r[100], "hundred");
 
-    let old1: string | undefined = wrapper.tryGetAndUpsert(1, "aaa");
+    let old1: string|undefined = wrapper.tryGetAndUpsert(1, "aaa");
     arktest.assertEQ(old1, "aa");
     arktest.assertEQ(r[1], "aaa");
 
-    let old2: string | undefined = wrapper.tryGetAndUpsert(10, "ten");
+    let old2: string|undefined = wrapper.tryGetAndUpsert(10, "ten");
     arktest.assertEQ(old2, undefined);
     arktest.assertEQ(r[10], "ten");
 
-    let old3: string | undefined = wrapper.tryGetAndInsert(1, "should-not-insert");
+    let old3: string|undefined =
+        wrapper.tryGetAndInsert(1, "should-not-insert");
     arktest.assertEQ(old3, "aaa");
     arktest.assertEQ(r[1], "aaa");
 
-    let old4: string | undefined = wrapper.tryGetAndInsert(11, "eleven");
+    let old4: string|undefined = wrapper.tryGetAndInsert(11, "eleven");
     arktest.assertEQ(old4, undefined);
     arktest.assertEQ(r[11], "eleven");
 
@@ -578,11 +580,11 @@ function testRecordBasic() {
     assertTrue(wrapper.checkedRemove(100));
     assertFalse(wrapper.has(100));
 
-    let removed: string | undefined = wrapper.tryGetAndRemove(1);
+    let removed: string|undefined = wrapper.tryGetAndRemove(1);
     arktest.assertEQ(removed, "aaa");
     assertFalse(wrapper.has(1));
 
-    let removed2: string | undefined = wrapper.tryGetAndRemove(1);
+    let removed2: string|undefined = wrapper.tryGetAndRemove(1);
     arktest.assertEQ(removed2, undefined);
 
     wrapper.clear();
@@ -941,7 +943,8 @@ function testClearAllInStruct() {
     arktest.assertEQ(containers.setValue.size, 0);
     arktest.assertEQ(containers.mapValue.size, 0);
 
-    let recordWrapper: shared.RecordWrapper = shared.makeRecordWrapper(containers.recordValue);
+    let recordWrapper: shared.RecordWrapper =
+        shared.makeRecordWrapper(containers.recordValue);
     arktest.assertEQ(recordWrapper.getSize(), 0 as long);
 
     let abView: Uint8Array = new Uint8Array(arrayBuffer);
@@ -1113,7 +1116,8 @@ function testEmptyContainers() {
     arktest.assertEQ(recordWrapper.getEntries().length, 0);
 
     let buf: ArrayBuffer = new ArrayBuffer(0);
-    let arrayWrapper: shared.ArrayU8Wrapper = shared.makeArrayBufferU8Wrapper(buf);
+    let arrayWrapper: shared.ArrayU8Wrapper =
+        shared.makeArrayBufferU8Wrapper(buf);
     arktest.assertEQ(arrayWrapper.size(), 0 as long);
 
     assertAnyError(() => {
@@ -1127,23 +1131,31 @@ function main() {
     suite.addTest("vector basic", testVectorBasic);
     suite.addTest("vector forEach", testVectorForEach);
     suite.addTest("vector forEach early stop", testVectorForEachEarlyStop);
-    suite.addTest("vector forEach error propagation", testVectorForEachErrorPropagation);
+    suite.addTest(
+        "vector forEach error propagation", testVectorForEachErrorPropagation);
     suite.addTest("vector out of bounds", testVectorOutOfBounds);
 
     suite.addTest("set basic", testSetBasic);
     suite.addTest("set keys and forEach", testSetKeysAndForEach);
     suite.addTest("set forEach early stop", testSetForEachEarlyStop);
-    suite.addTest("set forEach error propagation", testSetForEachErrorPropagation);
+    suite.addTest(
+        "set forEach error propagation", testSetForEachErrorPropagation);
 
     suite.addTest("map basic", testMapBasic);
-    suite.addTest("map keys values entries and forEach", testMapKeysValuesEntriesAndForEach);
+    suite.addTest(
+        "map keys values entries and forEach",
+        testMapKeysValuesEntriesAndForEach);
     suite.addTest("map forEach early stop", testMapForEachEarlyStop);
-    suite.addTest("map forEach error propagation", testMapForEachErrorPropagation);
+    suite.addTest(
+        "map forEach error propagation", testMapForEachErrorPropagation);
 
     suite.addTest("record basic", testRecordBasic);
-    suite.addTest("record keys values entries and forEach", testRecordKeysValuesEntriesAndForEach);
+    suite.addTest(
+        "record keys values entries and forEach",
+        testRecordKeysValuesEntriesAndForEach);
     suite.addTest("record forEach early stop", testRecordForEachEarlyStop);
-    suite.addTest("record forEach error propagation", testRecordForEachErrorPropagation);
+    suite.addTest(
+        "record forEach error propagation", testRecordForEachErrorPropagation);
 
     suite.addTest("arraybuffer u8", testArrayBufferU8);
     suite.addTest("arraybuffer i8", testArrayBufferI8);
@@ -1169,8 +1181,10 @@ function main() {
     suite.addTest("clear any in union set", testClearAnyInUnionSet);
     suite.addTest("clear any in union map", testClearAnyInUnionMap);
     suite.addTest("clear any in union record", testClearAnyInUnionRecord);
-    suite.addTest("clear any in union arraybuffer", testClearAnyInUnionArrayBuffer);
-    suite.addTest("clear any in union typedarray", testClearAnyInUnionTypedArray);
+    suite.addTest(
+        "clear any in union arraybuffer", testClearAnyInUnionArrayBuffer);
+    suite.addTest(
+        "clear any in union typedarray", testClearAnyInUnionTypedArray);
     suite.addTest("clear all in array", testClearAllInArray);
     suite.addTest("clear all in shared vector", testClearAllInSharedVector);
 
