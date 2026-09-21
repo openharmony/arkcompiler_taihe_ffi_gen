@@ -390,8 +390,10 @@ class _LegacyPandaVm(PathResource):
 class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
-    VERSION: Final = "sdk-1.5.0-dev.82361"
-    URL: Final = "https://gitcode.com/m0_52007851/panda_vm/releases/download/82361"
+    VERSION: Final = "sdk-1.5.0-dev.87728"
+    BASE_URL: Final = (
+        "https://gitcode.com/Jemtaly/panda-sdk/releases/download/sdk-1.5.0-dev.87728"
+    )
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)
@@ -455,8 +457,9 @@ class PandaVm(CachedResource):
 
     @override
     def fetch(self):
-        tgz = self.base_path.parent / f"{self.VERSION}.tgz"
-        url = f"{self.URL}/{self.VERSION}.tgz"
+        filename = f"{self.VERSION}.tgz"
+        tgz = self.base_path.parent / filename
+        url = f"{self.BASE_URL}/{filename}"
         if not tgz.exists():
             fetch_url(url, tgz)
 

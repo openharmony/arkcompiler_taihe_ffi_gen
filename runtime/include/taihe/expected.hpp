@@ -41,16 +41,10 @@ constexpr inline unexpect_t unexpect {};
 template<typename E>
 class unexpected {
 public:
-    template<class... Args>
-    explicit constexpr unexpected(std::in_place_t, Args &&...args) : unex(std::forward<Args>(args)...)
-    {
-    }
-
-    template<class G = E, typename std::enable_if_t<
-                              std::is_constructible_v<E, G &&> &&
-                                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<G>>, std::in_place_t> &&
-                                  !std::is_same_v<std::remove_cv_t<std::remove_reference_t<G>>, unexpected>,
-                              int> = 0>
+    template<class G = E,
+             typename std::enable_if_t<std::is_constructible_v<E, G &&> && std::is_convertible_v<G &&, E> &&
+                                           !std::is_same_v<std::remove_cv_t<std::remove_reference_t<G>>, unexpected>,
+                                       int> = 0>
     explicit constexpr unexpected(G &&err) : unex(std::forward<G>(err))
     {
     }
@@ -92,7 +86,7 @@ private:
 };
 
 template<typename E>
-unexpected(E) -> unexpected<E>;
+explicit unexpected(E) -> unexpected<E>;
 
 template<typename T, typename E>
 class expected;
@@ -543,13 +537,13 @@ public:
         return *this;
     }
 
-    template<class U = T, typename std::enable_if<
+    template<class U = T, typename std::enable_if_t<
                               std::is_constructible_v<T, U &&> && std::is_convertible_v<U &&, T> &&
                                   !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>, std::in_place_t> &&
                                   !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>, expected> &&
                                   !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>, unexpected<E>> &&
                                   !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>, unexpect_t>,
-                              int>::type = 0>
+                              int> = 0>
     constexpr expected &operator=(U &&value)
     {
         if (has_val) {

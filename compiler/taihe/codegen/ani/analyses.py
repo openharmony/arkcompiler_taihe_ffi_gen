@@ -323,14 +323,14 @@ ANI_FN_OBJECT = AniType(hint="fn_object", base=ANI_REF)
 ANI_ENUM_ITEM = AniType(hint="enum_item", base=ANI_REF)
 ANI_STRING = AniType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = AniType(hint="arraybuffer", base=ANI_REF)
-ANI_FIXEDARRAY_REF = AniType(hint="fixedarray_ref", base=ANI_REF)
-ANI_FIXEDARRAY_BOOLEAN = AniType(hint="fixedarray_boolean", base=ANI_REF)
-ANI_FIXEDARRAY_FLOAT = AniType(hint="fixedarray_float", base=ANI_REF)
-ANI_FIXEDARRAY_DOUBLE = AniType(hint="fixedarray_double", base=ANI_REF)
-ANI_FIXEDARRAY_BYTE = AniType(hint="fixedarray_byte", base=ANI_REF)
-ANI_FIXEDARRAY_SHORT = AniType(hint="fixedarray_short", base=ANI_REF)
-ANI_FIXEDARRAY_INT = AniType(hint="fixedarray_int", base=ANI_REF)
-ANI_FIXEDARRAY_LONG = AniType(hint="fixedarray_long", base=ANI_REF)
+ANI_FIXEDARRAY = AniType(hint="fixedarray", base=ANI_REF)
+ANI_VALUEARRAY_BOOLEAN = AniType(hint="valuearray_boolean", base=ANI_REF)
+ANI_VALUEARRAY_FLOAT = AniType(hint="valuearray_float", base=ANI_REF)
+ANI_VALUEARRAY_DOUBLE = AniType(hint="valuearray_double", base=ANI_REF)
+ANI_VALUEARRAY_BYTE = AniType(hint="valuearray_byte", base=ANI_REF)
+ANI_VALUEARRAY_SHORT = AniType(hint="valuearray_short", base=ANI_REF)
+ANI_VALUEARRAY_INT = AniType(hint="valuearray_int", base=ANI_REF)
+ANI_VALUEARRAY_LONG = AniType(hint="valuearray_long", base=ANI_REF)
 
 
 # Ani Scopes
@@ -1791,17 +1791,17 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type_inner = {
-            ScalarKinds.BOOL: ANI_FIXEDARRAY_BOOLEAN,
-            ScalarKinds.F32: ANI_FIXEDARRAY_FLOAT,
-            ScalarKinds.F64: ANI_FIXEDARRAY_DOUBLE,
-            ScalarKinds.I8: ANI_FIXEDARRAY_BYTE,
-            ScalarKinds.I16: ANI_FIXEDARRAY_SHORT,
-            ScalarKinds.I32: ANI_FIXEDARRAY_INT,
-            ScalarKinds.I64: ANI_FIXEDARRAY_LONG,
-            ScalarKinds.U8: ANI_FIXEDARRAY_BYTE,
-            ScalarKinds.U16: ANI_FIXEDARRAY_SHORT,
-            ScalarKinds.U32: ANI_FIXEDARRAY_INT,
-            ScalarKinds.U64: ANI_FIXEDARRAY_LONG,
+            ScalarKinds.BOOL: ANI_VALUEARRAY_BOOLEAN,
+            ScalarKinds.F32: ANI_VALUEARRAY_FLOAT,
+            ScalarKinds.F64: ANI_VALUEARRAY_DOUBLE,
+            ScalarKinds.I8: ANI_VALUEARRAY_BYTE,
+            ScalarKinds.I16: ANI_VALUEARRAY_SHORT,
+            ScalarKinds.I32: ANI_VALUEARRAY_INT,
+            ScalarKinds.I64: ANI_VALUEARRAY_LONG,
+            ScalarKinds.U8: ANI_VALUEARRAY_BYTE,
+            ScalarKinds.U16: ANI_VALUEARRAY_SHORT,
+            ScalarKinds.U32: ANI_VALUEARRAY_INT,
+            ScalarKinds.U64: ANI_VALUEARRAY_LONG,
         }[valuearray_attr.item_ty.kind]
 
     @property
@@ -1831,9 +1831,9 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"ani_size size = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, FixedArray_GetLength, ani_value, &size);",
+                f"TH_ANI_ASSUME_INVOKE(env, ValueArray_GetLength, ani_value, &size);",
                 f"::taihe::array<{item_ty_cpp_info.as_owner}> result(size);",
-                f"TH_ANI_ASSUME_INVOKE(env, FixedArray_GetRegion_{item_ty_ani_info.ani_type.suffix}, ani_value, 0, size, reinterpret_cast<{item_ty_ani_info.ani_type}*>(result.data()));",
+                f"TH_ANI_ASSUME_INVOKE(env, ValueArray_GetRegion_{item_ty_ani_info.ani_type.suffix}, ani_value, 0, size, reinterpret_cast<{item_ty_ani_info.ani_type}*>(result.data()));",
                 f"return result;",
             )
 
@@ -1847,8 +1847,8 @@ class ValueArrayTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"size_t size = cpp_value.size();",
                 f"{self.ani_type} ani_result = {{}};",
-                f"TH_ANI_ASSUME_INVOKE(env, FixedArray_New_{item_ty_ani_info.ani_type.suffix}, size, &ani_result);",
-                f"TH_ANI_ASSUME_INVOKE(env, FixedArray_SetRegion_{item_ty_ani_info.ani_type.suffix}, ani_result, 0, size, reinterpret_cast<{item_ty_ani_info.ani_type} const*>(cpp_value.data()));",
+                f"TH_ANI_ASSUME_INVOKE(env, ValueArray_New_{item_ty_ani_info.ani_type.suffix}, size, &ani_result);",
+                f"TH_ANI_ASSUME_INVOKE(env, ValueArray_SetRegion_{item_ty_ani_info.ani_type.suffix}, ani_result, 0, size, reinterpret_cast<{item_ty_ani_info.ani_type} const*>(cpp_value.data()));",
                 f"return ani_result;",
             )
 
@@ -1867,7 +1867,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
     @property
     @override
     def ani_type(self) -> AniType:
-        return ANI_FIXEDARRAY_REF
+        return ANI_FIXEDARRAY
 
     @property
     @override
@@ -1900,7 +1900,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
             ):
                 target.writelns(
                     f"ani_ref ani_item = {{}};",
-                    f"TH_ANI_ASSUME_INVOKE(env, FixedArray_Get_Ref, ani_value, i, reinterpret_cast<ani_ref*>(&ani_item));",
+                    f"TH_ANI_ASSUME_INVOKE(env, FixedArray_Get, ani_value, i, reinterpret_cast<ani_ref*>(&ani_item));",
                 )
                 item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
@@ -1919,10 +1919,10 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         ):
             target.writelns(
                 f"size_t size = cpp_value.size();",
-                f"ani_fixedarray_ref ani_result = {{}};",
+                f"ani_fixedarray ani_result = {{}};",
                 f"ani_ref ani_init = {{}};",
                 f"TH_ANI_ASSUME_INVOKE(env, GetUndefined, &ani_init);",
-                f'TH_ANI_ASSUME_INVOKE(env, FixedArray_New_Ref, TH_ANI_FIND_CLASS(env, "{item_ty_ani_info.ets_type.boxed.desc}"), size, ani_init, &ani_result);',
+                f'TH_ANI_ASSUME_INVOKE(env, FixedArray_New, TH_ANI_FIND_CLASS(env, "{item_ty_ani_info.ets_type.boxed.desc}"), size, ani_init, &ani_result);',
             )
             with target.indented(
                 f"for (size_t i = 0; i < size; i++) {{",
@@ -1930,7 +1930,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
             ):
                 item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
                 target.writelns(
-                    f"TH_ANI_ASSUME_INVOKE(env, FixedArray_Set_Ref, ani_result, i, item_into_ani(env, cpp_value[i]));",
+                    f"TH_ANI_ASSUME_INVOKE(env, FixedArray_Set, ani_result, i, item_into_ani(env, cpp_value[i]));",
                 )
             target.writelns(
                 f"return ani_result;",
@@ -2578,17 +2578,17 @@ class SharedValueArrayTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type_inner = {
-            ScalarKinds.BOOL: ANI_FIXEDARRAY_BOOLEAN,
-            ScalarKinds.F32: ANI_FIXEDARRAY_FLOAT,
-            ScalarKinds.F64: ANI_FIXEDARRAY_DOUBLE,
-            ScalarKinds.I8: ANI_FIXEDARRAY_BYTE,
-            ScalarKinds.I16: ANI_FIXEDARRAY_SHORT,
-            ScalarKinds.I32: ANI_FIXEDARRAY_INT,
-            ScalarKinds.I64: ANI_FIXEDARRAY_LONG,
-            ScalarKinds.U8: ANI_FIXEDARRAY_BYTE,
-            ScalarKinds.U16: ANI_FIXEDARRAY_SHORT,
-            ScalarKinds.U32: ANI_FIXEDARRAY_INT,
-            ScalarKinds.U64: ANI_FIXEDARRAY_LONG,
+            ScalarKinds.BOOL: ANI_VALUEARRAY_BOOLEAN,
+            ScalarKinds.F32: ANI_VALUEARRAY_FLOAT,
+            ScalarKinds.F64: ANI_VALUEARRAY_DOUBLE,
+            ScalarKinds.I8: ANI_VALUEARRAY_BYTE,
+            ScalarKinds.I16: ANI_VALUEARRAY_SHORT,
+            ScalarKinds.I32: ANI_VALUEARRAY_INT,
+            ScalarKinds.I64: ANI_VALUEARRAY_LONG,
+            ScalarKinds.U8: ANI_VALUEARRAY_BYTE,
+            ScalarKinds.U16: ANI_VALUEARRAY_SHORT,
+            ScalarKinds.U32: ANI_VALUEARRAY_INT,
+            ScalarKinds.U64: ANI_VALUEARRAY_LONG,
         }[t.item_ty.kind]
 
     @property
@@ -2918,7 +2918,7 @@ class SharedVectorTypeAniInfo(TypeAniInfo):
                 item_ty_ani_info.gen_from_ani_ref(target, "item_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(i, item_from_ani(env, ani_item));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -2977,7 +2977,7 @@ class SharedVectorTypeAniInfo(TypeAniInfo):
                 f"ani_env* env = guard.get_env();",
                 f"size_t size = 0;",
                 f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), reinterpret_cast<ani_int*>(&size));',
-                f'if (index > size) return ::taihe::unexpected<::taihe::error>(::taihe::error("Index out of range"));',
+                f'if (index > size) return ::taihe::unexpected(::taihe::error("Index out of range"));',
             )
             item_ty_ani_info.gen_into_ani_ref(target, "item_into_ani")
             target.writelns(
@@ -3014,7 +3014,7 @@ class SharedVectorTypeAniInfo(TypeAniInfo):
                 f"ani_env* env = guard.get_env();",
                 f"size_t size = 0;",
                 f'TH_ANI_TRY_INVOKE(env, Object_CallMethod_Int, static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "std.core.Array", "%%get-length", ":i"), reinterpret_cast<ani_int*>(&size));',
-                f'if (index >= size) return ::taihe::unexpected<::taihe::error>(::taihe::error("Index out of range"));',
+                f'if (index >= size) return ::taihe::unexpected(::taihe::error("Index out of range"));',
             )
             with target.indented(
                 f"for (size_t i = index + 1; i < size; i++) {{",
@@ -3208,7 +3208,7 @@ class SharedMapTypeAniInfo(TypeAniInfo):
                 key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -3278,7 +3278,7 @@ class SharedMapTypeAniInfo(TypeAniInfo):
                 val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(val_from_ani(env, ani_val));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -3360,7 +3360,7 @@ class SharedMapTypeAniInfo(TypeAniInfo):
                 val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -3645,7 +3645,7 @@ class SharedRecordTypeAniInfo(TypeAniInfo):
                 key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -3715,7 +3715,7 @@ class SharedRecordTypeAniInfo(TypeAniInfo):
                 val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(val_from_ani(env, ani_val));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -3797,7 +3797,7 @@ class SharedRecordTypeAniInfo(TypeAniInfo):
                 val_ty_ani_info.gen_from_ani_ref(target, "val_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key), val_from_ani(env, ani_val));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(
@@ -4069,7 +4069,7 @@ class SharedSetTypeAniInfo(TypeAniInfo):
                 key_ty_ani_info.gen_from_ani_ref(target, "key_from_ani")
                 target.writelns(
                     f"::taihe::expected<bool, ::taihe::error> result = visitor(key_from_ani(env, ani_key));",
-                    f"if (!result.has_value()) return ::taihe::unexpected<::taihe::error>(result.error());",
+                    f"if (!result.has_value()) return ::taihe::unexpected(result.error());",
                     f"if (!result.value()) break;",
                 )
             target.writelns(

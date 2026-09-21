@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import os
 import shutil
-import argparse
 import sys
 from pathlib import Path
 
@@ -44,11 +44,11 @@ def copy_with_permissions(src, dst):
 def copy_directory_excluding_files(base_dir, output_dir):
     base_path = Path(base_dir)
     output_path = Path(output_dir)
-    
+
     if not base_path.exists():
         print(f"Error: Input directory does not exist: {base_dir}", file=sys.stderr)
         sys.exit(1)
-    
+
     try:
         if output_path.exists():
             shutil.rmtree(output_path)
@@ -56,17 +56,17 @@ def copy_directory_excluding_files(base_dir, output_dir):
     except Exception as e:
         print(f"Error creating output directory: {e}", file=sys.stderr)
         sys.exit(1)
-    
+
     base_stat = os.stat(base_path)
     os.chmod(output_path, base_stat.st_mode)
-    
+
     excluded_patterns = [
         "*.taihe.mark",
         "lib/pyrt/lib/python3.11/site-packages/taihe/cli/tryit.py",
         "bin/taihe-tryit",
-        "napi_taihe"
+        "napi_taihe",
     ]
-    
+
     for root, dirs, files in os.walk(base_dir):
         root_path = Path(root)
         relative_path = root_path.relative_to(base_path)
@@ -76,7 +76,7 @@ def copy_directory_excluding_files(base_dir, output_dir):
             continue
 
         dest_dir = output_path / relative_path
-        
+
         try:
             dest_dir.mkdir(parents=True, exist_ok=True)
             dir_stat = os.stat(root_path)
@@ -84,12 +84,12 @@ def copy_directory_excluding_files(base_dir, output_dir):
         except Exception as e:
             print(f"Error creating directory {dest_dir}: {e}", file=sys.stderr)
             continue
-        
+
         for file in files:
             src_file = root_path / file
             dest_file = dest_dir / file
             file_rel_path = (relative_path / file).as_posix()
-            
+
             if not should_skip_file(file_rel_path, excluded_patterns):
                 copy_with_permissions(src_file, dest_file)
 

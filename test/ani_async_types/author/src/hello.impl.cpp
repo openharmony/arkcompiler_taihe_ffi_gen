@@ -35,14 +35,14 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
                                                                  ::taihe::completer<expected_string> completer)
 {
     if (ms < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
+        return taihe::unexpected(taihe::error("ms cannot be negative"));
     }
     std::thread([ms, val = taihe::string(val), completer = std::move(completer)]() mutable {
         std::cout << "[Future Result] Waiting for " << ms << " milliseconds..." << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         std::cout << "[Future Result] Task completed, completing future..." << std::endl;
         if (val.empty()) {
-            completer.complete(taihe::unexpected<taihe::error>("val cannot be empty"));
+            completer.complete(taihe::unexpected(taihe::error("val cannot be empty")));
         } else {
             completer.complete("C++AsyncProcessed-" + val);
         }
@@ -55,14 +55,14 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
 {
     auto [completer, future] = taihe::make_async_pair<expected_string>();
     if (ms < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
+        return taihe::unexpected(taihe::error("ms cannot be negative"));
     }
     std::thread([ms, val = taihe::string(val), completer = std::move(completer)]() mutable {
         std::cout << "[Future Result Returns Promise] Waiting for " << ms << " milliseconds..." << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         std::cout << "[Future Result Returns Promise] Task completed, completing future..." << std::endl;
         if (val.empty()) {
-            completer.complete(taihe::unexpected<taihe::error>("val cannot be empty"));
+            completer.complete(taihe::unexpected(taihe::error("val cannot be empty")));
         } else {
             completer.complete("C++AsyncProcessed-" + val);
         }
@@ -75,7 +75,7 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
                                                                     ::taihe::completer<expected_string> fin)
 {
     if (etsMs < 0 || cppMs < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
+        return taihe::unexpected(taihe::error("ms cannot be negative"));
     }
 
     auto [mid, tmp] = taihe::make_async_pair<expected_string>();
@@ -110,7 +110,7 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
     ::hello::weak::UserType user, int64_t etsMs, int64_t cppMs, ::taihe::string_view result)
 {
     if (etsMs < 0 || cppMs < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
+        return taihe::unexpected(taihe::error("ms cannot be negative"));
     }
 
     auto exp = user->fooReturnsPromise(etsMs, "C++SyncProcessed-" + result);
@@ -145,7 +145,7 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
 ::taihe::expected<void, ::taihe::error> TestVoidAsyncWithCallback(int64_t ms, ::taihe::completer<expected_void> set)
 {
     if (ms < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
+        return taihe::unexpected(taihe::error("ms cannot be negative"));
     }
     std::thread([ms, set = std::move(set)]() mutable {
         std::cout << "[Test Void Async With Callback] Waiting for " << ms << " milliseconds..." << std::endl;
@@ -159,7 +159,7 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
 ::taihe::expected<::taihe::future<expected_void>, ::taihe::error> TestVoidAsyncReturnsPromise(int64_t ms)
 {
     if (ms < 0) {
-        return taihe::unexpected<taihe::error>("ms cannot be negative");
+        return taihe::unexpected(taihe::error("ms cannot be negative"));
     }
     auto [set, fut] = taihe::make_async_pair<expected_void>();
 
@@ -290,7 +290,7 @@ using expected_nested_string_future = ::taihe::expected<nested_string_future, ::
     int64_t count, ::taihe::string_view result)
 {
     if (count < 0) {
-        return taihe::unexpected<taihe::error>("count cannot be negative");
+        return taihe::unexpected(taihe::error("count cannot be negative"));
     }
 
     std::vector<::taihe::future<expected_string>> futures;
