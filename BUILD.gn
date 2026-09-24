@@ -305,6 +305,8 @@ action("build_taihe_modobj") {
     "--strip_version",
     "--mode",
     "core",
+    "--cache-path",
+    rebase_path("//../openharmony_prebuilts/taihe_cache"),
   ]
 
   outputs = [
